@@ -151,17 +151,26 @@ class PipeCommunicator(Communicator):
         else:
             signal: bytes = proc.stderr.read()
             if signal is not None:
-                signal: str = signal.decode()
+                try:
+                    signal: str = signal.decode()
+                except UnicodeDecodeError as err:
+                    signal: str = pickle.loads(signal)
             contents: bytes = proc.stdout.read()
             if contents is not None:
-                contents: str = contents.decode()
+                try:
+                    contents: str = contents.decode()
+                except UnicodeDecodeError as err:
+                    contents: str = pickle.loads(contents)
 
             if signal and signal not in LUTE_SIGNALS:
                 # Some tasks write on stderr
                 # If the signal channel has "non-signal" info, add it to
                 # contents
-                contents += signal
-                signal = ""
+                if not contents:
+                    contents = f"({signal})"
+                else:
+                    contents = f"{contents} ({signal})"
+                signal: str = ""
         return Message(contents=contents, signal=signal)
 
     def write(self, msg: Message) -> None:

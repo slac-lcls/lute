@@ -17,13 +17,37 @@ __author__ = "Gabriel Dorlhiac"
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any, List, Dict, Union, Type, TextIO
 from enum import Enum
 import os
-import sys
+import warnings
 
 from ..io.config import TaskParameters
 from ..execution.ipc import *
+
+if __debug__:
+    warnings.simplefilter("default")
+    os.environ["PYTHONWARNINGS"] = "default"
+
+    def lute_warn(
+        message: Union[str, Warning],
+        category: Type[Warning],
+        filename: str,
+        lineno: int,
+        file: Union[TextIO, None] = None,
+        line: Union[str, None] = None,
+    ) -> None:
+        formatted_warning: str = warnings.formatwarning(
+            message, category=category, filename=filename, lineno=lineno, line=line
+        )
+        msg: Message = Message(contents=formatted_warning)
+        communicator: PipeCommunicator = PipeCommunicator()
+
+        communicator.write(msg)
+
+    warnings.showwarning = lute_warn
+else:
+    warnings.simplefilter("ignore")
 
 
 class TaskStatus(Enum):
@@ -201,27 +225,60 @@ class BinaryTask(Task):
         self._cmd = self._task_parameters.executable
         self._args_list: List[str] = [self._cmd]
 
-    def _pre_run(self):
-        """Prepare the list of flags and arguments to be executed."""
+    def _pre_run(self) -> None:
         super()._pre_run()
-        # We assume no compound/nested parameters for these Task types
-        # I.e. no parameters like: param = {"a": 1, "b": 2}, etc..
+        full_schema: Dict[
+            str, Union[str, Dict[str, Any]]
+        ] = self._task_parameters.schema()
         for param, value in self._task_parameters.dict().items():
             if param == "executable":
                 continue
-            if "p_arg" in param:
-                # p_arg indicates a positional argument, so no flag
-                self._args_list.append(f"{value}")
+            param_attributes: Dict[str, Any] = full_schema["properties"][param]
+            if "flag_type" in param_attributes:
+                flag: str = param_attributes["flag_type"]
+                if flag:
+                    # "-" or "--" flags
+                    if flag == "--" and isinstance(value, bool) and not value:
+                        continue
+                    self._args_list.append(f"{flag}{param}")
+                    if flag == "--" and isinstance(value, bool) and value:
+                        # On/off flag, e.g. something like --verbose: No Arg
+                        continue
             else:
-                self._args_list.append(f"--{param}")
+                warnings.warn(
+                    "Model parameters should be defined using Field(...,flag_type='') in the future.",
+                    category=PendingDeprecationWarning,
+                )
+                if len(param) == 1:  # Single-dash flags
+                    self._args_list.append(f"-{param}")
+                elif "p_arg" in param:  # Positional arguments
+                    pass
+                else:  # Double-dash flags
+                    if isinstance(value, bool) and not value:
+                        continue
+                    self._args_list.append(f"--{param}")
+                    if isinstance(value, bool) and value:
+                        continue
+            if value != "":
+                # Cannot have empty values in argument list for execvp
+                # So far this only comes for '', but do want to include, e.g. 0
                 self._args_list.append(f"{value}")
 
-    def _run(self):
+    def _run(self) -> None:
         """Execute the new program by replacing the current process."""
+        if __debug__:
+            time.sleep(0.1)
+            msg: Message = Message(contents=self._formatted_command())
+            self._report_to_executor(msg)
         os.execvp(file=self._cmd, args=self._args_list)
 
+    def _formatted_command(self) -> str:
+        """Returns the command as it would passed on the command-line."""
+        formatted_cmd: str = "".join(f"{arg} " for arg in self._args_list)
+        return formatted_cmd
+
     def _signal_start(self) -> None:
-        """Override start signal method to swtich communication methods."""
+        """Override start signal method to switch communication methods."""
         super()._signal_start()
         time.sleep(0.05)
         signal: str = "NO_PICKLE_MODE"

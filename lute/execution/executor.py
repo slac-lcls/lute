@@ -30,21 +30,26 @@ import subprocess
 import time
 import os
 import socket
-import threading
 import signal
 from typing import Dict, Callable, List
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import warnings
 
 from .ipc import *
 from ..tasks.task import *
 from ..io.config import TaskParameters
 
 if __debug__:
+    warnings.simplefilter("default")
+    os.environ["PYTHONWARNINGS"] = "default"
     logging.basicConfig(level=logging.DEBUG)
+    logging.captureWarnings(True)
 else:
     logging.basicConfig(level=logging.INFO)
+    warnings.simplefilter("ignore")
+    os.environ["PYTHONWARNINGS"] = "ignore"
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +274,8 @@ class BaseExecutor(ABC):
         os.set_blocking(proc.stderr.fileno(), True)
 
         self._finalize_task(proc)
+        proc.stdout.close()
+        proc.stderr.close()
 
     def _task_is_running(self, proc: subprocess.Popen) -> bool:
         """Whether a subprocess is running.

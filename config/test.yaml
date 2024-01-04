@@ -6,6 +6,13 @@ date: "2023/10/25"
 lute-version: 0.1      # Do not be change unless need to force older version
 ...
 ---
+SubmitSMD:
+  producer: "/sdf/data/lcls/ds/mfx/mfxl1013621/results/smalldata_tools/producers/smd_producer.py"
+  run: 99
+  experiment: "mfxl1013621"
+  directory: "/sdf/home/d/dorlhiac/scratch/lute_tests/test_smd"
+  default: true
+
 # FindOverlapXSS Configuration
 FindOverlapXSS:
   # Detector selection - if left as "", will attempt to find a default
