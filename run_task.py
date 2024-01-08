@@ -15,7 +15,7 @@ else:
 logger: logging.Logger = logging.getLogger(__name__)
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(
-    prog="LUTE Managed Task",
+    prog="run_managed_task",
     description="Run a LUTE managed task.",
     epilog="Refer to https://github.com/slac-lcls/lute for more information.",
 )
