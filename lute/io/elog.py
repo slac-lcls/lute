@@ -6,7 +6,7 @@ Functions:
     get_elog_opr_auth(exp: str): Return an authorization object to interact with
         eLog API as an opr account for the hutch where `exp` was conducted.
 
-    get_kerberos_auth(): Return the authorization headers for the user account
+    get_elog_kerberos_auth(): Return the authorization headers for the user account
         submitting the job.
 
     elog_http_request(url: str, request_type: str, **params): Make an HTTP
@@ -141,6 +141,36 @@ def post_elog_workflow(
     )
 
 
+def get_elog_active_expmt(hutch: str, *, endstation: int = 0) -> str:
+    """Get the current active experiment for a hutch.
+
+    This function is the only function to manage the HTTP request independently.
+    This is because it does not require an authorization object, and its result
+    is needed for the generic function `elog_http_request` to work properly.
+
+    Args:
+        hutch (str): The hutch to get the active experiment for.
+
+        endstation (int): The hutch endstation to get the experiment for. This
+            should generally be 0.
+    """
+
+    base_url: str = "https://pswww.slac.stanford.edu/ws/lgbk/lgbk"
+    endpoint: str = "ws/activeexperiment_for_instrument_station"
+    url: str = f"{base_url}/{endpoint}"
+    params: Dict[str, str] = {"instrument_name": hutch, "station": f"{endstation}"}
+    resp: requests.models.Response = requests.get(url, params)
+    if resp.status_code > 300:
+        raise RuntimeError(
+            f"Error getting current experiment!\n\t\tIncorrect hutch: '{hutch}'?"
+        )
+    if resp.json()["success"]:
+        return resp.json()["value"]["name"]
+    else:
+        msg: str = resp.json()["error_msg"]
+        raise RuntimeError(f"Error getting current experiment! Err: {msg}")
+
+
 def get_elog_auth(exp: str) -> Union[HTTPBasicAuth, Dict[str, str]]:
     """Determine the appropriate auth method depending on experiment state.
 
@@ -149,7 +179,11 @@ def get_elog_auth(exp: str) -> Union[HTTPBasicAuth, Dict[str, str]]:
             is active/live, returns authorization for the hutch operator account
             or the current user submitting a job.
     """
-    return get_elog_opr_auth(exp)
+    hutch: str = exp[:3]
+    if exp.lower() == get_elog_active_expmt(hutch=hutch).lower():
+        return get_elog_opr_auth(exp)
+    else:
+        return get_elog_kerberos_auth()
 
 
 def get_elog_opr_auth(exp: str) -> HTTPBasicAuth:
@@ -168,7 +202,7 @@ def get_elog_opr_auth(exp: str) -> HTTPBasicAuth:
     return HTTPBasicAuth("fake", "fake") or {}
 
 
-def get_kerberos_auth() -> Dict[str, str]:
+def get_elog_kerberos_auth() -> Dict[str, str]:
     """Returns Kerberos authorization key.
 
     This functions returns authorization for the USER account submitting jobs.
@@ -220,10 +254,11 @@ def elog_http_request(
 
     url: str = f"{base_url}/{endpoint}"
 
+    resp: requests.models.Response
     if request_type.upper() == "POST":
-        resp: requests.models.Response = requests.post(url, **params)
+        resp = requests.post(url, **params)
     elif request_type.upper() == "GET":
-        resp: requests.models.Response = requests.get(url, **params)
+        resp = requests.get(url, **params)
     else:
         return (-1, "Invalid request type!", None)
 
