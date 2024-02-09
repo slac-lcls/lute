@@ -21,11 +21,22 @@ Exceptions:
 __all__ = ["parse_config", "TaskParameters"]
 __author__ = "Gabriel Dorlhiac"
 
+import os
 from abc import ABC
-from typing import List, Dict, Iterator, Dict, Any, Union
+from typing import List, Dict, Iterator, Dict, Any, Union, Optional
 
 import yaml
-from pydantic import BaseModel, BaseSettings, ValidationError
+import yaml
+from pydantic import (
+    BaseModel,
+    BaseSettings,
+    ValidationError,
+    HttpUrl,
+    PositiveInt,
+    NonNegativeInt,
+    Field,
+    conint,
+)
 
 
 # Parameter models
@@ -49,6 +60,8 @@ class TaskParameters(BaseSettings):
         env_prefix = "LUTE_"
 
 
+# Test Task models
+##################
 class TestParameters(TaskParameters):
     """Parameters for the test Task `Test`."""
 
@@ -70,6 +83,110 @@ class TestBinaryParameters(TaskParameters):
 class TestSocketParameters(TaskParameters):
     array_size: int = 10000
     num_arrays: int = 10
+
+
+# smalldata_tools Parameters
+############################
+class SubmitSMDParameters(TaskParameters):
+    """Parameters for running smalldata to produce reduced HDF5 files."""
+
+    executable: str = Field("mpirun", description="MPI executable.", flag_type="")
+    np: conint(gt=2, le=120) = Field(
+        120, description="Number of processes", flag_type="-"
+    )
+    p_arg1: str = Field(
+        "python", description="Executable to run with mpi (i.e. python).", flag_type=""
+    )
+    u: str = Field(
+        "", description="Python option for unbuffered output.", flag_type="-"
+    )
+    m: str = Field(
+        "mpi4py.run",
+        description="Python option to execute a module's contents as __main__ module.",
+        flag_type="-",
+    )
+    producer: str = Field(
+        "", description="Path to the SmallData producer Python script.", flag_type=""
+    )
+    run: str = Field(
+        os.environ.get("RUN_NUM", ""), description="DAQ Run Number.", flag_type="--"
+    )
+    experiment: str = Field(
+        os.environ.get("EXPERIMENT", ""),
+        description="LCLS Experiment Number.",
+        flag_type="--",
+    )
+    stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    nevents: int = Field(
+        int(1e9), description="Number of events to process.", flag_type="--"
+    )
+    directory: Optional[str] = Field(
+        None,
+        description="Optional output directory. If None, will be in ${EXP_FOLDER}/hdf5/smalldata.",
+        flag_type="--",
+    )
+    gather_interval: PositiveInt = Field(
+        25, description="Number of events to collect at a time.", flag_type="--"
+    )
+    norecorder: bool = Field(
+        False, description="Whether to ignore recorder streams.", flag_type="--"
+    )
+    url: HttpUrl = Field(
+        "https://pswww.slac.stanford.edu/ws-auth/lgbk",
+        description="Base URL for eLog posting.",
+        flag_type="--",
+    )
+    epicsAll: bool = Field(
+        False,
+        description="Whether to store all EPICS PVs. Use with care.",
+        flag_type="--",
+    )
+    full: bool = Field(
+        False,
+        description="Whether to store all data. Use with EXTRA care.",
+        flag_type="--",
+    )
+    fullSum: bool = Field(
+        False,
+        description="Whether to store sums for all area detector images.",
+        flag_type="--",
+    )
+    default: bool = Field(
+        False,
+        description="Whether to store only the default minimal set of data.",
+        flag_type="--",
+    )
+    image: bool = Field(
+        False,
+        description="Whether to save everything as images. Use with care.",
+        flag_type="--",
+    )
+    tiff: bool = Field(
+        False,
+        description="Whether to save all images as a single TIFF. Use with EXTRA care.",
+        flag_type="--",
+    )
+    centerpix: bool = Field(
+        False,
+        description="Whether to mask center pixels for Epix10k2M detectors.",
+        flag_type="--",
+    )
+    postRuntable: bool = Field(
+        False,
+        description="Whether to post run tables. Also used as a trigger for summary jobs.",
+        flag_type="--",
+    )
+    wait: bool = Field(
+        False, description="Whether to wait for a file to appear.", flag_type="--"
+    )
+    xtcav: bool = Field(
+        False,
+        description="Whether to add XTCAV processing to the HDF5 generation.",
+        flag_type="--",
+    )
+    noarch: bool = Field(
+        False, description="Whether to not use archiver data.", flag_type="--"
+    )
 
 
 class FindOverlapXSSParameters(TaskParameters):
