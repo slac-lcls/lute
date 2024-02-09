@@ -338,7 +338,6 @@ def post_elog_message(
     tag: Optional[str],
     title: Optional[str],
     in_files: List[Union[str, tuple, list]],
-    auth: Optional[Union[HTTPBasicAuth, Dict]] = None,
 ) -> Optional[str]:
     """Post a new message to the eLog. Inspired by the `elog` package.
 
@@ -353,10 +352,6 @@ def post_elog_message(
 
         in_files (List[str | tuple | list]): Files to include as attachments in
             the eLog post.
-
-        auth (None | HTTPBasicAuth | Dict): Authorization for the eLog API. Can
-            be username/password or kerberos headers. If none are provided,
-            authorization will be generated based on the experiment name.
 
     Returns:
         err_msg (str | None): If successful, nothing is returned, otherwise,
@@ -373,22 +368,15 @@ def post_elog_message(
     if title:
         post["log_title"] = title
 
-    auth: Union[HTTPBasicAuth, Dict] = auth or get_elog_opr_auth(exp)
-    post_url: str = f"{BASE_URL}/{exp}/ws/new_elog_entry"
-    # post_endpoint: str = f"{exp}/ws/new_elog_entry"
+    endpoint: str = f"{exp}/ws/new_elog_entry"
 
     params: Dict[str, Any] = {"data": post}
-
-    if isinstance(auth, HTTPBasicAuth):
-        params.update({"auth": auth})
-    elif isinstance(auth, dict):
-        params.update({"headers": auth})
 
     if out_files:
         params.update({"files": out_files})
 
     status_code, resp_msg, _ = elog_http_request(
-        url=post_url, request_type="POST", **params
+        exp=exp, endpoint=endpoint, request_type="POST", **params
     )
 
     if resp_msg != "SUCCESS":
@@ -400,7 +388,6 @@ def post_elog_run_table(
     exp: str,
     run: int,
     data: Dict[str, Any],
-    auth: Optional[Union[HTTPBasicAuth, Dict]] = None,
 ) -> Optional[str]:
     """Post data for eLog run tables.
 
@@ -412,27 +399,16 @@ def post_elog_run_table(
         data (Dict[str, Any]): Data to be posted in format
             data["column_header"] = value.
 
-        auth (None | HTTPBasicAuth | Dict): Authorization for the eLog API. Can
-            be username/password or kerberos headers. If none are provided,
-            authorization will be generated based on the experiment name.
-
     Returns:
         err_msg (None | str): If successful, nothing is returned, otherwise,
             return an error message.
     """
-    table_url: str = f"{BASE_URL}/run_control/{exp}/ws/add_run_params"
-    # endpoint: str = f"run_control/{exp}/ws/add_run_params"
-    auth: Union[HTTPBasicAuth, Dict] = auth or get_elog_auth(exp)
+    endpoint: str = f"run_control/{exp}/ws/add_run_params"
 
     params: Dict[str, Any] = {"params": {"run_num": run}, "json": data}
 
-    if isinstance(auth, HTTPBasicAuth):
-        params.update({"auth": auth})
-    elif isinstance(auth, dict):
-        params.update({"headers": auth})
-
     status_code, resp_msg, _ = elog_http_request(
-        exp, url=table_url, request_type="POST", **params
+        exp=exp, endpoint=endpoint, request_type="POST", **params
     )
 
     if resp_msg != "SUCCESS":
@@ -449,20 +425,12 @@ def get_elog_runs_by_tag(
         exp (str): Experiment name.
 
         tag (str): The tag to retrieve runs for.
-
-        auth (None | HTTPBasicAuth | Dict): Authorization for the eLog API. Can
-            be username/password or kerberos headers. If none are provided,
-            authorization will be generated based on the experiment name.
     """
-    tag_url: str = f"{BASE_URL}/{exp}/ws/get_runs_with_tag?tag={tag}"
+    endpoint: str = f"{exp}/ws/get_runs_with_tag?tag={tag}"
     params: Dict[str, Any] = {}
-    if isinstance(auth, HTTPBasicAuth):
-        params.update({"auth": auth})
-    elif isinstance(auth, dict):
-        params.update({"headers": auth})
 
     status_code, resp_msg, tagged_runs = elog_http_request(
-        url=tag_url, request_type="GET", **params
+        exp=exp, endpoint=endpoint, request_type="GET", **params
     )
 
     if not tagged_runs:
