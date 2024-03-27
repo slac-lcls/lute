@@ -1,0 +1,55 @@
+{
+    "compressor_id": "pressio",
+    "early_config": {
+        "pressio": {
+            "pressio:compressor": "roibin",
+            "roibin": {
+                "roibin:metric": "composite",
+                "roibin:background": "mask_binning",
+                "roibin:roi": "fpzip",
+                "background": {
+                    "binning:compressor": "pressio",
+                    "mask_binning:compressor": "pressio",
+                    "pressio": {
+                        "pressio:compressor": {{ compressor | tojson }}
+                    }
+                },
+                "composite": {
+                    "composite:plugins": [
+                        "size",
+                        "time",
+                        "input_stats",
+                        "error_stat"
+                    ]
+                }
+            }
+        }
+    },
+    "compressor_config": {
+        "pressio": {
+            "roibin": {
+                "roibin:roi_size": [
+                    {{ roiWindowSize}},
+                    {{ roiWindowSize}},
+                    0
+                ],
+                "roibin:centers": null,
+                "roibin:nthreads": 4,
+                "roi": {
+                    "fpzip:prec": 0
+                },
+                "background": {
+                    "mask_binning:mask": null,
+                    "mask_binning:shape": [
+                        {{ binSize }},
+                        {{ binSize }},
+                        1
+                    ],
+                    "mask_binning:nthreads": 4,
+                    "pressio": {{ pressio_opts | tojson }}
+                }
+            }
+        }
+    },
+    "name": "pressio"
+}

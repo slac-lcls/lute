@@ -22,20 +22,21 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
-import _io
-import os
-import sys
-import socket
-import pickle
-import subprocess
-import select
 import logging
+import os
+import pickle
+import select
+import socket
+import subprocess
+import sys
 import warnings
-from typing import Optional, Any, Set
-from typing_extensions import Self
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Optional, Set
+
+import _io
+from typing_extensions import Self
 
 LUTE_SIGNALS: Set[str] = {
     "NO_PICKLE_MODE",
@@ -182,7 +183,7 @@ class PipeCommunicator(Communicator):
                     contents = raw_contents.decode()
                 except UnicodeDecodeError as err:
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
-                    self._use_pickle = True
+                    #                    self._use_pickle = True
                     contents = self._safe_unpickle_decode(raw_contents)
         else:
             contents = None
