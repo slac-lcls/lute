@@ -47,7 +47,7 @@ class IndexCrystFELParameters(BaseBinaryParameters):
         "", description="Path to input file.", flag_type="-", rename_param="i"
     )
     out_file: str = Field(
-        description="Path to output file.", flag_type="-", rename_param="o"
+        "", description="Path to output file.", flag_type="-", rename_param="o"
     )
     geometry: str = Field(
         "", description="Path to geometry file.", flag_type="-", rename_param="g"
@@ -393,3 +393,13 @@ class IndexCrystFELParameters(BaseBinaryParameters):
             if filename is not None:
                 return filename
         return in_file
+
+    @validator("out_file", always=True)
+    def validate_in_file(cls, out_file: str, values: Dict[str, Any]) -> str:
+        if out_file == "":
+            expmt: str = values["lute_config"].experiment
+            run: int = values["lute_config"].run
+            work_dir: str = values["lute_config"].work_dir
+            fname: str = f"{expmt}_r{run:04d}.stream"
+            return f"{work_dir}/{fname}"
+        return out_file
