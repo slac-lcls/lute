@@ -48,16 +48,25 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
-import sys
 import requests
 from requests.auth import HTTPBasicAuth
-import socket
 import mimetypes
 import os
+import logging
 from typing import Any, Dict, Optional, List, Union, Tuple
 from io import BufferedReader
 
 from krtc import KerberosTicket
+
+from .exceptions import ElogFileFormatError
+
+if __debug__:
+    logging.basicConfig(level=logging.DEBUG)
+    logging.captureWarnings(True)
+else:
+    logging.basicConfig(level=logging.INFO)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def get_elog_workflows(exp: str) -> Dict[str, str]:
@@ -198,8 +207,10 @@ def get_elog_opr_auth(exp: str) -> HTTPBasicAuth:
         auth (HTTPBasicAuth): HTTPBasicAuth for an active experiment based on
             username and password for the associated operator account.
     """
-    # NEED TO FILL IN
-    return HTTPBasicAuth("fake", "fake") or {}
+    opr: str = f"{exp[:3]}opr"
+    with open("/sdf/group/lcls/ds/tools/forElogPost.txt", "r") as f:
+        pw: str = f.readline()[:-1]
+    return HTTPBasicAuth(opr, pw)
 
 
 def get_elog_kerberos_auth() -> Dict[str, str]:
@@ -290,11 +301,24 @@ def format_file_for_post(
         in_file (str | tuple | list): File to include as an attachment in an
             eLog post.
     """
-    # NEED TO FILL IN FOR VARIOUS INPUT TYPES
+    description: str
+    fptr: BufferedReader
+    ftype: Optional[str]
+    if isinstance(in_file, str):
+        description = os.path.basename(in_file)
+        fptr = open(in_file, "rb")
+        ftype = mimetypes.guess_type(in_file)[0]
+    elif isinstance(in_file, tuple) or isinstance(in_file, list):
+        description = in_file[1]
+        fptr = open(in_file[0], "rb")
+        ftype = mimetypes.guess_type(in_file[0])[0]
+    else:
+        raise ElogFileFormatError(f"Unrecognized format: {in_file}")
+
     out_file: Tuple[str, Tuple[str, BufferedReader], Any] = (
         "files",
-        ("description", open("file", "rb")),
-        mimetypes.guess_type("path_to_file")[0],
+        (description, fptr),
+        ftype,
     )
     return out_file
 
@@ -321,8 +345,11 @@ def post_elog_run_status(
         {"key": f"{key}", "value": f"{value}"} for key, value in data.items()
     ]
 
-    if not update_url:
+    if update_url is None:
         update_url = os.environ.get("JID_UPDATE_COUNTERS")
+        if update_url is None:
+            logger.info("eLog Update Failed! JID_UPDATE_COUNTERS is not defined!")
+            return
 
     params: Dict[str, List[Dict[str, str]]] = {"json": post_list}
     if update_url:
@@ -337,7 +364,7 @@ def post_elog_message(
     *,
     tag: Optional[str],
     title: Optional[str],
-    in_files: List[Union[str, tuple, list]],
+    in_files: List[Union[str, tuple, list]] = [],
 ) -> Optional[str]:
     """Post a new message to the eLog. Inspired by the `elog` package.
 
@@ -360,7 +387,10 @@ def post_elog_message(
     # MOSTLY CORRECT
     out_files: list = []
     for f in in_files:
-        out_files.append(format_file_for_post(in_file=f))
+        try:
+            out_files.append(format_file_for_post(in_file=f))
+        except ElogFileFormatError as err:
+            logger.debug(f"ElogFileFormatError: {err}")
     post: Dict[str, str] = {}
     post["log_text"] = msg
     if tag:
