@@ -1,0 +1,47 @@
+#!/bin/bash
+usage()
+{
+cat << EOF
+$(basename "$0"):
+    Launch a TUI app to inspect a LUTE database.
+    Options:
+        -h|--help
+          Display this message.
+        -p|--path
+          Path to the LUTE SQLite database.
+EOF
+}
+
+POS=()
+while [[ $# -gt 0 ]]
+do
+    flag="$1"
+
+    case $flag in
+        -h|--help)
+          usage
+          exit
+          ;;
+        -p|--path)
+          DBPATH="$2"
+          shift
+          shift
+          ;;
+    esac
+done
+set -- "${POS[@]}"
+
+if [[ -z ${DBPATH} ]]; then
+    echo "Please provide a database path!"
+    usage
+    exit
+fi
+
+export APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/src/dbview"
+export LUTE_BASE="${APP_DIR}/../../.."
+
+if [[ $HOSTNAME =~ "sdf" ]]; then
+    source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+fi
+
+python -B ${APP_DIR}/dbview.py -p $DBPATH

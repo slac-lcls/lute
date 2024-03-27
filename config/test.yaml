@@ -3,15 +3,97 @@
 title: "LUTE Task Configuration" # Include experiment description if desired
 experiment: "EXPL10000"
 date: "2023/10/25"
-lute-version: 0.1      # Do not be change unless need to force older version
+lute_version: 0.1      # Do not be change unless need to force older version
+task_timeout: 600
+work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
 ---
 SubmitSMD:
+  # Command line arguments
   producer: "/sdf/data/lcls/ds/mfx/mfxl1013621/results/smalldata_tools/producers/smd_producer.py"
   run: 99
   experiment: "mfxl1013621"
+  #stn: 0
   directory: "/sdf/home/d/dorlhiac/scratch/lute_tests/test_smd"
+  #gather_interval: 25
+  #norecorder: False
+  #url: "https://pswww.slac.stanford.edu"
+  #epicsAll: False
+  #full: False
+  #fullSum: False
   default: true
+  #image: False
+  #tiff: False
+  #centerpix: False
+  #postRuntable: False
+  #wait: False
+  #xtcav: False
+  #noarch: False
+  # Producer variables. These are substituted into the producer to run specific
+  # data reduction algorithms. Uncomment and modify as needed.
+  # If you prefer to modify the producer file directly, leave commented.
+  detnames: []
+  epicsPV: []
+  ttCalib: []
+  getROIs:
+    jungfrau1M:
+      ROIs: [[[1, 2], [157, 487], [294, 598]]]
+      writeArea: True
+      thresADU: None
+  getAzIntParams:
+    Rayonix:
+      eBeam: 18
+      center: [87526.79161840, 92773.3296889500]
+      dis_to_sam: 80.0
+      tx: 0
+      ty: 0
+  getAzIntPyFAIParams:
+    Rayonix:
+      pix_size: 176e-6
+      ai_kwargs:
+        dist: 1
+        poni1: 960 * 1.76e-4
+        poni2: 960 * 1.76e-4
+      npts: 512
+      int_units: "2th_deg"
+      return2d: False
+  getPhotonsParams:
+    jungfrau1M:
+      ADU_per_photon: 9.5
+      thresADU: 0.8
+  getDropletParams:
+    epix_1:
+      threshold: 5
+      thresholdLow: 5
+      thresADU: 60
+      useRms: True
+      nData: 1e5
+  getDroplet2Photons:
+    epix_alc1:
+      droplet:
+        threshold: 10
+        thresholdLow: 3
+        thresADU: 10
+        useRms: True
+      d2p:
+        aduspphot: 162
+        mask: np.load('path_to_mask.npy')
+        cputime: True
+      nData: 3e4
+  getSvdParams:
+    acq_0:
+      basis_file: None
+      n_pulse: 1
+      delay: None
+      return_reconstructed: True
+  getAutocorrParams:
+    epix_2:
+      mask: "/sdf/home/e/example/dataAna/mask_epix.npy"
+      thresAdu: [72.0, 1.0e6]
+      save_range: [70, 50]
+      save_lineout: True
+
+
 
 # FindOverlapXSS Configuration
 FindOverlapXSS:
@@ -39,4 +121,63 @@ TestBinary:
 TestSocket:
   array_size: 8000 # Size of arrays to send. 8000 floats ~ 6.4e4
   num_arrays: 10 # Number of arrays to send.
+
++FindPeaksPyAlgos:
++    outdir: ""
++    n_events: 100
++    det_name: "Rayonix"
++    event_receiver: "evr0"
++    tag: "red"
++    event_logic: false
++    psana_mask: false
++    mask_file: null
++    min_peaks: 10
++    max_peaks: 2048
++    npix_min: 2
++    npix_max: 30
++    amax_thr: 40
++    atot_thr: 180
++    son_min: 3.0
++    peak_rank: 3
++    r0: 3.0
++    dr: 2.0
++    nsigm: 10.0
++    compression:
++        compressor: "sz3"
++        abs_error: 10.0
++        bin_size: 2
++        roi_window_size: 9
+
+IndexCrystFEL:
+  #in_file: ""            # Location of a `.lst` file listing CXI files
+  #out_file: ""           # Where to write the output stream file
+  geometry: ""            # Location of a geometry file
+  indexing: "mosflm"      # Indexing methods
+  int_radius: "4,5,7"     # Integration radii
+  tolerance: "5,5,5,1.5"  # Tolerances
+  multi: True
+  profile: True
+  no_revalidate: True
+
+MergePartialator:
+  #in_file: ""
+  #out_file: ""
+  #model: "unity"
+  #niter: 1
+  symmetry: "mmm"
+
+CompareHKL:
+  #in_files: ""
+  #fom: "Rsplit"
+  #nshells: 10
+  #shell_file: ""
+  #cell_file: ""
+  symmetry: "mmm"
+
+#ManipulateHKL:
+  #output_format: "mtz"
+  #out_file: "..."
+
+DimpleSolve:
+  pdb: "/path/to/pdb"
 ...
