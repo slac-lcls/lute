@@ -1,7 +1,7 @@
 from typing import Dict
 
-from .io.config import *
 from .execution.executor import *
+from .io.config import *
 
 # Tests
 #######
@@ -35,3 +35,4 @@ DimpleSolver.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 PeakFinderPyAlgos: MPIExecutor = MPIExecutor("FindPeaksPyAlgos")
 SHELXCRunner: Executor = Executor("RunSHELXC")
 SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")

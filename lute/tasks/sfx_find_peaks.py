@@ -647,10 +647,13 @@ class FindPeaksPyAlgos(Task):
                         unbondnbrs=False,
                     ).astype(numpy.uint16)
 
+                hdffh: Any
                 if self._task_parameters.mask_file is not None:
-                    mask *= numpy.load(self._task_parameters.mask_file).astype(
-                        numpy.uint16
-                    )
+                    with h5py.File(self._task_parameters.mask_file, "r") as hdffh:
+                        loaded_mask: NDArray[numpy.int] = hdffh["entry_1/data_1/mask"][
+                            :
+                        ]
+                        mask *= loaded_mask.astype(numpy.uint16)
 
                 file_writer: CxiWriter = CxiWriter(
                     outdir=self._task_parameters.outdir,
