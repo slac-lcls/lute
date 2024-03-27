@@ -197,6 +197,7 @@ class PipeCommunicator(Communicator):
             else:
                 contents = f"{contents} ({signal})"
             signal = None
+
         return Message(contents=contents, signal=signal)
 
     def _safe_unpickle_decode(self, maybe_mixed: bytes) -> Optional[str]:
@@ -397,7 +398,14 @@ class SocketCommunicator(Communicator):
         try:
             socket_path = os.environ["LUTE_SOCKET"]
         except KeyError as err:
-            socket_path = "/tmp/.lock.sock"
+            import uuid
+            import tempfile
+
+            # Define a path,up and add to environment
+            # Executor-side always created first, Task will use the same one
+            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
+            os.environ["LUTE_SOCKET"] = socket_path
+            logger.debug(f"SocketCommunicator defines socket_path: {socket_path}")
 
         data_socket: socket.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 

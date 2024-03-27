@@ -35,6 +35,8 @@ class Test(Task):
             time.sleep(1)
             msg: Message = Message(contents=f"Test message {i}")
             self._report_to_executor(msg)
+        if self._task_parameters.throw_error:
+            raise RuntimeError("Testing Error!")
 
     def _post_run(self) -> None:
         self._result.summary = "Test Finished."

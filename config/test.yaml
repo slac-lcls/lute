@@ -113,9 +113,14 @@ Test:
   compound_var:
     int_var: 10
     dict_var: {"a": "b"}
+  throw_error: False # Set True to test Task failure
 
 TestBinary:
   executable: "/sdf/home/d/dorlhiac/test_tasks/test_threads"
+  p_arg1: 4 # Number of cores
+
+TestBinaryErr:
+  executable: "/sdf/home/d/dorlhiac/test_tasks/test_threads_err"
   p_arg1: 4 # Number of cores
 
 TestSocket:

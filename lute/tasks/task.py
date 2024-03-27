@@ -11,11 +11,10 @@ __author__ = "Gabriel Dorlhiac"
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Union, Type, TextIO, Optional
+from typing import Any, List, Dict, Union, Type, TextIO
 import os
 import warnings
 import signal
-import types
 
 from ..io.models.base import (
     TaskParameters,

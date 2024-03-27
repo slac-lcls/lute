@@ -7,9 +7,11 @@ from .io.config import *
 #######
 Tester: Executor = Executor("Test")
 BinaryTester: Executor = Executor("TestBinary")
+BinaryErrTester = Executor("TestBinaryErr")
 SocketTester: Executor = Executor("TestSocket")
 WriteTester: Executor = Executor("TestWriteOutput")
 ReadTester: Executor = Executor("TestReadOutput")
+
 
 # SmallData-related
 ###################
