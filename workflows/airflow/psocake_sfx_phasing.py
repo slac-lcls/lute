@@ -38,6 +38,11 @@ indexer: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=120, task_id="CrystFELIndexer", dag=dag
 )
 
+# Concatenate stream files from all previous runs with same tag
+stream_concatenator: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="StreamFileConcatenator", dag=dag
+)
+
 # Merge
 merger: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=120, task_id="PartialatorMerger", dag=dag
@@ -59,7 +64,7 @@ shelxc: JIDSlurmOperator = JIDSlurmOperator(
 )
 
 
-peak_finder >> indexer >> merger >> hkl_manipulator >> shelxc
+peak_finder >> indexer >> stream_concatenator >> merger >> hkl_manipulator >> shelxc
 merger >> hkl_comparer
 
 # Run summaries
