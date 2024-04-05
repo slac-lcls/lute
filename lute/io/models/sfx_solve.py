@@ -176,7 +176,7 @@ class DimpleSolveParameters(BaseBinaryParameters):
         rename_param="ItoF-prog",
     )
 
-    @validator("in_file")
+    @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             get_hkl_file: Optional[str] = read_latest_db_entry(
@@ -186,7 +186,7 @@ class DimpleSolveParameters(BaseBinaryParameters):
                 return get_hkl_file
         return in_file
 
-    @validator("out_dir")
+    @validator("out_dir", always=True)
     def validate_out_dir(cls, out_dir: str, values: Dict[str, Any]) -> str:
         if out_dir == "":
             get_hkl_file: Optional[str] = read_latest_db_entry(
@@ -220,7 +220,7 @@ class RunSHELXCParameters(BaseBinaryParameters):
         flag_type="",
     )
 
-    @validator("in_file")
+    @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             # get_hkl needed to be run to produce an XDS format file...

@@ -423,7 +423,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         description="Path to merged output stream file.",
     )
 
-    @validator("in_file")
+    @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             stream_file: Optional[str] = read_latest_db_entry(
@@ -434,7 +434,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 return stream_dir
         return in_file
 
-    @validator("tag")
+    @validator("tag", always=True)
     def validate_tag(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_file: Optional[str] = read_latest_db_entry(
@@ -445,7 +445,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 return stream_tag
         return tag
 
-    @validator("out_file")
+    @validator("out_file", always=True)
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_out_file: str = str(

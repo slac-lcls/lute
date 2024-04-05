@@ -290,7 +290,7 @@ class CompareHKLParameters(BaseBinaryParameters):
         flag_type="--",
     )
 
-    @validator("in_files")
+    @validator("in_files", always=True)
     def validate_in_files(cls, in_files: str, values: Dict[str, Any]) -> str:
         if in_files == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -301,7 +301,7 @@ class CompareHKLParameters(BaseBinaryParameters):
                 return hkls
         return in_files
 
-    @validator("cell_file")
+    @validator("cell_file", always=True)
     def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -> str:
         if cell_file == "":
             idx_cell_file: Optional[str] = read_latest_db_entry(
@@ -314,7 +314,7 @@ class CompareHKLParameters(BaseBinaryParameters):
                 return idx_cell_file
         return cell_file
 
-    @validator("symmetry")
+    @validator("symmetry", always=True)
     def validate_symmetry(cls, symmetry: str, values: Dict[str, Any]) -> str:
         if symmetry == "":
             partialator_sym: Optional[str] = read_latest_db_entry(
@@ -324,7 +324,7 @@ class CompareHKLParameters(BaseBinaryParameters):
                 return partialator_sym
         return symmetry
 
-    @validator("shell_file")
+    @validator("shell_file", always=True)
     def validate_shell_file(cls, shell_file: str, values: Dict[str, Any]) -> str:
         if shell_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -444,7 +444,7 @@ class ManipulateHKLParameters(BaseBinaryParameters):
         flag_type="--",
     )
 
-    @validator("in_file")
+    @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -454,7 +454,7 @@ class ManipulateHKLParameters(BaseBinaryParameters):
                 return partialator_file
         return in_file
 
-    @validator("out_file")
+    @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -466,7 +466,7 @@ class ManipulateHKLParameters(BaseBinaryParameters):
                 return mtz_out
         return out_file
 
-    @validator("cell_file")
+    @validator("cell_file", always=True)
     def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -> str:
         if cell_file == "":
             idx_cell_file: Optional[str] = read_latest_db_entry(
