@@ -48,7 +48,7 @@ class MergePartialatorParameters(BaseBinaryParameters):
         "", description="Path to input stream.", flag_type="-", rename_param="i"
     )
     out_file: str = Field(
-        "partialator.hkl",
+        "",
         description="Path to output file.",
         flag_type="-",
         rename_param="o",
@@ -184,6 +184,29 @@ class MergePartialatorParameters(BaseBinaryParameters):
         flag_type="--",
         rename_param="harvest-file",
     )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            stream_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}",
+                "ConcatenateStreamFiles",
+                "out_file",
+            )
+            if stream_file:
+                return stream_file
+        return in_file
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
+        if out_file == "":
+            in_file: str = values["in_file"]
+            if in_file:
+                tag: str = in_file.split(".")[0]
+                return f"{tag}.hkl"
+            else:
+                return "partialator.hkl"
+        return out_file
 
 
 class CompareHKLParameters(BaseBinaryParameters):
