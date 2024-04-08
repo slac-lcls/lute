@@ -391,6 +391,10 @@ class IndexCrystFELParameters(BaseBinaryParameters):
             filename: Optional[str] = read_latest_db_entry(
                 f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "out_file"
             )
+            if filename is None:
+                filename = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "out_file"
+                )
             if filename is not None:
                 return filename
         return in_file
