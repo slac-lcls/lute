@@ -113,7 +113,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         rename_param="o",
     )
 
-    @validator("out_file")
+    @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             fname: Path = (
@@ -268,13 +268,13 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
         description="Configuration parameters for SZ Compression", flag_type=""
     )
 
-    @validator("e")
+    @validator("e", always=True)
     def validate_e(cls, e: str, values: Dict[str, Any]) -> str:
         if e == "":
             return values["lute_config"].experiment
         return e
 
-    @validator("r")
+    @validator("r", always=True)
     def validate_r(cls, r: int, values: Dict[str, Any]) -> int:
         if r == -1:
             return values["lute_config"].run
