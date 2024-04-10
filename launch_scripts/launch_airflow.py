@@ -87,7 +87,7 @@ if __name__ == "__main__":
         "dag_run_id": str(uuid.uuid4()),
         "conf": {
             "experiment": os.environ.get("EXPERIMENT"),
-            "run_id": f"{os.environ.get('RUN_NUM')}{datetime.datetime.utcnow().isoformat()}",
+            "run_id": f"{os.environ.get('RUN_NUM')}_{datetime.datetime.utcnow().isoformat()}",
             "JID_UPDATE_COUNTERS": os.environ.get("JID_UPDATE_COUNTERS"),
             "ARP_ROOT_JOB_ID": os.environ.get("ARP_JOB_ID"),
             "ARP_LOCATION": os.environ.get("ARP_LOCATION", "S3DF"),
