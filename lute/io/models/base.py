@@ -47,7 +47,7 @@ class AnalysisHeader(BaseModel):
         "LUTE Task Configuration",
         description="Description of the configuration or experiment.",
     )
-    experiment: str = Field("EXPX00000", description="Experiment.")
+    experiment: str = Field("", description="Experiment.")
     run: Union[str, int] = Field("", description="Data acquisition run.")
     date: str = Field("1970/01/01", description="Start date of analysis.")
     lute_version: Union[float, str] = Field(
@@ -81,6 +81,13 @@ class AnalysisHeader(BaseModel):
             if run_time != "":
                 return int(run_time.split("_")[0])
         return run
+
+    @validator("experiment", always=True)
+    def validate_experiment(cls, experiment: str, values: Dict[str, Any]) -> str:
+        if experiment == "":
+            arp_exp: str = os.environ.get("EXPERIMENT", "EXPX00000")
+            return arp_exp
+        return experiment
 
 
 class TaskParameters(BaseSettings):
