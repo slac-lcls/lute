@@ -305,7 +305,10 @@ class ThirdPartyTask(Task):
                     self._args_list.append(f"{constructed_flag}")
             else:
                 warnings.warn(
-                    "Model parameters should be defined using Field(...,flag_type='') in the future.",
+                    (
+                        f"Model parameters should be defined using Field(...,flag_type='')"
+                        f" in the future.  Parameter: {param}"
+                    ),
                     category=PendingDeprecationWarning,
                 )
                 if len(param) == 1:  # Single-dash flags
