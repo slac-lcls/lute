@@ -399,7 +399,7 @@ class IndexCrystFELParameters(BaseBinaryParameters):
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             expmt: str = values["lute_config"].experiment
-            run: int = values["lute_config"].run
+            run: int = int(values["lute_config"].run)
             work_dir: str = values["lute_config"].work_dir
             fname: str = f"{expmt}_r{run:04d}.stream"
             return f"{work_dir}/{fname}"
