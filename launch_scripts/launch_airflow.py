@@ -30,7 +30,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 def _retrieve_pw(instance: str = "prod") -> str:
     path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}.txt"
     if instance == "prod" or instance == "test":
-        path = path.format(instance)
+        path = path.format(instance=instance)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
 
