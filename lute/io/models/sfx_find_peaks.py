@@ -291,7 +291,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     @validator("sz_parameters", always=True)
     def set_sz_compression_parameters(
         cls, sz_parameters: SZParameters, values: Dict[str, Any]
-    ) -> SZParameters:
+    ) -> None:
         values["compressor"] = sz_parameters.compressor
         values["binSize"] = sz_parameters.binSize
         values["roiWindowSize"] = sz_parameters.roiWindowSize
