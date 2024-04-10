@@ -391,7 +391,21 @@ class IndexCrystFELParameters(BaseBinaryParameters):
             filename: Optional[str] = read_latest_db_entry(
                 f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "out_file"
             )
-            if filename is not None:
+            if filename is None:
+                exp: str = values["lute_config"].experiment
+                run: int = int(values["lute_config"].run)
+                tag: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "tag"
+                )
+                out_dir: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "outDir"
+                )
+                if out_dir is not None:
+                    fname: str = f"{out_dir}/{exp}_{run:04d}"
+                    if tag is not None:
+                        fname = f"{fname}_{tag}"
+                    return f"{fname}.lst"
+            else:
                 return filename
         return in_file
 
