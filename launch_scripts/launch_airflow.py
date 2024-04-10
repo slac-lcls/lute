@@ -30,7 +30,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 def _retrieve_pw(instance: str = "prod") -> str:
     path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}.txt"
     if instance == "prod" or instance == "test":
-        path = path.format(instance)
+        path = path.format(instance=instance)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
 
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         "dag_run_id": str(uuid.uuid4()),
         "conf": {
             "experiment": os.environ.get("EXPERIMENT"),
-            "run_id": f"{os.environ.get('RUN_NUM')}{datetime.datetime.utcnow().isoformat()}",
+            "run_id": f"{os.environ.get('RUN_NUM')}_{datetime.datetime.utcnow().isoformat()}",
             "JID_UPDATE_COUNTERS": os.environ.get("JID_UPDATE_COUNTERS"),
             "ARP_ROOT_JOB_ID": os.environ.get("ARP_JOB_ID"),
             "ARP_LOCATION": os.environ.get("ARP_LOCATION", "S3DF"),
