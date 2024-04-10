@@ -241,7 +241,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     instrument: Union[None, str] = Field(
         None, description="Instrument name", flag_type="--"
     )
-    pixelSize: float = Field(0.0, description="Pixel size", lag_type="--")
+    pixelSize: float = Field(0.0, description="Pixel size", flag_type="--")
     auto: str = Field(
         "False",
         description=(
