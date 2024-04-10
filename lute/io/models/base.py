@@ -48,9 +48,7 @@ class AnalysisHeader(BaseModel):
         description="Description of the configuration or experiment.",
     )
     experiment: str = Field("EXPX00000", description="Experiment.")
-    run: Union[str, int] = Field(
-        os.environ.get("RUN", ""), description="Data acquisition run."
-    )
+    run: Union[str, int] = Field("", description="Data acquisition run.")
     date: str = Field("1970/01/01", description="Start date of analysis.")
     lute_version: Union[float, str] = Field(
         0.1, description="Version of LUTE used for analysis."
@@ -72,6 +70,17 @@ class AnalysisHeader(BaseModel):
                 f"{values['experiment']}/scratch"
             )
         return work_dir
+
+    @validator("run", always=True)
+    def validate_run(
+        cls, run: Union[str, int], values: Dict[str, Any]
+    ) -> Union[str, int]:
+        if run == "":
+            # From Airflow RUN_NUM should have Format "RUN_DATETIME" - Num is first part
+            run_time: str = os.environ.get("RUN_NUM", "")
+            if run_time != "":
+                return int(run_time.split("_")[0])
+        return run
 
 
 class TaskParameters(BaseSettings):
