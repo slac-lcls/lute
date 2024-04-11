@@ -26,6 +26,7 @@ Exceptions
 __all__ = ["BaseExecutor", "Executor", "MPIExecutor"]
 __author__ = "Gabriel Dorlhiac"
 
+import sys
 import _io
 import logging
 import subprocess
@@ -315,6 +316,10 @@ class BaseExecutor(ABC):
         for comm in self._communicators:
             comm.clear_communicator()
 
+        if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
+            logger.info("Exiting after Task failure. Result recorded.")
+            sys.exit(-1)
+
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
         record_analysis_db(copy.deepcopy(self._analysis_desc))
@@ -519,3 +524,7 @@ class MPIExecutor(Executor):
         self._store_configuration()
         for comm in self._communicators:
             comm.clear_communicator()
+
+        if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
+            logger.info("Exiting after Task failure. Result recorded.")
+            sys.exit(-1)
