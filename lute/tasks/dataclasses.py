@@ -83,7 +83,7 @@ class TaskResult:
 @dataclass
 class DescribedAnalysis:
     task_result: TaskResult
-    task_parameters: TaskParameters
+    task_parameters: Optional[TaskParameters]
     task_env: Dict[str, str]
     poll_interval: float
     communicator_desc: List[str]

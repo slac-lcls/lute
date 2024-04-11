@@ -128,7 +128,7 @@ class BaseExecutor(ABC):
         result: TaskResult = TaskResult(
             task_name=task_name, task_status=TaskStatus.PENDING, summary="", payload=""
         )
-        task_parameters: TaskParameters = TaskParameters()
+        task_parameters: Optional[TaskParameters] = None
         task_env: Dict[str, str] = os.environ.copy()
         self._communicators: List[Communicator] = communicators
         communicator_desc: List[str] = []

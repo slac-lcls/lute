@@ -219,7 +219,16 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         _add_task_entry,
     )
 
-    work_dir: str = cfg.task_parameters.lute_config.work_dir
+    try:
+        work_dir: str = cfg.task_parameters.lute_config.work_dir
+    except AttributeError:
+        logger.info(
+            (
+                "Unable to access TaskParameters object. Likely wasn't created. "
+                "Cannot store result."
+            )
+        )
+        return
     del cfg.task_parameters.lute_config.work_dir
 
     exec_entry, exec_columns = _cfg_to_exec_entry_cols(cfg)

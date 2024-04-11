@@ -69,6 +69,12 @@ class AnalysisHeader(BaseModel):
                 f"/sdf/data/lcls/ds/{values['experiment'][:3]}/"
                 f"{values['experiment']}/scratch"
             )
+        # Check existence and permissions
+        if not os.path.exists(work_dir):
+            raise ValueError(f"Working Directory: {work_dir} does not exist!")
+        if not os.access(work_dir, os.W_OK):
+            # Need write access for database, files etc.
+            raise ValueError(f"Not write access for working directory: {work_dir}!")
         return work_dir
 
     @validator("run", always=True)
@@ -111,7 +117,7 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
-    lute_config: AnalysisHeader = AnalysisHeader()
+    lute_config: AnalysisHeader
 
 
 @dataclass
