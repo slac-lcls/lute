@@ -22,7 +22,7 @@ __author__ = "Gabriel Dorlhiac"
 import logging
 from typing import List, Dict, Dict, Any, Tuple, Optional
 
-from .models.base import TaskParameters
+from .models.base import TaskParameters, TemplateParameters
 from ..tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
 
 if __debug__:
@@ -188,13 +188,16 @@ def _dict_to_flatdicts(
             flat_key = key
         else:
             flat_key = f"{curr_key}.{key}"
-        if isinstance(value, dict):
-            x, y = _dict_to_flatdicts(value, curr_key=flat_key)
+        corrected_value: Any = value
+        if isinstance(corrected_value, TemplateParameters):
+            corrected_value = value.params
+        if isinstance(corrected_value, dict):
+            x, y = _dict_to_flatdicts(corrected_value, curr_key=flat_key)
             param_list.extend(x.items())
             type_list.extend(y.items())
         else:
-            param_list.append((flat_key, value))
-            type_list.append((flat_key, _check_type(value)))
+            param_list.append((flat_key, corrected_value))
+            type_list.append((flat_key, _check_type(corrected_value)))
 
     return dict(param_list), dict(type_list)
 
