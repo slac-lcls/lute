@@ -241,7 +241,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     instrument: Union[None, str] = Field(
         None, description="Instrument name", flag_type="--"
     )
-    pixelSize: float = Field(0.0, description="Pixel size", lag_type="--")
+    pixelSize: float = Field(0.0, description="Pixel size", flag_type="--")
     auto: str = Field(
         "False",
         description=(
@@ -251,10 +251,10 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
         flag_type="--",
     )
     detectorDistance: float = Field(
-        0.0, description="Detector distance from interaction point in m"
+        0.0, description="Detector distance from interaction point in m", flag_type="--"
     )
     access: Literal["ana", "ffb"] = Field(
-        "ana", description="Data node type: {ana,ffb}"
+        "ana", description="Data node type: {ana,ffb}", flag_type="--"
     )
     szfile: str = Field("qoz.json", description="Path to SZ's JSON configuration file")
     lute_template_cfg: TemplateConfig = Field(
@@ -291,7 +291,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     @validator("sz_parameters", always=True)
     def set_sz_compression_parameters(
         cls, sz_parameters: SZParameters, values: Dict[str, Any]
-    ) -> SZParameters:
+    ) -> None:
         values["compressor"] = sz_parameters.compressor
         values["binSize"] = sz_parameters.binSize
         values["roiWindowSize"] = sz_parameters.roiWindowSize

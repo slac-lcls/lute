@@ -157,7 +157,8 @@ def _make_task_table(
         current_cols: Dict[str, str] = _get_table_cols(con, task_name)
         if diff := _compare_cols(current_cols, columns):
             for col in diff.items():
-                sql: str = f"ALTER TABLE {task_name} ADD COLUMN {col[0]} {col[1]}"
+                sql: str = f'ALTER TABLE {task_name} ADD COLUMN "{col[0]}" {col[1]}'
+                logger.debug(f"_make_task_table[ALTER]: {sql}")
                 with con:
                     con.execute(sql)
 
@@ -172,6 +173,7 @@ def _make_task_table(
         "valid_flag INTEGER)"
     )
     sql: str = f"CREATE TABLE IF NOT EXISTS {db_str}"
+    logger.debug(f"_make_task_table[CREATE]: {sql}")
     with con:
         con.execute(sql)
     return _does_table_exist(con, task_name)
@@ -214,14 +216,15 @@ def _add_task_entry(
         entry (Dict[str, Any]): A dictionary of entries in the format of
             {COLUMN: ENTRY}. These are assumed to match the columns of the table.
     """
-    placeholder_str: str = ", ".join("?" for x in range(len(entry)))
+    placeholder_str: str = ", ".join("?" for _ in range(len(entry)))
     keys: List[str] = []
     values: List[str] = []
     for key, value in entry.items():
         keys.append(f'"{key}"')
         values.append(value)
     with con:
-        ins_str: str = "".join(f':"{x}", ' for x in entry.keys())[:-2]
+        # ins_str: str = "".join(f':"{x}", ' for x in entry.keys())[:-2]
+        logger.debug(f"_add_task_entry: {keys}\n\t\t{values}")
         res = con.execute(
             f"INSERT INTO {task_name} ({','.join(keys)}) VALUES ({placeholder_str})",
             values,

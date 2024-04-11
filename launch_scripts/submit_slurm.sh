@@ -20,6 +20,7 @@ EOF
 }
 
 POSITIONAL=()
+
 while [[ $# -gt 0 ]]
 do
     flag="$1"
@@ -67,7 +68,7 @@ RUN="${RUN_TIME_ARR[0]}"
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"
 SLURM_ARGS+=" --output=${LOG_FILE}.out"
-SLURM_ARGS+=" --error=${LOG_FILE}.err"
+SLURM_ARGS+=" --error=${LOG_FILE}.out"
 
 export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
 

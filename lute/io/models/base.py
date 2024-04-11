@@ -47,10 +47,8 @@ class AnalysisHeader(BaseModel):
         "LUTE Task Configuration",
         description="Description of the configuration or experiment.",
     )
-    experiment: str = Field("EXPX00000", description="Experiment.")
-    run: Union[str, int] = Field(
-        os.environ.get("RUN", ""), description="Data acquisition run."
-    )
+    experiment: str = Field("", description="Experiment.")
+    run: Union[str, int] = Field("", description="Data acquisition run.")
     date: str = Field("1970/01/01", description="Start date of analysis.")
     lute_version: Union[float, str] = Field(
         0.1, description="Version of LUTE used for analysis."
@@ -71,7 +69,31 @@ class AnalysisHeader(BaseModel):
                 f"/sdf/data/lcls/ds/{values['experiment'][:3]}/"
                 f"{values['experiment']}/scratch"
             )
+        # Check existence and permissions
+        if not os.path.exists(work_dir):
+            raise ValueError(f"Working Directory: {work_dir} does not exist!")
+        if not os.access(work_dir, os.W_OK):
+            # Need write access for database, files etc.
+            raise ValueError(f"Not write access for working directory: {work_dir}!")
         return work_dir
+
+    @validator("run", always=True)
+    def validate_run(
+        cls, run: Union[str, int], values: Dict[str, Any]
+    ) -> Union[str, int]:
+        if run == "":
+            # From Airflow RUN_NUM should have Format "RUN_DATETIME" - Num is first part
+            run_time: str = os.environ.get("RUN_NUM", "")
+            if run_time != "":
+                return int(run_time.split("_")[0])
+        return run
+
+    @validator("experiment", always=True)
+    def validate_experiment(cls, experiment: str, values: Dict[str, Any]) -> str:
+        if experiment == "":
+            arp_exp: str = os.environ.get("EXPERIMENT", "EXPX00000")
+            return arp_exp
+        return experiment
 
 
 class TaskParameters(BaseSettings):
@@ -95,7 +117,7 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
-    lute_config: AnalysisHeader = AnalysisHeader()
+    lute_config: AnalysisHeader
 
 
 @dataclass
