@@ -14,6 +14,7 @@ Classes:
 __all__ = ["JIDSlurmOperator", "RequestOnlyOperator"]
 __author__ = "Fred Poitevin, Murali Shankar"
 
+import sys
 import uuid
 import getpass
 import time
@@ -329,6 +330,14 @@ class JIDSlurmOperator(BaseOperator):
         # Logs out to xcom
         out = self.rpc("job_log_file", jobs[0], context)
         context["task_instance"].xcom_push(key="log", value=out)
+        failure_messages: List[str] = [
+            "INFO:lute.execution.executor:Task failed with return code:",
+            "INFO:lute.execution.executor:Exiting after Task failure.",
+        ]
+        for msg in failure_messages:
+            if msg in out:
+                logger.info("Logs indicate `Task` failed.")
+                sys.exit(-1)
 
 
 class JIDPlugins(AirflowPlugin):
