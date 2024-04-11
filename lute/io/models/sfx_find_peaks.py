@@ -251,10 +251,10 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
         flag_type="--",
     )
     detectorDistance: float = Field(
-        0.0, description="Detector distance from interaction point in m"
+        0.0, description="Detector distance from interaction point in m", flag_type="--"
     )
     access: Literal["ana", "ffb"] = Field(
-        "ana", description="Data node type: {ana,ffb}"
+        "ana", description="Data node type: {ana,ffb}", flag_type="--"
     )
     szfile: str = Field("qoz.json", description="Path to SZ's JSON configuration file")
     lute_template_cfg: TemplateConfig = Field(
