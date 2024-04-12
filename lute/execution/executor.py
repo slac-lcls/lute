@@ -44,6 +44,7 @@ from ..tasks.task import *
 from ..tasks.dataclasses import *
 from ..io.models.base import TaskParameters
 from ..io.db import record_analysis_db
+from ..io.elog import post_elog_run_status
 
 if __debug__:
     warnings.simplefilter("default")
@@ -308,6 +309,7 @@ class BaseExecutor(ABC):
         if ret := proc.returncode:
             logger.info(f"Task failed with return code: {ret}")
             self._analysis_desc.task_result.task_status = TaskStatus.FAILED
+            self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
@@ -406,22 +408,42 @@ class Executor(BaseExecutor):
                 f"Executor: {self._analysis_desc.task_result.task_name} started"
             )
             self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "RUNNING",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message): ...
+        def task_failed(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "FAILED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message): ...
+        def task_stopped(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message): ...
+        def task_done(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message): ...
+        def task_cancelled(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_cancelled", task_cancelled)
 
@@ -430,6 +452,10 @@ class Executor(BaseExecutor):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
                 logger.info(self._analysis_desc.task_result.task_status)
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_result", task_result)
 

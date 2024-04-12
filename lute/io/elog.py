@@ -153,7 +153,7 @@ def post_elog_workflow(
 def get_elog_active_expmt(hutch: str, *, endstation: int = 0) -> str:
     """Get the current active experiment for a hutch.
 
-    This function is the only function to manage the HTTP request independently.
+    This function is one of two functions to manage the HTTP request independently.
     This is because it does not require an authorization object, and its result
     is needed for the generic function `elog_http_request` to work properly.
 
@@ -329,7 +329,7 @@ def post_elog_run_status(
     """Post a summary to the status/report section of a specific run.
 
     In contrast to most eLog update/post mechanisms, this function searches
-    for a specific environment variable which contains a temporary URL for
+    for a specific environment variable which contains a specific URL for
     posting. This is updated every job/run as jobs are submitted by the JID.
     The URL can optionally be passed to this function if it is known.
 
@@ -352,10 +352,7 @@ def post_elog_run_status(
             return
 
     params: Dict[str, List[Dict[str, str]]] = {"json": post_list}
-    if update_url:
-        status_code, resp_msg, _ = elog_http_request(
-            url=update_url, request_type="POST", **params
-        )
+    requests.post(update_url, **params)
 
 
 def post_elog_message(
