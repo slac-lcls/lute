@@ -6,7 +6,8 @@ Classes:
     TaskStatus: Enumeration of possible Task statuses (running, pending, failed,
         etc.).
 
-    BinaryTask: Class to run a third-party executable binary as a `Task`.
+    DescribedAnalysis: Executor's description of a `Task` run (results,
+        parameters, env).
 """
 
 __all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis"]
@@ -82,7 +83,7 @@ class TaskResult:
 @dataclass
 class DescribedAnalysis:
     task_result: TaskResult
-    task_parameters: TaskParameters
+    task_parameters: Optional[TaskParameters]
     task_env: Dict[str, str]
     poll_interval: float
     communicator_desc: List[str]

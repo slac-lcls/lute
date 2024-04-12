@@ -174,7 +174,7 @@ class PipeCommunicator(Communicator):
             if self._use_pickle:
                 try:
                     contents = pickle.loads(raw_contents)
-                except pickle.UnpicklingError as err:
+                except (pickle.UnpicklingError, ValueError, EOFError) as err:
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
                     self._use_pickle = False
                     contents = self._safe_unpickle_decode(raw_contents)
@@ -183,7 +183,7 @@ class PipeCommunicator(Communicator):
                     contents = raw_contents.decode()
                 except UnicodeDecodeError as err:
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
-                    #                    self._use_pickle = True
+                    self._use_pickle = True
                     contents = self._safe_unpickle_decode(raw_contents)
         else:
             contents = None
@@ -197,6 +197,7 @@ class PipeCommunicator(Communicator):
             else:
                 contents = f"{contents} ({signal})"
             signal = None
+
         return Message(contents=contents, signal=signal)
 
     def _safe_unpickle_decode(self, maybe_mixed: bytes) -> Optional[str]:
@@ -237,9 +238,18 @@ class PipeCommunicator(Communicator):
             repickled: bytes = pickle.dumps(contents)
             if len(repickled) < len(maybe_mixed):
                 # Successful unpickling, but pickle stops even if there are more bytes
-                additional_data: str = maybe_mixed[len(repickled) :].decode()
-                contents = f"{contents}{additional_data}"
-        except pickle.UnpicklingError as err:
+                try:
+                    additional_data: str = maybe_mixed[len(repickled) :].decode()
+                    contents = f"{contents}{additional_data}"
+                except UnicodeDecodeError:
+                    # Can't decode the bytes left by pickle, so they are lost
+                    missing_bytes: int = len(maybe_mixed) - len(repickled)
+                    logger.debug(
+                        f"PipeCommunicator has truncated message. Unable to retrieve {missing_bytes} bytes."
+                    )
+        except (pickle.UnpicklingError, ValueError, EOFError) as err:
+            # Pickle may also throw a ValueError, e.g. this bytes: b"Found! \n"
+            # Pickle may also throw an EOFError, eg. this bytes: b"F0\n"
             try:
                 contents = maybe_mixed.decode()
             except UnicodeDecodeError as err2:
@@ -251,11 +261,6 @@ class PipeCommunicator(Communicator):
                         f"PipeCommunicator unable to decode/parse data! {err3}"
                     )
                     contents = None
-        except UnicodeDecodeError as err3:
-            missing_bytes: int = len(maybe_mixed) - len(repickled)
-            logger.debug(
-                f"PipeCommunicator has truncated message. Unable to retrieve {missing_bytes} bytes."
-            )
         return contents
 
     def write(self, msg: Message) -> None:
@@ -397,7 +402,14 @@ class SocketCommunicator(Communicator):
         try:
             socket_path = os.environ["LUTE_SOCKET"]
         except KeyError as err:
-            socket_path = "/tmp/.lock.sock"
+            import uuid
+            import tempfile
+
+            # Define a path,up and add to environment
+            # Executor-side always created first, Task will use the same one
+            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
+            os.environ["LUTE_SOCKET"] = socket_path
+            logger.debug(f"SocketCommunicator defines socket_path: {socket_path}")
 
         data_socket: socket.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 

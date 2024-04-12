@@ -144,18 +144,18 @@ class SubmitSMDParameters(BaseBinaryParameters):
             lute_template_cfg.output_path = values["producer"]
         return lute_template_cfg
 
-    # detnames: ThirdPartyParameters = ThirdPartyParameters({})
-    # epicsPV: ThirdPartyParameters = ThirdPartyParameters({})
-    # ttCalib: ThirdPartyParameters = ThirdPartyParameters({})
-    # aioParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getROIs: ThirdPartyParameters = ThirdPartyParameters({})
-    # getAzIntParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getAzIntPyFAIParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getPhotonsParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getDropletParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getDroplet2Photons: ThirdPartyParameters = ThirdPartyParameters({})
-    # getSvdParams: ThirdPartyParameters = ThirdPartyParameters({})
-    # getAutocorrParams: ThirdPartyParameters = ThirdPartyParameters({})
+    # detnames: TemplateParameters = TemplateParameters({})
+    # epicsPV: TemplateParameters = TemplateParameters({})
+    # ttCalib: TemplateParameters = TemplateParameters({})
+    # aioParams: TemplateParameters = TemplateParameters({})
+    # getROIs: TemplateParameters = TemplateParameters({})
+    # getAzIntParams: TemplateParameters = TemplateParameters({})
+    # getAzIntPyFAIParams: TemplateParameters = TemplateParameters({})
+    # getPhotonsParams: TemplateParameters = TemplateParameters({})
+    # getDropletParams: TemplateParameters = TemplateParameters({})
+    # getDroplet2Photons: TemplateParameters = TemplateParameters({})
+    # getSvdParams: TemplateParameters = TemplateParameters({})
+    # getAutocorrParams: TemplateParameters = TemplateParameters({})
 
 
 class FindOverlapXSSParameters(TaskParameters):

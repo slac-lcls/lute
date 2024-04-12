@@ -5,24 +5,25 @@ Classes:
         CrystFEL's `indexamajig`.
 """
 
-__all__ = ["IndexCrystFELParameters"]
+__all__ = ["IndexCrystFELParameters", "ConcatenateStreamFilesParameters"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 from pydantic import (
     AnyUrl,
-    PositiveInt,
-    PositiveFloat,
-    NonNegativeInt,
     Field,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
     conint,
     validator,
 )
 
-from .base import BaseBinaryParameters
 from ..db import read_latest_db_entry
+from .base import BaseBinaryParameters, TaskParameters
 
 
 class IndexCrystFELParameters(BaseBinaryParameters):
@@ -47,7 +48,7 @@ class IndexCrystFELParameters(BaseBinaryParameters):
         "", description="Path to input file.", flag_type="-", rename_param="i"
     )
     out_file: str = Field(
-        description="Path to output file.", flag_type="-", rename_param="o"
+        "", description="Path to output file.", flag_type="-", rename_param="o"
     )
     geometry: str = Field(
         "", description="Path to geometry file.", flag_type="-", rename_param="g"
@@ -390,6 +391,79 @@ class IndexCrystFELParameters(BaseBinaryParameters):
             filename: Optional[str] = read_latest_db_entry(
                 f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "out_file"
             )
-            if filename is not None:
+            if filename is None:
+                exp: str = values["lute_config"].experiment
+                run: int = int(values["lute_config"].run)
+                tag: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "tag"
+                )
+                out_dir: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "outDir"
+                )
+                if out_dir is not None:
+                    fname: str = f"{out_dir}/{exp}_{run:04d}"
+                    if tag is not None:
+                        fname = f"{fname}_{tag}"
+                    return f"{fname}.lst"
+            else:
                 return filename
         return in_file
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
+        if out_file == "":
+            expmt: str = values["lute_config"].experiment
+            run: int = int(values["lute_config"].run)
+            work_dir: str = values["lute_config"].work_dir
+            fname: str = f"{expmt}_r{run:04d}.stream"
+            return f"{work_dir}/{fname}"
+        return out_file
+
+
+class ConcatenateStreamFilesParameters(TaskParameters):
+
+    in_file: str = Field(
+        "",
+        description="Root of directory tree storing stream files to merge.",
+    )
+
+    tag: Optional[str] = Field(
+        "",
+        description="Tag identifying the stream files to merge.",
+    )
+
+    out_file: str = Field(
+        "",
+        description="Path to merged output stream file.",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            stream_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "IndexCrystFEL", "out_file"
+            )
+            if stream_file:
+                stream_dir: str = str(Path(stream_file).parent)
+                return stream_dir
+        return in_file
+
+    @validator("tag", always=True)
+    def validate_tag(cls, tag: str, values: Dict[str, Any]) -> str:
+        if tag == "":
+            stream_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "IndexCrystFEL", "out_file"
+            )
+            if stream_file:
+                stream_tag: str = Path(stream_file).name.split("_")[0]
+                return stream_tag
+        return tag
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
+        if tag == "":
+            stream_out_file: str = str(
+                Path(values["in_file"]).parent / f"{values['tag'].stream}"
+            )
+            return stream_out_file
+        return tag

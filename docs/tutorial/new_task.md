@@ -21,9 +21,9 @@ A brief overview of parameters objects will be provided below. The following inf
 
 **`Task`s and `TaskParameter`s**
 
-All `Task`s have a corresponding `TaskParameters` object. These objects are linked **exclusively** by a named relationship. For a `Task` named `MyBinaryTask`, the parameters object **must** be named `MyBinaryTaskParameters`. For third-party `Task`s there are a number of additional requirements:
+All `Task`s have a corresponding `TaskParameters` object. These objects are linked **exclusively** by a named relationship. For a `Task` named `MyThirdPartyTask`, the parameters object **must** be named `MyThirdPartyTaskParameters`. For third-party `Task`s there are a number of additional requirements:
 - The model must inherit from a base class called `BaseBinaryParameters`.
-- The model must have one field specified called `executable`. The presence of this field indicates that the `Task` is a third-party `Task` and the specified executable must be called. This allows all third-party `Task`s to be defined exclusively by their parameters model. A single `BinaryTask` class handles execution of **all** third-party `Task`s.
+- The model must have one field specified called `executable`. The presence of this field indicates that the `Task` is a third-party `Task` and the specified executable must be called. This allows all third-party `Task`s to be defined exclusively by their parameters model. A single `ThirdPartyTask` class handles execution of **all** third-party `Task`s.
 
 All models are stored in `lute/io/models`. For any given `Task`, a new model can be added to an existing module contained in this directory or to a new module. If creating a new module, make sure to add an import statement to `lute.io.models.__init__`.
 
@@ -294,10 +294,10 @@ Task2Runner.shell_source("/sdf/group/lcls/ds/tools/new_task_setup.sh") # Will so
 Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the `Task`'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the `Task` implementer refer to the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/) for more information.
 
 LUTE provides two additional base models which are used for template parsing in conjunction with the primary `Task` model. These are:
-- `ThirdPartyParameters` objects which hold parameters which will be used to render a portion of a template.
+- `TemplateParameters` objects which hold parameters which will be used to render a portion of a template.
 - `TemplateConfig` objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.
 
-`Task` models which inherit from the `BaseBinaryParameters` model, as all third-party `Task`s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as `ThirdPartyParameters` objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the **only** requirement on the Python-side when adding template rendering functionality to the `Task` is the addition of one parameter - an instance of `TemplateConfig`. The instance **MUST** be called `lute_template_cfg`.
+`Task` models which inherit from the `BaseBinaryParameters` model, as all third-party `Task`s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as `TemplateParameters` objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the **only** requirement on the Python-side when adding template rendering functionality to the `Task` is the addition of one parameter - an instance of `TemplateConfig`. The instance **MUST** be called `lute_template_cfg`.
 
 ```py
 from pydantic import Field, validator
@@ -381,7 +381,7 @@ We save this file as `jsonuser.json` in `config/templates`. Next, we will update
 
 from pydantic import Field, validator
 
-from .base import TemplateConfig #, ThirdPartyParameters
+from .base import TemplateConfig #, TemplateParameters
 
 class RunJsonUserParameters:
     executable: str = Field(
@@ -399,12 +399,12 @@ class RunJsonUserParameters:
         ),
         description="Template rendering configuration",
     )
-    # We do not need to include these ThirdPartyParameters, they will be added
+    # We do not need to include these TemplateParameters, they will be added
     # automatically if provided in the YAML
-    #str_var: Optional[ThirdPartyParameters]
-    #int_var: Optional[ThirdPartyParameters]
-    #p3_b: Optional[ThirdPartyParameters]
-    #val: Optional[ThirdPartyParameters]
+    #str_var: Optional[TemplateParameters]
+    #int_var: Optional[TemplateParameters]
+    #p3_b: Optional[TemplateParameters]
+    #val: Optional[TemplateParameters]
 
 
     # Tell LUTE to write the rendered template to the location provided with
@@ -429,7 +429,7 @@ RunJsonUser:
     val: 2 # Will substitute for "param4": [2, 2, 3] in the JSON
 ```
 
-If on the other hand, a user were to have an already valid JSON file, it is possible to turn off the template rendering. (ALL) Template variables (`ThirdPartyParameters`) are simply excluded from the configuration YAML.
+If on the other hand, a user were to have an already valid JSON file, it is possible to turn off the template rendering. (ALL) Template variables (`TemplateParameters`) are simply excluded from the configuration YAML.
 
 ```yaml
 RunJsonUser:

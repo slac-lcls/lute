@@ -113,7 +113,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         rename_param="o",
     )
 
-    @validator("out_file")
+    @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             fname: Path = (
@@ -241,7 +241,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     instrument: Union[None, str] = Field(
         None, description="Instrument name", flag_type="--"
     )
-    pixelSize: float = Field(0.0, description="Pixel size", lag_type="--")
+    pixelSize: float = Field(0.0, description="Pixel size", flag_type="--")
     auto: str = Field(
         "False",
         description=(
@@ -251,10 +251,10 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
         flag_type="--",
     )
     detectorDistance: float = Field(
-        0.0, description="Detector distance from interaction point in m"
+        0.0, description="Detector distance from interaction point in m", flag_type="--"
     )
     access: Literal["ana", "ffb"] = Field(
-        "ana", description="Data node type: {ana,ffb}"
+        "ana", description="Data node type: {ana,ffb}", flag_type="--"
     )
     szfile: str = Field("qoz.json", description="Path to SZ's JSON configuration file")
     lute_template_cfg: TemplateConfig = Field(
@@ -268,13 +268,13 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
         description="Configuration parameters for SZ Compression", flag_type=""
     )
 
-    @validator("e")
+    @validator("e", always=True)
     def validate_e(cls, e: str, values: Dict[str, Any]) -> str:
         if e == "":
             return values["lute_config"].experiment
         return e
 
-    @validator("r")
+    @validator("r", always=True)
     def validate_r(cls, r: int, values: Dict[str, Any]) -> int:
         if r == -1:
             return values["lute_config"].run
@@ -291,7 +291,7 @@ class FindPeaksPsocakeParameters(BaseBinaryParameters):
     @validator("sz_parameters", always=True)
     def set_sz_compression_parameters(
         cls, sz_parameters: SZParameters, values: Dict[str, Any]
-    ) -> SZParameters:
+    ) -> None:
         values["compressor"] = sz_parameters.compressor
         values["binSize"] = sz_parameters.binSize
         values["roiWindowSize"] = sz_parameters.roiWindowSize

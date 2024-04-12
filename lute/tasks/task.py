@@ -3,23 +3,22 @@
 Classes:
     Task: Abstract base class from which all analysis tasks are derived.
 
-    BinaryTask: Class to run a third-party executable binary as a `Task`.
+    ThirdPartyTask: Class to run a third-party executable binary as a `Task`.
 """
 
-__all__ = ["Task", "TaskResult", "TaskStatus", "DescribedAnalysis", "BinaryTask"]
+__all__ = ["Task", "TaskResult", "TaskStatus", "DescribedAnalysis", "ThirdPartyTask"]
 __author__ = "Gabriel Dorlhiac"
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Union, Type, TextIO, Optional
+from typing import Any, List, Dict, Union, Type, TextIO
 import os
 import warnings
 import signal
-import types
 
 from ..io.models.base import (
     TaskParameters,
-    ThirdPartyParameters,
+    TemplateParameters,
     TemplateConfig,
     AnalysisHeader,
 )
@@ -159,7 +158,7 @@ class Task(ABC):
         ...
 
 
-class BinaryTask(Task):
+class ThirdPartyTask(Task):
     """A `Task` interface to analysis with binary executables."""
 
     def __init__(self, *, params: TaskParameters) -> None:
@@ -199,7 +198,7 @@ class BinaryTask(Task):
         """
         context_update: Dict[str, Any] = {param_name: value}
         if __debug__:
-            msg: Message = Message(contents=f"ThirdPartyParameters: {context_update}")
+            msg: Message = Message(contents=f"TemplateParameters: {context_update}")
             self._report_to_executor(msg)
         self._template_context.update(context_update)
 
@@ -273,8 +272,8 @@ class BinaryTask(Task):
                 or isinstance(self._task_parameters.__dict__[param], AnalysisHeader)
             ):
                 continue
-            if isinstance(self._task_parameters.__dict__[param], ThirdPartyParameters):
-                # ThirdPartyParameters objects have a single parameter `params`
+            if isinstance(self._task_parameters.__dict__[param], TemplateParameters):
+                # TemplateParameters objects have a single parameter `params`
                 self._add_to_jinja_context(param_name=param, value=value.params)
                 continue
 
@@ -306,7 +305,10 @@ class BinaryTask(Task):
                     self._args_list.append(f"{constructed_flag}")
             else:
                 warnings.warn(
-                    "Model parameters should be defined using Field(...,flag_type='') in the future.",
+                    (
+                        f"Model parameters should be defined using Field(...,flag_type='')"
+                        f" in the future.  Parameter: {param}"
+                    ),
                     category=PendingDeprecationWarning,
                 )
                 if len(param) == 1:  # Single-dash flags

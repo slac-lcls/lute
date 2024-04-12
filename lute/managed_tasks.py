@@ -7,9 +7,11 @@ from .io.config import *
 #######
 Tester: Executor = Executor("Test")
 BinaryTester: Executor = Executor("TestBinary")
+BinaryErrTester = Executor("TestBinaryErr")
 SocketTester: Executor = Executor("TestSocket")
 WriteTester: Executor = Executor("TestWriteOutput")
 ReadTester: Executor = Executor("TestReadOutput")
+
 
 # SmallData-related
 ###################
@@ -36,3 +38,4 @@ PeakFinderPyAlgos: MPIExecutor = MPIExecutor("FindPeaksPyAlgos")
 SHELXCRunner: Executor = Executor("RunSHELXC")
 SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
+StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")

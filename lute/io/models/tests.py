@@ -20,6 +20,7 @@ Classes:
 __all__ = [
     "TestParameters",
     "TestBinaryParameters",
+    "TestBinaryErrParameters",
     "TestSocketParameters",
     "TestWriteOutputParameters",
     "TestReadOutputParameters",
@@ -49,10 +50,18 @@ class TestParameters(TaskParameters):
         dict_var: Dict[str, str] = {"a": "b"}
 
     compound_var: CompoundVar
+    throw_error: bool = False
 
 
 class TestBinaryParameters(BaseBinaryParameters):
     executable: str = "/sdf/home/d/dorlhiac/test_tasks/test_threads"
+    p_arg1: int = 1
+
+
+class TestBinaryErrParameters(BaseBinaryParameters):
+    """Same as TestBinary, but exits with non-zero code."""
+
+    executable: str = "/sdf/home/d/dorlhiac/test_tasks/test_threads_err"
     p_arg1: int = 1
 
 

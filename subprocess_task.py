@@ -1,13 +1,11 @@
 import sys
-import os
 import argparse
 import logging
 import signal
 import types
-import importlib.util
 from typing import Type, Optional, Dict, Any
 
-from lute.tasks.task import Task, BinaryTask
+from lute.tasks.task import Task, ThirdPartyTask
 from lute.execution.ipc import Message
 from lute.io.config import *
 from lute.io.models.base import TaskParameters, BaseBinaryParameters
@@ -60,37 +58,22 @@ task_parameters: TaskParameters = parse_config(task_name=task_name, config_path=
 
 # Hack to avoid importing modules with conflicting dependencie
 TaskType: Type[Task]
-module_with_task: Optional[str] = None
-lute_path: str = os.getenv("LUTE_PATH", os.path.dirname(__file__))
 if isinstance(task_parameters, BaseBinaryParameters):
-    TaskType = BinaryTask
+    TaskType = ThirdPartyTask
 else:
-    for module_name in os.listdir(f"{lute_path}/lute/tasks"):
-        if module_name.endswith(".py") and module_name not in [
-            "dataclasses.py",
-            "task.py",
-            "__init__.py",
-        ]:
-            with open(f"{lute_path}/lute/tasks/{module_name}", "r") as f:
-                txt: str = f.read()
-                if f"class {task_name}(Task):" in txt:
-                    module_with_task = module_name[:-3]
-                    del txt
-                    break
-    else:
+    from lute.tasks import import_task, TaskNotFoundError
+
+    try:
+        TaskType = import_task(task_name)
+    except TaskNotFoundError as err:
         logger.debug(
-            f"Task {task_name} not found while scanning directory: `{lute_path}/lute/tasks`."
+            (
+                f"Task {task_name} not found! Things to double check:\n"
+                "\t - The spelling of the Task name.\n"
+                "\t - Has the Task been registered in lute.tasks.import_task."
+            )
         )
         sys.exit(-1)
-
-# If we got this far we should have a module or are BinaryTask
-if module_with_task is not None:
-    spec: importlib.machinery.ModuleSpec = importlib.util.spec_from_file_location(
-        module_with_task, f"{lute_path}/lute/tasks/{module_with_task}.py"
-    )
-    task_module: types.ModuleType = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(task_module)
-    TaskType: Type[Task] = getattr(task_module, f"{task_name}")
 
 task: Task = TaskType(params=task_parameters)
 task.run()

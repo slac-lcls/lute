@@ -1,4 +1,4 @@
-# [ADR-6] Third-party Config Files Managed by Templates Rendered by `BinaryTask`s
+# [ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s
 
 **Date:** 2024-02-12
 
@@ -12,7 +12,7 @@
 - Ideally all aspects of configuraiton could be managed from the single LUTE configuration file.
 
 ## Decision
-Templates will be used for the third party configuration files. A generic interface to heterogenous templates will be provided through a combination of pydantic models and the `BinaryTask` implementation. The pydantic models will label extra arguments to `BinaryTask`s as being `ThirdPartyParameters`. I.e. any extra parameters are considered to be for a templated configuration file. The `BinaryTask` will find the necessary template and render it if any extra parameters are found. This puts the burden of correct parsing on the template definition itself.
+Templates will be used for the third party configuration files. A generic interface to heterogenous templates will be provided through a combination of pydantic models and the `ThirdPartyTask` implementation. The pydantic models will label extra arguments to `ThirdPartyTask`s as being `TemplateParameters`. I.e. any extra parameters are considered to be for a templated configuration file. The `ThirdPartyTask` will find the necessary template and render it if any extra parameters are found. This puts the burden of correct parsing on the template definition itself.
 
 ### Decision Drivers
 * Need to be able to configure the necessary files from within the LUTE framework.
@@ -21,9 +21,9 @@ Templates will be used for the third party configuration files. A generic interf
   * Text substiution provides a means to do this.
 
 ### Considered Options
-* Separate configuration `Task` to be run before the main `BinaryTask`.
+* Separate configuration `Task` to be run before the main `ThirdPartyTask`.
 * Generate the configuration file in its entirety from within the `Task`.
-  * This removes the simplicity in allowing all `BinaryTask`s to be run as instances of a single class.
+  * This removes the simplicity in allowing all `ThirdPartyTask`s to be run as instances of a single class.
 
 ## Consequences
 * Can configure and run third party tasks which require the use of a configuration file.

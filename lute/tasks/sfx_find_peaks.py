@@ -1,3 +1,16 @@
+"""
+Classes for peak finding tasks in SFX.
+
+Classes:
+    CxiWriter: utility class for writing peak finding results to CXI files.
+
+    FindPeaksPyAlgos: peak finding using psana's PyAlgos algorithm. Optional data
+        compression and decompression with libpressio for data reduction tests.
+"""
+
+__all__ = ["CxiWriter", "FindPeaksPyAlgos"]
+__author__ = "Valerio Mariani"
+
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, TextIO, Tuple
