@@ -323,6 +323,23 @@ def format_file_for_post(
     return out_file
 
 
+def _get_current_run_status(update_url: str) -> Dict[str, str]:
+    """Retrieve the current 'counters' or status for a workflow.
+
+    This function is intended to be called from the posting function to allow
+    for incremental updates to the status. It will only work for currently
+    running workflows, as it does not go back to the database, only the JID/ARP.
+
+    Args:
+        update_url (str): The JID_UPDATE_COUNTERS url.
+
+    Returns:
+        data (Dict[str, str]): A dictionary of key:value pairs of currently
+            displayed data.
+    """
+    get_url: str = update_url.replace("replace_counters", "get_counters")
+    requests.get(get_url)
+
 def post_elog_run_status(
     data: Dict[str, Union[str, int, float]], update_url: Optional[str] = None
 ) -> None:
