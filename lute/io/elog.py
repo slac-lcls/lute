@@ -340,6 +340,7 @@ def _get_current_run_status(update_url: str) -> Dict[str, str]:
     get_url: str = update_url.replace("replace_counters", "get_counters")
     requests.get(get_url)
 
+
 def post_elog_run_status(
     data: Dict[str, Union[str, int, float]], update_url: Optional[str] = None
 ) -> None:
