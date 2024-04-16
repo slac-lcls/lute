@@ -158,10 +158,10 @@ if __name__ == "__main__":
         for inst in instance_information:
             task_id: str = inst["task_id"]
             task_state: Optional[str] = inst["state"]
-            if task_id not in completed_tasks and task_state:
+            if task_id not in completed_tasks and task_state not in (None, "scheduled"):
                 if task_id not in logged_running:
                     # Should be "running" by first time it reaches here.
-                    # Or e.g. "upstream_failed"...
+                    # Or e.g. "upstream_failed"... Setup to skip "scheduled"
                     logger.info(f"{task_id} state: {task_state}")
                     logged_running.append(task_id)
 
