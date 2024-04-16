@@ -21,12 +21,17 @@ from typing import Dict, Union, List, Optional, Any
 import requests
 from requests.auth import HTTPBasicAuth
 
-if __debug__:
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    logging.basicConfig(level=logging.INFO)
+# Requests, urllib have lots of debug statements. Only set level for this logger
+logger: logging.Logger = logging.getLogger("Launch_Airflow")
+handler: logging.Handler = logging.StreamHandler()
+formatter: logging.Formatter = logging.Formatter(logging.BASIC_FORMAT)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
-logger: logging.Logger = logging.getLogger(__name__)
+if __debug__:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 
 
 def _retrieve_pw(instance: str = "prod") -> str:
@@ -116,8 +121,8 @@ if __name__ == "__main__":
     resp.raise_for_status()
     dag_run_id: str = dag_run_data["dag_run_id"]
     logger.info(f"Submitted DAG (Workflow): {args.workflow}\nDAG_RUN_ID: {dag_run_id}")
-    state: str = resp.json()["state"]
-    logger.info(f"DAG is {state}")
+    dag_state: str = resp.json()["state"]
+    logger.info(f"DAG is {dag_state}")
 
     # Get Task information
     resp = requests.get(
@@ -127,7 +132,9 @@ if __name__ == "__main__":
     resp.raise_for_status()
     task_ids: List[str] = [task["task_id"] for task in resp.json()["tasks"]]
     task_id_str: str = ",\n\t- ".join(tid for tid in task_ids)
-    logger.info(f"Contains Managed Tasks (in no particular order):\n\t- {task_id_str}")
+    logger.info(
+        f"Contains Managed Tasks (alphabetical, not execution order):\n\t- {task_id_str}"
+    )
 
     # Enter loop for checking status
     time.sleep(1)
@@ -135,12 +142,14 @@ if __name__ == "__main__":
     url: str = f"{airflow_instance}/{airflow_api_endpoints['run_dag']}/{dag_run_id}"
     # Pulling logs for each Task via XCom
     xcom_key: str = "log"
+    completed_tasks: Dict[str, str] = {}  # Remember exit status of each Task
+    logged_running: List[str] = []  # Keep track to only print "running" once
     while True:
         time.sleep(1)
         # DAG Status
         resp = requests.get(url, auth=auth)
         resp.raise_for_status()
-        state = resp.json()["state"]
+        dag_state = resp.json()["state"]
         # Check Task instances
         task_url: str = f"{url}/taskInstances"
         resp = requests.get(task_url, auth=auth)
@@ -148,10 +157,15 @@ if __name__ == "__main__":
         instance_information: Dict[str, Any] = resp.json()["task_instances"]
         for inst in instance_information:
             task_id: str = inst["task_id"]
-            task_state: Optional[str]
-            if task_state := inst["state"]:
-                logger.info(f"{task_id} state: {task_state}")
-                if task_state in ("success", "failed"):
+            task_state: Optional[str] = inst["state"]
+            if task_id not in completed_tasks and task_state:
+                if task_id not in logged_running:
+                    # Should be "running" by first time it reaches here.
+                    # Or e.g. "upstream_failed"...
+                    logger.info(f"{task_id} state: {task_state}")
+                    logged_running.append(task_id)
+
+                if task_state in ("success", "failed", "upstream_failed"):
                     # Only pushed to XCOM at the end of each Task
                     xcom_url: str = (
                         f"{airflow_instance}/{airflow_api_endpoints['get_xcom']}"
@@ -164,13 +178,19 @@ if __name__ == "__main__":
                     resp = requests.get(xcom_url, auth=auth)
                     resp.raise_for_status()
                     logs: str = resp.json()["value"]  # Only want to print once.
+                    logger.info(f"Providing logs for {task_id}")
+                    print("-" * 50, flush=True)
+                    print(logs, flush=True)
+                    print("-" * 50, flush=True)
+                    logger.info(f"End of logs for {task_id}")
+                    completed_tasks[task_id] = task_state
 
-        if state in ("queued", "running"):
+        if dag_state in ("queued", "running"):
             continue
-        logger.info(f"DAG is {state}")
+        logger.info(f"DAG exited: {dag_state}")
         break
 
-    if state == "failed":
+    if dag_state == "failed":
         sys.exit(1)
     else:
         sys.exit(0)
