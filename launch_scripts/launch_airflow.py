@@ -165,7 +165,7 @@ if __name__ == "__main__":
                     logger.info(f"{task_id} state: {task_state}")
                     logged_running.append(task_id)
 
-                if task_state in ("success", "failed", "upstream_failed"):
+                if task_state in ("success", "failed"):
                     # Only pushed to XCOM at the end of each Task
                     xcom_url: str = (
                         f"{airflow_instance}/{airflow_api_endpoints['get_xcom']}"
@@ -183,6 +183,10 @@ if __name__ == "__main__":
                     print(logs, flush=True)
                     print("-" * 50, flush=True)
                     logger.info(f"End of logs for {task_id}")
+                    completed_tasks[task_id] = task_state
+
+                elif task_state in ("upstream_failed"):
+                    # upstream_failed never launches so has no log
                     completed_tasks[task_id] = task_state
 
         if dag_state in ("queued", "running"):
