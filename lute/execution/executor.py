@@ -314,6 +314,7 @@ class BaseExecutor(ABC):
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
+            self.Hooks.task_done(self, msg=Message())
         self._store_configuration()
         for comm in self._communicators:
             comm.clear_communicator()
