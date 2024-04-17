@@ -323,7 +323,7 @@ def format_file_for_post(
     return out_file
 
 
-def _get_current_run_status(update_url: str) -> Dict[str, str]:
+def _get_current_run_status(update_url: str) -> Dict[str, Union[str, int, float]]:
     """Retrieve the current 'counters' or status for a workflow.
 
     This function is intended to be called from the posting function to allow
@@ -338,7 +338,11 @@ def _get_current_run_status(update_url: str) -> Dict[str, str]:
             displayed data.
     """
     get_url: str = update_url.replace("replace_counters", "get_counters")
-    requests.get(get_url)
+    resp: requests.models.Response = requests.get(get_url)
+    #current_status: Dict[str, Union[str, int, float]] = {d["key"]: d["value"] for d in resp.json()["value"]}
+    print(resp.json())
+    current_status = {}
+    return current_status
 
 
 def post_elog_run_status(
@@ -359,18 +363,18 @@ def post_elog_run_status(
             function searches for the corresponding environment variable. If
             neither is found, the function aborts
     """
-    post_list: List[Dict[str, str]] = [
-        {"key": f"{key}", "value": f"{value}"} for key, value in data.items()
-    ]
-
     if update_url is None:
         update_url = os.environ.get("JID_UPDATE_COUNTERS")
         if update_url is None:
             logger.info("eLog Update Failed! JID_UPDATE_COUNTERS is not defined!")
             return
-
+    current_status: Dict[str, Union[str, int, float]] = _get_current_run_status(update_url)
+    current_status.update(data)
+    post_list: List[Dict[str, str]] = [
+        {"key": f"{key}", "value": f"{value}"} for key, value in current_status.items()
+    ]
     params: Dict[str, List[Dict[str, str]]] = {"json": post_list}
-    requests.post(update_url, **params)
+    resp: requests.models.Response = requests.post(update_url, **params)
 
 
 def post_elog_message(
