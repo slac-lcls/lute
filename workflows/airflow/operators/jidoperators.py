@@ -121,6 +121,7 @@ class JIDSlurmOperator(BaseOperator):
         user: str = getpass.getuser(),
         poke_interval: float = 30.0,
         max_cores: Optional[int] = None,
+        max_nodes: Optional[int] = None,
         *args,
         **kwargs,
     ) -> None:
@@ -129,6 +130,46 @@ class JIDSlurmOperator(BaseOperator):
         self.user: str = user
         self.poke_interval: float = poke_interval
         self.max_cores: Optional[int] = max_cores
+        self.max_nodes: Optional[int] = max_nodes
+
+    def _sub_overridable_arguments(self, slurm_param_str: str) -> str:
+        """Overrides certain SLURM arguments given instance options.
+
+        Since the same SLURM arguments are used by default for the entire DAG,
+        individual Operator instances can override some important ones if they
+        are passed at instantiation.
+
+        ASSUMES `=` is used with SLURM arguments! E.g. --ntasks=12, --nodes=0-4
+
+        Args:
+            slurm_param_str (str): Constructed string of DAG SLURM arguments
+                without modification
+        Returns:
+            slurm_param_str (str): Modified SLURM argument string.
+        """
+        # Cap max cores used by a managed Task if that is requested
+        # Only search for part after `=` since this will always be passed
+        pattern: str = r"(?<=\bntasks=)\d+"
+        ntasks: int
+        try:
+            ntasks = int(re.findall(pattern, slurm_param_str)[0])
+        except IndexError as err:  # If `ntasks` not passed - 1 is default
+            ntasks = 1
+        if self.max_cores is not None and ntasks > self.max_cores:
+            slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+
+        # Cap max nodes. Unlike above search for everything, if not present, add it.
+        pattern = r"nodes=\S+"
+        nnodes_str: str
+        try:
+            nnodes_str = re.findall(pattern, slurm_param_str)[0]
+            slurm_param_str = re.sub(
+                pattern, f"nodes=0-{self.max_nodes}", slurm_param_str
+            )
+        except IndexError as err:  # `--nodes` not present
+            slurm_param_str = f"{slurm_param_str} --nodes=0-{self.max_nodes}"
+
+        return slurm_param_str
 
     def create_control_doc(
         self, context: Dict[str, Any]
