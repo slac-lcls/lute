@@ -524,7 +524,7 @@ class MPIExecutor(Executor):
 
     def _submit_cmd(self, executable_path: str, params: str) -> str:
         """Override submission command to use `mpirun`
-        
+
         Args:
             executable_path (str): Path to the LUTE subprocess script.
 
