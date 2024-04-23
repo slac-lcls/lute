@@ -344,7 +344,6 @@ def _get_current_run_status(update_url: str) -> Dict[str, Union[str, int, float]
     exp: str = replace_counters_parts[-2]
     get_url: str = "/".join(replace_counters_parts[:-3])
     get_url = f"{get_url}/{exp}/get_counters"
-    print(get_url, flush=True)
     job_doc: Dict[str, str] = {
         "_id": os.environ.get("ARP_ROOT_JOB_ID"),
         "experiment": exp,
