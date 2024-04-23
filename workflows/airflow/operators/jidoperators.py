@@ -148,26 +148,31 @@ class JIDSlurmOperator(BaseOperator):
             slurm_param_str (str): Modified SLURM argument string.
         """
         # Cap max cores used by a managed Task if that is requested
-        # Only search for part after `=` since this will always be passed
-        pattern: str = r"(?<=\bntasks=)\d+"
-        ntasks: int
-        try:
-            ntasks = int(re.findall(pattern, slurm_param_str)[0])
-        except IndexError as err:  # If `ntasks` not passed - 1 is default
-            ntasks = 1
-        if self.max_cores is not None and ntasks > self.max_cores:
-            slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+        # Only search for part after `=` since this will usually be passed
+        if self.max_cores is not None:
+            pattern: str = r"(?<=\bntasks=)\d+"
+            ntasks: int
+            try:
+                ntasks = int(re.findall(pattern, slurm_param_str)[0])
+                if ntasks > self.max_cores:
+                    slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+            except IndexError:  # If `ntasks` not passed - 1 is default
+                ntasks = 1
+                slurm_param_str = f"{slurm_param_str} --ntasks={ntasks}"
 
         # Cap max nodes. Unlike above search for everything, if not present, add it.
-        pattern = r"nodes=\S+"
-        nnodes_str: str
-        try:
-            nnodes_str = re.findall(pattern, slurm_param_str)[0]
-            slurm_param_str = re.sub(
-                pattern, f"nodes=0-{self.max_nodes}", slurm_param_str
-            )
-        except IndexError as err:  # `--nodes` not present
-            slurm_param_str = f"{slurm_param_str} --nodes=0-{self.max_nodes}"
+        if self.max_nodes is not None:
+            pattern = r"nodes=\S+"
+            nnodes_str: str
+            try:
+                nnodes_str = re.findall(pattern, slurm_param_str)[0]
+                # Check if present with above. Below does nothing but does not
+                # throw error if pattern not present.
+                slurm_param_str = re.sub(
+                    pattern, f"nodes=0-{self.max_nodes}", slurm_param_str
+                )
+            except IndexError:  # `--nodes` not present
+                slurm_param_str = f"{slurm_param_str} --nodes=0-{self.max_nodes}"
 
         return slurm_param_str
 
