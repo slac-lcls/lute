@@ -155,7 +155,9 @@ class JIDSlurmOperator(BaseOperator):
             try:
                 ntasks = int(re.findall(pattern, slurm_param_str)[0])
                 if ntasks > self.max_cores:
-                    slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+                    slurm_param_str = re.sub(
+                        pattern, f"{self.max_cores}", slurm_param_str
+                    )
             except IndexError:  # If `ntasks` not passed - 1 is default
                 ntasks = 1
                 slurm_param_str = f"{slurm_param_str} --ntasks={ntasks}"
