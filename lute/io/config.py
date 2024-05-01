@@ -38,7 +38,7 @@ from .models import *
 
 def substitute_variables(
     config: Dict[str, Any], curr_key: Optional[str] = None
-) -> Dict[str, Any]:
+) -> None:
     """Performs variable substitutions on a dictionary read from config YAML file.
 
     Can be used to define input parameters in terms of other input parameters.
@@ -97,8 +97,6 @@ def substitute_variables(
                 else:
                     sub = config[key_to_sub]
                 pattern: str = m.replace("{{", "\{\{").replace("}}", "\}\}")
-                print(pattern)
-                print(re.sub(pattern, sub, value))
                 iterable[param] = re.sub(pattern, sub, value)
 
 
