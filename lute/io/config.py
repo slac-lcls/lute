@@ -14,10 +14,9 @@ Exceptions:
 __all__ = ["parse_config"]
 __author__ = "Gabriel Dorlhiac"
 
-import os
+import re
 import warnings
-from abc import ABC
-from typing import List, Dict, Iterator, Dict, Any, Union, Optional
+from typing import List, Dict, Iterator, Dict, Any
 
 import yaml
 import yaml
@@ -35,6 +34,72 @@ from pydantic import (
 from pydantic.dataclasses import dataclass
 
 from .models import *
+
+
+def substitute_variables(
+    config: Dict[str, Any], curr_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """Performs variable substitutions on a dictionary read from config YAML file.
+
+    Can be used to define input parameters in terms of other input parameters.
+    This is similar to functionality employed by validators for parameters in
+    the specific Task models, but is intended to be more accessible to users.
+    Variable substitutions are defined using a minimal syntax from Jinja:
+                               {{ experiment }}
+    defines a substitution of the variable `experiment`. The characters `{{ }}`
+    can be escaped if the literal symbols are needed in place.
+
+    For example, a path to a file can be defined in terms of experiment and run
+    values in the config file:
+        MyTask:
+          experiment: myexp
+          run: 2
+          special_file: /path/to/{{ experiment }}/{{ run }}/file.inp
+
+    Acceptable variables for substitutions are values defined elsewhere in the
+    YAML file. Environment variables can also be used if prefaced with a `$`
+    character. E.g. to get the experiment from an environment variable:
+        MyTask:
+          run: 2
+          special_file: /path/to/{{ $EXPERIMENT }}/{{ run }}/file.inp
+
+    Args:
+        config (Dict[str, Any]):  A dictionary of parsed configuration.
+
+        curr_key (Optional[str]): Used to keep track of recursion level when scanning
+            through iterable items in the config dictionary.
+
+    Returns:
+        subbed_config (Dict[str, Any]): The config dictionary after substitutions
+            have been made. May be identical to the input if no substitutions are
+            needed.
+    """
+    _sub_pattern = "\{\{.*\}\}"
+    iterable: Dict[str, Any]
+    if curr_key is not None:
+        # Need to handle nested levels by interpreting curr_key
+        iterable = config[curr_key]
+    else:
+        iterable = config
+    for param, value in iterable.items():
+        if isinstance(value, dict):
+            substitute_variables(config, curr_key=param)
+        elif isinstance(value, list):
+            ...
+        # Scalars str - we skip numeric types
+        elif isinstance(value, str):
+            matches: List[str] = re.findall(_sub_pattern, value)
+            for m in matches:
+                key_to_sub: str = m[2:-2].strip()
+                sub: str
+                if key_to_sub[0] == "$":
+                    sub = os.environ.get(key_to_sub[1:], "")
+                else:
+                    sub = config[key_to_sub]
+                pattern: str = m.replace("{{", "\{\{").replace("}}", "\}\}")
+                print(pattern)
+                print(re.sub(pattern, sub, value))
+                iterable[param] = re.sub(pattern, sub, value)
 
 
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
