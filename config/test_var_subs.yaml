@@ -13,7 +13,7 @@ OtherTask:
   useful_other_var: "USE ME!"
 
 NonExistentTask:
-  test_sub: "/path/to/{{ experiment }}/file.input"
+  test_sub: "/path/to/{{ experiment }}/file_r{{ run:04d }}.input"
   test_env_sub: "/path/to/{{ $EXPERIMENT }}/file.input"
   test_nested:
     a: "outfile_{{ run }}_one.out"

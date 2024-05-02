@@ -192,15 +192,15 @@ OtherTask:
   useful_other_var: "USE ME!"
 
 NonExistentTask:
-  test_sub: "/path/to/{{ experiment }}/file.input"         # Substitute `experiment` from header above
-  test_env_sub: "/path/to/{{ $EXPERIMENT }}/file.input"    # Substitute from the environment variable $EXPERIMENT
+  test_sub: "/path/to/{{ experiment }}/file_r{{ run:04d }}.input"         # Substitute `experiment` and `run` from header above
+  test_env_sub: "/path/to/{{ $EXPERIMENT }}/file.input"                   # Substitute from the environment variable $EXPERIMENT
   test_nested:
-    a: "outfile_{{ run }}_one.out"                         # Substitute `run` from header above
+    a: "outfile_{{ run }}_one.out"                                        # Substitute `run` from header above
     b:
-      c: "outfile_{{ run }}_two.out"                       # Also substitute `run` from header above
-      d: "{{ OtherTask.useful_other_var }}"                # Substitute `useful_other_var` from `OtherTask`
-  test_fmt: "{{ run:04d }}"                                # Subsitute `run` and format as 0012
-  test_env_fmt: "{{ $RUN:04d }}"                           # Substitute environment variable $RUN and pad to 4 w/ zeros
+      c: "outfile_{{ run }}_two.out"                                      # Also substitute `run` from header above
+      d: "{{ OtherTask.useful_other_var }}"                               # Substitute `useful_other_var` from `OtherTask`
+  test_fmt: "{{ run:04d }}"                                               # Subsitute `run` and format as 0012
+  test_env_fmt: "{{ $RUN:04d }}"                                          # Substitute environment variable $RUN and pad to 4 w/ zeros
 ...
 ```
 

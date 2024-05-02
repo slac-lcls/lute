@@ -101,7 +101,7 @@ def substitute_variables(
             have been made. May be identical to the input if no substitutions are
             needed.
     """
-    _sub_pattern = r"\{\{.*\}\}"
+    _sub_pattern = r"\{\{[^}{]*\}\}"
     iterable: Dict[str, Any] = config
     if curr_key is not None:
         # Need to handle nested levels by interpreting curr_key
@@ -156,7 +156,7 @@ def substitute_variables(
                     sub = f"{sub:{fmt}}"
                 else:
                     sub = f"{sub}"
-                iterable[param] = re.sub(pattern, sub, value)
+                iterable[param] = re.sub(pattern, sub, iterable[param])
 
 
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
