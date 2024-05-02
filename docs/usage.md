@@ -173,9 +173,38 @@ Using `validator`s, it is possible to define (generally, default) model paramete
 
 These types of substitutions, however, have a limitation in that they are not easily adapted at run time. They therefore address only a small number of the possible combinations in the dependencies between different input parameters. In order to support more complex relationships between parameters, variable substitutions can also be used in the configuration YAML itself. Using a syntax similar to `Jinja` templates, you can define values for YAML parameters in terms of other parameters or environment variables. The values are substituted before Pydantic attempts to validate the configuration.
 
-It is perhaps easiest to illustrate with an example. Consider a `Task` where some
+It is perhaps easiest to illustrate with an example. A test case is provided in `config/test_var_subs.yaml` and is reproduced here:
 
-Nested levels are delimited using a `.`. E.g. consider a structure like:
+```yaml
+%YAML 1.3
+---
+title: "Configuration to Test YAML Substitution"
+experiment: "TestYAMLSubs"
+run: 12
+date: "2024/05/01"
+lute_version: 0.1
+task_timeout: 600
+work_dir: "/sdf/scratch/users/d/dorlhiac"
+...
+---
+OtherTask:
+  useful_other_var: "USE ME!"
+
+NonExistentTask:
+  test_sub: "/path/to/{{ experiment }}/file.input"         # Substitute `experiment` from header above
+  test_env_sub: "/path/to/{{ $EXPERIMENT }}/file.input"    # Substitute from the environment variable $EXPERIMENT
+  test_nested:
+    a: "outfile_{{ run }}_one.out"                         # Substitute `run` from header above
+    b:
+      c: "outfile_{{ run }}_two.out"                       # Also substitute `run` from header above
+      d: "{{ OtherTask.useful_other_var }}"                # Substitute `useful_other_var` from `OtherTask`
+  test_fmt: "{{ run:04d }}"                                # Subsitute `run` and format as 0012
+  test_env_fmt: "{{ $RUN:04d }}"                           # Substitute environment variable $RUN and format with 4 zeros
+...
+```
+
+Input parameters in the config YAML can be substituted with either other input parameters or environment variables, with or without limited string formatting. All substitutions occur between double curly brackets: `{{ SUB_VAR }}`. Environment variables are indicated by `$` in front of the variable name. Parameters from the header, i.e. the first YAML document (top section) containing the `run`, `experiment`, version fields, etc. can be substituted without any qualification. If you want to use the `run` parameter, you can substitute it using `{{ run }}`. All other parameters, i.e. from other `Task`s or within `Task`s, must use a qualified name. Nested levels are delimited using a `.`. E.g. consider a structure like:
+
 ```yaml
 Task:
   param_set:
@@ -183,7 +212,11 @@ Task:
     b: 2
     c: 3
 ```
-In order to use parameter `c`, you would use `Task.param_set.c` as the substitution. If the parameter is located in the header (the first document in the config file), you do not need to use qualified parameter names using these delimiters.
+In order to use parameter `c`, you would use `{{ Task.param_set.c }}` as the substitution.
+
+Take care when using substitutions! This process will not try and guess for you. When a substitution is not available, e.g. due to misspelling, one of two things will happen:
+- If it was an environment variable that does not exist, no substitution will be performed, although a message will be printed. I.e. you will be left with `param: /my/failed/{{ $SUBSTITUTION }}` as your parameter. This may or may not fail the model validation step, but is not what you intended.
+- If it was an attempt at substituting another YAML parameter which does not exist, an exception will be thrown and the program will exit.
 
 ### Gotchas!
 **Found unhashable key**
