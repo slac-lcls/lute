@@ -243,7 +243,7 @@ Developers can insert these markers as needed into their code to add new exit po
 
 In order to include a new marker in your code:
 ```py
-from lute.execution.debug_utils import lute_debug_exit, lute_debug_pause
+from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 
 def my_code() -> None:
     # ...
