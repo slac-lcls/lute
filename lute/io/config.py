@@ -18,7 +18,7 @@ import re
 import warnings
 from typing import List, Dict, Iterator, Dict, Any
 
-import yaml
+import pprint
 import yaml
 from pydantic import (
     BaseModel,
@@ -34,10 +34,11 @@ from pydantic import (
 from pydantic.dataclasses import dataclass
 
 from .models import *
+from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 
 
 def substitute_variables(
-    config: Dict[str, Any], curr_key: Optional[str] = None
+    header: Dict[str, Any], config: Dict[str, Any], curr_key: Optional[str] = None
 ) -> None:
     """Performs variable substitutions on a dictionary read from config YAML file.
 
@@ -74,30 +75,45 @@ def substitute_variables(
             have been made. May be identical to the input if no substitutions are
             needed.
     """
-    _sub_pattern = "\{\{.*\}\}"
-    iterable: Dict[str, Any]
+    _sub_pattern = r"\{\{.*\}\}"
+    iterable: Dict[str, Any] = config
     if curr_key is not None:
         # Need to handle nested levels by interpreting curr_key
-        iterable = config[curr_key]
+        keys_by_level: List[str] = curr_key.split(".")
+        for key in keys_by_level:
+            iterable = iterable[key]
     else:
-        iterable = config
+        ...
+        # iterable = config
     for param, value in iterable.items():
         if isinstance(value, dict):
-            substitute_variables(config, curr_key=param)
+            new_key: str
+            if curr_key is None:
+                new_key = param
+            else:
+                new_key = f"{curr_key}.{param}"
+            substitute_variables(header, config, curr_key=new_key)
         elif isinstance(value, list):
             ...
         # Scalars str - we skip numeric types
         elif isinstance(value, str):
             matches: List[str] = re.findall(_sub_pattern, value)
             for m in matches:
-                key_to_sub: str = m[2:-2].strip()
+                key_to_sub_maybe_with_fmt: List[str] = m[2:-2].strip().split(":")
+                key_to_sub: str = key_to_sub_maybe_with_fmt[0]
+                fmt: Optional[str] = None
+                if len(key_to_sub_maybe_with_fmt) == 2:
+                    fmt = key_to_sub_maybe_with_fmt[1]
                 sub: str
                 if key_to_sub[0] == "$":
                     sub = os.environ.get(key_to_sub[1:], "")
                 else:
-                    sub = config[key_to_sub]
-                pattern: str = m.replace("{{", "\{\{").replace("}}", "\}\}")
-                iterable[param] = re.sub(pattern, sub, value)
+                    try:
+                        sub = config[key_to_sub]
+                    except KeyError:
+                        sub = header[key_to_sub]
+                pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
+                iterable[param] = re.sub(pattern, str(sub), value)
 
 
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
@@ -123,7 +139,9 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
         docs: Iterator[Dict[str, Any]] = yaml.load_all(stream=f, Loader=yaml.FullLoader)
         header: Dict[str, Any] = next(docs)
         config: Dict[str, Any] = next(docs)
-
+    # pprint.pprint(config)
+    substitute_variables(header, config)
+    LUTE_DEBUG_EXIT("LUTE_DEBUG_EXIT_AT_YAML", pprint.pformat(config))
     lute_config: Dict[str, AnalysisHeader] = {"lute_config": AnalysisHeader(**header)}
     try:
         task_config: Dict[str, Any] = dict(config[task_name])
@@ -136,5 +154,4 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
             )
         )
     parsed_parameters: TaskParameters = globals()[task_config_name](**lute_config)
-
     return parsed_parameters
