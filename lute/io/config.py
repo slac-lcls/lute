@@ -109,7 +109,9 @@ def substitute_variables(
                     sub = os.environ.get(key_to_sub[1:], "")
                 else:
                     try:
-                        sub = config[key_to_sub]
+                        sub = config
+                        for key in key_to_sub.split("."):
+                            sub = sub[key]
                     except KeyError:
                         sub = header[key_to_sub]
                 pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
