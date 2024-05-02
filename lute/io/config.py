@@ -37,6 +37,32 @@ from .models import *
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 
 
+def _isfloat(string: str) -> bool:
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
+
+def _check_str_numeric(string: str) -> Union[str, int, float]:
+    """Check if a string is an integer or float and return it as such.
+
+    Args:
+        string (str): Input string to check.
+
+    Returns:
+        output (str | int | float): Returns an int or float if the string can be
+            converted to one. Otherwise returns the original string.
+    """
+    if string.isnumeric():
+        return int(string)
+    elif _isfloat(string):
+        return float(string)
+    else:
+        return string
+
+
 def substitute_variables(
     header: Dict[str, Any], config: Dict[str, Any], curr_key: Optional[str] = None
 ) -> None:
@@ -104,9 +130,18 @@ def substitute_variables(
                 fmt: Optional[str] = None
                 if len(key_to_sub_maybe_with_fmt) == 2:
                     fmt = key_to_sub_maybe_with_fmt[1]
-                sub: str
+                sub: Any
                 if key_to_sub[0] == "$":
-                    sub = os.environ.get(key_to_sub[1:], "")
+                    sub = os.getenv(key_to_sub[1:], None)
+                    if sub is None:
+                        print(
+                            f"Environment variable {key_to_sub[1:]} not found! Cannot substitute in YAML config!",
+                            flush=True,
+                        )
+                        continue
+                    # substitutions from env vars will be strings, so convert back
+                    # to numeric in order to perform formatting later on (e.g. {var:04d})
+                    sub = _check_str_numeric(sub)
                 else:
                     try:
                         sub = config
@@ -114,8 +149,14 @@ def substitute_variables(
                             sub = sub[key]
                     except KeyError:
                         sub = header[key_to_sub]
-                pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
-                iterable[param] = re.sub(pattern, str(sub), value)
+                pattern: str = (
+                    m.replace("{{", r"\{\{").replace("}}", r"\}\}").replace("$", r"\$")
+                )
+                if fmt is not None:
+                    sub = f"{sub:{fmt}}"
+                else:
+                    sub = f"{sub}"
+                iterable[param] = re.sub(pattern, sub, value)
 
 
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
@@ -141,7 +182,6 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
         docs: Iterator[Dict[str, Any]] = yaml.load_all(stream=f, Loader=yaml.FullLoader)
         header: Dict[str, Any] = next(docs)
         config: Dict[str, Any] = next(docs)
-    # pprint.pprint(config)
     substitute_variables(header, config)
     LUTE_DEBUG_EXIT("LUTE_DEBUG_EXIT_AT_YAML", pprint.pformat(config))
     lute_config: Dict[str, AnalysisHeader] = {"lute_config": AnalysisHeader(**header)}
