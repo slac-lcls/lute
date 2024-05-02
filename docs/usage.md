@@ -46,6 +46,7 @@ Some things to consider and possible points of confusion:
 
 
 | **Managed** `Task`       | The `Task` it Runs       | `Task` Description                                             |
+|:------------------------:|:------------------------:|:--------------------------------------------------------------:|
 | `SmallDataProducer`      | `SubmitSMD`              | Smalldata production                                           |
 | `CrystFELIndexer`        | `IndexCrystFEL`          | Crystallographic indexing                                      |
 | `PartialatorMerger`      | `MergePartialator`       | Crystallographic merging                                       |
@@ -199,7 +200,7 @@ NonExistentTask:
       c: "outfile_{{ run }}_two.out"                       # Also substitute `run` from header above
       d: "{{ OtherTask.useful_other_var }}"                # Substitute `useful_other_var` from `OtherTask`
   test_fmt: "{{ run:04d }}"                                # Subsitute `run` and format as 0012
-  test_env_fmt: "{{ $RUN:04d }}"                           # Substitute environment variable $RUN and format with 4 zeros
+  test_env_fmt: "{{ $RUN:04d }}"                           # Substitute environment variable $RUN and pad to 4 w/ zeros
 ...
 ```
 
