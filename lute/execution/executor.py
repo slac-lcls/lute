@@ -44,6 +44,7 @@ from ..tasks.task import *
 from ..tasks.dataclasses import *
 from ..io.models.base import TaskParameters
 from ..io.db import record_analysis_db
+from ..io.elog import post_elog_run_status
 
 if __debug__:
     warnings.simplefilter("default")
@@ -275,6 +276,27 @@ class BaseExecutor(ABC):
         """
         ...
 
+    def _submit_cmd(self, executable_path: str, params: str) -> str:
+        """Return a formatted command for launching Task subprocess.
+
+        May be overridden by subclasses.
+
+        Args:
+            executable_path (str): Path to the LUTE subprocess script.
+
+            params (str): String of formatted command-line arguments.
+
+        Returns:
+            cmd (str): Appropriately formatted command for this Executor.
+        """
+        cmd: str = ""
+        if __debug__:
+            cmd = f"python -B {executable_path} {params}"
+        else:
+            cmd = f"python -OB {executable_path} {params}"
+
+        return cmd
+
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
@@ -286,12 +308,7 @@ class BaseExecutor(ABC):
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
 
-        cmd: str = ""
-        if __debug__:
-            cmd = f"python -B {executable_path} {params}"
-        else:
-            cmd = f"python -OB {executable_path} {params}"
-
+        cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
 
         while self._task_is_running(proc):
@@ -308,10 +325,12 @@ class BaseExecutor(ABC):
         if ret := proc.returncode:
             logger.info(f"Task failed with return code: {ret}")
             self._analysis_desc.task_result.task_status = TaskStatus.FAILED
+            self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
+            self.Hooks.task_done(self, msg=Message())
         self._store_configuration()
         for comm in self._communicators:
             comm.clear_communicator()
@@ -406,22 +425,42 @@ class Executor(BaseExecutor):
                 f"Executor: {self._analysis_desc.task_result.task_name} started"
             )
             self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "RUNNING",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message): ...
+        def task_failed(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "FAILED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message): ...
+        def task_stopped(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message): ...
+        def task_done(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message): ...
+        def task_cancelled(self: Executor, msg: Message):
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_cancelled", task_cancelled)
 
@@ -430,6 +469,10 @@ class Executor(BaseExecutor):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
                 logger.info(self._analysis_desc.task_result.task_status)
+            elog_data: Dict[str, str] = {
+                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+            }
+            post_elog_run_status(elog_data)
 
         self.add_hook("task_result", task_result)
 
@@ -476,20 +519,20 @@ class MPIExecutor(Executor):
     for the Executor itself.
 
     Methods:
-        execute_task(): Run the task as a subprocess using `mpirun`.
+        _submit_cmd: Run the task as a subprocess using `mpirun`.
     """
 
-    def execute_task(self) -> None:
-        """Run the requested Task as a subprocess."""
-        lute_path: Optional[str] = os.getenv("LUTE_PATH")
-        if lute_path is None:
-            logger.debug("Absolute path to subprocess.py not found.")
-            lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
-            os.environ["LUTE_PATH"] = lute_path
-        executable_path: str = f"{lute_path}/subprocess_task.py"
-        config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
-        params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
+    def _submit_cmd(self, executable_path: str, params: str) -> str:
+        """Override submission command to use `mpirun`
 
+        Args:
+            executable_path (str): Path to the LUTE subprocess script.
+
+            params (str): String of formatted command-line arguments.
+
+        Returns:
+            cmd (str): Appropriately formatted command for this Executor.
+        """
         py_cmd: str = ""
         nprocs: int = max(
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
@@ -501,30 +544,4 @@ class MPIExecutor(Executor):
             py_cmd = f"python -OB -u -m mpi4py.run {executable_path} {params}"
 
         cmd: str = f"{mpi_cmd} {py_cmd}"
-        proc: subprocess.Popen = self._submit_task(cmd)
-
-        while self._task_is_running(proc):
-            self._task_loop(proc)
-            time.sleep(self._analysis_desc.poll_interval)
-
-        os.set_blocking(proc.stdout.fileno(), True)
-        os.set_blocking(proc.stderr.fileno(), True)
-
-        self._finalize_task(proc)
-        proc.stdout.close()
-        proc.stderr.close()
-        proc.wait()
-        if ret := proc.returncode:
-            logger.info(f"Task failed with return code: {ret}")
-            self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-        elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
-            # Ret code is 0, no exception was thrown, task forgot to set status
-            self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
-            logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
-        self._store_configuration()
-        for comm in self._communicators:
-            comm.clear_communicator()
-
-        if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
-            logger.info("Exiting after Task failure. Result recorded.")
-            sys.exit(-1)
+        return cmd
