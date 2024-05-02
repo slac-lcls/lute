@@ -7,6 +7,8 @@ $(basename "$0"):
     Options:
         -c|--config
           ABSOLUTE path to the LUTE configuration YAML. Must be absolute.
+        --debug
+          Whether to run in debug mode (verbose printing).
         -h|--help
           Display this message.
         -t|--taskname
