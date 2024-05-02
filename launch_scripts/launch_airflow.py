@@ -1,4 +1,4 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.59-py3/bin/python
+#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.60-py3/bin/python
 
 """Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
 
@@ -8,23 +8,30 @@ begin running the tasks of the specified directed acyclic graph (DAG).
 
 __author__ = "Gabriel Dorlhiac"
 
+import sys
 import os
 import uuid
 import getpass
 import datetime
 import logging
 import argparse
-from typing import Dict, Union, List
+import time
+from typing import Dict, Union, List, Optional, Any
 
 import requests
 from requests.auth import HTTPBasicAuth
 
-if __debug__:
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    logging.basicConfig(level=logging.INFO)
+# Requests, urllib have lots of debug statements. Only set level for this logger
+logger: logging.Logger = logging.getLogger("Launch_Airflow")
+handler: logging.Handler = logging.StreamHandler()
+formatter: logging.Formatter = logging.Formatter(logging.BASIC_FORMAT)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
-logger: logging.Logger = logging.getLogger(__name__)
+if __debug__:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 
 
 def _retrieve_pw(instance: str = "prod") -> str:
@@ -69,11 +76,18 @@ if __name__ == "__main__":
     airflow_api_endpoints: Dict[str, str] = {
         "health": "api/v1/health",
         "run_dag": f"api/v1/dags/lute_{args.workflow}/dagRuns",
+        "get_tasks": f"api/v1/dags/lute_{args.workflow}/tasks",
+        "get_xcom": (  # Need to format dag_run_id, task_id, xcom_key
+            f"api/v1/dags/lute_{args.workflow}/dagRuns/{{dag_run_id}}/taskInstances"
+            f"/{{task_id}}/xcomEntries/{{xcom_key}}"
+        ),
     }
 
+    pw: str = _retrieve_pw(instance_str)
+    auth: HTTPBasicAuth = HTTPBasicAuth("btx", pw)
     resp: requests.models.Response = requests.get(
         f"{airflow_instance}/{airflow_api_endpoints['health']}",
-        auth=HTTPBasicAuth("btx", _retrieve_pw(instance_str)),
+        auth=auth,
     )
     resp.raise_for_status()
 
@@ -99,10 +113,88 @@ if __name__ == "__main__":
         },
     }
 
-    resp: requests.models.Response = requests.post(
+    resp = requests.post(
         f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
         json=dag_run_data,
-        auth=HTTPBasicAuth("btx", _retrieve_pw(instance_str)),
+        auth=auth,
     )
     resp.raise_for_status()
-    logger.info(resp.text)
+    dag_run_id: str = dag_run_data["dag_run_id"]
+    logger.info(f"Submitted DAG (Workflow): {args.workflow}\nDAG_RUN_ID: {dag_run_id}")
+    dag_state: str = resp.json()["state"]
+    logger.info(f"DAG is {dag_state}")
+
+    # Get Task information
+    resp = requests.get(
+        f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
+        auth=auth,
+    )
+    resp.raise_for_status()
+    task_ids: List[str] = [task["task_id"] for task in resp.json()["tasks"]]
+    task_id_str: str = ",\n\t- ".join(tid for tid in task_ids)
+    logger.info(
+        f"Contains Managed Tasks (alphabetical, not execution order):\n\t- {task_id_str}"
+    )
+
+    # Enter loop for checking status
+    time.sleep(1)
+    # Same as run_dag endpoint, but needs to include the dag_run_id on the end
+    url: str = f"{airflow_instance}/{airflow_api_endpoints['run_dag']}/{dag_run_id}"
+    # Pulling logs for each Task via XCom
+    xcom_key: str = "log"
+    completed_tasks: Dict[str, str] = {}  # Remember exit status of each Task
+    logged_running: List[str] = []  # Keep track to only print "running" once
+    while True:
+        time.sleep(1)
+        # DAG Status
+        resp = requests.get(url, auth=auth)
+        resp.raise_for_status()
+        dag_state = resp.json()["state"]
+        # Check Task instances
+        task_url: str = f"{url}/taskInstances"
+        resp = requests.get(task_url, auth=auth)
+        resp.raise_for_status()
+        instance_information: Dict[str, Any] = resp.json()["task_instances"]
+        for inst in instance_information:
+            task_id: str = inst["task_id"]
+            task_state: Optional[str] = inst["state"]
+            if task_id not in completed_tasks and task_state not in (None, "scheduled"):
+                if task_id not in logged_running:
+                    # Should be "running" by first time it reaches here.
+                    # Or e.g. "upstream_failed"... Setup to skip "scheduled"
+                    logger.info(f"{task_id} state: {task_state}")
+                    logged_running.append(task_id)
+
+                if task_state in ("success", "failed"):
+                    # Only pushed to XCOM at the end of each Task
+                    xcom_url: str = (
+                        f"{airflow_instance}/{airflow_api_endpoints['get_xcom']}"
+                    )
+                    xcom_url = xcom_url.format(
+                        dag_run_id=dag_run_id,
+                        task_id=task_id,
+                        xcom_key=xcom_key,
+                    )
+                    resp = requests.get(xcom_url, auth=auth)
+                    resp.raise_for_status()
+                    logs: str = resp.json()["value"]  # Only want to print once.
+                    logger.info(f"Providing logs for {task_id}")
+                    print("-" * 50, flush=True)
+                    print(logs, flush=True)
+                    print("-" * 50, flush=True)
+                    logger.info(f"End of logs for {task_id}")
+                    completed_tasks[task_id] = task_state
+
+                elif task_state in ("upstream_failed"):
+                    # upstream_failed never launches so has no log
+                    completed_tasks[task_id] = task_state
+
+        if dag_state in ("queued", "running"):
+            continue
+        logger.info(f"DAG exited: {dag_state}")
+        break
+
+    if dag_state == "failed":
+        sys.exit(1)
+    else:
+        sys.exit(0)
