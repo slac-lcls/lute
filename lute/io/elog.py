@@ -56,8 +56,6 @@ import logging
 from typing import Any, Dict, Optional, List, Union, Tuple
 from io import BufferedReader
 
-from krtc import KerberosTicket
-
 from .exceptions import ElogFileFormatError
 
 if __debug__:
@@ -222,6 +220,8 @@ def get_elog_kerberos_auth() -> Dict[str, str]:
     Returns:
         auth (Dict[str, str]): Dictionary containing Kerberos authorization key.
     """
+    from krtc import KerberosTicket
+
     return KerberosTicket("HTTP@pswww.slac.stanford.edu").getAuthHeaders()
 
 
