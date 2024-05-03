@@ -1,3 +1,31 @@
+# Setup
+LUTE is publically available on [GitHub](https://github.com/slac-lcls/lute). In order to run it, the first step is to clone the repository:
+
+```bash
+# Navigate to the directory of your choice.
+git clone@github.com:slac-lcls/lute
+```
+The repostiory directory structure is as follows:
+
+```
+lute
+  |--- config             # Configuration YAML files (see below) and templates for third party config
+  |--- docs               # Documentation (including this page)
+  |--- launch_scripts     # Entry points for using SLURM and communicating with Airflow
+  |--- lute               # Code
+        |--- run_task.py  # Script to run an individual managed Task
+        |--- ...
+  |--- utilities          # Help utility programs
+
+```
+
+In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.
+
+### A note on utilties
+In the `utilities` directory there are two useful programs to provide assistance with using the software:
+- `utilities/dbview`: LUTE stores all parameters for every analysis routine it runs (as well as results) in a database. This database is stored in the `work_dir` defined in the YAML file (see below). The `dbview` utility is a TUI application (Text-based user interface) which runs in the terminal. It allows you to navigate a LUTE database using the arrow keys, etc. Usage is: `utilities/dbview -p <path/to/lute.db>`.
+- `utilities/lute_help`: This utility provides help and usage information for running LUTE software. E.g., it provides access to parameter descriptions to assist in properly filling out a configuration YAML. It's usage is described in slightly more detail below.
+
 # Basic Usage
 ## Overview
 LUTE runs code as `Task`s that are managed by an `Executor`. The `Executor` provides modifications to the environment the `Task` runs in, as well as controls details of inter-process communication, reporting results to the eLog, etc. Combinations of specific `Executor`s and `Task`s are already provided, and are referred to as **managed** `Task`s. **Managed** `Task`s are submitted as a single unit. They can be run individually, or a series of independent steps can be submitted all at once in the form of a workflow, or **directed acyclic graph** (**DAG**). This latter option makes use of Airflow to manage the individual execution steps.
