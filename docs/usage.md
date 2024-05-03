@@ -16,6 +16,7 @@ lute
         |--- run_task.py  # Script to run an individual managed Task
         |--- ...
   |--- utilities          # Help utility programs
+  |--- workflows          # This directory contains workflow definitions. It is synced elsewhere and not used directly.
 
 ```
 
@@ -186,14 +187,25 @@ The submission process is slightly more complicated in this case. A more in-dept
 - `-c </path/...>` is the path to the configuration YAML to use.
 - `-w <dag_name>` is the name of the DAG (workflow) to run. This replaces the task name provided when using the other two methods above. A DAG list is provided below.
 - `--debug` controls whether to use debug mode (verbose printing)
-- `--test` controls whether to use the test or production instance of Airflow to manage the DAG.
+- `--test` controls whether to use the test or production instance of Airflow to manage the DAG. The instances are running identical versions of Airflow, but the `test` instance may have "test" or more bleeding edge development DAGs.
 
-The `$SLURM_ARGS` must be provided in the same manner as when submitting an individual **managed** `Task` by hand to be run as batch job with the script above. **Note** that these parameters will be used as the starting point for the SLURM arguments of **every managed** `Task` in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments.
+The `$SLURM_ARGS` must be provided in the same manner as when submitting an individual **managed** `Task` by hand to be run as batch job with the script above. **Note** that these parameters will be used as the starting point for the SLURM arguments of **every managed** `Task` in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments. For example, a single threaded analysis `Task` may be capped to running on one core, even if in general everything should be running on 100 cores, per the SLURM argument provided. These caps are added during development and cannot be disabled through configuration changes in the YAML.
 
 **DAG List**
 - `find_peaks_index`
 - `psocake_sfx_phasing`
 - `pyalgos_sfx`
+
+
+#### DAG Submission from the `eLog`
+You can use the script in the previous section to submit jobs through the eLog. To do so navigate to the `Workflow > Definitions` tab using the blue navigation bar at the top of the eLog. On this tab, in the top-right corner (underneath the help and zoom icons) you can click the `+` sign to add a new workflow. This will bring up a "Workflow definition" UI window. When filling out the eLog workflow definition the following fields are needed (all of them):
+- `Name`: You can name the workflow anything you like. It should probably be something descriptive, e.g. if you are using LUTE to run smalldata_tools, you may call the workflow `lute_smd`.
+- `Executable`: In this field you will put the **full path** to the `submit_launch_airflow.sh` script:  `/path/to/lute/launch_scripts/submit_launch_airflow.sh`.
+- `Parameters`: You will use the parameters as described above. Remember the first argument will be the **full path** to the `launch_airflow.py` script (this is NOT the same as the bash script used in the executable!): `/full/path/to/lute/launch_scripts/launch_airflow.py -c <path/to/yaml> -w <dag_name> [--debug] [--test] $SLURM_ARGS`
+- `Location`: **Be sure to set to** `S3DF`.
+- `Trigger`: You can have the workflow trigger automatically or manually. Which option to choose will depend on the type of workflow you are running. In general the options `Manually triggered` (which displays as `MANUAL` on the definitions page) and `End of a run` (which displays as `END_OF_RUN` on the definitions page) are safe options for ALL workflows. The latter will be automatically submitted for you when data acquisition has finished. If you are running a workflow with **managed** `Task`s that work as data is being acquired (e.g. `SmallDataProducer`), you may also select `Start of a run` (which displays as `START_OF_RUN` on the definitions page).
+
+Upon clicking create you will see a new entry in the table on the definitions page. In order to run `MANUAL` workflows, or re-run automatic workflows, you must navigate to the `Workflows > Control` tab. For each acquisition run you will find a drop down menu under the `Job` column. To submit a workflow you select it from this drop down menu by the `Name` you provided when creating its definition.
 
 
 # Advanced Usage
