@@ -177,6 +177,8 @@ You will likely also want to provide at a minimum:
 In general, it is best to prefer the long-form of the SLURM-argument (`--arg=<...>`) in order to avoid potential clashes with present or future LUTE arguments.
 
 ### Workflow (DAG) submission
+**NOTE**: Support for submitting Airflow DAGs from the command-line is coming soon. As of 2024/05/03 you will need to use the instructions for **DAG Submission from the** `eLog` described below. This is due to authentication requirements - support for new API calls is in the works.
+
 Finally, you can submit a full workflow (e.g. SFX analysis, smalldata production and summary results, geometry optimization...). This can be done using a single script, `submit_launch_airflow.sh`, similarly to the SLURM submission above:
 
 ```bash
