@@ -157,6 +157,8 @@ def substitute_variables(
                 else:
                     sub = f"{sub}"
                 iterable[param] = re.sub(pattern, sub, iterable[param])
+            # Reconvert back to numeric values if needed...
+            iterable[param] = _check_str_numeric(iterable[param])
 
 
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
@@ -182,6 +184,7 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
         docs: Iterator[Dict[str, Any]] = yaml.load_all(stream=f, Loader=yaml.FullLoader)
         header: Dict[str, Any] = next(docs)
         config: Dict[str, Any] = next(docs)
+    substitute_variables(header, header)
     substitute_variables(header, config)
     LUTE_DEBUG_EXIT("LUTE_DEBUG_EXIT_AT_YAML", pprint.pformat(config))
     lute_config: Dict[str, AnalysisHeader] = {"lute_config": AnalysisHeader(**header)}
