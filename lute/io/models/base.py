@@ -7,7 +7,7 @@ Classes:
     TaskParameters(BaseSettings): Base class for Task parameters. Subclasses
         specify a model of parameters and their types for validation.
 
-    BaseBinaryParameters(TaskParameters): Base class for Third-party, binary
+    ThirdPartyParameters(TaskParameters): Base class for Third-party, binary
         executable Tasks.
 
     TemplateParameters: Dataclass to represent parameters of binary
@@ -22,12 +22,12 @@ __all__ = [
     "AnalysisHeader",
     "TemplateConfig",
     "TemplateParameters",
-    "BaseBinaryParameters",
+    "ThirdPartyParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Optional
 
 from pydantic import (
     BaseModel,
@@ -139,7 +139,7 @@ class TemplateParameters:
     params: Any
 
 
-class BaseBinaryParameters(TaskParameters):
+class ThirdPartyParameters(TaskParameters):
     """Base class for third party task parameters.
 
     Contains special validators for extra arguments and handling of parameters
@@ -147,11 +147,25 @@ class BaseBinaryParameters(TaskParameters):
     """
 
     class Config(TaskParameters.Config):
+        """Configuration for parameters model.
+
+        The Config class holds Pydantic configuration. In the case of
+        ThirdPartyParameters it also holds some LUTE-specific configuration for
+        interpreting command-line arguments and determining TaskResults from the
+        set of parameters.
+        """
+
         extra: str = "allow"
         short_flags_use_eq: bool = False
         """Whether short command-line arguments are passed like `-x=arg`."""
         long_flags_use_eq: bool = False
         """Whether long command-line arguments are passed like `--long=arg`."""
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+        #result_summary: Optional[str] = None
+        #"""Format a TaskResult.summary from output."""
+        impl_schemas: str = ""
+        """Schema specification for output result. Will be passed to TaskResult."""
 
     # lute_template_cfg: TemplateConfig
 

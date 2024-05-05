@@ -33,7 +33,7 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional
+from typing import Dict, Callable, List, Optional, Any, Union
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 import warnings
@@ -371,6 +371,52 @@ class BaseExecutor(ABC):
         os.kill(proc.pid, signal.SIGCONT)
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
 
+    def _set_result_from_parameters(self) -> None:
+        # This method shouldn't be called unless appropriate
+        # But we will add extra guards here
+        if self._analysis_desc.task_parameters is None:
+            logger.debug(
+                "Cannot set result from TaskParameters. TaskParameters is None!"
+            )
+            return
+        if not hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
+            logger.debug(
+                (
+                    "Cannot set result from TaskParameters. `set_result` not specified!"
+                    " Perhaps this is not a ThirdPartyTask?"
+                    " This method should only be used when running a ThirdPartyTask."
+                )
+            )
+            return
+        schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
+        for param, value in self._analysis_desc.task_parameters.dict().items():
+            param_attrs: Dict[str, Any] = schema[param]
+            if "result_from_param" in param_attrs:
+                # The result specifier can be a bool or a format string
+                # bool to set the parameter directly as the result, string to
+                # produce the result from parameter - E.g. can use the output
+                # directory and add a separate filename.
+                result_from_param: Union[str, bool] = param_attrs["result_from_param"]
+                if isinstance(result_from_param, bool) and result_from_param:
+                    logger.info(f"TaskResult specified as {value}.")
+                    self._analysis_desc.task_result.payload = value
+                elif isinstance(result_from_param, str):
+                    # Perform formatting operations
+                    ...
+                else:
+                    logger.debug(
+                        (
+                            f"{param} specified as result! But specifier is of "
+                            f"wrong type: {type(result_from_param)}!"
+                        )
+                    )
+            elif "impl_schemas" in param_attrs:
+                # Now check for impl_schemas and pass to result.impl_schemas
+                impl_schemas: str = param_attrs["impl_schemas"]
+                if impl_schemas != "":
+                    self._analysis_desc.task_result.impl_schemas = impl_schemas
+        # check for result attribute in model Fields
+
 
 class Executor(BaseExecutor):
     """Basic implementation of an Executor which manages simple IPC with Task.
@@ -421,6 +467,10 @@ class Executor(BaseExecutor):
         def task_started(self: Executor, msg: Message):
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
+                if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
+                    # Third party Tasks may mark a parameter as the result
+                    # If so, setup the result now.
+                    self._set_result_from_parameters()
             logger.info(
                 f"Executor: {self._analysis_desc.task_result.task_name} started"
             )

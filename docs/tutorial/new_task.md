@@ -22,7 +22,7 @@ A brief overview of parameters objects will be provided below. The following inf
 **`Task`s and `TaskParameter`s**
 
 All `Task`s have a corresponding `TaskParameters` object. These objects are linked **exclusively** by a named relationship. For a `Task` named `MyThirdPartyTask`, the parameters object **must** be named `MyThirdPartyTaskParameters`. For third-party `Task`s there are a number of additional requirements:
-- The model must inherit from a base class called `BaseBinaryParameters`.
+- The model must inherit from a base class called `ThirdPartyParameters`.
 - The model must have one field specified called `executable`. The presence of this field indicates that the `Task` is a third-party `Task` and the specified executable must be called. This allows all third-party `Task`s to be defined exclusively by their parameters model. A single `ThirdPartyTask` class handles execution of **all** third-party `Task`s.
 
 All models are stored in `lute/io/models`. For any given `Task`, a new model can be added to an existing module contained in this directory or to a new module. If creating a new module, make sure to add an import statement to `lute.io.models.__init__`.
@@ -39,13 +39,13 @@ from pydantic import Field, validator
 # Also include any pydantic type specifications - Pydantic has many custom
 # validation types already, e.g. types for constrained numberic values, URL handling, etc.
 
-from .base import BaseBinaryParameters
+from .base import ThirdPartyParameters
 
 # Change class name as necessary
-class RunTaskParameters(BaseBinaryParameters):
+class RunTaskParameters(ThirdPartyParameters):
     """Parameters for RunTask..."""
 
-    class Config(BaseBinaryParameters.Config): # MUST be exactly as written here.
+    class Config(ThirdPartyParameters.Config): # MUST be exactly as written here.
         ...
         # Model-wide configuration will go here
 
@@ -83,10 +83,10 @@ As an example, we can again consider defining a model for a `RunTask` `Task`. Co
 
 A model specification for this `Task` may look like:
 ```py
-class RunTaskParameters(BaseBinaryParameters):
+class RunTaskParameters(ThirdPartyParameters):
     """Parameters for the runtask binary."""
 
-    class Config(BaseBinaryParameters.Config):
+    class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True  # For the --method parameter
 
     # Prefer using full/absolute paths where possible.
@@ -144,7 +144,7 @@ For example, consider the `method_param1` field defined above for `RunTask`. We 
 
 ```py
 from pydantic import Field, validator, ValidationError
-class RunTaskParameters(BaseBinaryParameters):
+class RunTaskParameters(ThirdPartyParameters):
     """Parameters for the runtask binary."""
 
     # [...]
@@ -205,10 +205,10 @@ Parameters used to run a `Task` are recorded in a database for every `Task`. It 
 ```py
 from pydantic import Field, validator
 
-from .base import BaseBinaryParameters
+from .base import ThirdPartyParameters
 from ..db import read_latest_db_entry
 
-class RunTask2Parameters(BaseBinaryParameters):
+class RunTask2Parameters(ThirdPartyParameters):
     input: str = Field("", description="Input file.", flag_type="--")
 
     @validator("input")
@@ -241,8 +241,8 @@ After a pydantic model has been created, the next required step is to define a *
 As mentioned, for most cases you can setup a third-party `Task` to use the first type of `Executor`. If, however, your third-party `Task` uses MPI, you can use either. When using the standard `Executor` for a `Task` requiring MPI, the `executable` in the pydantic model must be set to `mpirun`. For example, a third-party `Task` model, that uses MPI but can be run with the `Executor` may look like the following. We assume this `Task` runs a Python script using MPI.
 
 ```py
-class RunMPITaskParameters(BaseBinaryParameters):
-    class Config(BaseBinaryParameters.Config):
+class RunMPITaskParameters(ThirdPartyParameters):
+    class Config(ThirdPartyParameters.Config):
         ...
 
     executable: str = Field("mpirun", description="MPI executable")
@@ -297,14 +297,14 @@ LUTE provides two additional base models which are used for template parsing in 
 - `TemplateParameters` objects which hold parameters which will be used to render a portion of a template.
 - `TemplateConfig` objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.
 
-`Task` models which inherit from the `BaseBinaryParameters` model, as all third-party `Task`s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as `TemplateParameters` objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the **only** requirement on the Python-side when adding template rendering functionality to the `Task` is the addition of one parameter - an instance of `TemplateConfig`. The instance **MUST** be called `lute_template_cfg`.
+`Task` models which inherit from the `ThirdPartyParameters` model, as all third-party `Task`s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as `TemplateParameters` objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the **only** requirement on the Python-side when adding template rendering functionality to the `Task` is the addition of one parameter - an instance of `TemplateConfig`. The instance **MUST** be called `lute_template_cfg`.
 
 ```py
 from pydantic import Field, validator
 
 from .base import TemplateConfig
 
-class RunTaskParamaters(BaseBinaryParameters):
+class RunTaskParamaters(ThirdPartyParameters):
     ...
     # This parameter MUST be called lute_template_cfg!
     lute_template_cfg: TemplateConfig = Field(
