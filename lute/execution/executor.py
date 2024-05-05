@@ -410,12 +410,11 @@ class BaseExecutor(ABC):
                             f"wrong type: {type(result_from_param)}!"
                         )
                     )
-            elif "impl_schemas" in param_attrs:
-                # Now check for impl_schemas and pass to result.impl_schemas
-                impl_schemas: str = param_attrs["impl_schemas"]
-                if impl_schemas != "":
-                    self._analysis_desc.task_result.impl_schemas = impl_schemas
-        # check for result attribute in model Fields
+        # Now check for impl_schemas and pass to result.impl_schemas
+        if hasattr(self._analysis_desc.task_parameters.Config, "impl_schemas"):
+            impl_schemas: str = self._analysis_desc.task_parameters.Config.impl_schemas
+            if impl_schemas != "":
+                self._analysis_desc.task_result.impl_schemas = impl_schemas
 
 
 class Executor(BaseExecutor):

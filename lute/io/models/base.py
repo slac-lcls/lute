@@ -162,8 +162,8 @@ class ThirdPartyParameters(TaskParameters):
         """Whether long command-line arguments are passed like `--long=arg`."""
         set_result: bool = False
         """Whether the Executor should mark a specified parameter as a result."""
-        #result_summary: Optional[str] = None
-        #"""Format a TaskResult.summary from output."""
+        # result_summary: Optional[str] = None
+        # """Format a TaskResult.summary from output."""
         impl_schemas: str = ""
         """Schema specification for output result. Will be passed to TaskResult."""
 
