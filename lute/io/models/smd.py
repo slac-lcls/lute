@@ -21,6 +21,7 @@ from pydantic import (
     PositiveInt,
     NonNegativeInt,
     Field,
+    root_validator,
     validator,
 )
 
@@ -29,6 +30,11 @@ from .base import TaskParameters, ThirdPartyParameters, TemplateConfig
 
 class SubmitSMDParameters(ThirdPartyParameters):
     """Parameters for running smalldata to produce reduced HDF5 files."""
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        result_from_params: str = ""
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")
     np: PositiveInt = Field(
@@ -67,6 +73,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
         description="Optional output directory. If None, will be in ${EXP_FOLDER}/hdf5/smalldata.",
         flag_type="--",
     )
+    ## Need mechanism to set result_from_param=True ...
     gather_interval: PositiveInt = Field(
         25, description="Number of events to collect at a time.", flag_type="--"
     )
@@ -143,6 +150,19 @@ class SubmitSMDParameters(ThirdPartyParameters):
         if not lute_template_cfg.output_path:
             lute_template_cfg.output_path = values["producer"]
         return lute_template_cfg
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        exp: str = values["experiment"]
+        hutch: str = exp[:3]
+        run: int = int(values["run"])
+        directory: Optional[str] = values["directory"]
+        if directory is None:
+            directory = f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata"
+        fname: str = f"{exp}_Run{run:04d}.h5"
+
+        cls.Config.result_from_params = f"{directory}/{fname}"
+        return values
 
     # detnames: TemplateParameters = TemplateParameters({})
     # epicsPV: TemplateParameters = TemplateParameters({})

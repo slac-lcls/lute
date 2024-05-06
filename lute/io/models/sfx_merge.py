@@ -52,6 +52,7 @@ class MergePartialatorParameters(ThirdPartyParameters):
         description="Path to output file.",
         flag_type="-",
         rename_param="o",
+        is_result=True,
     )
     symmetry: str = Field(description="Point group symmetry.", flag_type="--")
     niter: Optional[int] = Field(
@@ -231,6 +232,7 @@ class CompareHKLParameters(ThirdPartyParameters):
         description="Path to input HKLs. Space-separated list of 2. Use output of partialator e.g.",
         flag_type="",
     )
+    ## Need mechanism to set is_result=True ...
     symmetry: str = Field("", description="Point group symmetry.", flag_type="--")
     cell_file: str = Field(
         "",
@@ -367,6 +369,7 @@ class ManipulateHKLParameters(ThirdPartyParameters):
         description="Path to output file.",
         flag_type="-",
         rename_param="o",
+        is_result=True,
     )
     cell_file: str = Field(
         "",

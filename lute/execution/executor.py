@@ -372,6 +372,30 @@ class BaseExecutor(ABC):
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
 
     def _set_result_from_parameters(self) -> None:
+        """Use TaskParameters object to set TaskResult fields.
+
+        A result may be defined in terms of specific parameters. This is most
+        useful for ThirdPartyTasks which would not otherwise have an easy way of
+        reporting what the TaskResult is. There are two options for specifying
+        results from parameters:
+            1. A single parameter (Field) of the model has an attribute
+               `is_result`. This is a bool indicating that this parameter points
+               to a result. E.g. a parameter `output` may set `is_result=True`.
+            2. The `TaskParameters.Config` has a `result_from_params` attribute.
+               This is an appropriate option if the result is determinable for
+               the Task, but it is not easily defined by a single parameter. The
+               TaskParameters.Config.result_from_param can be set by a custom
+               validator, e.g. to combine the values of multiple parameters into
+               a single result. E.g. an `out_dir` and `out_file` parameter used
+               together specify the result. Currently only string specifiers are
+               supported.
+
+        A TaskParameters object specifies that it contains information about the
+        result by setting a single config option:
+                        TaskParameters.Config.set_result=True
+        In general, this method should only be called when the above condition is
+        met, however, there are minimal checks in it as well.
+        """
         # This method shouldn't be called unless appropriate
         # But we will add extra guards here
         if self._analysis_desc.task_parameters is None:
@@ -388,26 +412,24 @@ class BaseExecutor(ABC):
                 )
             )
             return
+        if hasattr(self._analysis_desc.task_parameters.Config, "result_from_params"):
+            result_from_params: str = self._analysis_desc.task_parameters.Config.result_from_params
+            if isinstance(result_from_params, str) and result_from_params != "":
+                logger.info(f"TaskResult specified as {result_from_params}.")
+                self._analysis_desc.task_result.payload = result_from_params
         schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
         for param, value in self._analysis_desc.task_parameters.dict().items():
             param_attrs: Dict[str, Any] = schema[param]
-            if "result_from_param" in param_attrs:
-                # The result specifier can be a bool or a format string
-                # bool to set the parameter directly as the result, string to
-                # produce the result from parameter - E.g. can use the output
-                # directory and add a separate filename.
-                result_from_param: Union[str, bool] = param_attrs["result_from_param"]
-                if isinstance(result_from_param, bool) and result_from_param:
+            if "is_result" in param_attrs:
+                is_result: Union[str, bool] = param_attrs["is_result"]
+                if isinstance(is_result, bool) and is_result:
                     logger.info(f"TaskResult specified as {value}.")
                     self._analysis_desc.task_result.payload = value
-                elif isinstance(result_from_param, str):
-                    # Perform formatting operations
-                    ...
                 else:
                     logger.debug(
                         (
                             f"{param} specified as result! But specifier is of "
-                            f"wrong type: {type(result_from_param)}!"
+                            f"wrong type: {type(is_result)}!"
                         )
                     )
         # Now check for impl_schemas and pass to result.impl_schemas
@@ -466,6 +488,9 @@ class Executor(BaseExecutor):
         def task_started(self: Executor, msg: Message):
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
+                # Maybe just run this no matter what? Rely on the other guards?
+                # Perhaps just check if ThirdPartyParameters?
+                # if isinstance(self._analysis_desc.task_parameters, ThirdPartyParameters):
                 if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
                     # Third party Tasks may mark a parameter as the result
                     # If so, setup the result now.
@@ -534,7 +559,9 @@ class Executor(BaseExecutor):
         for communicator in self._communicators:
             msg: Message = communicator.read(proc)
             if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                hook: Callable[[None], None] = getattr(self.Hooks, msg.signal.lower())
+                hook: Callable[[Executor, Message], None] = getattr(
+                    self.Hooks, msg.signal.lower()
+                )
                 hook(self, msg)
             if msg.contents is not None:
                 if isinstance(msg.contents, str) and msg.contents != "":

@@ -153,6 +153,23 @@ class ThirdPartyParameters(TaskParameters):
         ThirdPartyParameters it also holds some LUTE-specific configuration for
         interpreting command-line arguments and determining TaskResults from the
         set of parameters.
+
+        Attributes:
+            extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
+                arguments.
+
+            short_flags_use_eq (bool): False. If True, "short" command-line args
+                are passed as `-x=arg`.
+
+            long_flags_use_eq (bool): False. If True, "long" command-line args
+                are passed as `--long=arg`.
+
+            set_result (bool). True. If True, the model has information about
+                setting the TaskResult object from the parameters it contains.
+                E.g. it has an `output` parameter which is marked as the result.
+
+            impl_schemas (str). Specifies a the schemas the output/results
+                conform to. Only used if set_result is True.
         """
 
         extra: str = "allow"
@@ -160,17 +177,19 @@ class ThirdPartyParameters(TaskParameters):
         """Whether short command-line arguments are passed like `-x=arg`."""
         long_flags_use_eq: bool = False
         """Whether long command-line arguments are passed like `--long=arg`."""
-        set_result: bool = False
+        set_result: bool = True  # Could consider moving this to the base Config...
         """Whether the Executor should mark a specified parameter as a result."""
         # result_summary: Optional[str] = None
         # """Format a TaskResult.summary from output."""
+        # result_from_params: str = ""
+        # """Defines a result from the parameters. Use a validator to do so."""
         impl_schemas: str = ""
         """Schema specification for output result. Will be passed to TaskResult."""
 
     # lute_template_cfg: TemplateConfig
 
     @root_validator(pre=False)
-    def extra_fields_to_thirdparty(cls, values):
+    def extra_fields_to_thirdparty(cls, values: Dict[str, Any]):
         for key in values:
             if key not in cls.__fields__:
                 values[key] = TemplateParameters(values[key])

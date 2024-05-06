@@ -52,7 +52,7 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         description="Path to output file.",
         flag_type="-",
         rename_param="o",
-        result_from_param=True,
+        is_result=True,
     )
     geometry: str = Field(
         "", description="Path to geometry file.", flag_type="-", rename_param="g"
