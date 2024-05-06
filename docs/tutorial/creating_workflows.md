@@ -6,6 +6,7 @@ In addition to the core LUTE package, a number of components are generally invol
 
 For building and running workflows using SLURM and Airflow, the following components are necessary, and will be described in more detail below:
 - Airflow launch script: `launch_airflow.py`
+  - This has a wrapper batch submission script: `submit_launch_airflow.sh` . When running using the ARP (from the eLog), you **MUST** use this wrapper script instead of the Python script directly.
 - SLURM submission script: `submit_slurm.sh`
 - Airflow operators:
   - `JIDSlurmOperator`
@@ -44,6 +45,12 @@ launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test]
 - `--debug` is an optional flag to run all steps of the workflow in debug mode for verbose logging and output.
 - `--test` is an optional flag which will use the test Airflow instance. By default the script will make requests of the standard production Airflow instance.
 
+
+**Lifetime**
+This script will run for the entire duration of the **workflow (DAG)**. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed `Task`)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.
+
+### `submit_launch_airflow.sh`
+This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the `launch_airflow.py` job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the `launch_airflow.py` script to run on the S3DF batch nodes. Usage of this script is identical to `launch_airflow.py`. All the arguments are passed transparently to the underlying Python script. The wrapper will simply launch a batch job using minimal resources (1 core).
 
 ## `submit_slurm.sh`
 Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single **managed** `Task` at a time. The usage is as follows:
