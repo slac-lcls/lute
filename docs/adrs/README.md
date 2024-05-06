@@ -12,4 +12,6 @@
 | 5       | 2023-12-06  | Task-Executor IPC is Managed by Communicator Objects                        | **Proposed** |
 | 6       | 2024-02-12  | Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s | **Proposed** |
 | 7       | 2024-02-12  | `Task` Configuration is Stored in a Database Managed by `Executor`s         | **Proposed** |
+| 8       | 2024-03-18  | Airflow credentials/authorization requires special launch program.          | **Proposed** |
+| 9       | 2024-04-15  | Airflow launch script will run as long lived batch job.                     | **Proposed** |
 |         |             |                                                                             |              |
