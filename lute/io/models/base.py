@@ -168,8 +168,8 @@ class ThirdPartyParameters(TaskParameters):
                 setting the TaskResult object from the parameters it contains.
                 E.g. it has an `output` parameter which is marked as the result.
 
-            impl_schemas (str). Specifies a the schemas the output/results
-                conform to. Only used if set_result is True.
+            impl_schemas (Optional[str]). Specifies a the schemas the
+                output/results conform to. Only used if set_result is True.
         """
 
         extra: str = "allow"
@@ -183,7 +183,7 @@ class ThirdPartyParameters(TaskParameters):
         # """Format a TaskResult.summary from output."""
         # result_from_params: str = ""
         # """Defines a result from the parameters. Use a validator to do so."""
-        impl_schemas: str = ""
+        impl_schemas: Optional[str] = None
         """Schema specification for output result. Will be passed to TaskResult."""
 
     # lute_template_cfg: TemplateConfig
