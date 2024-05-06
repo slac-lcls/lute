@@ -1,6 +1,6 @@
 # [ADR-9] Airflow launch script will run as long lived batch job.
 
-**Date:** 2024-03-18
+**Date:** 2024-04-15
 
 ## Status
 **Proposed**
