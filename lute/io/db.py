@@ -135,16 +135,16 @@ def _result_to_entry_cols(
         columns (Dict[str, str]): Converted {name:type} dictionary.
     """
     entry: Dict[str, Any] = {
-        "task_status": str(result.task_status).split(".")[1],
-        "summary": result.summary,
-        "payload": result.payload,
-        "impl_schemas": result.impl_schemas,
+        "result.task_status": str(result.task_status).split(".")[1],
+        "result.summary": result.summary,
+        "result.payload": result.payload,
+        "result.impl_schemas": result.impl_schemas,
     }
     columns: Dict[str, str] = {
-        "task_status": "TEXT",
-        "summary": "TEXT",
-        "payload": "BLOB",
-        "impl_schemas": "TEXT",
+        "result.task_status": "TEXT",
+        "result.summary": "TEXT",
+        "result.payload": "BLOB",
+        "result.impl_schemas": "TEXT",
     }
 
     return entry, columns
@@ -241,6 +241,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         gen_entry,  # Dict[str, Any]
         gen_columns,  # Dict[str, str]
     ) = _params_to_entry_cols(cfg.task_parameters)
+    # Maybe switch below to use a prefix `result.<field>`?
     x, y = _result_to_entry_cols(cfg.task_result)
     task_entry.update(x)
     task_columns.update(y)
