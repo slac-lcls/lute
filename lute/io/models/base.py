@@ -63,12 +63,16 @@ class AnalysisHeader(BaseModel):
     work_dir: str = Field("", description="Main working directory for LUTE.")
 
     @validator("work_dir", always=True)
-    def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
-        if work_dir == "":
-            work_dir = (
+    def validate_work_dir(cls, directory: str, values: Dict[str, Any]) -> str:
+        work_dir: str
+        if directory == "":
+            std_work_dir = (
                 f"/sdf/data/lcls/ds/{values['experiment'][:3]}/"
                 f"{values['experiment']}/scratch"
             )
+            work_dir = std_work_dir
+        else:
+            work_dir = directory
         # Check existence and permissions
         if not os.path.exists(work_dir):
             raise ValueError(f"Working Directory: {work_dir} does not exist!")
