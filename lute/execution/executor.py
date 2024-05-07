@@ -339,6 +339,8 @@ class BaseExecutor(ABC):
             logger.info("Exiting after Task failure. Result recorded.")
             sys.exit(-1)
 
+        self.process_results()
+
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
         record_analysis_db(copy.deepcopy(self._analysis_desc))
@@ -412,31 +414,81 @@ class BaseExecutor(ABC):
                 )
             )
             return
-        if hasattr(self._analysis_desc.task_parameters.Config, "result_from_params"):
-            result_from_params: str = self._analysis_desc.task_parameters.Config.result_from_params
-            if isinstance(result_from_params, str) and result_from_params != "":
-                logger.info(f"TaskResult specified as {result_from_params}.")
-                self._analysis_desc.task_result.payload = result_from_params
-        schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
-        for param, value in self._analysis_desc.task_parameters.dict().items():
-            param_attrs: Dict[str, Any] = schema[param]
-            if "is_result" in param_attrs:
-                is_result: Union[str, bool] = param_attrs["is_result"]
-                if isinstance(is_result, bool) and is_result:
-                    logger.info(f"TaskResult specified as {value}.")
-                    self._analysis_desc.task_result.payload = value
-                else:
-                    logger.debug(
-                        (
-                            f"{param} specified as result! But specifier is of "
-                            f"wrong type: {type(is_result)}!"
+        if not self._analysis_desc.task_parameters.Config.set_result:
+            return
+
+        # First try to set from result_from_params (faster)
+        if self._analysis_desc.task_parameters.Config.result_from_params is not None:
+            # if hasattr(self._analysis_desc.task_parameters.Config, "result_from_params"):
+            result_from_params: str = (
+                self._analysis_desc.task_parameters.Config.result_from_params
+            )
+            logger.info(f"TaskResult specified as {result_from_params}.")
+            self._analysis_desc.task_result.payload = result_from_params
+            # if isinstance(result_from_params, str) and result_from_params != "":
+            #    logger.info(f"TaskResult specified as {result_from_params}.")
+            #    self._analysis_desc.task_result.payload = result_from_params
+        else:
+            # Iterate parameters to find the one that is the result
+            schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
+            for param, value in self._analysis_desc.task_parameters.dict().items():
+                param_attrs: Dict[str, Any] = schema["properties"][param]
+                if "is_result" in param_attrs:
+                    # is_result: Union[str, bool] = param_attrs["is_result"]
+                    is_result: bool = param_attrs["is_result"]
+                    if isinstance(is_result, bool) and is_result:
+                        logger.info(f"TaskResult specified as {value}.")
+                        self._analysis_desc.task_result.payload = value
+                    else:
+                        logger.debug(
+                            (
+                                f"{param} specified as result! But specifier is of "
+                                f"wrong type: {type(is_result)}!"
+                            )
                         )
-                    )
+                    break  # We should only have 1 result-like parameter!
+
+        # If we get this far and haven't changed the payload we should complain
+        if self._analysis_desc.task_result.payload == "":
+            task_name: str = self._analysis_desc.task_result.task_name
+            logger.debug(
+                (
+                    f"{task_name} specified result be set from {task_name}Parameters,"
+                    " but no result provided! Check model definition!"
+                )
+            )
         # Now check for impl_schemas and pass to result.impl_schemas
-        if hasattr(self._analysis_desc.task_parameters.Config, "impl_schemas"):
-            impl_schemas: str = self._analysis_desc.task_parameters.Config.impl_schemas
-            if impl_schemas != "":
-                self._analysis_desc.task_result.impl_schemas = impl_schemas
+        # Only get to this point if set_result == True
+        impl_schemas: Optional[str] = (
+            self._analysis_desc.task_parameters.Config.impl_schemas
+        )
+        self._analysis_desc.task_result.impl_schemas = impl_schemas
+        # If we set_result but didn't get schema information we should complain
+        if self._analysis_desc.task_result.impl_schemas is None:
+            task_name: str = self._analysis_desc.task_result.task_name
+            logger.debug(
+                (
+                    f"{task_name} specified result be set from {task_name}Parameters,"
+                    " but no schema provided! Check model definition!"
+                )
+            )
+        # if hasattr(self._analysis_desc.task_parameters.Config, "impl_schemas"):
+        #    impl_schemas: Optional[str] = (
+        #        self._analysis_desc.task_parameters.Config.impl_schemas
+        #    )
+        #    self._analysis_desc.task_result.impl_schemas = impl_schemas
+
+    def process_results(self) -> None:
+        """Perform any necessary steps to process TaskResults object.
+
+        Processing will depend on subclass. Examples of steps include, moving
+        files, converting file formats, compiling plots/figures into an HTML
+        file, etc.
+        """
+        self._process_results()
+
+    @abstractmethod
+    def _process_results(self) -> None: ...
 
 
 class Executor(BaseExecutor):
@@ -577,6 +629,37 @@ class Executor(BaseExecutor):
         """
         self._task_loop(proc)  # Perform a final read.
 
+    def _process_results(self) -> None:
+        """Performs result processing.
+
+        Actions include:
+        - For `ElogSummaryPlots`, will save the summary plot to a
+        """
+        task_result: TaskResult = self._analysis_desc.task_result
+        self._process_result_payload(task_result.payload)
+        self._process_result_summary(task_result.summary)
+
+    def _process_result_payload(self, payload: Any) -> None:
+        if isinstance(payload, ElogSummaryPlots):
+            # ElogSummaryPlots has figures and a navigation save name
+            try:
+                # Preferred use is panel.Tabs
+                if not os.path.isdir(payload.save_path):
+                    os.makedirs(payload.save_path)
+                payload.figures.save(f"{payload.save_path}/report.html")
+            except AttributeError:  # Not panel.Tabs
+                try:
+                    # Attempt matplotlib...
+                    ...
+                except:
+                    ...
+        elif isinstance(payload, str):
+            # May be a path to a file...
+            schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
+            # Should also check `impl_schemas` to determine what to do with path
+
+    def _process_result_summary(self, summary: str) -> None: ...
+
 
 class MPIExecutor(Executor):
     """Runs first-party Tasks that require MPI.
@@ -592,7 +675,9 @@ class MPIExecutor(Executor):
 
     This Executor will submit the Task to run with a number of processes equal
     to the total number of cores available minus 1. A single core is reserved
-    for the Executor itself.
+    for the Executor itself. Note that currently this means that you must submit
+    on 3 cores or more, since MPI requires a minimum of 2 ranks, and the number
+    of ranks is determined from the cores dedicated to Task execution.
 
     Methods:
         _submit_cmd: Run the task as a subprocess using `mpirun`.

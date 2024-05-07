@@ -112,10 +112,59 @@ class TaskParameters(BaseSettings):
     """
 
     class Config:
+        """Configuration for parameters model.
+
+        The Config class holds Pydantic configuration. A number of LUTE-specific
+        configuration has also been placed here.
+
+        Attributes:
+            env_prefix (str): Pydantic configuration. Will set parameters from
+                environment variables containing this prefix. E.g. a model
+                parameter `input` can be set with an environment variable:
+                `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+            underscore_attrs_are_private (bool): Pydantic configuration. Whether
+                to hide attributes (parameters) prefixed with an underscore.
+
+            copy_on_model_validation (str): Pydantic configuration. How to copy
+                the input object passed to the class instance for model
+                validation. Set to perform a deep copy.
+
+            allow_inf_nan (bool): Pydantic configuration. Whether to allow
+                infinity or NAN in float fields.
+
+            set_result (bool). False. If True, the model has information about
+                setting the TaskResult object from the parameters it contains.
+                E.g. it has an `output` parameter which is marked as the result.
+
+            result_from_params (Optional[str]): None. Optionally used to define
+                results from information available in the model using a custom
+                validator. E.g. use a `outdir` and `filename` field to set
+                `result_from_params=f"{outdir}/{filename}`, etc. Only used if
+                `set_result==True`
+
+            result_summary (Optional[str]): None. Defines a result summary that
+                can be known after processing the Pydantic model. Use of summary
+                depends on the Executor running the Task. All summaries are
+                stored in the database, however. Only used if `set_result==True`
+
+            impl_schemas (Optional[str]). Specifies a the schemas the
+                output/results conform to. Only used if `set_result==True`.
+        """
+
         env_prefix = "LUTE_"
         underscore_attrs_are_private: bool = True
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
+
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+        result_from_params: Optional[str] = None
+        """Defines a result from the parameters. Use a validator to do so."""
+        result_summary: Optional[str] = None
+        """Format a TaskResult.summary from output."""
+        impl_schemas: Optional[str] = None
+        """Schema specification for output result. Will be passed to TaskResult."""
 
     lute_config: AnalysisHeader
 
@@ -149,24 +198,50 @@ class ThirdPartyParameters(TaskParameters):
     class Config(TaskParameters.Config):
         """Configuration for parameters model.
 
-        The Config class holds Pydantic configuration. In the case of
-        ThirdPartyParameters it also holds some LUTE-specific configuration for
-        interpreting command-line arguments and determining TaskResults from the
-        set of parameters.
+        The Config class holds Pydantic configuration and inherited configuration
+        from the base `TaskParameters.Config` class. A number of values are also
+        overridden, and there are some specific configuration options to
+        ThirdPartyParameters. A full list of options (with TaskParameters options
+        repeated) is described below.
 
         Attributes:
+            env_prefix (str): Pydantic configuration. Will set parameters from
+                environment variables containing this prefix. E.g. a model
+                parameter `input` can be set with an environment variable:
+                `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+            underscore_attrs_are_private (bool): Pydantic configuration. Whether
+                to hide attributes (parameters) prefixed with an underscore.
+
+            copy_on_model_validation (str): Pydantic configuration. How to copy
+                the input object passed to the class instance for model
+                validation. Set to perform a deep copy.
+
+            allow_inf_nan (bool): Pydantic configuration. Whether to allow
+                infinity or NAN in float fields.
+
             extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
                 arguments.
 
             short_flags_use_eq (bool): False. If True, "short" command-line args
-                are passed as `-x=arg`.
+                are passed as `-x=arg`. ThirdPartyTask-specific.
 
             long_flags_use_eq (bool): False. If True, "long" command-line args
-                are passed as `--long=arg`.
+                are passed as `--long=arg`. ThirdPartyTask-specific.
 
             set_result (bool). True. If True, the model has information about
                 setting the TaskResult object from the parameters it contains.
                 E.g. it has an `output` parameter which is marked as the result.
+
+            result_from_params (Optional[str]): None. Optionally used to define
+                results from information available in the model using a custom
+                validator. E.g. use a `outdir` and `filename` field to set
+                `result_from_params=f"{outdir}/{filename}`, etc.
+
+            result_summary (Optional[str]): None. Defines a result summary that
+                can be known after processing the Pydantic model. Use of summary
+                depends on the Executor running the Task. All summaries are
+                stored in the database, however.
 
             impl_schemas (Optional[str]). Specifies a the schemas the
                 output/results conform to. Only used if set_result is True.
@@ -179,12 +254,6 @@ class ThirdPartyParameters(TaskParameters):
         """Whether long command-line arguments are passed like `--long=arg`."""
         set_result: bool = True  # Could consider moving this to the base Config...
         """Whether the Executor should mark a specified parameter as a result."""
-        # result_summary: Optional[str] = None
-        # """Format a TaskResult.summary from output."""
-        # result_from_params: str = ""
-        # """Defines a result from the parameters. Use a validator to do so."""
-        impl_schemas: Optional[str] = None
-        """Schema specification for output result. Will be passed to TaskResult."""
 
     # lute_template_cfg: TemplateConfig
 

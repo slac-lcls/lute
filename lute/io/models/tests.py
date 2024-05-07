@@ -86,8 +86,11 @@ class TestSocketParameters(TaskParameters):
 
 
 class TestWriteOutputParameters(TaskParameters):
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+
     outfile_name: str = Field(
-        "test_output.txt", description="Outfile name without full path."
+        "test_output.txt", description="Outfile name without full path.", is_result=True
     )
     num_vals: int = Field(100, description='Number of values to "process"')
 

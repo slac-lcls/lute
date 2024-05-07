@@ -10,10 +10,10 @@ Classes:
         parameters, env).
 """
 
-__all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis"]
+__all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis", "ElogSummaryPlots"]
 __author__ = "Gabriel Dorlhiac"
 
-from typing import Any, List, Dict, Optional
+from typing import Any, List, Dict, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -66,10 +66,10 @@ class TaskResult:
 
         payload (Any): Actual result. May be data in any format.
 
-        impl_schemas (str): A string listing `Task` schemas implemented by the
-            associated `Task`. Schemas define the category and expected output
-            of the `Task`. An individual task may implement/conform to multiple
-            schemas. Multiple schemas are separated by ';', e.g.
+        impl_schemas (Optional[str]): A string listing `Task` schemas implemented
+            by the associated `Task`. Schemas define the category and expected
+            output of the `Task`. An individual task may implement/conform to
+            multiple schemas. Multiple schemas are separated by ';', e.g.
                 * impl_schemas = "schema1;schema2"
     """
 
@@ -81,7 +81,25 @@ class TaskResult:
 
 
 @dataclass
+class ElogSummaryPlots:
+    """Holds a graphical summary intended for display in the eLog.
+
+    Attributes:
+        save_path (str): This represents both a path and how the result will be
+            displayed on the eLog. Can include "/" characters. E.g.
+            `navigation_display = "scans/my_motor_scan"` will have plots shown
+            on a "my_motor_scan" page, under a "scans" tab. This format mirrors
+            how the file is stored on disk as well.
+    """
+
+    save_path: str
+    figures: Union["pn.Tabs", "hv.Image", "plt.Figure"]
+
+
+@dataclass
 class DescribedAnalysis:
+    """Complete analysis description. Held by an Executor."""
+
     task_result: TaskResult
     task_parameters: Optional[TaskParameters]
     task_env: Dict[str, str]

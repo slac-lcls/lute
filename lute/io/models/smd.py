@@ -31,10 +31,10 @@ from .base import TaskParameters, ThirdPartyParameters, TemplateConfig
 class SubmitSMDParameters(ThirdPartyParameters):
     """Parameters for running smalldata to produce reduced HDF5 files."""
 
-    class Config(ThirdPartyParameters.Config):
-        """Identical to super-class Config but includes a result."""
+    # class Config(ThirdPartyParameters.Config):
+    #    """Identical to super-class Config but includes a result."""
 
-        result_from_params: str = ""
+    #    result_from_params: str = ""
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")
     np: PositiveInt = Field(
