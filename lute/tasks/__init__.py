@@ -5,7 +5,8 @@ Functions:
        Task's. This prevents import conflicts as Task's may be intended to run
        in different environments.
 Exceptions:
-    TaskNotFoundError: Raised if
+    TaskNotFoundError: Raised if the requested Task can not be found. It may not
+        exist, or it has not been added to the `import_task` function.
 """
 
 from typing import Type
@@ -65,5 +66,10 @@ def import_task(task_name: str) -> Type[Task]:
         from .sfx_index import ConcatenateStreamFiles
 
         return ConcatenateStreamFiles
+
+    if task_name == "EditSHELXDInstructions":
+        from .sfx_solve import EditSHELXDInstructions
+
+        return EditSHELXDInstructions
 
     raise TaskNotFoundError

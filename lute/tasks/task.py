@@ -15,6 +15,7 @@ from typing import Any, List, Dict, Union, Type, TextIO
 import os
 import warnings
 import signal
+import shlex
 
 from ..io.models.base import (
     TaskParameters,
@@ -328,7 +329,7 @@ class ThirdPartyTask(Task):
                     if isinstance(value, bool) and value:
                         continue
             if isinstance(value, str) and " " in value:
-                for val in value.split():
+                for val in shlex.split(value):
                     self._args_list.append(f"{val}")
             else:
                 self._args_list.append(f"{value}")

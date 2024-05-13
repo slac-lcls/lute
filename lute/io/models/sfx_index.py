@@ -154,7 +154,10 @@ class IndexCrystFELParameters(BaseBinaryParameters):
         rename_param="no-image-data",
     )
     # Peak-finding options
-    # ....
+    peaks: Optional[str] = Field(
+        description="Peak detection method, or specify to collect from a file",
+        flag_type="--",
+    )
     # Indexing options
     indexing: Optional[str] = Field(
         description="Comma-separated list of supported indexing algorithms to use. Default is to automatically detect.",
