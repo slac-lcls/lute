@@ -45,3 +45,5 @@ PhenixEMMARunner: Executor = Executor("RunPhenixEMMA")
 PhenixEMMARunner.shell_source(
     "/sdf/group/lcls/ds/tools/phenix/phenix-1.16-3549/phenix_env.sh"
 )
+
+PDBFileEditor: Executor = Executor("EditPDBFile")

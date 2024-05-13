@@ -10,11 +10,13 @@ __all__ = [
     "RunSHELXCParameters",
     "RunSHELXDParameters",
     "EditSHELXDInstructionsParameters",
+    "RunPhenixEMMAParameters",
+    "EditPDBFileParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, List, Optional, Dict, Any, Tuple
 
 from pydantic import Field, validator, PositiveFloat, PositiveInt
 
@@ -350,7 +352,7 @@ class RunSHELXDParameters(ThirdPartyParameters):
         return in_file
 
 
-class RunPhenixEMMA(ThirdPartyParameters):
+class RunPhenixEMMAParameters(ThirdPartyParameters):
     """Phenix's Euclidian Model Matching.
 
     Superimposes two structure solutions to derive a consensus.
@@ -392,4 +394,121 @@ class RunPhenixEMMA(ThirdPartyParameters):
     )
     other_coords: str = Field(
         "", description="Other coordinates to compare with.", flag_type=""
+    )
+
+
+class EditPDBFileParameters(TaskParameters):
+    """Perform modifications of a PDB file."""
+
+    in_file: str = Field("", description="PDB to modify.")
+    delete_hetatom_number: Optional[Union[int, List[int]]] = Field(
+        description=(
+            "Delete an atom (or list of atoms), specified by indices.\n"
+            "Atoms are numbered beginning from 1!"
+        )
+    )
+    substitute_element: Optional[Tuple[str, str]] = Field(
+        description="Substitute instances of one element for another."
+    )
+    out_file: str = Field("", description="Edited output PDB.")
+
+    @validator("out_file")
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
+        if out_file == "":
+            in_file: str = values["in_file"]
+            return in_file
+        return out_file
+
+
+class RunSolomonParameters(ThirdPartyParameters):
+    """Density modification program by solvent flipping.
+
+    More information available here:
+    https://www.ccp4.ac.uk/html/solomon.html
+
+    Usage:
+    solomon MAPIN foo_in.map [ MAPOUT foo_out.map ] [ RMSMAP foo_out2.map ]
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/solomon",
+        description="CCP4 Solomon density modification program.",
+        flag_type="",
+    )
+
+class RunMulticombParameters(ThirdPartyParameters):
+    """Phase combination program.
+
+    More information available here:
+
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/multicomb",
+        description="CCP4 phase combination program.",
+        flag_type="",
+    )
+
+class RunParrotParameters(ThirdPartyParameters):
+    """Phase combination program.
+
+    More information available here:
+    https://www.ccp4.ac.uk/html/parrot.html
+
+    Usage:
+	-mtzin-ref <filename>
+	-pdbin-ref <filename>
+	-mtzin <filename>		COMPULSORY
+	-seqin <filename>
+	-pdbin <filename>
+	-pdbin-ha <filename>
+	-pdbin-mr <filename>
+	-colin-ref-fo <colpath>
+	-colin-ref-hl <colpath>
+	-colin-fo <colpath>		COMPULSORY
+	-colin-hl <colpath> or -colin-phifom <colpath>	COMPULSORY
+	-colin-fc <colpath>
+	-colin-free <colpath>
+	-mtzout <filename>
+	-colout <colpath>
+	-colout-hl <colpath>
+	-colout-fc <colpath>
+	-mapout-ncs <filename prefix>
+	-solvent-flatten
+	-histogram-match
+	-ncs-average
+	-rice-probability
+	-anisotropy-correction
+	-cycles <cycles>
+	-resolution <resolution/A>
+	-solvent-content <fraction>
+	-solvent-mask-filter-radius <radius>
+	-ncs-mask-filter-radius <radius>
+	-ncs-asu-fraction <fraction>
+	-ncs-operator <alpha>,<beta>,<gamma>,<x>,<y>,<z>,<x>,<y>,<z>
+	-xmlout <filename>
+    An input mtz is specified, F's and HL coefficients are required.
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/multicomb",
+        description="CCP4 phase combination program.",
+        flag_type="",
+    )
+
+
+class RunRefmac5Parameters(ThirdPartyParameters):
+    """Macromolecular refinement program.
+
+    More information available here:
+    https://www.ccp4.ac.uk/html/refmac5/description.html
+
+    Usage:
+    refmac5 XYZIN foo_cycle_i.brk HKLIN foo.mtz TLSIN tlsin.txt TLSOUT tlsout.txt XYZOUT foo_cycle_j.brk HKLOUT foo_cycle_j.mtz
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/refmac5",
+        description="CCP4 refinement program.",
+        flag_type="",
     )

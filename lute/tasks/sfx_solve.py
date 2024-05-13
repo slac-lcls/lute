@@ -3,16 +3,17 @@ Class involved in structure solution for SFX.
 
 Classes:
     EditSHELXDInstructions: Modifies output from SHELXC, i.e. instructions for SHELXD.
+
+    EditPDBFile: Perform basic edits of a PDB file.
 """
 
-__all__ = ["EditSHELXDInstructions"]
+__all__ = ["EditSHELXDInstructions", "EditPDBFile"]
 __author__ = "Gabriel Dorlhiac"
 
 import shutil
 import sys
 import logging
-from pathlib import Path
-from typing import BinaryIO, List
+from typing import Union, List, Optional, Tuple
 
 import numpy
 from mpi4py import MPI
@@ -41,7 +42,6 @@ class EditSHELXDInstructions(Task):
     def _run(self) -> None:
         with open(self._task_parameters.in_file) as f:
             lines_in: List[str] = f.readlines()
-        print(lines_in, flush=True)
 
         lines_out: List[str] = []
         write_shel: bool = False
@@ -82,6 +82,57 @@ class EditSHELXDInstructions(Task):
                 lines_out.append("END\n")
             else:
                 lines_out.append(line)
+        with open(self._task_parameters.out_file, "w") as f:
+            for line in lines_out:
+                f.write(line)
+
+
+class EditPDBFile(Task):
+    """Task to perform edits of a PDB file."""
+
+    def __init__(self, *, params: TaskParameters) -> None:
+        super().__init__(params=params)
+
+    def _run(self) -> None:
+        with open(self._task_parameters.in_file) as f:
+            lines_in: List[str] = f.readlines()
+
+        atom_num: Optional[Union[int, List[int]]] = (
+            self._task_parameters.delete_hetatom_number
+        )
+        del_hetatoms: bool = False
+        if atom_num is not None:
+            del_hetatoms = True
+
+        substitute_element: Optional[Tuple[str, str]] = (
+            self._task_parameters.substitute_element
+        )
+
+        lines_out: List[str] = []
+        for line in lines_in:
+            if del_hetatoms:
+                if "HETATM" in line:
+                    curr_idx: int = int(line.split()[1])
+                    if isinstance(atom_num, int) and curr_idx == atom_num:
+                        del_hetatoms = False
+                        continue
+                    elif isinstance(atom_num, list):
+                        try:
+                            idx_in_list: int = atom_num.index(curr_idx)
+                            atom_num.pop(idx_in_list)
+                            if len(atom_num) == 0:
+                                del_hetatoms = False
+                            continue
+                        except ValueError:
+                            ...
+
+            if substitute_element is not None:
+                check_str: str = f" {substitute_element[0]} "
+                replacement_str: str = f" {substitute_element[1]} "
+                line = line.replace(check_str, replacement_str)
+
+            lines_out.append(line)
+
         with open(self._task_parameters.out_file, "w") as f:
             for line in lines_out:
                 f.write(line)

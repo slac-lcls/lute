@@ -72,4 +72,9 @@ def import_task(task_name: str) -> Type[Task]:
 
         return EditSHELXDInstructions
 
+    if task_name == "EditPDBFile":
+        from .sfx_solve import EditPDBFile
+
+        return EditPDBFile
+
     raise TaskNotFoundError
