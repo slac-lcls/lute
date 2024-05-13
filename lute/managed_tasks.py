@@ -40,3 +40,8 @@ StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
 SHELXDEditor: Executor = Executor("EditSHELXDInstructions")
 SHELXDRunner: Executor = Executor("RunSHELXD")
 SHELXDRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+
+PhenixEMMARunner: Executor = Executor("RunPhenixEMMA")
+PhenixEMMARunner.shell_source(
+    "/sdf/group/lcls/ds/tools/phenix/phenix-1.16-3549/phenix_env.sh"
+)

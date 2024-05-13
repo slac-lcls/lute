@@ -348,3 +348,48 @@ class RunSHELXDParameters(ThirdPartyParameters):
                 prefix: str = shelxc_cmd.split()[1]
                 return f"{prefix}_fa"
         return in_file
+
+
+class RunPhenixEMMA(ThirdPartyParameters):
+    """Phenix's Euclidian Model Matching.
+
+    Superimposes two structure solutions to derive a consensus.
+
+    More information is availble at:
+    https://phenix-online.org/documentation/reference/emma.html
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/phenix/phenix-1.16-3549/build/bin/phenix.emma",
+        description="Phenix EMMA program for model comparison.",
+        flag_type="",
+    )
+    unit_cell: Optional[str] = Field(
+        description=(
+            "Unit cell parameters listed as a comma-separated list.\n"
+            "Listed as: a,b,c,al,be,ga"
+        ),
+        flag_type="--",
+    )
+    space_group: Optional[str] = Field(
+        description="Space group symbol, e.g. P212121.",
+        flag_type="--",
+    )
+    symmetry_file: Optional[str] = Field(
+        description="External file with symmetry information.",
+        rename_param="symmetry",
+        flag_type="--",
+    )
+    tolerance: Optional[float] = Field(
+        description="Match tolerance for comparison.", flag_type="--"
+    )
+    diffraction_index_equivalent: Optional[bool] = Field(
+        description="Use only if models are diffraction-index equivalent.",
+        flag_type="--",
+    )
+    reference_coords: str = Field(
+        "", description="Reference coordinates to compare with.", flag_type=""
+    )
+    other_coords: str = Field(
+        "", description="Other coordinates to compare with.", flag_type=""
+    )
