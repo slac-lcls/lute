@@ -1,7 +1,7 @@
 """Models for smalldata_tools Tasks.
 
 Classes:
-    SubmitSMDParameters(BaseBinaryParameters): Parameters to run smalldata_tools
+    SubmitSMDParameters(ThirdPartyParameters): Parameters to run smalldata_tools
         to produce a smalldata HDF5 file.
 
     FindOverlapXSSParameters(TaskParameters): Parameter model for the
@@ -24,10 +24,10 @@ from pydantic import (
     validator,
 )
 
-from .base import TaskParameters, BaseBinaryParameters, TemplateConfig
+from .base import TaskParameters, ThirdPartyParameters, TemplateConfig
 
 
-class SubmitSMDParameters(BaseBinaryParameters):
+class SubmitSMDParameters(ThirdPartyParameters):
     """Parameters for running smalldata to produce reduced HDF5 files."""
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")

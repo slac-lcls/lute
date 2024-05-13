@@ -4,7 +4,7 @@ Classes:
     TestParameters(TaskParameters): Model for most basic test case. Single
         core first-party Task. Uses only communication via pipes.
 
-    TestBinaryParameters(BaseBinaryParameters): Parameters for a simple multi-
+    TestBinaryParameters(ThirdPartyParameters): Parameters for a simple multi-
         threaded binary executable.
 
     TestSocketParameters(TaskParameters): Model for first-party test requiring
@@ -35,7 +35,7 @@ from pydantic import (
     validator,
 )
 
-from .base import TaskParameters, BaseBinaryParameters
+from .base import TaskParameters, ThirdPartyParameters
 from ..db import read_latest_db_entry
 
 
@@ -53,12 +53,12 @@ class TestParameters(TaskParameters):
     throw_error: bool = False
 
 
-class TestBinaryParameters(BaseBinaryParameters):
+class TestBinaryParameters(ThirdPartyParameters):
     executable: str = "/sdf/home/d/dorlhiac/test_tasks/test_threads"
     p_arg1: int = 1
 
 
-class TestBinaryErrParameters(BaseBinaryParameters):
+class TestBinaryErrParameters(ThirdPartyParameters):
     """Same as TestBinary, but exits with non-zero code."""
 
     executable: str = "/sdf/home/d/dorlhiac/test_tasks/test_threads_err"

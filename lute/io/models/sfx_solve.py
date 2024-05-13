@@ -1,7 +1,7 @@
 """Models for structure solution in serial femtosecond crystallography.
 
 Classes:
-    DimpleSolveParameters(BaseBinaryParameters): Perform structure solution
+    DimpleSolveParameters(ThirdPartyParameters): Perform structure solution
         using CCP4's dimple (molecular replacement).
 """
 
@@ -18,11 +18,11 @@ from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, validator, PositiveFloat, PositiveInt
 
-from .base import BaseBinaryParameters, TaskParameters
+from .base import ThirdPartyParameters, TaskParameters
 from ..db import read_latest_db_entry
 
 
-class DimpleSolveParameters(BaseBinaryParameters):
+class DimpleSolveParameters(ThirdPartyParameters):
     """Parameters for CCP4's dimple program.
 
     There are many parameters. For more information on
@@ -202,7 +202,7 @@ class DimpleSolveParameters(BaseBinaryParameters):
         return out_dir
 
 
-class RunSHELXCParameters(BaseBinaryParameters):
+class RunSHELXCParameters(ThirdPartyParameters):
     """Parameters for CCP4's SHELXC program.
 
     SHELXC prepares files for SHELXD and SHELXE.
@@ -317,7 +317,7 @@ class EditSHELXDInstructionsParameters(TaskParameters):
         return out_file
 
 
-class RunSHELXDParameters(BaseBinaryParameters):
+class RunSHELXDParameters(ThirdPartyParameters):
     """Parameters for CCP4's SHELXD program.
 
     SHELXD performs a heavy atom search. Input files can be created by SHELXC.
