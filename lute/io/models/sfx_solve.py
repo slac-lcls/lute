@@ -360,6 +360,13 @@ class RunSHELXDParameters(ThirdPartyParameters):
                 return f"{prefix}_fa"
         return in_file
 
+    @root_validator(pre=False)
+    def set_run_directory(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        directory: str = os.path.dirname(values["instruction_file"])
+        cls.Config.run_directory = directory
+
+        return values
+
 
 class RunPhenixEMMAParameters(ThirdPartyParameters):
     """Phenix's Euclidian Model Matching.
