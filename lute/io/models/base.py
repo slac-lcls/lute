@@ -27,7 +27,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, Optional
 
 from pydantic import (
     BaseModel,
@@ -116,6 +116,8 @@ class TaskParameters(BaseSettings):
         underscore_attrs_are_private: bool = True
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
+
+        run_directory: Optional[str] = None
 
     lute_config: AnalysisHeader
 

@@ -18,7 +18,7 @@ __author__ = "Gabriel Dorlhiac"
 import os
 from typing import Union, List, Optional, Dict, Any, Tuple
 
-from pydantic import Field, validator, PositiveFloat, PositiveInt
+from pydantic import Field, validator, PositiveFloat, PositiveInt, root_validator
 
 from .base import ThirdPartyParameters, TaskParameters
 from ..db import read_latest_db_entry
@@ -277,13 +277,22 @@ class RunSHELXCParameters(ThirdPartyParameters):
     ) -> str:
         if instructions_file != "":
             return f"{instructions_file}"
+        return instructions_file
 
     @validator("bash_c_flag")
     def validate_bash_command(cls, bash_cmd: str, values: Dict[str, Any]) -> str:
+        """This validator also sets the run directory.
+
+        It's easier here tahn with a separate root_validator because this
+        validator sets all the values to None.
+        """
         shelxc: str = values["shelxc_executable"]
         values["shelxc_executable"] = None
 
         outfiles_prefix: str = values["outfiles_prefix"]
+        # SET run directory here!
+        directory: str = os.path.dirname(outfiles_prefix)
+        cls.Config.run_directory = f"{directory}"
         values["outfiles_prefix"] = None
 
         redirect: str = values["redirect"]
