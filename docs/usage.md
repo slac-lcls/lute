@@ -246,7 +246,7 @@ NonExistentTask:
 ...
 ```
 
-Input parameters in the config YAML can be substituted with either other input parameters or environment variables, with or without limited string formatting. All substitutions occur between double curly brackets: `{{ SUB_VAR }}`. Environment variables are indicated by `$` in front of the variable name. Parameters from the header, i.e. the first YAML document (top section) containing the `run`, `experiment`, version fields, etc. can be substituted without any qualification. If you want to use the `run` parameter, you can substitute it using `{{ run }}`. All other parameters, i.e. from other `Task`s or within `Task`s, must use a qualified name. Nested levels are delimited using a `.`. E.g. consider a structure like:
+Input parameters in the config YAML can be substituted with either other input parameters or environment variables, with or without limited string formatting. All substitutions occur between double curly brackets: `{{ VARIABLE_TO_SUBSTITUTE }}`. Environment variables are indicated by `$` in front of the variable name. Parameters from the header, i.e. the first YAML document (top section) containing the `run`, `experiment`, version fields, etc. can be substituted without any qualification. If you want to use the `run` parameter, you can substitute it using `{{ run }}`. All other parameters, i.e. from other `Task`s or within `Task`s, must use a qualified name. Nested levels are delimited using a `.`. E.g. consider a structure like:
 
 ```yaml
 Task:
@@ -257,13 +257,40 @@ Task:
 ```
 In order to use parameter `c`, you would use `{{ Task.param_set.c }}` as the substitution.
 
-Take care when using substitutions! This process will not try and guess for you. When a substitution is not available, e.g. due to misspelling, one of two things will happen:
-- If it was an environment variable that does not exist, no substitution will be performed, although a message will be printed. I.e. you will be left with `param: /my/failed/{{ $SUBSTITUTION }}` as your parameter. This may or may not fail the model validation step, but is not what you intended.
+Take care when using substitutions! This process will not try to guess for you. When a substitution is not available, e.g. due to misspelling, one of two things will happen:
+- If it was an environment variable that does not exist, no substitution will be performed, although a message will be printed. I.e. you will be left with `param: /my/failed/{{ $SUBSTITUTION }}` as your parameter. This may or may not fail the model validation step, but is likely not what you intended.
 - If it was an attempt at substituting another YAML parameter which does not exist, an exception will be thrown and the program will exit.
+
+**Defining your own parameters**
+The configuration file is **not** validated in its totality, only on a `Task`-by-`Task` basis, but it **is read** in its totality. E.g. when running `MyTask` only that portion of the configuration is validated even though the entire file has been read, and is available for substitutions. As a result, it is safe to introduce extra entries into the YAML file, as long as they are not entered under a specific `Task`'s configuration. This may be useful to create your own global substitutions, for example if there is a key variable that may be used across different `Task`s.
+E.g. Consider a case where you want to create a more generic configuration file where a single variable is used by multiple `Task`s. This single variable may be changed between experiments, for instance, but is likely static for the duration of a single set of analyses. In order to avoid a mistake when changing the configuration between experiments you can define this special variable (or variables) as a separate entry in the YAML, and make use of substitutions in each `Task`'s configuration. This way the variable only needs to be changed in one place.
+
+```yaml
+# Define our substitution. This is only for substitutiosns!
+MY_SPECIAL_SUB: "EXPMT_DEPENDENT_VALUE"  # Can change here once per experiment!
+
+RunTask1:
+  special_var: "{{ MY_SPECIAL_SUB }}"
+  var_1: 1
+  var_2: "a"
+  # ...
+
+RunTask2:
+  special_var: "{{ MY_SPECIAL_SUB }}"
+  var_3: "abcd"
+  var_4: 123
+  # ...
+
+RunTask3:
+  special_var: "{{ MY_SPECIAL_SUB }}"
+  #...
+
+# ... and so on
+```
 
 ### Gotchas!
 **Found unhashable key**
-To avoid YAML parsing issues when using the substitution syntax, be sure to quote your substitutions, partcularly if also using string formatting options. Before substitution is performed, a dictionary is first constructed by the `pyyaml` package which parses the document - it may fail to parse the document and raise an exception if the substitutions are not quoted.
+To avoid YAML parsing issues when using the substitution syntax, be sure to quote your substitutions. Before substitution is performed, a dictionary is first constructed by the `pyyaml` package which parses the document - it may fail to parse the document and raise an exception if the substitutions are not quoted.
 E.g.
 ```yaml
 # USE THIS
@@ -274,6 +301,8 @@ MyTask:
 MyTask:
   var_sub: {{ other_var:04d }}
 ```
+
+During validation, Pydantic will by default cast variables if possible, because of this it is generally safe to use strings for substitutions. E.g. if your parameter is expecting an integer, and after substitution you pass `"2"`, Pydantic will acst this to the `int` `2`, and validation will succeed.
 
 ## Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.
