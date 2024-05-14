@@ -362,6 +362,12 @@ class ManipulateHKLParameters(ThirdPartyParameters):
         flag_type="-",
         rename_param="i",
     )
+    output_format: str = Field(
+        "mtz",
+        description="Output format. One of mtz, mtz-bij, or xds. Otherwise CrystFEL format.",
+        flag_type="--",
+        rename_param="output-format",
+    )
     out_file: str = Field(
         "",
         description="Path to output file.",
@@ -373,12 +379,6 @@ class ManipulateHKLParameters(ThirdPartyParameters):
         description="Path to a file containing unit cell information (PDB or CrystFEL format).",
         flag_type="-",
         rename_param="p",
-    )
-    output_format: str = Field(
-        "mtz",
-        description="Output format. One of mtz, mtz-bij, or xds. Otherwise CrystFEL format.",
-        flag_type="--",
-        rename_param="output-format",
     )
     expand: Optional[str] = Field(
         description="Reflections will be expanded to fill asymmetric unit of specified point group.",
@@ -462,7 +462,11 @@ class ManipulateHKLParameters(ThirdPartyParameters):
             )
             if partialator_file:
                 mtz_out: str = partialator_file.split(".")[0]
-                mtz_out = f"{mtz_out}.mtz"
+                fmt: str = values["output_format"]
+                if fmt == "xds":
+                    mtz_out = f"{mtz_out}_xds.hkl"
+                else:
+                    mtz_out = f"{mtz_out}.mtz"
                 return mtz_out
         return out_file
 

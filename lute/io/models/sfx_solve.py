@@ -436,6 +436,7 @@ class RunSolomonParameters(ThirdPartyParameters):
         flag_type="",
     )
 
+
 class RunMulticombParameters(ThirdPartyParameters):
     """Phase combination program.
 
@@ -449,6 +450,7 @@ class RunMulticombParameters(ThirdPartyParameters):
         flag_type="",
     )
 
+
 class RunParrotParameters(ThirdPartyParameters):
     """Phase combination program.
 
@@ -456,37 +458,37 @@ class RunParrotParameters(ThirdPartyParameters):
     https://www.ccp4.ac.uk/html/parrot.html
 
     Usage:
-	-mtzin-ref <filename>
-	-pdbin-ref <filename>
-	-mtzin <filename>		COMPULSORY
-	-seqin <filename>
-	-pdbin <filename>
-	-pdbin-ha <filename>
-	-pdbin-mr <filename>
-	-colin-ref-fo <colpath>
-	-colin-ref-hl <colpath>
-	-colin-fo <colpath>		COMPULSORY
-	-colin-hl <colpath> or -colin-phifom <colpath>	COMPULSORY
-	-colin-fc <colpath>
-	-colin-free <colpath>
-	-mtzout <filename>
-	-colout <colpath>
-	-colout-hl <colpath>
-	-colout-fc <colpath>
-	-mapout-ncs <filename prefix>
-	-solvent-flatten
-	-histogram-match
-	-ncs-average
-	-rice-probability
-	-anisotropy-correction
-	-cycles <cycles>
-	-resolution <resolution/A>
-	-solvent-content <fraction>
-	-solvent-mask-filter-radius <radius>
-	-ncs-mask-filter-radius <radius>
-	-ncs-asu-fraction <fraction>
-	-ncs-operator <alpha>,<beta>,<gamma>,<x>,<y>,<z>,<x>,<y>,<z>
-	-xmlout <filename>
+        -mtzin-ref <filename>
+        -pdbin-ref <filename>
+        -mtzin <filename>		COMPULSORY
+        -seqin <filename>
+        -pdbin <filename>
+        -pdbin-ha <filename>
+        -pdbin-mr <filename>
+        -colin-ref-fo <colpath>
+        -colin-ref-hl <colpath>
+        -colin-fo <colpath>		COMPULSORY
+        -colin-hl <colpath> or -colin-phifom <colpath>	COMPULSORY
+        -colin-fc <colpath>
+        -colin-free <colpath>
+        -mtzout <filename>
+        -colout <colpath>
+        -colout-hl <colpath>
+        -colout-fc <colpath>
+        -mapout-ncs <filename prefix>
+        -solvent-flatten
+        -histogram-match
+        -ncs-average
+        -rice-probability
+        -anisotropy-correction
+        -cycles <cycles>
+        -resolution <resolution/A>
+        -solvent-content <fraction>
+        -solvent-mask-filter-radius <radius>
+        -ncs-mask-filter-radius <radius>
+        -ncs-asu-fraction <fraction>
+        -ncs-operator <alpha>,<beta>,<gamma>,<x>,<y>,<z>,<x>,<y>,<z>
+        -xmlout <filename>
     An input mtz is specified, F's and HL coefficients are required.
     """
 
