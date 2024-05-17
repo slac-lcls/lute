@@ -137,6 +137,11 @@ class TaskParameters(BaseSettings):
             allow_inf_nan (bool): Pydantic configuration. Whether to allow
                 infinity or NAN in float fields.
 
+            run_directory (Optional[str]): None. If set, it should be a valid
+                path. The `Task` will be run from this directory. This may be
+                useful for some `Task`s which rely on searching the working
+                directory.
+
             set_result (bool). False. If True, the model has information about
                 setting the TaskResult object from the parameters it contains.
                 E.g. it has an `output` parameter which is marked as the result.
@@ -161,6 +166,8 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
+        run_directory: Optional[str] = None
+        """Set the directory that the Task is run from."""
         set_result: bool = False
         """Whether the Executor should mark a specified parameter as a result."""
         result_from_params: Optional[str] = None
@@ -224,14 +231,10 @@ class ThirdPartyParameters(TaskParameters):
             allow_inf_nan (bool): Pydantic configuration. Whether to allow
                 infinity or NAN in float fields.
 
-            extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
-                arguments.
-
-            short_flags_use_eq (bool): False. If True, "short" command-line args
-                are passed as `-x=arg`. ThirdPartyTask-specific.
-
-            long_flags_use_eq (bool): False. If True, "long" command-line args
-                are passed as `--long=arg`. ThirdPartyTask-specific.
+            run_directory (Optional[str]): None. If set, it should be a valid
+                path. The `Task` will be run from this directory. This may be
+                useful for some `Task`s which rely on searching the working
+                directory.
 
             set_result (bool). True. If True, the model has information about
                 setting the TaskResult object from the parameters it contains.
@@ -249,6 +252,18 @@ class ThirdPartyParameters(TaskParameters):
 
             impl_schemas (Optional[str]). Specifies a the schemas the
                 output/results conform to. Only used if set_result is True.
+
+            -----------------------
+            ThirdPartyTask-specific:
+
+            extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
+                arguments.
+
+            short_flags_use_eq (bool): False. If True, "short" command-line args
+                are passed as `-x=arg`. ThirdPartyTask-specific.
+
+            long_flags_use_eq (bool): False. If True, "long" command-line args
+                are passed as `--long=arg`. ThirdPartyTask-specific.
         """
 
         extra: str = "allow"
@@ -256,7 +271,7 @@ class ThirdPartyParameters(TaskParameters):
         """Whether short command-line arguments are passed like `-x=arg`."""
         long_flags_use_eq: bool = False
         """Whether long command-line arguments are passed like `--long=arg`."""
-        set_result: bool = True  # Could consider moving this to the base Config...
+        set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
 
     # lute_template_cfg: TemplateConfig
