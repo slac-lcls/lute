@@ -10,6 +10,8 @@ Classes:
         parameters, env).
 """
 
+from __future__ import annotations
+
 __all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis", "ElogSummaryPlots"]
 __author__ = "Gabriel Dorlhiac"
 
@@ -85,15 +87,15 @@ class ElogSummaryPlots:
     """Holds a graphical summary intended for display in the eLog.
 
     Attributes:
-        save_path (str): This represents both a path and how the result will be
-            displayed on the eLog. Can include "/" characters. E.g.
-            `navigation_display = "scans/my_motor_scan"` will have plots shown
+        display_name (str): This represents both a path and how the result will be
+            displayed in the eLog. Can include "/" characters. E.g.
+            `display_name = "scans/my_motor_scan"` will have plots shown
             on a "my_motor_scan" page, under a "scans" tab. This format mirrors
             how the file is stored on disk as well.
     """
 
-    save_path: str
-    figures: Union["pn.Tabs", "hv.Image", "plt.Figure"]
+    display_name: str
+    figures: Union[pn.Tabs, hv.Image, plt.Figure]
 
 
 @dataclass

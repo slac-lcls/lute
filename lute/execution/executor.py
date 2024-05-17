@@ -405,16 +405,13 @@ class BaseExecutor(ABC):
                 "Cannot set result from TaskParameters. TaskParameters is None!"
             )
             return
-        if not hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
+        if (
+            not hasattr(self._analysis_desc.task_parameters.Config, "set_result")
+            or not self._analysis_desc.task_parameters.Config.set_result
+        ):
             logger.debug(
-                (
-                    "Cannot set result from TaskParameters. `set_result` not specified!"
-                    " Perhaps this is not a ThirdPartyTask?"
-                    " This method should only be used when running a ThirdPartyTask."
-                )
+                "Cannot set result from TaskParameters. `set_result` not specified!"
             )
-            return
-        if not self._analysis_desc.task_parameters.Config.set_result:
             return
 
         # First try to set from result_from_params (faster)
@@ -434,7 +431,6 @@ class BaseExecutor(ABC):
             for param, value in self._analysis_desc.task_parameters.dict().items():
                 param_attrs: Dict[str, Any] = schema["properties"][param]
                 if "is_result" in param_attrs:
-                    # is_result: Union[str, bool] = param_attrs["is_result"]
                     is_result: bool = param_attrs["is_result"]
                     if isinstance(is_result, bool) and is_result:
                         logger.info(f"TaskResult specified as {value}.")
@@ -472,11 +468,6 @@ class BaseExecutor(ABC):
                     " but no schema provided! Check model definition!"
                 )
             )
-        # if hasattr(self._analysis_desc.task_parameters.Config, "impl_schemas"):
-        #    impl_schemas: Optional[str] = (
-        #        self._analysis_desc.task_parameters.Config.impl_schemas
-        #    )
-        #    self._analysis_desc.task_result.impl_schemas = impl_schemas
 
     def process_results(self) -> None:
         """Perform any necessary steps to process TaskResults object.
@@ -640,19 +631,25 @@ class Executor(BaseExecutor):
         self._process_result_summary(task_result.summary)
 
     def _process_result_payload(self, payload: Any) -> None:
+        if self._analysis_desc.task_parameters is None:
+            logger.debug("Please run Task before using this method!")
+            return
         if isinstance(payload, ElogSummaryPlots):
-            # ElogSummaryPlots has figures and a navigation save name
-            try:
-                # Preferred use is panel.Tabs
-                if not os.path.isdir(payload.save_path):
-                    os.makedirs(payload.save_path)
-                payload.figures.save(f"{payload.save_path}/report.html")
-            except AttributeError:  # Not panel.Tabs
-                try:
-                    # Attempt matplotlib...
-                    ...
-                except:
-                    ...
+            # ElogSummaryPlots has figures and a display name
+            # display name also serves as a path.
+            expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
+            base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
+            full_path: str = f"{base_path}/{payload.display_name}"
+            if not os.path.isdir(full_path):
+                os.makedirs(full_path)
+
+            # Preferred plots are pn.Tabs objects which save directly as html
+            # Only supported plot type that has "save" method - do not want to
+            # import plot modules here to do type checks.
+            if hasattr(payload.figures, "save"):
+                payload.figures.save(f"{full_path}/report.html")
+            else:
+                ...
         elif isinstance(payload, str):
             # May be a path to a file...
             schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
