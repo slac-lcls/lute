@@ -90,6 +90,8 @@ my_var: Union[str, int] = get_str_or_int()
 ```
 The `typing` module contains many other useful features for type hint support.
 
+Note that it is possible to use `from __future__ import annotations` to enable the use of these features. It is a breaking change and is used on a module-by-module basis, please investigate if it applies to your use case.
+
 
 ### Commit Messages
 Inspired by `pcdshub` repositories, in turn following [NumPy conventions](https://numpy.org/doc/stable/dev/development_workflow.html#writing-the-commit-message), all commit messages should ideally be prefixed by a three letter acronym. Each of these acronyms has a specific meaning, making it easy to discern at a glance what the intended purpose of the commit is (bug fix, new feature, etc.). Pull (merge) request titles, and origin branches, should use the same acronyms. The following acronyms are in use:
