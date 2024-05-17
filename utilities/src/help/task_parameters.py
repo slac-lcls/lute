@@ -16,7 +16,7 @@ class PropertyDict(TypedDict):
     title: str
     type: Optional[str]
     anyOf: Optional[List[Dict[str, str]]]  # Either an anyOf or type per property
-    # Generally only for BinaryTasks
+    # Generally only for ThirdPartyTasks
     rename_param: Optional[str]
     flag_type: Optional[str]
     # Other additional field attributes

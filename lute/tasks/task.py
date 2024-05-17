@@ -11,10 +11,11 @@ __author__ = "Gabriel Dorlhiac"
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Union, Type, TextIO
+from typing import Any, List, Dict, Union, Type, TextIO, Optional
 import os
 import warnings
 import signal
+import shlex
 
 from ..io.models.base import (
     TaskParameters,
@@ -76,6 +77,19 @@ class Task(ABC):
         self._task_parameters: TaskParameters = params
         timeout: int = self._task_parameters.lute_config.task_timeout
         signal.setitimer(signal.ITIMER_REAL, timeout)
+
+        run_directory: Optional[str] = self._task_parameters.Config.run_directory
+        if run_directory is not None:
+            try:
+                os.chdir(run_directory)
+            except FileNotFoundError:
+                warnings.warn(
+                    (
+                        f"Attempt to change to {run_directory}, but it is not found!\n"
+                        f"Will attempt to run from {os.getcwd()}. It may fail!"
+                    ),
+                    category=UserWarning,
+                )
 
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
@@ -328,7 +342,7 @@ class ThirdPartyTask(Task):
                     if isinstance(value, bool) and value:
                         continue
             if isinstance(value, str) and " " in value:
-                for val in value.split():
+                for val in shlex.split(value):
                     self._args_list.append(f"{val}")
             else:
                 self._args_list.append(f"{value}")

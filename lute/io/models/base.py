@@ -7,7 +7,7 @@ Classes:
     TaskParameters(BaseSettings): Base class for Task parameters. Subclasses
         specify a model of parameters and their types for validation.
 
-    BaseBinaryParameters(TaskParameters): Base class for Third-party, binary
+    ThirdPartyParameters(TaskParameters): Base class for Third-party, binary
         executable Tasks.
 
     TemplateParameters: Dataclass to represent parameters of binary
@@ -22,12 +22,12 @@ __all__ = [
     "AnalysisHeader",
     "TemplateConfig",
     "TemplateParameters",
-    "BaseBinaryParameters",
+    "ThirdPartyParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, List, Optional
 
 from pydantic import (
     BaseModel,
@@ -117,6 +117,8 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
+        run_directory: Optional[str] = None
+
     lute_config: AnalysisHeader
 
 
@@ -139,7 +141,7 @@ class TemplateParameters:
     params: Any
 
 
-class BaseBinaryParameters(TaskParameters):
+class ThirdPartyParameters(TaskParameters):
     """Base class for third party task parameters.
 
     Contains special validators for extra arguments and handling of parameters
@@ -156,10 +158,49 @@ class BaseBinaryParameters(TaskParameters):
     # lute_template_cfg: TemplateConfig
 
     @root_validator(pre=False)
-    def extra_fields_to_thirdparty(cls, values):
+    def extra_fields_to_thirdparty(cls, values) -> Dict[str, Any]:
         for key in values:
             if key not in cls.__fields__:
                 values[key] = TemplateParameters(values[key])
+
+        return values
+
+
+class ThirdPartyShellParameters(ThirdPartyParameters):
+    """Class for ThirdPartyTask's that need to be run within a shell.
+
+    This TaskParameters model will convert all parameters such that they can be
+    called with a command as `bash -c "$EXECUTABLE $PARAM1 $PARAM2 ..."`.
+
+    All parameters MUST appear in the order they need to appear in the command.
+    The actual executable to call must also be provided, however, it must use a
+    different parameter name. E.g. to execute `my_binary` within the shell,
+    a `my_binary`
+    """
+
+    executable: str = Field("/bin/bash", description="Shell to use.", flag_type="")
+
+    bash_cmd: str = Field(
+        "",
+        description="Command to run in shell. This is populated automatically.",
+        flag_type="-",
+        rename_param="c",
+    )
+
+    @root_validator(pre=False)
+    def validate_bash_command(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        formatted_cmd: str = ""
+        ignored_keys: List[str] = ["lute_config", "executable"]
+        for key in values:
+            if key in ignored_keys or isinstance(values[key], TemplateParameters):
+                continue
+            # Create a new formatted command with all parameters
+            formatted_cmd = " ".join((formatted_cmd, values[key]))
+            # Then set each parameter to None so it gets ignored
+            values[key] = None
+
+        if values["bash_cmd"] == "":
+            values["bash_cmd"] = formatted_cmd
 
         return values
 

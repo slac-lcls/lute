@@ -1,13 +1,13 @@
 """Models for merging reflections in serial femtosecond crystallography.
 
 Classes:
-    MergePartialatorParameters(BaseBinaryParameters): Perform merging using
+    MergePartialatorParameters(ThirdPartyParameters): Perform merging using
         CrystFEL's `partialator`.
 
-    CompareHKLParameters(BaseBinaryParameters): Calculate figures of merit using
+    CompareHKLParameters(ThirdPartyParameters): Calculate figures of merit using
         CrystFEL's `compare_hkl`.
 
-    ManipulateHKLParameters(BaseBinaryParameters): Perform transformations on
+    ManipulateHKLParameters(ThirdPartyParameters): Perform transformations on
         lists of reflections using CrystFEL's `get_hkl`.
 """
 
@@ -23,11 +23,11 @@ from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, validator
 
-from .base import BaseBinaryParameters
+from .base import ThirdPartyParameters
 from ..db import read_latest_db_entry
 
 
-class MergePartialatorParameters(BaseBinaryParameters):
+class MergePartialatorParameters(ThirdPartyParameters):
     """Parameters for CrystFEL's `partialator`.
 
     There are many parameters, and many combinations. For more information on
@@ -35,7 +35,7 @@ class MergePartialatorParameters(BaseBinaryParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(BaseBinaryParameters.Config):
+    class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
@@ -209,7 +209,7 @@ class MergePartialatorParameters(BaseBinaryParameters):
         return out_file
 
 
-class CompareHKLParameters(BaseBinaryParameters):
+class CompareHKLParameters(ThirdPartyParameters):
     """Parameters for CrystFEL's `compare_hkl` for calculating figures of merit.
 
     There are many parameters, and many combinations. For more information on
@@ -217,7 +217,7 @@ class CompareHKLParameters(BaseBinaryParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(BaseBinaryParameters.Config):
+    class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
@@ -337,7 +337,7 @@ class CompareHKLParameters(BaseBinaryParameters):
         return shell_file
 
 
-class ManipulateHKLParameters(BaseBinaryParameters):
+class ManipulateHKLParameters(ThirdPartyParameters):
     """Parameters for CrystFEL's `get_hkl` for manipulating lists of reflections.
 
     This Task is predominantly used internally to convert `hkl` to `mtz` files.
@@ -347,7 +347,7 @@ class ManipulateHKLParameters(BaseBinaryParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(BaseBinaryParameters.Config):
+    class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
@@ -362,6 +362,12 @@ class ManipulateHKLParameters(BaseBinaryParameters):
         flag_type="-",
         rename_param="i",
     )
+    output_format: str = Field(
+        "mtz",
+        description="Output format. One of mtz, mtz-bij, or xds. Otherwise CrystFEL format.",
+        flag_type="--",
+        rename_param="output-format",
+    )
     out_file: str = Field(
         "",
         description="Path to output file.",
@@ -373,12 +379,6 @@ class ManipulateHKLParameters(BaseBinaryParameters):
         description="Path to a file containing unit cell information (PDB or CrystFEL format).",
         flag_type="-",
         rename_param="p",
-    )
-    output_format: str = Field(
-        "mtz",
-        description="Output format. One of mtz, mtz-bij, or xds. Otherwise CrystFEL format.",
-        flag_type="--",
-        rename_param="output-format",
     )
     expand: Optional[str] = Field(
         description="Reflections will be expanded to fill asymmetric unit of specified point group.",
@@ -462,7 +462,11 @@ class ManipulateHKLParameters(BaseBinaryParameters):
             )
             if partialator_file:
                 mtz_out: str = partialator_file.split(".")[0]
-                mtz_out = f"{mtz_out}.mtz"
+                fmt: str = values["output_format"]
+                if fmt == "xds":
+                    mtz_out = f"{mtz_out}_xds.hkl"
+                else:
+                    mtz_out = f"{mtz_out}.mtz"
                 return mtz_out
         return out_file
 
