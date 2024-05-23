@@ -67,7 +67,6 @@ class TestBinaryParameters(ThirdPartyParameters):
     )
     p_arg1: int = Field(1, descriptions="Number of threads.")
 
-
 class TestBinaryErrParameters(ThirdPartyParameters):
     """Same as TestBinary, but exits with non-zero code."""
 

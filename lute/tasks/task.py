@@ -23,6 +23,7 @@ from ..io.models.base import (
     AnalysisHeader,
 )
 from ..execution.ipc import *
+from ..execution.debug_utils import LUTE_DEBUG_EXIT
 from .dataclasses import *
 
 if __debug__:
@@ -357,6 +358,7 @@ class ThirdPartyTask(Task):
             time.sleep(0.1)
             msg: Message = Message(contents=self._formatted_command())
             self._report_to_executor(msg)
+        LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
         os.execvp(file=self._cmd, args=self._args_list)
 
     def _formatted_command(self) -> str:
