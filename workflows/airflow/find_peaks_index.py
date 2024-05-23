@@ -31,7 +31,7 @@ dag: DAG = DAG(
 peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id="PeakFinderPsocake", dag=dag)
 
 indexer: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=120, task_id="CrystFELIndexer", dag=dag
+    max_cores=120, max_nodes=1, task_id="CrystFELIndexer", dag=dag
 )
 
 peak_finder >> indexer
