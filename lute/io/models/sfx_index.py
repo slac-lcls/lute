@@ -1,7 +1,7 @@
 """Models for serial femtosecond crystallography indexing.
 
 Classes:
-    IndexCrystFELParameters(BaseBinaryParameters): Perform indexing of hits/peaks using
+    IndexCrystFELParameters(ThirdPartyParameters): Perform indexing of hits/peaks using
         CrystFEL's `indexamajig`.
 """
 
@@ -23,10 +23,10 @@ from pydantic import (
 )
 
 from ..db import read_latest_db_entry
-from .base import BaseBinaryParameters, TaskParameters
+from .base import ThirdPartyParameters, TaskParameters
 
 
-class IndexCrystFELParameters(BaseBinaryParameters):
+class IndexCrystFELParameters(ThirdPartyParameters):
     """Parameters for CrystFEL's `indexamajig`.
 
     There are many parameters, and many combinations. For more information on
@@ -34,7 +34,7 @@ class IndexCrystFELParameters(BaseBinaryParameters):
     https://www.desy.de/~twhite/crystfel/manual-indexamajig.html
     """
 
-    class Config(BaseBinaryParameters.Config):
+    class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 

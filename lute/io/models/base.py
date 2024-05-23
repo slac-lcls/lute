@@ -7,7 +7,7 @@ Classes:
     TaskParameters(BaseSettings): Base class for Task parameters. Subclasses
         specify a model of parameters and their types for validation.
 
-    BaseBinaryParameters(TaskParameters): Base class for Third-party, binary
+    ThirdPartyParameters(TaskParameters): Base class for Third-party, binary
         executable Tasks.
 
     TemplateParameters: Dataclass to represent parameters of binary
@@ -22,7 +22,7 @@ __all__ = [
     "AnalysisHeader",
     "TemplateConfig",
     "TemplateParameters",
-    "BaseBinaryParameters",
+    "ThirdPartyParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -139,7 +139,7 @@ class TemplateParameters:
     params: Any
 
 
-class BaseBinaryParameters(TaskParameters):
+class ThirdPartyParameters(TaskParameters):
     """Base class for third party task parameters.
 
     Contains special validators for extra arguments and handling of parameters

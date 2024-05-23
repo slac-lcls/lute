@@ -1,0 +1,25 @@
+%YAML 1.3
+---
+title: "Configuration to Test YAML Substitution"
+experiment: "TestYAMLSubs"
+run: 12
+date: "2024/05/01"
+lute_version: 0.1
+task_timeout: 600
+work_dir: "/sdf/scratch/users/d/dorlhiac"
+...
+---
+OtherTask:
+  useful_other_var: "USE ME!"
+
+NonExistentTask:
+  test_sub: "/path/to/{{ experiment }}/file_r{{ run:04d }}.input"
+  test_env_sub: "/path/to/{{ $EXPERIMENT }}/file.input"
+  test_nested:
+    a: "outfile_{{ run }}_one.out"
+    b:
+      c: "outfile_{{ run }}_two.out"
+      d: "{{ OtherTask.useful_other_var }}"
+  test_fmt: "{{ run:04d }}"
+  test_env_fmt: "{{ $RUN:04d }}"
+...

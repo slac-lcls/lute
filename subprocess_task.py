@@ -8,7 +8,7 @@ from typing import Type, Optional, Dict, Any
 from lute.tasks.task import Task, ThirdPartyTask
 from lute.execution.ipc import Message
 from lute.io.config import *
-from lute.io.models.base import TaskParameters, BaseBinaryParameters
+from lute.io.models.base import TaskParameters, ThirdPartyParameters
 
 
 def get_task() -> Optional[Task]:
@@ -58,7 +58,7 @@ task_parameters: TaskParameters = parse_config(task_name=task_name, config_path=
 
 # Hack to avoid importing modules with conflicting dependencie
 TaskType: Type[Task]
-if isinstance(task_parameters, BaseBinaryParameters):
+if isinstance(task_parameters, ThirdPartyParameters):
     TaskType = ThirdPartyTask
 else:
     from lute.tasks import import_task, TaskNotFoundError

@@ -4,7 +4,7 @@ from typing import Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, PositiveInt, validator
 
-from .base import BaseBinaryParameters, TaskParameters, TemplateConfig
+from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
 class FindPeaksPyAlgosParameters(TaskParameters):
@@ -125,7 +125,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         return out_file
 
 
-class FindPeaksPsocakeParameters(BaseBinaryParameters):
+class FindPeaksPsocakeParameters(ThirdPartyParameters):
 
     class SZParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(
