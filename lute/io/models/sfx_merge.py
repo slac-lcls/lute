@@ -39,6 +39,9 @@ class MergePartialatorParameters(ThirdPartyParameters):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/partialator",
         description="CrystFEL's Partialator binary.",
@@ -222,6 +225,9 @@ class CompareHKLParameters(ThirdPartyParameters):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/compare_hkl",
         description="CrystFEL's reflection comparison binary.",
@@ -256,6 +262,7 @@ class CompareHKLParameters(ThirdPartyParameters):
         description="Write the statistics in resolution shells to a file.",
         flag_type="--",
         rename_param="shell-file",
+        is_result=True,
     )
     ignore_negs: bool = Field(
         False,
@@ -352,6 +359,9 @@ class ManipulateHKLParameters(ThirdPartyParameters):
     class Config(ThirdPartyParameters.Config):
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/get_hkl",

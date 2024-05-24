@@ -35,6 +35,9 @@ class IndexCrystFELParameters(ThirdPartyParameters):
     """
 
     class Config(ThirdPartyParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
         long_flags_use_eq: bool = True
         """Whether long command-line arguments are passed like `--long=arg`."""
 
@@ -425,6 +428,15 @@ class IndexCrystFELParameters(ThirdPartyParameters):
 
 
 class ConcatenateStreamFilesParameters(TaskParameters):
+    """Parameters for stream concatenation.
+
+    Concatenates the stream file output from CrystFEL indexing for multiple
+    experimental runs.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
 
     in_file: str = Field(
         "",
@@ -437,8 +449,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     )
 
     out_file: str = Field(
-        "",
-        description="Path to merged output stream file.",
+        "", description="Path to merged output stream file.", is_result=True
     )
 
     @validator("in_file", always=True)

@@ -145,6 +145,9 @@ class TaskParameters(BaseSettings):
             set_result (bool). False. If True, the model has information about
                 setting the TaskResult object from the parameters it contains.
                 E.g. it has an `output` parameter which is marked as the result.
+                The result can be set with a field value of `is_result=True` on
+                a specific parameter, or using `result_from_params` and a
+                validator.
 
             result_from_params (Optional[str]): None. Optionally used to define
                 results from information available in the model using a custom
@@ -239,6 +242,9 @@ class ThirdPartyParameters(TaskParameters):
             set_result (bool). True. If True, the model has information about
                 setting the TaskResult object from the parameters it contains.
                 E.g. it has an `output` parameter which is marked as the result.
+                The result can be set with a field value of `is_result=True` on
+                a specific parameter, or using `result_from_params` and a
+                validator.
 
             result_from_params (Optional[str]): None. Optionally used to define
                 results from information available in the model using a custom

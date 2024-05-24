@@ -2,12 +2,21 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, PositiveInt, validator
+from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
 
 from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
 class FindPeaksPyAlgosParameters(TaskParameters):
+    """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
+
+    This peak finding Task optionally has the ability to compress/decompress
+    data with SZ for the purpose of compression validation.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
 
     class SZCompressorParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(
@@ -111,6 +120,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         description="Path to output file.",
         flag_type="-",
         rename_param="o",
+        is_result=True,
     )
 
     @validator("out_file", always=True)
@@ -126,6 +136,19 @@ class FindPeaksPyAlgosParameters(TaskParameters):
 
 
 class FindPeaksPsocakeParameters(ThirdPartyParameters):
+    """Parameters for crystallographic (Bragg) peak finding using Psocake.
+
+    This peak finding Task optionally has the ability to compress/decompress
+    data with SZ for the purpose of compression validation.
+    NOTE: This Task is deprecated and provided for compatibility only.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
 
     class SZParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(
@@ -303,3 +326,13 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
         else:
             values["pressio_opts"] = {"pressio:abs": sz_parameters.absError}
         return None
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        exp: str = values["lute_config"].experiment
+        run: int = int(values["lute_config"].run)
+        directory: str = values["outDir"]
+        fname: str = f"{exp}_{run:04d}.lst"
+
+        cls.Config.result_from_params = f"{directory}/{fname}"
+        return values

@@ -31,10 +31,14 @@ from .base import TaskParameters, ThirdPartyParameters, TemplateConfig
 class SubmitSMDParameters(ThirdPartyParameters):
     """Parameters for running smalldata to produce reduced HDF5 files."""
 
-    # class Config(ThirdPartyParameters.Config):
-    #    """Identical to super-class Config but includes a result."""
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
 
-    #    result_from_params: str = ""
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")
     np: PositiveInt = Field(
@@ -153,9 +157,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
     @root_validator(pre=False)
     def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        exp: str = values["experiment"]
+        exp: str = values["lute_config"].experiment
         hutch: str = exp[:3]
-        run: int = int(values["run"])
+        run: int = int(values["lute_config"].run)
         directory: Optional[str] = values["directory"]
         if directory is None:
             directory = f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata"
