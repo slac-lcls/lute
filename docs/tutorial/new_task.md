@@ -55,24 +55,37 @@ class RunTaskParameters(ThirdPartyParameters):
     # param1: param1Type = Field("default", description="", ...)
 ```
 
-Under the class definition for `Config` in the model, we can modify global options for all the parameters. Currently, the available configuration options are:
 
-| **Config Parameter** | **Meaning**                                                       | **Default Value** |
-|:--------------------:|:-----------------------------------------------------------------:|:-----------------:|
-| `short_flags_use_eq` | Use equals sign instead of space for arguments of `-` parameters. | `False`           |
-| `long_flags_use_eq`  | Use equals sign instead of space for arguments of `-` parameters. | `False`           |
-|                      |                                                                   |                   |
+**Config settings and options**
+Under the class definition for `Config` in the model, we can modify global options for all the parameters. In addition, there are a number of configuration options related to specifying what the outputs/results from the associated `Task` are, and a number of options to modify runtime behaviour. Currently, the available configuration options are:
 
-These configuration options modify how the parameter models are parsed and passed along on the command-line. The default behaviour is that parameters are assumed to be passed as `-p arg` and `--param arg`. Setting the above options to `True` will mean that all parameters are instead passed as `-p=arg` and `--param=arg`.
+| **Config Parameter** | **Meaning**                                                                                                  | **Default Value**     | **ThirdPartyTask-specific?**             |
+|:--------------------:|:------------------------------------------------------------------------------------------------------------:|:---------------------:|:----------------------------------------:|
+| `run_directory`      | If provided, can be used to specify the directory from which a `Task` is run.                                | `None` (not provided) | **NO**                                   |
+| `set_result`         | `bool`. If `True` search the model definition for a parameter that indicates what the result is.             | `False`               | **NO**                                   |
+| `result_from_params` | If `set_result` is `True` can define a result using this option and a validator. See also `is_result` below. | `None` (not provided) | **NO**                                   |
+| `short_flags_use_eq` | Use equals sign instead of space for arguments of `-` parameters.                                            | `False`               | **YES** - Only affects `ThirdPartyTask`s |
+| `long_flags_use_eq`  | Use equals sign instead of space for arguments of `-` parameters.                                            | `False`               | **YES** - Only affects `ThirdPartyTask`s |
+|                      |                                                                                                              |                       |                                          |
 
+These configuration options modify how the parameter models are parsed and passed along on the command-line, as well as what we consider results and where a `Task` can run. The default behaviour is that parameters are assumed to be passed as `-p arg` and `--param arg`, the `Task` will be run in the current working directory (or scratch if submitted with the ARP), and we have no information about `Task` results . Setting the above options can modify this behaviour.
+
+- By setting `short_flags_use_eq` and/or `long_flags_use_eq` to `True` parameters are instead passed as `-p=arg` and `--param=arg`.
+- By setting `run_directory` to a valid path, we can force a `Task` to be run in a specific directory. By default the `Task` will be run from the directory you submit the job in, or from your scratch folder (`/sdf/scratch/...`) if you submit from the eLog. Some `ThirdPartyTask`s rely on searching the correct working directory in order run properly.
+- By setting `set_result` to `True` we indicate that the `TaskParameters` model will provide information on what the `TaskResult` is. This setting must be used with one of two options, either the `result_from_params` `Config` option, described below, or the **Field** attribute `is_result` described in the next sub-section (**Field Attributes**).
+- `result_from_params` is a Config option that can be used when `set_result==True`. In conjunction with a **validator** (described a sections down) we can use this option to specify a result from all the information contained in the model. E.g. if you have a `Task` that has parameters for an `output_directory` and a `output_filename`, you can set `result_from_params==f"{output_directory}/{output_filename}"`.
+
+
+**Field attributes**
 In addition to the global configuration options there are a couple of ways to specify individual parameters. The following `Field` attributes are used when parsing the model:
 
-| **Field Attribute** | **Meaning**                                                                       | **Default Value** | **Example**                                       |
-|:-------------------:|:---------------------------------------------------------------------------------:|:-----------------:|:-------------------------------------------------:|
-| `flag_type`         | Specify the type of flag for passing this argument. One of `"-"`, `"--"`, or `""` | N/A               | `p_arg1 = Field(..., flag_type="")`               |
-| `rename_param`      | Change the name of the parameter as passed on the command-line.                   | N/A               | `my_arg = Field(..., rename_param="my-arg")`      |
-| `description`       | Documentation of the parameter's usage or purpose.                                | N/A               | `arg = Field(..., description="Argument for...")` |
-|                     |                                                                                   |                   |                                                   |
+| **Field Attribute** | **Meaning**                                                                                            | **Default Value** | **Example**                                       |
+|:-------------------:|:------------------------------------------------------------------------------------------------------:|:-----------------:|:-------------------------------------------------:|
+| `flag_type`         | Specify the type of flag for passing this argument. One of `"-"`, `"--"`, or `""`                      | N/A               | `p_arg1 = Field(..., flag_type="")`               |
+| `rename_param`      | Change the name of the parameter as passed on the command-line.                                        | N/A               | `my_arg = Field(..., rename_param="my-arg")`      |
+| `description`       | Documentation of the parameter's usage or purpose.                                                     | N/A               | `arg = Field(..., description="Argument for...")` |
+| `is_result`         | `bool`. If the `set_result` `Config` option is `True`, we can set this to `True` to indicate a result. | N/A               | `output_result = Field(..., is_result=true)`      |
+|                     |                                                                                                        |                   |                                                   |
 
 The `flag_type` attribute allows us to specify whether the parameter corresponds to a positional (`""`) command line argument, requires a single hyphen (`"-"`), or a double hyphen (`"--"`). By default, the parameter name is passed as-is on the command-line. However, command-line arguments can have characters which would not be valid in Python variable names. In particular, hyphens are frequently used. To handle this case, the `rename_param` attribute can be used to specify an alternative spelling of the parameter when it is passed on the command-line. This also allows for using more descriptive variable names internally than those used on the command-line. A `description` can also be provided for each Field to document the usage and purpose of that particular parameter.
 
@@ -118,6 +131,38 @@ class RunTaskParameters(ThirdPartyParameters):
     )
 ```
 
+The `is_result` attribute allows us to specify whether the corresponding Field points to the output/result of the associated `Task`. Consider a `Task`, `RunTask2` which writes its output to a single file which is passed as a parameter.
+
+```py
+class RunTask2Parameters(ThirdPartyParameters):
+    """Parameters for the runtask2 binary."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True                     # This must be set here!
+        # result_from_params: Optional[str] = None  # We can use this for more complex result setups (see below). Ignore for now.
+
+    # Prefer using full/absolute paths where possible.
+    # No flag_type needed for this field
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/runtask2", description="Runtask Binary v2.0"
+    )
+
+    # Lets assume we take one input and write one output file
+    # We will not provide a default value, so this parameter MUST be provided
+    input: str = Field(
+        description="Path to input file.", flag_type="--"
+    )
+
+    # We will also not provide a default for the output
+    # BUT, we will specify that whatever is provided is the result
+    output: str = Field(
+        description="Path to write output to.",
+        flag_type="-",
+        rename_param="o",
+        is_result=True,   # This means this parameter points to the result!
+    )
+```
+
 **Additional Comments**
 1. Model parameters of type `bool` are not passed with an argument and are only passed when `True`. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. `--debug`, `--test`, `--verbose`, etc.
   - If you need to pass the literal words `"True"` or `"False"`, use a parameter of type `str`.
@@ -130,7 +175,7 @@ class RunTaskParameters(ThirdPartyParameters):
   - `date`: The date of the experiment or the analysis.
   - `lute_version`: The version of the software you are running.
   - `task_timeout`: How long a `Task` can run before it is killed.
-  - `work_dir`: The main working directory for LUTE. Files and the database are created relative to this directory.
+  - `work_dir`: The main working directory for LUTE. Files and the database are created relative to this directory. This is separate from the `run_directory` config option. LUTE will write files to the work directory by default; however, the `Task` itself is run from `run_directory` if it is specified.
 
 **Validators**
 Pydantic uses `validators` to determine whether a value for a specific field is appropriate. There are default validators for all the standard library types and the types specified within the pydantic package; however, it is straightforward to define custom ones as well. In the template code-snippet above we imported the `validator` decorator. To create our own validator we define a method (with any name) with the following prototype, and decorate it with the `validator` decorator:
@@ -143,7 +188,7 @@ In this snippet, the `field` variable corresponds to the value for the specific 
 For example, consider the `method_param1` field defined above for `RunTask`. We can provide a custom validator which changes the default value for this field depending on what type of algorithm is specified for the `--method` option. We will also constrain the options for `method` to two specific strings.
 
 ```py
-from pydantic import Field, validator, ValidationError
+from pydantic import Field, validator, ValidationError, root_validator
 class RunTaskParameters(ThirdPartyParameters):
     """Parameters for the runtask binary."""
 
@@ -194,12 +239,59 @@ class RunTaskParameters(ThirdPartyParameters):
             return 5
 ```
 
+The special `root_validator(pre=False)` can also be used to provide validation of the model as a whole. This is also the recommended method for specifying a result (using `result_from_params`) which has a complex dependence on the parameters of the model. This latter use-case is described in FAQ 2 below.
+
 #### FAQ
 1. How can I specify a default value which depends on another parameter?
 
 Use a custom validator. The example above shows how to do this. The parameter that depends on another parameter must come LATER in the model defintion than the independent parameter.
 
-2. My new `Task` depends on the output of a previous `Task`, how can I specify this dependency?
+2. My `TaskResult` is determinable from the parameters model, but it isn't easily specified by one parameter. How can I use `result_from_params` to indicate the result?
+
+When a result can be identified from the set of parameters defined in a `TaskParameters` model, but is not as straightforward as saying it is equivalent to one of the parameters alone, we can set `result_from_params` using a custom validator. In the example below, we have two parameters which together determine what the result is, `output_dir` and `out_name`. Using a validator we will define a result from these two values.
+
+```py
+from pydantic import Field, root_validator
+
+class RunTask3Parameters(ThirdPartyParameters):
+    """Parameters for the runtask3 binary."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True       # This must be set here!
+        result_from_params: str = ""  # We will set this momentarily
+
+    # [...] executable, other params, etc.
+
+    output_dir: str = Field(
+        description="Directory to write output to.",
+        flag_type="--",
+        rename_param="dir",
+    )
+
+    out_name: str = Field(
+        description="The name of the final output file.",
+        flag_type="--",
+        rename_param="oname",
+    )
+
+    # We can still provide other validators as needed
+    # But for now, we just set result_from_params
+    # Validator name can be anything, we set pre=False so this runs at the end
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Extract the values of output_dir and out_name
+        output_dir: str = values["output_dir"]
+        out_name: str = values["out_name"]
+
+        result: str = f"{output_dir}/{out_name}"
+        # Now we set result_from_params
+        cls.Config.result_from_params = result
+
+        # We haven't modified any other values, but we MUST return this!
+        return values
+```
+
+3. My new `Task` depends on the output of a previous `Task`, how can I specify this dependency?
 Parameters used to run a `Task` are recorded in a database for every `Task`. It is also recorded whether or not the execution of that specific parameter set was successful. A utility function is provided to access the most recent values from the database for a specific parameter of a specific `Task`. It can also be used to specify whether unsuccessful `Task`s should be included in the query. This utility can be used within a validator to specify dependencies. For example, suppose the input of `RunTask2` (parameter `input`) depends on the output location of `RunTask1` (parameter `outfile`). A validator of the following type can be used to retrieve the output file and make it the default value of the input parameter.
 
 ```py
@@ -456,6 +548,12 @@ There are many other syntactical constructions we can use with Jinja. Some of th
 ```
 
 ## Creating a "First-Party" `Task`
+The process for creating a "First-Party" `Task` is very similar to that for a "Third-Party" `Task`, with the difference being that you must also write the analysis code. The steps for integration are:
+1. Write the `TaskParameters` model.
+2. Write the `Task` class. There are a few rules that need to be adhered to.
+3. Make your `Task` available by modifying the import function.
+4. Specify an `Executor`
+
 ### Specifying a `TaskParameters` Model for your `Task`
 Parameter models have a format that must be followed for "Third-Party" `Task`s, but "First-Party" `Task`s have a little more liberty in how parameters are dealt with, since the `Task` will do all the parsing itself.
 
@@ -471,3 +569,119 @@ To create a model, the basic steps are:
   - E.g. create default values that depend on other `Task`s by reading from the database - see for example: [TestReadOutputParameters](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75).
 4. The model will have access to some general configuration values by inheriting from `TaskParameters`. These parameters are all stored in `lute_config` which is an instance of `AnalysisHeader` ([defined here](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42)).
   - For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the `Task`.
+
+A number of configuration options and **Field** attributes are also available for "First-Party" `Task` models. These are identical to those used for the `ThirdPartyTask`s, although there is a smaller selection. These options are reproduced below for convenience.
+
+**Config settings and options**
+Under the class definition for `Config` in the model, we can modify global options for all the parameters. In addition, there are a number of configuration options related to specifying what the outputs/results from the associated `Task` are, and a number of options to modify runtime behaviour. Currently, the available configuration options are:
+
+| **Config Parameter** | **Meaning**                                                                                                  | **Default Value**     | **ThirdPartyTask-specific?**             |
+|:--------------------:|:------------------------------------------------------------------------------------------------------------:|:---------------------:|:----------------------------------------:|
+| `run_directory`      | If provided, can be used to specify the directory from which a `Task` is run.                                | `None` (not provided) | **NO**                                   |
+| `set_result`         | `bool`. If `True` search the model definition for a parameter that indicates what the result is.             | `False`               | **NO**                                   |
+| `result_from_params` | If `set_result` is `True` can define a result using this option and a validator. See also `is_result` below. | `None` (not provided) | **NO**                                   |
+| `short_flags_use_eq` | Use equals sign instead of space for arguments of `-` parameters.                                            | `False`               | **YES** - Only affects `ThirdPartyTask`s |
+| `long_flags_use_eq`  | Use equals sign instead of space for arguments of `-` parameters.                                            | `False`               | **YES** - Only affects `ThirdPartyTask`s |
+|                      |                                                                                                              |                       |                                          |
+
+These configuration options modify how the parameter models are parsed and passed along on the command-line, as well as what we consider results and where a `Task` can run. The default behaviour is that parameters are assumed to be passed as `-p arg` and `--param arg`, the `Task` will be run in the current working directory (or scratch if submitted with the ARP), and we have no information about `Task` results . Setting the above options can modify this behaviour.
+
+- By setting `short_flags_use_eq` and/or `long_flags_use_eq` to `True` parameters are instead passed as `-p=arg` and `--param=arg`.
+- By setting `run_directory` to a valid path, we can force a `Task` to be run in a specific directory. By default the `Task` will be run from the directory you submit the job in, or from your scratch folder (`/sdf/scratch/...`) if you submit from the eLog. Some `ThirdPartyTask`s rely on searching the correct working directory in order run properly.
+- By setting `set_result` to `True` we indicate that the `TaskParameters` model will provide information on what the `TaskResult` is. This setting must be used with one of two options, either the `result_from_params` `Config` option, described below, or the **Field** attribute `is_result` described in the next sub-section (**Field Attributes**).
+- `result_from_params` is a Config option that can be used when `set_result==True`. In conjunction with a **validator** (described a sections down) we can use this option to specify a result from all the information contained in the model. E.g. if you have a `Task` that has parameters for an `output_directory` and a `output_filename`, you can set `result_from_params==f"{output_directory}/{output_filename}"`.
+
+
+**Field attributes**
+In addition to the global configuration options there are a couple of ways to specify individual parameters. The following `Field` attributes are used when parsing the model:
+
+| **Field Attribute** | **Meaning**                                                                                            | **Default Value** | **Example**                                       |
+|:-------------------:|:------------------------------------------------------------------------------------------------------:|:-----------------:|:-------------------------------------------------:|
+| `description`       | Documentation of the parameter's usage or purpose.                                                     | N/A               | `arg = Field(..., description="Argument for...")` |
+| `is_result`         | `bool`. If the `set_result` `Config` option is `True`, we can set this to `True` to indicate a result. | N/A               | `output_result = Field(..., is_result=true)`      |
+|                     |                                                                                                        |                   |                                                   |
+
+### Writing the `Task`
+You can write your analysis code (or whatever code to be executed) as long as it adheres to the limited rules below. You can create a new module for your `Task` in `lute.tasks` or add it to any existing module, if it makes sense for it to belong there. The `Task` itself is a single class constructed as:
+1. Your analysis `Task` is a class named in a way that matches its Pydantic model. E.g. `RunTask` is the `Task`, and `RunTaskParameters` is the Pydantic model.
+2. The class must inherit from the `Task` class (see template below).
+3. You must provide an implementation of a `_run` method. This is the method that will be executed when the `Task` is run. You can in addition write as many methods as you need. For fine-grained execution control you can also provide `_pre_run()` and `_post_run()` methods, but this is optional.
+4. For all communication (including print statements) you should use the `_report_to_executor(msg: Message)` method. Since the `Task` is run as a subprocess this method will pass information to the controlling `Executor`. You can pass **any** type of object using this method, strings, plots, arrays, etc.
+5. If you did not use the `set_result` configuration option in your parameters model, make sure to provide a result when finished. This is done by setting `self._result.payload = ...`. You can set the result to be any object. If you have written the result to a file, for example, please provide a path.
+
+A minimal template is provided below.
+
+```py
+"""Standard docstring..."""
+
+__all__ = ["RunTask"]
+__author__ = "" # Please include so we know who the SME is
+
+# Include any imports you need here
+
+from lute.execution.ipc import Message # Message for communication
+from lute.io.models.base import *      # For TaskParameters
+from lute.tasks.task import *          # For Task
+
+class RunTask(Task): # Inherit from Task
+    """Task description goes here, or in __init__"""
+
+    def __init__(self, *, params: TaskParameters) -> None:
+        super().__init__(params=params) # Sets up Task, parameters, etc.
+        # Parameters will be available through:
+          # self._task_parameters
+          # You access with . operator: self._task_parameters.param1, etc.
+        # Your result object is availble through:
+          # self._result
+            # self._result.payload <- Main result
+            # self._result.summary <- Short summary
+            # self._result.task_status <- Semi-automatic, but can be set manually
+
+    def _run(self) -> None:
+        # THIS METHOD MUST BE PROVIDED
+        self.do_my_analysis()
+
+    def do_my_analysis(self) -> None:
+        # Send a message, proper way to print:
+        msg: Message(contents="My message contents", signal="")
+        self._report_to_executor(msg)
+
+        # When done, set result - assume we wrote a file, e.g.
+        self._result.payload = "/path/to/output_file.h5"
+        # Optionally also set status - good practice but not obligatory
+        self._result.task_status = TaskStatus.COMPLETED
+```
+
+Signals in `Message` objects are strings and can be one of the following:
+
+```py
+LUTE_SIGNALS: Set[str] = {
+    "NO_PICKLE_MODE",
+    "TASK_STARTED",
+    "TASK_FAILED",
+    "TASK_STOPPED",
+    "TASK_DONE",
+    "TASK_CANCELLED",
+    "TASK_RESULT",
+}
+```
+Each of these signals is associated with a hook on the `Executor`-side. They are for the most part used by base classes; however, you can choose to make use of them manually as well.
+
+### Making your `Task` available
+Once the `Task` has been written, it needs to be made available for import. Since different `Task`s can have conflicting dependencies and environments, this is managed through an import function. When the `Task` is done, or ready for testing, a condition is added to `lute.tasks.__init__.import_task`. For example, assume the `Task` is called `RunXASAnalysis` and it's defined in a module called `xas.py`, we would add the following lines to the `import_task` function:
+
+```py
+# in lute.tasks.__init__
+
+# ...
+
+def import_task(task_name: str) -> Type[Task]:
+    # ...
+    if task_name == "RunXASAnalysis":
+        from .xas import RunXASAnalysis
+
+        return RunXASAnalysis
+```
+
+### Defining an `Executor`
+The process of `Executor` definition is identical to the process as described for `ThirdPartyTask`s above.
