@@ -241,7 +241,6 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         gen_entry,  # Dict[str, Any]
         gen_columns,  # Dict[str, str]
     ) = _params_to_entry_cols(cfg.task_parameters)
-    # Maybe switch below to use a prefix `result.<field>`?
     x, y = _result_to_entry_cols(cfg.task_result)
     task_entry.update(x)
     task_columns.update(y)
