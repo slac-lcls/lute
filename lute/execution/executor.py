@@ -33,7 +33,7 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Union
+from typing import Dict, Callable, List, Optional, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 import warnings
@@ -416,15 +416,11 @@ class BaseExecutor(ABC):
 
         # First try to set from result_from_params (faster)
         if self._analysis_desc.task_parameters.Config.result_from_params is not None:
-            # if hasattr(self._analysis_desc.task_parameters.Config, "result_from_params"):
             result_from_params: str = (
                 self._analysis_desc.task_parameters.Config.result_from_params
             )
             logger.info(f"TaskResult specified as {result_from_params}.")
             self._analysis_desc.task_result.payload = result_from_params
-            # if isinstance(result_from_params, str) and result_from_params != "":
-            #    logger.info(f"TaskResult specified as {result_from_params}.")
-            #    self._analysis_desc.task_result.payload = result_from_params
         else:
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
@@ -454,7 +450,7 @@ class BaseExecutor(ABC):
                 )
             )
         # Now check for impl_schemas and pass to result.impl_schemas
-        # Only get to this point if set_result == True
+        # Currently unused
         impl_schemas: Optional[str] = (
             self._analysis_desc.task_parameters.Config.impl_schemas
         )
@@ -624,7 +620,8 @@ class Executor(BaseExecutor):
         """Performs result processing.
 
         Actions include:
-        - For `ElogSummaryPlots`, will save the summary plot to a
+        - For `ElogSummaryPlots`, will save the summary plot to the appropriate
+            directory for display in the eLog.
         """
         task_result: TaskResult = self._analysis_desc.task_result
         self._process_result_payload(task_result.payload)
