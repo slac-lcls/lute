@@ -33,7 +33,7 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional
+from typing import Dict, Callable, List, Optional, Any
 from typing_extensions import Self
 from abc import ABC, abstractmethod
 import warnings
@@ -339,6 +339,8 @@ class BaseExecutor(ABC):
             logger.info("Exiting after Task failure. Result recorded.")
             sys.exit(-1)
 
+        self.process_results()
+
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
         record_analysis_db(copy.deepcopy(self._analysis_desc))
@@ -370,6 +372,110 @@ class BaseExecutor(ABC):
         """Resume a stopped Task subprocess."""
         os.kill(proc.pid, signal.SIGCONT)
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
+
+    def _set_result_from_parameters(self) -> None:
+        """Use TaskParameters object to set TaskResult fields.
+
+        A result may be defined in terms of specific parameters. This is most
+        useful for ThirdPartyTasks which would not otherwise have an easy way of
+        reporting what the TaskResult is. There are two options for specifying
+        results from parameters:
+            1. A single parameter (Field) of the model has an attribute
+               `is_result`. This is a bool indicating that this parameter points
+               to a result. E.g. a parameter `output` may set `is_result=True`.
+            2. The `TaskParameters.Config` has a `result_from_params` attribute.
+               This is an appropriate option if the result is determinable for
+               the Task, but it is not easily defined by a single parameter. The
+               TaskParameters.Config.result_from_param can be set by a custom
+               validator, e.g. to combine the values of multiple parameters into
+               a single result. E.g. an `out_dir` and `out_file` parameter used
+               together specify the result. Currently only string specifiers are
+               supported.
+
+        A TaskParameters object specifies that it contains information about the
+        result by setting a single config option:
+                        TaskParameters.Config.set_result=True
+        In general, this method should only be called when the above condition is
+        met, however, there are minimal checks in it as well.
+        """
+        # This method shouldn't be called unless appropriate
+        # But we will add extra guards here
+        if self._analysis_desc.task_parameters is None:
+            logger.debug(
+                "Cannot set result from TaskParameters. TaskParameters is None!"
+            )
+            return
+        if (
+            not hasattr(self._analysis_desc.task_parameters.Config, "set_result")
+            or not self._analysis_desc.task_parameters.Config.set_result
+        ):
+            logger.debug(
+                "Cannot set result from TaskParameters. `set_result` not specified!"
+            )
+            return
+
+        # First try to set from result_from_params (faster)
+        if self._analysis_desc.task_parameters.Config.result_from_params is not None:
+            result_from_params: str = (
+                self._analysis_desc.task_parameters.Config.result_from_params
+            )
+            logger.info(f"TaskResult specified as {result_from_params}.")
+            self._analysis_desc.task_result.payload = result_from_params
+        else:
+            # Iterate parameters to find the one that is the result
+            schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
+            for param, value in self._analysis_desc.task_parameters.dict().items():
+                param_attrs: Dict[str, Any] = schema["properties"][param]
+                if "is_result" in param_attrs:
+                    is_result: bool = param_attrs["is_result"]
+                    if isinstance(is_result, bool) and is_result:
+                        logger.info(f"TaskResult specified as {value}.")
+                        self._analysis_desc.task_result.payload = value
+                    else:
+                        logger.debug(
+                            (
+                                f"{param} specified as result! But specifier is of "
+                                f"wrong type: {type(is_result)}!"
+                            )
+                        )
+                    break  # We should only have 1 result-like parameter!
+
+        # If we get this far and haven't changed the payload we should complain
+        if self._analysis_desc.task_result.payload == "":
+            task_name: str = self._analysis_desc.task_result.task_name
+            logger.debug(
+                (
+                    f"{task_name} specified result be set from {task_name}Parameters,"
+                    " but no result provided! Check model definition!"
+                )
+            )
+        # Now check for impl_schemas and pass to result.impl_schemas
+        # Currently unused
+        impl_schemas: Optional[str] = (
+            self._analysis_desc.task_parameters.Config.impl_schemas
+        )
+        self._analysis_desc.task_result.impl_schemas = impl_schemas
+        # If we set_result but didn't get schema information we should complain
+        if self._analysis_desc.task_result.impl_schemas is None:
+            task_name: str = self._analysis_desc.task_result.task_name
+            logger.debug(
+                (
+                    f"{task_name} specified result be set from {task_name}Parameters,"
+                    " but no schema provided! Check model definition!"
+                )
+            )
+
+    def process_results(self) -> None:
+        """Perform any necessary steps to process TaskResults object.
+
+        Processing will depend on subclass. Examples of steps include, moving
+        files, converting file formats, compiling plots/figures into an HTML
+        file, etc.
+        """
+        self._process_results()
+
+    @abstractmethod
+    def _process_results(self) -> None: ...
 
 
 class Executor(BaseExecutor):
@@ -421,6 +527,13 @@ class Executor(BaseExecutor):
         def task_started(self: Executor, msg: Message):
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
+                # Maybe just run this no matter what? Rely on the other guards?
+                # Perhaps just check if ThirdPartyParameters?
+                # if isinstance(self._analysis_desc.task_parameters, ThirdPartyParameters):
+                if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
+                    # Third party Tasks may mark a parameter as the result
+                    # If so, setup the result now.
+                    self._set_result_from_parameters()
             logger.info(
                 f"Executor: {self._analysis_desc.task_result.task_name} started"
             )
@@ -485,7 +598,9 @@ class Executor(BaseExecutor):
         for communicator in self._communicators:
             msg: Message = communicator.read(proc)
             if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                hook: Callable[[None], None] = getattr(self.Hooks, msg.signal.lower())
+                hook: Callable[[Executor, Message], None] = getattr(
+                    self.Hooks, msg.signal.lower()
+                )
                 hook(self, msg)
             if msg.contents is not None:
                 if isinstance(msg.contents, str) and msg.contents != "":
@@ -500,6 +615,44 @@ class Executor(BaseExecutor):
         reporting to third party services, etc.
         """
         self._task_loop(proc)  # Perform a final read.
+
+    def _process_results(self) -> None:
+        """Performs result processing.
+
+        Actions include:
+        - For `ElogSummaryPlots`, will save the summary plot to the appropriate
+            directory for display in the eLog.
+        """
+        task_result: TaskResult = self._analysis_desc.task_result
+        self._process_result_payload(task_result.payload)
+        self._process_result_summary(task_result.summary)
+
+    def _process_result_payload(self, payload: Any) -> None:
+        if self._analysis_desc.task_parameters is None:
+            logger.debug("Please run Task before using this method!")
+            return
+        if isinstance(payload, ElogSummaryPlots):
+            # ElogSummaryPlots has figures and a display name
+            # display name also serves as a path.
+            expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
+            base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
+            full_path: str = f"{base_path}/{payload.display_name}"
+            if not os.path.isdir(full_path):
+                os.makedirs(full_path)
+
+            # Preferred plots are pn.Tabs objects which save directly as html
+            # Only supported plot type that has "save" method - do not want to
+            # import plot modules here to do type checks.
+            if hasattr(payload.figures, "save"):
+                payload.figures.save(f"{full_path}/report.html")
+            else:
+                ...
+        elif isinstance(payload, str):
+            # May be a path to a file...
+            schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
+            # Should also check `impl_schemas` to determine what to do with path
+
+    def _process_result_summary(self, summary: str) -> None: ...
 
 
 class MPIExecutor(Executor):
@@ -516,7 +669,9 @@ class MPIExecutor(Executor):
 
     This Executor will submit the Task to run with a number of processes equal
     to the total number of cores available minus 1. A single core is reserved
-    for the Executor itself.
+    for the Executor itself. Note that currently this means that you must submit
+    on 3 cores or more, since MPI requires a minimum of 2 ranks, and the number
+    of ranks is determined from the cores dedicated to Task execution.
 
     Methods:
         _submit_cmd: Run the task as a subprocess using `mpirun`.

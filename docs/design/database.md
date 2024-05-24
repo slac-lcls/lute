@@ -57,11 +57,11 @@ The `Executor` table contains information on the environment provided to the `Ex
 ### `Task` tables
 For every `Task` a table of the following format will be created. The exact number of columns will depend on the specific `Task`, as the number of parameters can vary between them, and each parameter gets its own column. Within a table, multiple experiments and runs can coexist. The experiment and run are not recorded directly. Instead the first two columns point to the id of entries in the general configuration and `Executor` tables respectively. The general configuration table entry will contain the experiment and run information.
 
-| id | timestamp             | gen_cfg_id | exec_cfg_id | P1 | P2 | ... | Pn | task_status | summary   | payload | impl_schemas       | valid_flag |
-|:--:|:---------------------:|:----------:|:-----------:|:--:|:--:|:---:|:--:|:-----------:|:---------:|:-------:|:------------------:|:----------:|
-| 2  | "YYYY-MM-DD HH:MM:SS" | 1          | 1           | 1  | 2  | ... | 3  | "COMPLETED" | "Summary" | "XYZ"   | "schema1;schema3;" | 1          |
-| 3  | "YYYY-MM-DD HH:MM:SS" | 1          | 1           | 3  | 1  | ... | 4  | "FAILED"    | "Summary" | "XYZ"   | "schema1;schema3;" | 0          |
-|    |                       |            |             |    |    |     |    |             |           |         |                    |            |
+| id | timestamp             | gen_cfg_id | exec_cfg_id | P1 | P2 | ... | Pn | result.task_status | result.summary | result.payload | result.impl_schemas | valid_flag |
+|:--:|:---------------------:|:----------:|:-----------:|:--:|:--:|:---:|:--:|:------------------:|:--------------:|:--------------:|:-------------------:|:----------:|
+| 2  | "YYYY-MM-DD HH:MM:SS" | 1          | 1           | 1  | 2  | ... | 3  | "COMPLETED"        | "Summary"      | "XYZ"          | "schema1;schema3;"  | 1          |
+| 3  | "YYYY-MM-DD HH:MM:SS" | 1          | 1           | 3  | 1  | ... | 4  | "FAILED"           | "Summary"      | "XYZ"          | "schema1;schema3;"  | 0          |
+|    |                       |            |             |    |    |     |    |                    |                |                |                     |            |
 
 #### Column descriptions
 | **Column**          | **Description**                                                                                                                                  |

@@ -135,16 +135,16 @@ def _result_to_entry_cols(
         columns (Dict[str, str]): Converted {name:type} dictionary.
     """
     entry: Dict[str, Any] = {
-        "task_status": str(result.task_status).split(".")[1],
-        "summary": result.summary,
-        "payload": result.payload,
-        "impl_schemas": result.impl_schemas,
+        "result.task_status": str(result.task_status).split(".")[1],
+        "result.summary": result.summary,
+        "result.payload": result.payload,
+        "result.impl_schemas": result.impl_schemas,
     }
     columns: Dict[str, str] = {
-        "task_status": "TEXT",
-        "summary": "TEXT",
-        "payload": "BLOB",
-        "impl_schemas": "TEXT",
+        "result.task_status": "TEXT",
+        "result.summary": "TEXT",
+        "result.payload": "BLOB",
+        "result.impl_schemas": "TEXT",
     }
 
     return entry, columns
