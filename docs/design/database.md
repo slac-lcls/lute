@@ -55,7 +55,7 @@ The `Executor` table contains information on the environment provided to the `Ex
 **NOTE**: The `env` column currently only stores variables related to `SLURM` or `LUTE` itself.
 
 ### `Task` tables
-For every `Task` a table of the following format will be created. The exact number of columns will depend on the specific `Task`, as the number of parameters can vary between them, and each parameter gets its own column. Within a table, multiple experiments and runs can coexist. The experiment and run are not recorded directly. Instead the first two columns point to the id of entries in the general configuration and `Executor` tables respectively. The general configuration table entry will contain the experiment and run information.
+For every `Task` a table of the following format will be created. The exact number of columns will depend on the specific `Task`, as the number of parameters can vary between them, and each parameter gets its own column. Within a table, multiple experiments and runs can coexist. The experiment and run are not recorded directly. Instead, the first two columns point to the id of entries in the general configuration and `Executor` tables respectively. The general configuration table entry will contain the experiment and run information.
 
 | id | timestamp             | gen_cfg_id | exec_cfg_id | P1 | P2 | ... | Pn | result.task_status | result.summary | result.payload | result.impl_schemas | valid_flag |
 |:--:|:---------------------:|:----------:|:-----------:|:--:|:--:|:---:|:--:|:------------------:|:--------------:|:--------------:|:-------------------:|:----------:|
@@ -63,22 +63,37 @@ For every `Task` a table of the following format will be created. The exact numb
 | 3  | "YYYY-MM-DD HH:MM:SS" | 1          | 1           | 3  | 1  | ... | 4  | "FAILED"           | "Summary"      | "XYZ"          | "schema1;schema3;"  | 0          |
 |    |                       |            |             |    |    |     |    |                    |                |                |                     |            |
 
-#### Column descriptions
-| **Column**          | **Description**                                                                                                                                  |
-|:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------:|
-| `id`                | ID of the entry in this table.                                                                                                                   |
-| `CURRENT_TIMESTAMP` | Full timestamp for the entry.                                                                                                                    |
-| `gen_cfg_id`        | ID of the entry in the general config table that applies to this `Task` entry. That table has, e.g., experiment and run number.                  |
-| `exec_cfg_id`       | The ID of the entry in the `Executor` table which applies to this `Task` entry.                                                                  |
-| `P1` - `Pn`         | The specific parameters of the `Task`. The `P{1..n}` are replaced by the actual parameter names.                                                 |
-| `task_status`       | Reported exit status of the `Task`. Note that the output may still be labeled invalid by the `valid_flag` (see below).                           |
-| `summary`           | Short text summary of the `Task` result. This is provided by the `Task`, or sometimes the `Executor`.                                            |
-| `payload`           | Full description of result from the `Task`. If the object is incompatible with the database, will instead be a pointer to where it can be found. |
-| `impl_schemas`      | A string of semi-colon separated schema(s) implemented by the `Task`. Schemas describe conceptually the type output the `Task` produces.         |
-| `valid_flag`        | A boolean flag for whether the result is valid. May be `0` (False) if e.g., data is missing, or corrupt, or reported status is failed.           |
-|                     |                                                                                                                                                  |
+Parameter sets which can be described as nested dictionaries are flattened and then delimited with a `.` to create column names. Parameters which are lists (or Python tuples, etc.) have a column for each entry with names that include an index (counting from 0). E.g. consider the following dictionary of parameters:
+```py
+param_dict: Dict[str, Any] = {
+    "a": {               # First parameter a
+        "b": (1, 2),
+        "c": 1,
+        # ...
+    },
+    "a2": 4,             # Second parameter a2
+    # ...
+}
+```
 
-**NOTE:** The `payload` is distinct from the output files. Payloads are an optional summary of the results provided by the `Task`. E.g. this may include graphical descriptions of results (plots, figures, etc.). The output files themselves, if they exist, will most likely be pointed to be an output file parameter in one of the columns `P{1...n}`
+The dictionary `a` will produce columns: `a.b[0]`, `a.b[1]`, `a.c`, and so on.
+
+#### Column descriptions
+| **Column**            | **Description**                                                                                                                                  |
+|:---------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------:|
+| `id`                  | ID of the entry in this table.                                                                                                                   |
+| `CURRENT_TIMESTAMP`   | Full timestamp for the entry.                                                                                                                    |
+| `gen_cfg_id`          | ID of the entry in the general config table that applies to this `Task` entry. That table has, e.g., experiment and run number.                  |
+| `exec_cfg_id`         | The ID of the entry in the `Executor` table which applies to this `Task` entry.                                                                  |
+| `P1` - `Pn`           | The specific parameters of the `Task`. The `P{1..n}` are replaced by the actual parameter names.                                                 |
+| `result.task_status`  | Reported exit status of the `Task`. Note that the output may still be labeled invalid by the `valid_flag` (see below).                           |
+| `result.summary`      | Short text summary of the `Task` result. This is provided by the `Task`, or sometimes the `Executor`.                                            |
+| `result.payload`      | Full description of result from the `Task`. If the object is incompatible with the database, will instead be a pointer to where it can be found. |
+| `result.impl_schemas` | A string of semi-colon separated schema(s) implemented by the `Task`. Schemas describe conceptually the type output the `Task` produces.         |
+| `valid_flag`          | A boolean flag for whether the result is valid. May be `0` (False) if e.g., data is missing, or corrupt, or reported status is failed.           |
+|                       |                                                                                                                                                  |
+
+**NOTE:** The `result.payload` may be distinct from the output files. Payloads can be specified in terms of output parameters, specific output files, or are an optional summary of the results provided by the `Task`. E.g. this may include graphical descriptions of results (plots, figures, etc.). In many cases, however, the output files will most likely be pointed to by a parameter in one of the columns `P{1...n}` - if properly specified in the `TaskParameters` model the value of this output parameter will be replicated in the `result.payload` column as well..
 
 ## API
 This API is intended to be used at the `Executor` level, with some calls intended to provide default values for Pydantic models. Utilities for reading and inspecting the database outside of normal `Task` execution are addressed in the following subheader.
