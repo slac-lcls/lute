@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="http://127.0.0.1:8000/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_merge/">
+        <link rel="shortcut icon" href="../../../../../../../../../../../../img/favicon.ico">
+        <title>Sfx merge - LUTE</title>
+        <link href="../../../../../../../../../../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link href="../../../../../../../../../../../../assets/_mkdocstrings.css" rel="stylesheet">
+
+        <script src="../../../../../../../../../../../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../../../../../../../../../../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../../../../../../../../../../..">LUTE</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../../../../../../../../../../../../usage/" class="nav-link">Setup</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">/ <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Home</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Dorlhiac</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Documentos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">SLAC</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">DataProjects</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Repos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">My lute</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Docs</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Source</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/ipc/" class="dropdown-item">Ipc</a>
+</li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_merge/" class="dropdown-item active">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/smd/" class="dropdown-item">Smd</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Adrs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/" class="dropdown-item">Architecture Decision Records</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/MADR_LICENSE/" class="dropdown-item">MADR LICENSE</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-1/" class="dropdown-item">[ADR-1] All Analysis Tasks Inherit from a Base Class</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-2/" class="dropdown-item">[ADR-2] Analysis Task Submission and Communication is Performed Via Executors</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-3/" class="dropdown-item">[ADR-3] `Executor`s will run all `Task`s via subprocess</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-4/" class="dropdown-item">[ADR-4] Airflow `Operator`s and LUTE `Executor`s are Separate Entities</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-5/" class="dropdown-item">[ADR-5] Task-Executor IPC is Managed by Communicator Objects</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-6/" class="dropdown-item">[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-7/" class="dropdown-item">[ADR-7] `Task` Configuration is Stored in a Database Managed by `Executor`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-8/" class="dropdown-item">[ADR-8] Airflow credentials/authorization requires special launch program</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-9/" class="dropdown-item">[ADR-9] Airflow launch script will run as long lived batch job.</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/madr_template/" class="dropdown-item">Madr template</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Design <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../design/database/" class="dropdown-item">LUTE Configuration Database Specification</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Docs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../docs/SUMMARY/" class="dropdown-item">SUMMARY</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Source <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/ipc/" class="dropdown-item">Ipc</a>
+</li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_merge/" class="dropdown-item">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/smd/" class="dropdown-item">Smd</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../tutorial/creating_workflows/" class="dropdown-item">Workflows with Airflow</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../tutorial/new_task/" class="dropdown-item">Integrating a New `Task`</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_index/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_solve/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.sfx_merge" class="nav-link">sfx_merge</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.sfx_merge.CompareHKLParameters" class="nav-link">CompareHKLParameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.sfx_merge.ManipulateHKLParameters" class="nav-link">ManipulateHKLParameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.sfx_merge.MergePartialatorParameters" class="nav-link">MergePartialatorParameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.sfx_merge"></a>
+    <div class="doc doc-contents first">
+
+      <p>Models for merging reflections in serial femtosecond crystallography.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.sfx_merge.MergePartialatorParameters" href="../../../../../../../../../../../../../source/io/models/sfx_merge/#io.models.sfx_merge.MergePartialatorParameters">MergePartialatorParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Perform merging using
+CrystFEL's <code>partialator</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.sfx_merge.CompareHKLParameters" href="../../../../../../../../../../../../../source/io/models/sfx_merge/#io.models.sfx_merge.CompareHKLParameters">CompareHKLParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Calculate figures of merit using
+CrystFEL's <code>compare_hkl</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.sfx_merge.ManipulateHKLParameters" href="../../../../../../../../../../../../../source/io/models/sfx_merge/#io.models.sfx_merge.ManipulateHKLParameters">ManipulateHKLParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Perform transformations on
+lists of reflections using CrystFEL's <code>get_hkl</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_merge.CompareHKLParameters" class="doc doc-heading">
+            <code>CompareHKLParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for CrystFEL's <code>compare_hkl</code> for calculating figures of merit.</p>
+<p>There are many parameters, and many combinations. For more information on
+usage, please refer to the CrystFEL documentation, here:
+https://www.desy.de/~twhite/crystfel/manual-partialator.html</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class CompareHKLParameters(ThirdPartyParameters):
+    """Parameters for CrystFEL's `compare_hkl` for calculating figures of merit.
+
+    There are many parameters, and many combinations. For more information on
+    usage, please refer to the CrystFEL documentation, here:
+    https://www.desy.de/~twhite/crystfel/manual-partialator.html
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/compare_hkl",
+        description="CrystFEL's reflection comparison binary.",
+        flag_type="",
+    )
+    in_files: Optional[str] = Field(
+        "",
+        description="Path to input HKLs. Space-separated list of 2. Use output of partialator e.g.",
+        flag_type="",
+    )
+    ## Need mechanism to set is_result=True ...
+    symmetry: str = Field("", description="Point group symmetry.", flag_type="--")
+    cell_file: str = Field(
+        "",
+        description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+        flag_type="-",
+        rename_param="p",
+    )
+    fom: str = Field(
+        "Rsplit", description="Specify figure of merit to calculate.", flag_type="--"
+    )
+    nshells: int = Field(10, description="Use n resolution shells.", flag_type="--")
+    # NEED A NEW CASE FOR THIS -&gt; Boolean flag, no arg, one hyphen...
+    # fix_unity: bool = Field(
+    #    False,
+    #    description="Fix scale factors to unity.",
+    #    flag_type="-",
+    #    rename_param="u",
+    # )
+    shell_file: str = Field(
+        "",
+        description="Write the statistics in resolution shells to a file.",
+        flag_type="--",
+        rename_param="shell-file",
+        is_result=True,
+    )
+    ignore_negs: bool = Field(
+        False,
+        description="Ignore reflections with negative reflections.",
+        flag_type="--",
+        rename_param="ignore-negs",
+    )
+    zero_negs: bool = Field(
+        False,
+        description="Set negative intensities to 0.",
+        flag_type="--",
+        rename_param="zero-negs",
+    )
+    sigma_cutoff: Optional[Union[float, int, str]] = Field(
+        # "-infinity",
+        description="Discard reflections with I/sigma(I) &lt; n. -infinity means no cutoff.",
+        flag_type="--",
+        rename_param="sigma-cutoff",
+    )
+    rmin: Optional[float] = Field(
+        description="Low resolution cutoff of 1/d (m-1). Use this or --lowres NOT both.",
+        flag_type="--",
+    )
+    lowres: Optional[float] = Field(
+        descirption="Low resolution cutoff in Angstroms. Use this or --rmin NOT both.",
+        flag_type="--",
+    )
+    rmax: Optional[float] = Field(
+        description="High resolution cutoff in 1/d (m-1). Use this or --highres NOT both.",
+        flag_type="--",
+    )
+    highres: Optional[float] = Field(
+        description="High resolution cutoff in Angstroms. Use this or --rmax NOT both.",
+        flag_type="--",
+    )
+
+    @validator("in_files", always=True)
+    def validate_in_files(cls, in_files: str, values: Dict[str, Any]) -&gt; str:
+        if in_files == "":
+            partialator_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergePartialator", "out_file"
+            )
+            if partialator_file:
+                hkls: str = f"{partialator_file}1 {partialator_file}2"
+                return hkls
+        return in_files
+
+    @validator("cell_file", always=True)
+    def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -&gt; str:
+        if cell_file == "":
+            idx_cell_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}",
+                "IndexCrystFEL",
+                "cell_file",
+                valid_only=False,
+            )
+            if idx_cell_file:
+                return idx_cell_file
+        return cell_file
+
+    @validator("symmetry", always=True)
+    def validate_symmetry(cls, symmetry: str, values: Dict[str, Any]) -&gt; str:
+        if symmetry == "":
+            partialator_sym: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergePartialator", "symmetry"
+            )
+            if partialator_sym:
+                return partialator_sym
+        return symmetry
+
+    @validator("shell_file", always=True)
+    def validate_shell_file(cls, shell_file: str, values: Dict[str, Any]) -&gt; str:
+        if shell_file == "":
+            partialator_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergePartialator", "out_file"
+            )
+            if partialator_file:
+                shells_out: str = partialator_file.split(".")[0]
+                shells_out = f"{shells_out}_{values['fom']}_n{values['nshells']}.dat"
+                return shells_out
+        return shell_file</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.sfx_merge.CompareHKLParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters.Config" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters.Config">Config</a></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(ThirdPartyParameters.Config):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.CompareHKLParameters.Config.long_flags_use_eq" class="doc doc-heading">
+            <code class="highlight language-python">long_flags_use_eq: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether long command-line arguments are passed like <code>--long=arg</code>.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.CompareHKLParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_merge.ManipulateHKLParameters" class="doc doc-heading">
+            <code>ManipulateHKLParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for CrystFEL's <code>get_hkl</code> for manipulating lists of reflections.</p>
+<p>This Task is predominantly used internally to convert <code>hkl</code> to <code>mtz</code> files.
+Note that performing multiple manipulations is undefined behaviour. Run
+the Task with multiple configurations in explicit separate steps. For more
+information on usage, please refer to the CrystFEL documentation, here:
+https://www.desy.de/~twhite/crystfel/manual-partialator.html</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class ManipulateHKLParameters(ThirdPartyParameters):
+    """Parameters for CrystFEL's `get_hkl` for manipulating lists of reflections.
+
+    This Task is predominantly used internally to convert `hkl` to `mtz` files.
+    Note that performing multiple manipulations is undefined behaviour. Run
+    the Task with multiple configurations in explicit separate steps. For more
+    information on usage, please refer to the CrystFEL documentation, here:
+    https://www.desy.de/~twhite/crystfel/manual-partialator.html
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/get_hkl",
+        description="CrystFEL's reflection manipulation binary.",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description="Path to input HKL file.",
+        flag_type="-",
+        rename_param="i",
+    )
+    out_file: str = Field(
+        "",
+        description="Path to output file.",
+        flag_type="-",
+        rename_param="o",
+        is_result=True,
+    )
+    cell_file: str = Field(
+        "",
+        description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+        flag_type="-",
+        rename_param="p",
+    )
+    output_format: str = Field(
+        "mtz",
+        description="Output format. One of mtz, mtz-bij, or xds. Otherwise CrystFEL format.",
+        flag_type="--",
+        rename_param="output-format",
+    )
+    expand: Optional[str] = Field(
+        description="Reflections will be expanded to fill asymmetric unit of specified point group.",
+        flag_type="--",
+    )
+    # Reducing reflections to higher symmetry
+    twin: Optional[str] = Field(
+        description="Reflections equivalent to specified point group will have intensities summed.",
+        flag_type="--",
+    )
+    no_need_all_parts: Optional[bool] = Field(
+        description="Use with --twin to allow reflections missing a 'twin mate' to be written out.",
+        flag_type="--",
+        rename_param="no-need-all-parts",
+    )
+    # Noise - Add to data
+    noise: Optional[bool] = Field(
+        description="Generate 10% uniform noise.", flag_type="--"
+    )
+    poisson: Optional[bool] = Field(
+        description="Generate Poisson noise. Intensities assumed to be A.U.",
+        flag_type="--",
+    )
+    adu_per_photon: Optional[int] = Field(
+        description="Use with --poisson to convert A.U. to photons.",
+        flag_type="--",
+        rename_param="adu-per-photon",
+    )
+    # Remove duplicate reflections
+    trim_centrics: Optional[bool] = Field(
+        description="Duplicated reflections (according to symmetry) are removed.",
+        flag_type="--",
+    )
+    # Restrict to template file
+    template: Optional[str] = Field(
+        description="Only reflections which also appear in specified file are written out.",
+        flag_type="--",
+    )
+    # Multiplicity
+    multiplicity: Optional[bool] = Field(
+        description="Reflections are multiplied by their symmetric multiplicites.",
+        flag_type="--",
+    )
+    # Resolution cutoffs
+    cutoff_angstroms: Optional[Union[str, int, float]] = Field(
+        description="Either n, or n1,n2,n3. For n, reflections &lt; n are removed. For n1,n2,n3 anisotropic trunction performed at separate resolution limits for a*, b*, c*.",
+        flag_type="--",
+        rename_param="cutoff-angstroms",
+    )
+    lowres: Optional[float] = Field(
+        description="Remove reflections with d &gt; n", flag_type="--"
+    )
+    highres: Optional[float] = Field(
+        description="Synonym for first form of --cutoff-angstroms"
+    )
+    reindex: Optional[str] = Field(
+        description="Reindex according to specified operator. E.g. k,h,-l.",
+        flag_type="--",
+    )
+    # Override input symmetry
+    symmetry: Optional[str] = Field(
+        description="Point group symmetry to use to override. Almost always OMIT this option.",
+        flag_type="--",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -&gt; str:
+        if in_file == "":
+            partialator_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergePartialator", "out_file"
+            )
+            if partialator_file:
+                return partialator_file
+        return in_file
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -&gt; str:
+        if out_file == "":
+            partialator_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergePartialator", "out_file"
+            )
+            if partialator_file:
+                mtz_out: str = partialator_file.split(".")[0]
+                mtz_out = f"{mtz_out}.mtz"
+                return mtz_out
+        return out_file
+
+    @validator("cell_file", always=True)
+    def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -&gt; str:
+        if cell_file == "":
+            idx_cell_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}",
+                "IndexCrystFEL",
+                "cell_file",
+                valid_only=False,
+            )
+            if idx_cell_file:
+                return idx_cell_file
+        return cell_file</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.sfx_merge.ManipulateHKLParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters.Config" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters.Config">Config</a></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(ThirdPartyParameters.Config):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.ManipulateHKLParameters.Config.long_flags_use_eq" class="doc doc-heading">
+            <code class="highlight language-python">long_flags_use_eq: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether long command-line arguments are passed like <code>--long=arg</code>.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.ManipulateHKLParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_merge.MergePartialatorParameters" class="doc doc-heading">
+            <code>MergePartialatorParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for CrystFEL's <code>partialator</code>.</p>
+<p>There are many parameters, and many combinations. For more information on
+usage, please refer to the CrystFEL documentation, here:
+https://www.desy.de/~twhite/crystfel/manual-partialator.html</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class MergePartialatorParameters(ThirdPartyParameters):
+    """Parameters for CrystFEL's `partialator`.
+
+    There are many parameters, and many combinations. For more information on
+    usage, please refer to the CrystFEL documentation, here:
+    https://www.desy.de/~twhite/crystfel/manual-partialator.html
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/partialator",
+        description="CrystFEL's Partialator binary.",
+        flag_type="",
+    )
+    in_file: Optional[str] = Field(
+        "", description="Path to input stream.", flag_type="-", rename_param="i"
+    )
+    out_file: str = Field(
+        "",
+        description="Path to output file.",
+        flag_type="-",
+        rename_param="o",
+        is_result=True,
+    )
+    symmetry: str = Field(description="Point group symmetry.", flag_type="--")
+    niter: Optional[int] = Field(
+        description="Number of cycles of scaling and post-refinement.",
+        flag_type="-",
+        rename_param="n",
+    )
+    no_scale: Optional[bool] = Field(
+        description="Disable scaling.", flag_type="--", rename_param="no-scale"
+    )
+    no_Bscale: Optional[bool] = Field(
+        description="Disable Debye-Waller part of scaling.",
+        flag_type="--",
+        rename_param="no-Bscale",
+    )
+    no_pr: Optional[bool] = Field(
+        description="Disable orientation model.", flag_type="--", rename_param="no-pr"
+    )
+    no_deltacchalf: Optional[bool] = Field(
+        description="Disable rejection based on deltaCC1/2.",
+        flag_type="--",
+        rename_param="no-deltacchalf",
+    )
+    model: str = Field(
+        "unity",
+        description="Partiality model. Options: xsphere, unity, offset, ggpm.",
+        flag_type="--",
+    )
+    nthreads: int = Field(
+        max(int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1),
+        description="Number of parallel analyses.",
+        flag_type="-",
+        rename_param="j",
+    )
+    polarisation: Optional[str] = Field(
+        description="Specification of incident polarisation. Refer to CrystFEL docs for more info.",
+        flag_type="--",
+    )
+    no_polarisation: Optional[bool] = Field(
+        description="Synonym for --polarisation=none",
+        flag_type="--",
+        rename_param="no-polarisation",
+    )
+    max_adu: Optional[float] = Field(
+        description="Maximum intensity of reflection to include.",
+        flag_type="--",
+        rename_param="max-adu",
+    )
+    min_res: Optional[float] = Field(
+        description="Only include crystals diffracting to a minimum resolution.",
+        flag_type="--",
+        rename_param="min-res",
+    )
+    min_measurements: int = Field(
+        2,
+        description="Include a reflection only if it appears a minimum number of times.",
+        flag_type="--",
+        rename_param="min-measurements",
+    )
+    push_res: Optional[float] = Field(
+        description="Merge reflections up to higher than the apparent resolution limit.",
+        flag_type="--",
+        rename_param="push-res",
+    )
+    start_after: int = Field(
+        0,
+        description="Ignore the first n crystals.",
+        flag_type="--",
+        rename_param="start-after",
+    )
+    stop_after: int = Field(
+        0,
+        description="Stop after processing n crystals. 0 means process all.",
+        flag_type="--",
+        rename_param="stop-after",
+    )
+    no_free: Optional[bool] = Field(
+        description="Disable cross-validation. Testing ONLY.",
+        flag_type="--",
+        rename_param="no-free",
+    )
+    custom_split: Optional[str] = Field(
+        description="Read a set of filenames, event and dataset IDs from a filename.",
+        flag_type="--",
+        rename_param="custom-split",
+    )
+    max_rel_B: float = Field(
+        100,
+        description="Reject crystals if |relB| &gt; n sq Angstroms.",
+        flag_type="--",
+        rename_param="max-rel-B",
+    )
+    output_every_cycle: bool = Field(
+        False,
+        description="Write per-crystal params after every refinement cycle.",
+        flag_type="--",
+        rename_param="output-every-cycle",
+    )
+    no_logs: bool = Field(
+        False,
+        description="Do not write logs needed for plots, maps and graphs.",
+        flag_type="--",
+        rename_param="no-logs",
+    )
+    set_symmetry: Optional[str] = Field(
+        description="Set the apparent symmetry of the crystals to a point group.",
+        flag_type="-",
+        rename_param="w",
+    )
+    operator: Optional[str] = Field(
+        description="Specify an ambiguity operator. E.g. k,h,-l.", flag_type="--"
+    )
+    force_bandwidth: Optional[float] = Field(
+        description="Set X-ray bandwidth. As percent, e.g. 0.0013 (0.13%).",
+        flag_type="--",
+        rename_param="force-bandwidth",
+    )
+    force_radius: Optional[float] = Field(
+        description="Set the initial profile radius (nm-1).",
+        flag_type="--",
+        rename_param="force-radius",
+    )
+    force_lambda: Optional[float] = Field(
+        description="Set the wavelength. In Angstroms.",
+        flag_type="--",
+        rename_param="force-lambda",
+    )
+    harvest_file: Optional[str] = Field(
+        description="Write parameters to file in JSON format.",
+        flag_type="--",
+        rename_param="harvest-file",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -&gt; str:
+        if in_file == "":
+            stream_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}",
+                "ConcatenateStreamFiles",
+                "out_file",
+            )
+            if stream_file:
+                return stream_file
+        return in_file
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -&gt; str:
+        if out_file == "":
+            in_file: str = values["in_file"]
+            if in_file:
+                tag: str = in_file.split(".")[0]
+                return f"{tag}.hkl"
+            else:
+                return "partialator.hkl"
+        return out_file</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.sfx_merge.MergePartialatorParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters.Config" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters.Config">Config</a></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_merge.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(ThirdPartyParameters.Config):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.MergePartialatorParameters.Config.long_flags_use_eq" class="doc doc-heading">
+            <code class="highlight language-python">long_flags_use_eq: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether long command-line arguments are passed like <code>--long=arg</code>.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_merge.MergePartialatorParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../../../../../../../../../../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../../../../../../../../../../js/base.js" defer></script>
+        <script src="../../../../../../../../../../../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

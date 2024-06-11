@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="http://127.0.0.1:8000/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/ipc/">
+        <link rel="shortcut icon" href="../../../../../../../../../../../img/favicon.ico">
+        <title>Ipc - LUTE</title>
+        <link href="../../../../../../../../../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link href="../../../../../../../../../../../assets/_mkdocstrings.css" rel="stylesheet">
+
+        <script src="../../../../../../../../../../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../../../../../../../../../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../../../../../../../../../..">LUTE</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../../../../../../../../../../../usage/" class="nav-link">Setup</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">/ <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Home</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Dorlhiac</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Documentos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">SLAC</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">DataProjects</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Repos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">My lute</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Docs</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Source</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/ipc/" class="dropdown-item active">Ipc</a>
+</li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_merge/" class="dropdown-item">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/smd/" class="dropdown-item">Smd</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Adrs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/" class="dropdown-item">Architecture Decision Records</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/MADR_LICENSE/" class="dropdown-item">MADR LICENSE</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-1/" class="dropdown-item">[ADR-1] All Analysis Tasks Inherit from a Base Class</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-2/" class="dropdown-item">[ADR-2] Analysis Task Submission and Communication is Performed Via Executors</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-3/" class="dropdown-item">[ADR-3] `Executor`s will run all `Task`s via subprocess</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-4/" class="dropdown-item">[ADR-4] Airflow `Operator`s and LUTE `Executor`s are Separate Entities</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-5/" class="dropdown-item">[ADR-5] Task-Executor IPC is Managed by Communicator Objects</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-6/" class="dropdown-item">[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-7/" class="dropdown-item">[ADR-7] `Task` Configuration is Stored in a Database Managed by `Executor`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-8/" class="dropdown-item">[ADR-8] Airflow credentials/authorization requires special launch program</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/adr-9/" class="dropdown-item">[ADR-9] Airflow launch script will run as long lived batch job.</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../adrs/madr_template/" class="dropdown-item">Madr template</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Design <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../design/database/" class="dropdown-item">LUTE Configuration Database Specification</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Docs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../docs/SUMMARY/" class="dropdown-item">SUMMARY</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Source <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/execution/ipc/" class="dropdown-item">Ipc</a>
+</li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/sfx_merge/" class="dropdown-item">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/smd/" class="dropdown-item">Smd</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../tutorial/creating_workflows/" class="dropdown-item">Workflows with Airflow</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../tutorial/new_task/" class="dropdown-item">Integrating a New `Task`</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/executor/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/_sqlite/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#execution.ipc" class="nav-link">ipc</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#execution.ipc.Communicator" class="nav-link">Communicator</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#execution.ipc.Party" class="nav-link">Party</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#execution.ipc.PipeCommunicator" class="nav-link">PipeCommunicator</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#execution.ipc.SocketCommunicator" class="nav-link">SocketCommunicator</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="execution.ipc"></a>
+    <div class="doc doc-contents first">
+
+      <p>Classes and utilities for communication between Executors and subprocesses.</p>
+<p>Communicators manage message passing and parsing between subprocesses. They
+maintain a limited public interface of "read" and "write" operations. Behind
+this interface the methods of communication vary from serialization across
+pipes to Unix sockets, etc. All communicators pass a single object called a
+"Message" which contains an arbitrary "contents" field as well as an optional
+"signal" field.</p>
+<p>Classes:</p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="execution.ipc.Communicator" class="doc doc-heading">
+            <code>Communicator</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="abc.ABC">ABC</span></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Communicator(ABC):
+    def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+        """Abstract Base Class for IPC Communicator objects.
+
+        Args:
+            party (Party): Which object (side/process) the Communicator is
+                managing IPC for. I.e., is this the "Task" or "Executor" side.
+            use_pickle (bool): Whether to serialize data using pickle prior to
+                sending it.
+        """
+        self._party = party
+        self._use_pickle = use_pickle
+        self.desc = "Communicator abstract base class."
+
+    @abstractmethod
+    def read(self, proc: subprocess.Popen) -&gt; Message:
+        """Method for reading data through the communication mechanism."""
+        ...
+
+    @abstractmethod
+    def write(self, msg: Message) -&gt; None:
+        """Method for sending data through the communication mechanism."""
+        ...
+
+    def __str__(self):
+        name: str = str(type(self)).split("'")[1].split(".")[-1]
+        return f"{name}: {self.desc}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __enter__(self) -&gt; Self:
+        return self
+
+    def __exit__(self) -&gt; None: ...
+
+    def stage_communicator(self):
+        """Alternative method for staging outside of context manager."""
+        self.__enter__()
+
+    def clear_communicator(self):
+        """Alternative exit method outside of context manager."""
+        self.__exit__()</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.Communicator.__init__" class="doc doc-heading">
+            <code class="highlight language-python">__init__(party=Party.TASK, use_pickle=True)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Abstract Base Class for IPC Communicator objects.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>party</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party">Party</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Which object (side/process) the Communicator is
+managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
+              </div>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party.TASK" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party.TASK">TASK</a></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>use_pickle</code></td>
+            <td>
+                  <code>bool</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to serialize data using pickle prior to
+sending it.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+    """Abstract Base Class for IPC Communicator objects.
+
+    Args:
+        party (Party): Which object (side/process) the Communicator is
+            managing IPC for. I.e., is this the "Task" or "Executor" side.
+        use_pickle (bool): Whether to serialize data using pickle prior to
+            sending it.
+    """
+    self._party = party
+    self._use_pickle = use_pickle
+    self.desc = "Communicator abstract base class."</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.Communicator.clear_communicator" class="doc doc-heading">
+            <code class="highlight language-python">clear_communicator()</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Alternative exit method outside of context manager.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def clear_communicator(self):
+    """Alternative exit method outside of context manager."""
+    self.__exit__()</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.Communicator.read" class="doc doc-heading">
+            <code class="highlight language-python">read(proc)</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Method for reading data through the communication mechanism.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">@abstractmethod
+def read(self, proc: subprocess.Popen) -&gt; Message:
+    """Method for reading data through the communication mechanism."""
+    ...</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.Communicator.stage_communicator" class="doc doc-heading">
+            <code class="highlight language-python">stage_communicator()</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Alternative method for staging outside of context manager.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def stage_communicator(self):
+    """Alternative method for staging outside of context manager."""
+    self.__enter__()</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.Communicator.write" class="doc doc-heading">
+            <code class="highlight language-python">write(msg)</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Method for sending data through the communication mechanism.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">@abstractmethod
+def write(self, msg: Message) -&gt; None:
+    """Method for sending data through the communication mechanism."""
+    ...</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="execution.ipc.Party" class="doc doc-heading">
+            <code>Party</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="enum.Enum">Enum</span></code></p>
+
+
+      <p>Identifier for which party (side/end) is using a communicator.</p>
+<p>For some types of communication streams there may be different interfaces
+depending on which side of the communicator you are on. This enum is used
+by the communicator to determine which interface to use.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Party(Enum):
+    """Identifier for which party (side/end) is using a communicator.
+
+    For some types of communication streams there may be different interfaces
+    depending on which side of the communicator you are on. This enum is used
+    by the communicator to determine which interface to use.
+    """
+
+    TASK = 0
+    """
+    The Task (client) side.
+    """
+    EXECUTOR = 1
+    """
+    The Executor (server) side.
+    """</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="execution.ipc.Party.EXECUTOR" class="doc doc-heading">
+            <code class="highlight language-python">EXECUTOR = 1</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>The Executor (server) side.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="execution.ipc.Party.TASK" class="doc doc-heading">
+            <code class="highlight language-python">TASK = 0</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>The Task (client) side.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="execution.ipc.PipeCommunicator" class="doc doc-heading">
+            <code>PipeCommunicator</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="execution.ipc.Communicator" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Communicator">Communicator</a></code></p>
+
+
+      <p>Provides communication through pipes over stderr/stdout.</p>
+<p>The implementation of this communicator has reading and writing ocurring
+on stderr and stdout. In general the <code>Task</code> will be writing while the
+<code>Executor</code> will be reading. <code>stderr</code> is used for sending signals.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+                <pre class="highlight"><code class="language-python">class PipeCommunicator(Communicator):
+    """Provides communication through pipes over stderr/stdout.
+
+    The implementation of this communicator has reading and writing ocurring
+    on stderr and stdout. In general the `Task` will be writing while the
+    `Executor` will be reading. `stderr` is used for sending signals.
+    """
+
+    def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+        """IPC through pipes.
+
+        Arbitrary objects may be transmitted using pickle to serialize the data.
+        If pickle is not used
+
+        Args:
+            party (Party): Which object (side/process) the Communicator is
+                managing IPC for. I.e., is this the "Task" or "Executor" side.
+            use_pickle (bool): Whether to serialize data using Pickle prior to
+                sending it. If False, data is assumed to be text whi
+        """
+        super().__init__(party=party, use_pickle=use_pickle)
+        self.desc = "Communicates through stderr and stdout using pickle."
+
+    def read(self, proc: subprocess.Popen) -&gt; Message:
+        """Read from stdout and stderr.
+
+        Args:
+            proc (subprocess.Popen): The process to read from.
+
+        Returns:
+            msg (Message): The message read, containing contents and signal.
+        """
+        signal: Optional[str]
+        contents: Optional[str]
+        raw_signal: bytes = proc.stderr.read()
+        raw_contents: bytes = proc.stdout.read()
+        if raw_signal is not None:
+            signal = raw_signal.decode()
+        else:
+            signal = raw_signal
+        if raw_contents:
+            if self._use_pickle:
+                try:
+                    contents = pickle.loads(raw_contents)
+                except (pickle.UnpicklingError, ValueError, EOFError) as err:
+                    logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
+                    self._use_pickle = False
+                    contents = self._safe_unpickle_decode(raw_contents)
+            else:
+                try:
+                    contents = raw_contents.decode()
+                except UnicodeDecodeError as err:
+                    logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
+                    self._use_pickle = True
+                    contents = self._safe_unpickle_decode(raw_contents)
+        else:
+            contents = None
+
+        if signal and signal not in LUTE_SIGNALS:
+            # Some tasks write on stderr
+            # If the signal channel has "non-signal" info, add it to
+            # contents
+            if not contents:
+                contents = f"({signal})"
+            else:
+                contents = f"{contents} ({signal})"
+            signal = None
+
+        return Message(contents=contents, signal=signal)
+
+    def _safe_unpickle_decode(self, maybe_mixed: bytes) -&gt; Optional[str]:
+        """This method is used to unpickle and/or decode a bytes object.
+
+        It attempts to handle cases where contents can be mixed, i.e., part of
+        the message must be decoded and the other part unpickled. It handles
+        only two-way splits. If there are more complex arrangements such as:
+        &lt;pickled&gt;:&lt;unpickled&gt;:&lt;pickled&gt; etc, it will give up.
+
+        The simpler two way splits are unlikely to occur in normal usage. They
+        may arise when debugging if, e.g., `print` statements are mixed with the
+        usage of the `_report_to_executor` method.
+
+        Note that this method works because ONLY text data is assumed to be
+        sent via the pipes. The method needs to be revised to handle non-text
+        data if the `Task` is modified to also send that via PipeCommunicator.
+        The use of pickle is supported to provide for this option if it is
+        necessary. It may be deprecated in the future.
+
+        Be careful when making changes. This method has seemingly redundant
+        checks because unpickling will not throw an error if a full object can
+        be retrieved. That is, the library will ignore extraneous bytes. This
+        method attempts to retrieve that information if the pickled data comes
+        first in the stream.
+
+        Args:
+            maybe_mixed (bytes): A bytes object which could require unpickling,
+                decoding, or both.
+
+        Returns:
+            contents (Optional[str]): The unpickled/decoded contents if possible.
+                Otherwise, None.
+        """
+        contents: Optional[str]
+        try:
+            contents = pickle.loads(maybe_mixed)
+            repickled: bytes = pickle.dumps(contents)
+            if len(repickled) &lt; len(maybe_mixed):
+                # Successful unpickling, but pickle stops even if there are more bytes
+                try:
+                    additional_data: str = maybe_mixed[len(repickled) :].decode()
+                    contents = f"{contents}{additional_data}"
+                except UnicodeDecodeError:
+                    # Can't decode the bytes left by pickle, so they are lost
+                    missing_bytes: int = len(maybe_mixed) - len(repickled)
+                    logger.debug(
+                        f"PipeCommunicator has truncated message. Unable to retrieve {missing_bytes} bytes."
+                    )
+        except (pickle.UnpicklingError, ValueError, EOFError) as err:
+            # Pickle may also throw a ValueError, e.g. this bytes: b"Found! \n"
+            # Pickle may also throw an EOFError, eg. this bytes: b"F0\n"
+            try:
+                contents = maybe_mixed.decode()
+            except UnicodeDecodeError as err2:
+                try:
+                    contents = maybe_mixed[: err2.start].decode()
+                    contents = f"{contents}{pickle.loads(maybe_mixed[err2.start:])}"
+                except Exception as err3:
+                    logger.debug(
+                        f"PipeCommunicator unable to decode/parse data! {err3}"
+                    )
+                    contents = None
+        return contents
+
+    def write(self, msg: Message) -&gt; None:
+        """Write to stdout and stderr.
+
+         The signal component is sent to `stderr` while the contents of the
+         Message are sent to `stdout`.
+
+        Args:
+            msg (Message): The Message to send.
+        """
+        if self._use_pickle:
+            signal: bytes
+            if msg.signal:
+                signal = msg.signal.encode()
+            else:
+                signal = b""
+
+            contents: bytes = pickle.dumps(msg.contents)
+
+            sys.stderr.buffer.write(signal)
+            sys.stdout.buffer.write(contents)
+
+            sys.stderr.buffer.flush()
+            sys.stdout.buffer.flush()
+        else:
+            raw_signal: str
+            if msg.signal:
+                raw_signal = msg.signal
+            else:
+                raw_signal = ""
+
+            raw_contents: str
+            if isinstance(msg.contents, str):
+                raw_contents = msg.contents
+            elif msg.contents is None:
+                raw_contents = ""
+            else:
+                raise ValueError(
+                    f"Cannot send msg contents of type: {type(msg.contents)} when not using pickle!"
+                )
+            sys.stderr.write(raw_signal)
+            sys.stdout.write(raw_contents)</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.PipeCommunicator.__init__" class="doc doc-heading">
+            <code class="highlight language-python">__init__(party=Party.TASK, use_pickle=True)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>IPC through pipes.</p>
+<p>Arbitrary objects may be transmitted using pickle to serialize the data.
+If pickle is not used</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>party</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party">Party</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Which object (side/process) the Communicator is
+managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
+              </div>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party.TASK" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party.TASK">TASK</a></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>use_pickle</code></td>
+            <td>
+                  <code>bool</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to serialize data using Pickle prior to
+sending it. If False, data is assumed to be text whi</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+    """IPC through pipes.
+
+    Arbitrary objects may be transmitted using pickle to serialize the data.
+    If pickle is not used
+
+    Args:
+        party (Party): Which object (side/process) the Communicator is
+            managing IPC for. I.e., is this the "Task" or "Executor" side.
+        use_pickle (bool): Whether to serialize data using Pickle prior to
+            sending it. If False, data is assumed to be text whi
+    """
+    super().__init__(party=party, use_pickle=use_pickle)
+    self.desc = "Communicates through stderr and stdout using pickle."</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.PipeCommunicator.read" class="doc doc-heading">
+            <code class="highlight language-python">read(proc)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Read from stdout and stderr.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>proc</code></td>
+            <td>
+                  <code><span title="subprocess.Popen">Popen</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The process to read from.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>msg</code></td>            <td>
+                  <code><span title="execution.ipc.Message">Message</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The message read, containing contents and signal.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def read(self, proc: subprocess.Popen) -&gt; Message:
+    """Read from stdout and stderr.
+
+    Args:
+        proc (subprocess.Popen): The process to read from.
+
+    Returns:
+        msg (Message): The message read, containing contents and signal.
+    """
+    signal: Optional[str]
+    contents: Optional[str]
+    raw_signal: bytes = proc.stderr.read()
+    raw_contents: bytes = proc.stdout.read()
+    if raw_signal is not None:
+        signal = raw_signal.decode()
+    else:
+        signal = raw_signal
+    if raw_contents:
+        if self._use_pickle:
+            try:
+                contents = pickle.loads(raw_contents)
+            except (pickle.UnpicklingError, ValueError, EOFError) as err:
+                logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
+                self._use_pickle = False
+                contents = self._safe_unpickle_decode(raw_contents)
+        else:
+            try:
+                contents = raw_contents.decode()
+            except UnicodeDecodeError as err:
+                logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
+                self._use_pickle = True
+                contents = self._safe_unpickle_decode(raw_contents)
+    else:
+        contents = None
+
+    if signal and signal not in LUTE_SIGNALS:
+        # Some tasks write on stderr
+        # If the signal channel has "non-signal" info, add it to
+        # contents
+        if not contents:
+            contents = f"({signal})"
+        else:
+            contents = f"{contents} ({signal})"
+        signal = None
+
+    return Message(contents=contents, signal=signal)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.PipeCommunicator.write" class="doc doc-heading">
+            <code class="highlight language-python">write(msg)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Write to stdout and stderr.</p>
+<p>The signal component is sent to <code>stderr</code> while the contents of the
+ Message are sent to <code>stdout</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>msg</code></td>
+            <td>
+                  <code><span title="execution.ipc.Message">Message</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Message to send.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def write(self, msg: Message) -&gt; None:
+    """Write to stdout and stderr.
+
+     The signal component is sent to `stderr` while the contents of the
+     Message are sent to `stdout`.
+
+    Args:
+        msg (Message): The Message to send.
+    """
+    if self._use_pickle:
+        signal: bytes
+        if msg.signal:
+            signal = msg.signal.encode()
+        else:
+            signal = b""
+
+        contents: bytes = pickle.dumps(msg.contents)
+
+        sys.stderr.buffer.write(signal)
+        sys.stdout.buffer.write(contents)
+
+        sys.stderr.buffer.flush()
+        sys.stdout.buffer.flush()
+    else:
+        raw_signal: str
+        if msg.signal:
+            raw_signal = msg.signal
+        else:
+            raw_signal = ""
+
+        raw_contents: str
+        if isinstance(msg.contents, str):
+            raw_contents = msg.contents
+        elif msg.contents is None:
+            raw_contents = ""
+        else:
+            raise ValueError(
+                f"Cannot send msg contents of type: {type(msg.contents)} when not using pickle!"
+            )
+        sys.stderr.write(raw_signal)
+        sys.stdout.write(raw_contents)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="execution.ipc.SocketCommunicator" class="doc doc-heading">
+            <code>SocketCommunicator</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="execution.ipc.Communicator" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Communicator">Communicator</a></code></p>
+
+
+      <p>Provides communication over Unix sockets.</p>
+
+
+<details class="the-path-to-the-unix-socket-is-defined-by-the-environment-variable" open>
+  <summary>The path to the Unix socket is defined by the environment variable</summary>
+  <p><code>LUTE_SOCKET=/path/to/socket</code></p>
+</details>      <p>This class assumes proper permissions and that this above environment
+variable has been defined. The <code>Task</code> is configured as what would commonly
+be referred to as the <code>client</code>, while the <code>Executor</code> is configured as the
+server. The Executor continuosly monitors for connections and appends any
+Messages that are received to a queue. Read requests retrieve Messages from
+the queue. Task-side Communicators are fleeting so they open a connection,
+send data, and immediately close and clean up.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+                <pre class="highlight"><code class="language-python">class SocketCommunicator(Communicator):
+    """Provides communication over Unix sockets.
+
+    The path to the Unix socket is defined by the environment variable:
+                      `LUTE_SOCKET=/path/to/socket`
+    This class assumes proper permissions and that this above environment
+    variable has been defined. The `Task` is configured as what would commonly
+    be referred to as the `client`, while the `Executor` is configured as the
+    server. The Executor continuosly monitors for connections and appends any
+    Messages that are received to a queue. Read requests retrieve Messages from
+    the queue. Task-side Communicators are fleeting so they open a connection,
+    send data, and immediately close and clean up.
+    """
+
+    READ_TIMEOUT: float = 0.01
+    """
+    Maximum time to wait to retrieve data.
+    """
+
+    def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+        """IPC over a Unix socket.
+
+        Unlike with the PipeCommunicator, pickle is always used to send data
+        through the socket.
+
+        Args:
+            party (Party): Which object (side/process) the Communicator is
+                managing IPC for. I.e., is this the "Task" or "Executor" side.
+
+            use_pickle (bool): Whether to use pickle. Always True currently,
+                passing False does not change behaviour.
+        """
+        super().__init__(party=party, use_pickle=use_pickle)
+        self.desc: str = "Communicates through a Unix socket."
+
+        self._data_socket: socket.socket = self._create_socket()
+        self._data_socket.setblocking(0)
+
+    def read(self, proc: subprocess.Popen) -&gt; Message:
+        """Read data from a socket.
+
+        Socket(s) are continuously monitored, and read from when new data is
+        available.
+
+        Args:
+            proc (subprocess.Popen): The process to read from. Provided for
+                compatibility with other Communicator subtypes. Is ignored.
+
+        Returns:
+             msg (Message): The message read, containing contents and signal.
+        """
+        has_data, _, has_error = select.select(
+            [self._data_socket],
+            [],
+            [self._data_socket],
+            SocketCommunicator.READ_TIMEOUT,
+        )
+
+        msg: Message
+        if has_data:
+            connection, _ = has_data[0].accept()
+            full_data: bytes = b""
+            while True:
+                data: bytes = connection.recv(1024)
+                if data:
+                    full_data += data
+                else:
+                    break
+            msg = pickle.loads(full_data) if full_data else Message()
+            connection.close()
+        else:
+            msg = Message()
+
+        return msg
+
+    def write(self, msg: Message) -&gt; None:
+        """Send a single Message.
+
+        The entire Message (signal and contents) is serialized and sent through
+        a connection over Unix socket.
+
+        Args:
+            msg (Message): The Message to send.
+        """
+        self._write_socket(msg)
+
+    def _create_socket(self) -&gt; socket.socket:
+        """Returns a socket object.
+
+        Returns:
+            data_socket (socket.socket): Unix socket object.
+        """
+        socket_path: str
+        try:
+            socket_path = os.environ["LUTE_SOCKET"]
+        except KeyError as err:
+            import uuid
+            import tempfile
+
+            # Define a path,up and add to environment
+            # Executor-side always created first, Task will use the same one
+            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
+            os.environ["LUTE_SOCKET"] = socket_path
+            logger.debug(f"SocketCommunicator defines socket_path: {socket_path}")
+
+        data_socket: socket.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+        if self._party == Party.EXECUTOR:
+            if os.path.exists(socket_path):
+                os.unlink(socket_path)
+            data_socket.bind(socket_path)
+            data_socket.listen(1)
+        elif self._party == Party.TASK:
+            data_socket.connect(socket_path)
+
+        return data_socket
+
+    def _write_socket(self, msg: Message) -&gt; None:
+        """Sends data over a socket from the 'client' (Task) side.
+
+        Communicator objects on the Task-side are fleeting, so a socket is
+        opened, data is sent, and then the connection and socket are cleaned up.
+        """
+        self._data_socket.sendall(pickle.dumps(msg))
+
+        self._clean_up()
+
+    def _clean_up(self) -&gt; None:
+        """Clean up connections."""
+        # Check the object exists in case the Communicator is cleaned up before
+        # opening any connections
+        if hasattr(self, "_data_socket"):
+            socket_path: str = self._data_socket.getsockname()
+            self._data_socket.close()
+
+            if self._party == Party.EXECUTOR:
+                os.unlink(socket_path)
+
+    @property
+    def socket_path(self) -&gt; str:
+        socket_path: str = self._data_socket.getsockname()
+        return socket_path
+
+    def __exit__(self):
+        self._clean_up()</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="execution.ipc.SocketCommunicator.READ_TIMEOUT" class="doc doc-heading">
+            <code class="highlight language-python">READ_TIMEOUT: float = 0.01</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Maximum time to wait to retrieve data.</p>
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.SocketCommunicator.__init__" class="doc doc-heading">
+            <code class="highlight language-python">__init__(party=Party.TASK, use_pickle=True)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>IPC over a Unix socket.</p>
+<p>Unlike with the PipeCommunicator, pickle is always used to send data
+through the socket.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>party</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party">Party</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Which object (side/process) the Communicator is
+managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
+              </div>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="execution.ipc.Party.TASK" href="../../../../../../../../../../../../source/execution/ipc/#execution.ipc.Party.TASK">TASK</a></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>use_pickle</code></td>
+            <td>
+                  <code>bool</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use pickle. Always True currently,
+passing False does not change behaviour.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -&gt; None:
+    """IPC over a Unix socket.
+
+    Unlike with the PipeCommunicator, pickle is always used to send data
+    through the socket.
+
+    Args:
+        party (Party): Which object (side/process) the Communicator is
+            managing IPC for. I.e., is this the "Task" or "Executor" side.
+
+        use_pickle (bool): Whether to use pickle. Always True currently,
+            passing False does not change behaviour.
+    """
+    super().__init__(party=party, use_pickle=use_pickle)
+    self.desc: str = "Communicates through a Unix socket."
+
+    self._data_socket: socket.socket = self._create_socket()
+    self._data_socket.setblocking(0)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.SocketCommunicator.read" class="doc doc-heading">
+            <code class="highlight language-python">read(proc)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Read data from a socket.</p>
+<p>Socket(s) are continuously monitored, and read from when new data is
+available.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>proc</code></td>
+            <td>
+                  <code><span title="subprocess.Popen">Popen</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The process to read from. Provided for
+compatibility with other Communicator subtypes. Is ignored.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>msg</code></td>            <td>
+                  <code><span title="execution.ipc.Message">Message</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The message read, containing contents and signal.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def read(self, proc: subprocess.Popen) -&gt; Message:
+    """Read data from a socket.
+
+    Socket(s) are continuously monitored, and read from when new data is
+    available.
+
+    Args:
+        proc (subprocess.Popen): The process to read from. Provided for
+            compatibility with other Communicator subtypes. Is ignored.
+
+    Returns:
+         msg (Message): The message read, containing contents and signal.
+    """
+    has_data, _, has_error = select.select(
+        [self._data_socket],
+        [],
+        [self._data_socket],
+        SocketCommunicator.READ_TIMEOUT,
+    )
+
+    msg: Message
+    if has_data:
+        connection, _ = has_data[0].accept()
+        full_data: bytes = b""
+        while True:
+            data: bytes = connection.recv(1024)
+            if data:
+                full_data += data
+            else:
+                break
+        msg = pickle.loads(full_data) if full_data else Message()
+        connection.close()
+    else:
+        msg = Message()
+
+    return msg</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="execution.ipc.SocketCommunicator.write" class="doc doc-heading">
+            <code class="highlight language-python">write(msg)</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Send a single Message.</p>
+<p>The entire Message (signal and contents) is serialized and sent through
+a connection over Unix socket.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>msg</code></td>
+            <td>
+                  <code><span title="execution.ipc.Message">Message</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Message to send.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/execution/ipc.py</code></summary>
+              <pre class="highlight"><code class="language-python">def write(self, msg: Message) -&gt; None:
+    """Send a single Message.
+
+    The entire Message (signal and contents) is serialized and sent through
+    a connection over Unix socket.
+
+    Args:
+        msg (Message): The Message to send.
+    """
+    self._write_socket(msg)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../../../../../../../../../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../../../../../../../../../js/base.js" defer></script>
+        <script src="../../../../../../../../../../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        <link rel="canonical" href="http://127.0.0.1:8000/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/smd/">
+        <link rel="shortcut icon" href="../../../../../../../../../../../../img/favicon.ico">
+        <title>Smd - LUTE</title>
+        <link href="../../../../../../../../../../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../../../../../../../../../../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link href="../../../../../../../../../../../../assets/_mkdocstrings.css" rel="stylesheet">
+
+        <script src="../../../../../../../../../../../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../../../../../../../../../../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../../../../../../../../../../../..">LUTE</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../../../../../../../../../../../../usage/" class="nav-link">Setup</a>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">/ <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Home</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Dorlhiac</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Documentos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">SLAC</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">DataProjects</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Repos</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">My lute</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Docs</a>
+    <ul class="dropdown-menu">
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Source</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/execution/ipc/" class="dropdown-item">Ipc</a>
+</li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_merge/" class="dropdown-item">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/smd/" class="dropdown-item active">Smd</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Adrs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/" class="dropdown-item">Architecture Decision Records</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/MADR_LICENSE/" class="dropdown-item">MADR LICENSE</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-1/" class="dropdown-item">[ADR-1] All Analysis Tasks Inherit from a Base Class</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-2/" class="dropdown-item">[ADR-2] Analysis Task Submission and Communication is Performed Via Executors</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-3/" class="dropdown-item">[ADR-3] `Executor`s will run all `Task`s via subprocess</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-4/" class="dropdown-item">[ADR-4] Airflow `Operator`s and LUTE `Executor`s are Separate Entities</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-5/" class="dropdown-item">[ADR-5] Task-Executor IPC is Managed by Communicator Objects</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-6/" class="dropdown-item">[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-7/" class="dropdown-item">[ADR-7] `Task` Configuration is Stored in a Database Managed by `Executor`s</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-8/" class="dropdown-item">[ADR-8] Airflow credentials/authorization requires special launch program</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/adr-9/" class="dropdown-item">[ADR-9] Airflow launch script will run as long lived batch job.</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../adrs/madr_template/" class="dropdown-item">Madr template</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Design <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../design/database/" class="dropdown-item">LUTE Configuration Database Specification</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Docs <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../docs/SUMMARY/" class="dropdown-item">SUMMARY</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Source <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../source/managed_tasks/" class="dropdown-item">Managed tasks</a>
+</li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Execution</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/debug_utils/" class="dropdown-item">Debug utils</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/executor/" class="dropdown-item">Executor</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/execution/ipc/" class="dropdown-item">Ipc</a>
+</li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Io</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/_sqlite/" class="dropdown-item"> sqlite</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/config/" class="dropdown-item">Config</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/db/" class="dropdown-item">Db</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/elog/" class="dropdown-item">Elog</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/exceptions/" class="dropdown-item">Exceptions</a>
+</li>
+            
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Models</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/base/" class="dropdown-item">Base</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_merge/" class="dropdown-item">Sfx merge</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/sfx_solve/" class="dropdown-item">Sfx solve</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/smd/" class="dropdown-item">Smd</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/io/models/tests/" class="dropdown-item">Tests</a>
+</li>
+    </ul>
+  </li>
+    </ul>
+  </li>
+                                    
+  <li class="dropdown-submenu">
+    <a href="#" class="dropdown-item">Tasks</a>
+    <ul class="dropdown-menu">
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/dataclasses/" class="dropdown-item">Dataclasses</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/sfx_find_peaks/" class="dropdown-item">Sfx find peaks</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/sfx_index/" class="dropdown-item">Sfx index</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/smalldata/" class="dropdown-item">Smalldata</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/task/" class="dropdown-item">Task</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/tasklets/" class="dropdown-item">Tasklets</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/test/" class="dropdown-item">Test</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/xas/" class="dropdown-item">Xas</a>
+</li>
+            
+<li>
+    <a href="../../../../../../../../../../../../source/tasks/xss/" class="dropdown-item">Xss</a>
+</li>
+    </ul>
+  </li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Tutorial <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../../../../../../../../../../tutorial/creating_workflows/" class="dropdown-item">Workflows with Airflow</a>
+</li>
+                                    
+<li>
+    <a href="../../../../../../../../../../../../tutorial/new_task/" class="dropdown-item">Integrating a New `Task`</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/sfx_solve/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="/home/dorlhiac/Documentos/SLAC/DataProjects/Repos/my_lute/docs/source/io/models/tests/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.smd" class="nav-link">smd</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.smd.FindOverlapXSSParameters" class="nav-link">FindOverlapXSSParameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#io.models.smd.SubmitSMDParameters" class="nav-link">SubmitSMDParameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.smd"></a>
+    <div class="doc doc-contents first">
+
+      <p>Models for smalldata_tools Tasks.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.smd.SubmitSMDParameters" href="../../../../../../../../../../../../../source/io/models/smd/#io.models.smd.SubmitSMDParameters">SubmitSMDParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Parameters to run smalldata_tools
+to produce a smalldata HDF5 file.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.smd.FindOverlapXSSParameters" href="../../../../../../../../../../../../../source/io/models/smd/#io.models.smd.FindOverlapXSSParameters">FindOverlapXSSParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Parameter model for the
+FindOverlapXSS Task. Used to determine spatial/temporal overlap based on
+XSS difference signal.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.smd.FindOverlapXSSParameters" class="doc doc-heading">
+            <code>FindOverlapXSSParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.TaskParameters">TaskParameters</a></code></p>
+
+
+      <p>TaskParameter model for FindOverlapXSS Task.</p>
+<p>This Task determines spatial or temporal overlap between an optical pulse
+and the FEL pulse based on difference scattering (XSS) signal. This Task
+uses SmallData HDF5 files as a source.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class FindOverlapXSSParameters(TaskParameters):
+    """TaskParameter model for FindOverlapXSS Task.
+
+    This Task determines spatial or temporal overlap between an optical pulse
+    and the FEL pulse based on difference scattering (XSS) signal. This Task
+    uses SmallData HDF5 files as a source.
+    """
+
+    class ExpConfig(BaseModel):
+        det_name: str
+        ipm_var: str
+        scan_var: Union[str, List[str]]
+
+    class Thresholds(BaseModel):
+        min_Iscat: Union[int, float]
+        min_ipm: Union[int, float]
+
+    class AnalysisFlags(BaseModel):
+        use_pyfai: bool = True
+        use_asymls: bool = False
+
+    exp_config: ExpConfig
+    thresholds: Thresholds
+    analysis_flags: AnalysisFlags</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.smd.SubmitSMDParameters" class="doc doc-heading">
+            <code>SubmitSMDParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for running smalldata to produce reduced HDF5 files.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class SubmitSMDParameters(ThirdPartyParameters):
+    """Parameters for running smalldata to produce reduced HDF5 files."""
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
+
+    executable: str = Field("mpirun", description="MPI executable.", flag_type="")
+    np: PositiveInt = Field(
+        max(int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1),
+        description="Number of processes",
+        flag_type="-",
+    )
+    p_arg1: str = Field(
+        "python", description="Executable to run with mpi (i.e. python).", flag_type=""
+    )
+    u: str = Field(
+        "", description="Python option for unbuffered output.", flag_type="-"
+    )
+    m: str = Field(
+        "mpi4py.run",
+        description="Python option to execute a module's contents as __main__ module.",
+        flag_type="-",
+    )
+    producer: str = Field(
+        "", description="Path to the SmallData producer Python script.", flag_type=""
+    )
+    run: str = Field(
+        os.environ.get("RUN_NUM", ""), description="DAQ Run Number.", flag_type="--"
+    )
+    experiment: str = Field(
+        os.environ.get("EXPERIMENT", ""),
+        description="LCLS Experiment Number.",
+        flag_type="--",
+    )
+    stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    nevents: int = Field(
+        int(1e9), description="Number of events to process.", flag_type="--"
+    )
+    directory: Optional[str] = Field(
+        None,
+        description="Optional output directory. If None, will be in ${EXP_FOLDER}/hdf5/smalldata.",
+        flag_type="--",
+    )
+    ## Need mechanism to set result_from_param=True ...
+    gather_interval: PositiveInt = Field(
+        25, description="Number of events to collect at a time.", flag_type="--"
+    )
+    norecorder: bool = Field(
+        False, description="Whether to ignore recorder streams.", flag_type="--"
+    )
+    url: HttpUrl = Field(
+        "https://pswww.slac.stanford.edu/ws-auth/lgbk",
+        description="Base URL for eLog posting.",
+        flag_type="--",
+    )
+    epicsAll: bool = Field(
+        False,
+        description="Whether to store all EPICS PVs. Use with care.",
+        flag_type="--",
+    )
+    full: bool = Field(
+        False,
+        description="Whether to store all data. Use with EXTRA care.",
+        flag_type="--",
+    )
+    fullSum: bool = Field(
+        False,
+        description="Whether to store sums for all area detector images.",
+        flag_type="--",
+    )
+    default: bool = Field(
+        False,
+        description="Whether to store only the default minimal set of data.",
+        flag_type="--",
+    )
+    image: bool = Field(
+        False,
+        description="Whether to save everything as images. Use with care.",
+        flag_type="--",
+    )
+    tiff: bool = Field(
+        False,
+        description="Whether to save all images as a single TIFF. Use with EXTRA care.",
+        flag_type="--",
+    )
+    centerpix: bool = Field(
+        False,
+        description="Whether to mask center pixels for Epix10k2M detectors.",
+        flag_type="--",
+    )
+    postRuntable: bool = Field(
+        False,
+        description="Whether to post run tables. Also used as a trigger for summary jobs.",
+        flag_type="--",
+    )
+    wait: bool = Field(
+        False, description="Whether to wait for a file to appear.", flag_type="--"
+    )
+    xtcav: bool = Field(
+        False,
+        description="Whether to add XTCAV processing to the HDF5 generation.",
+        flag_type="--",
+    )
+    noarch: bool = Field(
+        False, description="Whether to not use archiver data.", flag_type="--"
+    )
+
+    lute_template_cfg: TemplateConfig = TemplateConfig(template_name="", output_path="")
+
+    @validator("producer", always=True)
+    def validate_producer_path(cls, producer: str) -&gt; str:
+        return producer
+
+    @validator("lute_template_cfg", always=True)
+    def use_producer(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -&gt; TemplateConfig:
+        if not lute_template_cfg.output_path:
+            lute_template_cfg.output_path = values["producer"]
+        return lute_template_cfg
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -&gt; Dict[str, Any]:
+        exp: str = values["lute_config"].experiment
+        hutch: str = exp[:3]
+        run: int = int(values["lute_config"].run)
+        directory: Optional[str] = values["directory"]
+        if directory is None:
+            directory = f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata"
+        fname: str = f"{exp}_Run{run:04d}.h5"
+
+        cls.Config.result_from_params = f"{directory}/{fname}"
+        return values</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.smd.SubmitSMDParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters.Config" href="../../../../../../../../../../../../../source/io/models/base/#io.models.base.ThirdPartyParameters.Config">Config</a></code></p>
+
+
+      <p>Identical to super-class Config but includes a result.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(ThirdPartyParameters.Config):
+    """Identical to super-class Config but includes a result."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.smd.SubmitSMDParameters.Config.result_from_params" class="doc doc-heading">
+            <code class="highlight language-python">result_from_params: str = ''</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Defines a result from the parameters. Use a validator to do so.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.smd.SubmitSMDParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../../../../../../../../../../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../../../../../../../../../../js/base.js" defer></script>
+        <script src="../../../../../../../../../../../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
