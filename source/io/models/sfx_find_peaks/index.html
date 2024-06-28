@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../../img/favicon.ico" />
+    <title>sfx_find_peaks - LUTE</title>
+    <link rel="stylesheet" href="../../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "sfx_find_peaks";
+        var mkdocs_page_input_path = "source/io/models/sfx_find_peaks.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">io</a>
+    <ul class="current">
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">models</a>
+    <ul class="current">
+                <li class="toctree-l3"><a class="reference internal" href="../base/">base</a>
+                </li>
+                <li class="toctree-l3 current"><a class="reference internal current" href="./">sfx_find_peaks</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>io &raquo;</li>
+          <li>models &raquo;</li>
+      <li>sfx_find_peaks</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/io/models/sfx_find_peaks.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.sfx_find_peaks"></a>
+    <div class="doc doc-contents first">
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_find_peaks.FindPeaksPsocakeParameters" class="doc doc-heading">
+            <code>FindPeaksPsocakeParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for crystallographic (Bragg) peak finding using Psocake.</p>
+<p>This peak finding Task optionally has the ability to compress/decompress
+data with SZ for the purpose of compression validation.
+NOTE: This Task is deprecated and provided for compatibility only.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_find_peaks.py</code></summary>
+                <pre class="highlight"><code class="language-python">class FindPeaksPsocakeParameters(ThirdPartyParameters):
+    """Parameters for crystallographic (Bragg) peak finding using Psocake.
+
+    This peak finding Task optionally has the ability to compress/decompress
+    data with SZ for the purpose of compression validation.
+    NOTE: This Task is deprecated and provided for compatibility only.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
+
+    class SZParameters(BaseModel):
+        compressor: Literal["qoz", "sz3"] = Field(
+            "qoz", description="SZ compression algorithm (qoz, sz3)"
+        )
+        binSize: int = Field(2, description="SZ compression's bin size paramater")
+        roiWindowSize: int = Field(
+            2, description="SZ compression's ROI window size paramater"
+        )
+        absError: float = Field(10, descriptionp="Maximum absolute error value")
+
+    executable: str = Field("mpirun", description="MPI executable.", flag_type="")
+    np: PositiveInt = Field(
+        max(int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1),
+        description="Number of processes",
+        flag_type="-",
+    )
+    mca: str = Field(
+        "btl ^openib", description="Mca option for the MPI executable", flag_type="--"
+    )
+    p_arg1: str = Field(
+        "python", description="Executable to run with mpi (i.e. python).", flag_type=""
+    )
+    u: str = Field(
+        "", description="Python option for unbuffered output.", flag_type="-"
+    )
+    p_arg2: str = Field(
+        "findPeaksSZ.py",
+        description="Executable to run with mpi (i.e. python).",
+        flag_type="",
+    )
+    d: str = Field(description="Detector name", flag_type="-")
+    e: str = Field("", description="Experiment name", flag_type="-")
+    r: int = Field(-1, description="Run number", flag_type="-")
+    outDir: str = Field(
+        description="Output directory where .cxi will be saved", flag_type="--"
+    )
+    algorithm: int = Field(1, description="PyAlgos algorithm to use", flag_type="--")
+    alg_npix_min: float = Field(
+        1.0, description="PyAlgos algorithm's npix_min parameter", flag_type="--"
+    )
+    alg_npix_max: float = Field(
+        45.0, description="PyAlgos algorithm's npix_max parameter", flag_type="--"
+    )
+    alg_amax_thr: float = Field(
+        250.0, description="PyAlgos algorithm's amax_thr parameter", flag_type="--"
+    )
+    alg_atot_thr: float = Field(
+        330.0, description="PyAlgos algorithm's atot_thr parameter", flag_type="--"
+    )
+    alg_son_min: float = Field(
+        10.0, description="PyAlgos algorithm's son_min parameter", flag_type="--"
+    )
+    alg1_thr_low: float = Field(
+        80.0, description="PyAlgos algorithm's thr_low parameter", flag_type="--"
+    )
+    alg1_thr_high: float = Field(
+        270.0, description="PyAlgos algorithm's thr_high parameter", flag_type="--"
+    )
+    alg1_rank: int = Field(
+        3, description="PyAlgos algorithm's rank parameter", flag_type="--"
+    )
+    alg1_radius: int = Field(
+        3, description="PyAlgos algorithm's radius parameter", flag_type="--"
+    )
+    alg1_dr: int = Field(
+        1, description="PyAlgos algorithm's dr parameter", flag_type="--"
+    )
+    psanaMask_on: str = Field(
+        "True", description="Whether psana's mask should be used", flag_type="--"
+    )
+    psanaMask_calib: str = Field(
+        "True", description="Psana mask's calib parameter", flag_type="--"
+    )
+    psanaMask_status: str = Field(
+        "True", description="Psana mask's status parameter", flag_type="--"
+    )
+    psanaMask_edges: str = Field(
+        "True", description="Psana mask's edges parameter", flag_type="--"
+    )
+    psanaMask_central: str = Field(
+        "True", description="Psana mask's central parameter", flag_type="--"
+    )
+    psanaMask_unbond: str = Field(
+        "True", description="Psana mask's unbond parameter", flag_type="--"
+    )
+    psanaMask_unbondnrs: str = Field(
+        "True", description="Psana mask's unbondnbrs parameter", flag_type="--"
+    )
+    mask: str = Field(
+        "", description="Path to an additional mask to apply", flag_type="--"
+    )
+    clen: str = Field(
+        description="Epics variable storing the camera length", flag_type="--"
+    )
+    coffset: float = Field(0, description="Camera offset in m", flag_type="--")
+    minPeaks: int = Field(
+        15,
+        description="Minimum number of peaks to mark frame for indexing",
+        flag_type="--",
+    )
+    maxPeaks: int = Field(
+        15,
+        description="Maximum number of peaks to mark frame for indexing",
+        flag_type="--",
+    )
+    minRes: int = Field(
+        0,
+        description="Minimum peak resolution to mark frame for indexing ",
+        flag_type="--",
+    )
+    sample: str = Field("", description="Sample name", flag_type="--")
+    instrument: Union[None, str] = Field(
+        None, description="Instrument name", flag_type="--"
+    )
+    pixelSize: float = Field(0.0, description="Pixel size", flag_type="--")
+    auto: str = Field(
+        "False",
+        description=(
+            "Whether to automatically determine peak per event peak "
+            "finding parameters"
+        ),
+        flag_type="--",
+    )
+    detectorDistance: float = Field(
+        0.0, description="Detector distance from interaction point in m", flag_type="--"
+    )
+    access: Literal["ana", "ffb"] = Field(
+        "ana", description="Data node type: {ana,ffb}", flag_type="--"
+    )
+    szfile: str = Field("qoz.json", description="Path to SZ's JSON configuration file")
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="sz.json",
+            output_path="",  # Will want to change where this goes...
+        ),
+        description="Template information for the sz.json file",
+    )
+    sz_parameters: SZParameters = Field(
+        description="Configuration parameters for SZ Compression", flag_type=""
+    )
+
+    @validator("e", always=True)
+    def validate_e(cls, e: str, values: Dict[str, Any]) -&gt; str:
+        if e == "":
+            return values["lute_config"].experiment
+        return e
+
+    @validator("r", always=True)
+    def validate_r(cls, r: int, values: Dict[str, Any]) -&gt; int:
+        if r == -1:
+            return values["lute_config"].run
+        return r
+
+    @validator("lute_template_cfg", always=True)
+    def set_output_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -&gt; TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["szfile"]
+        return lute_template_cfg
+
+    @validator("sz_parameters", always=True)
+    def set_sz_compression_parameters(
+        cls, sz_parameters: SZParameters, values: Dict[str, Any]
+    ) -&gt; None:
+        values["compressor"] = sz_parameters.compressor
+        values["binSize"] = sz_parameters.binSize
+        values["roiWindowSize"] = sz_parameters.roiWindowSize
+        if sz_parameters.compressor == "qoz":
+            values["pressio_opts"] = {
+                "pressio:abs": sz_parameters.absError,
+                "qoz": {"qoz:stride": 8},
+            }
+        else:
+            values["pressio_opts"] = {"pressio:abs": sz_parameters.absError}
+        return None
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -&gt; Dict[str, Any]:
+        exp: str = values["lute_config"].experiment
+        run: int = int(values["lute_config"].run)
+        directory: str = values["outDir"]
+        fname: str = f"{exp}_{run:04d}.lst"
+
+        cls.Config.result_from_params = f"{directory}/{fname}"
+        return values</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.sfx_find_peaks.FindPeaksPsocakeParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters.Config" href="../base/#io.models.base.TaskParameters.Config">Config</a></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_find_peaks.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(TaskParameters.Config):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_find_peaks.FindPeaksPsocakeParameters.Config.result_from_params" class="doc doc-heading">
+            <code class="highlight language-python">result_from_params: str = ''</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Defines a result from the parameters. Use a validator to do so.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_find_peaks.FindPeaksPsocakeParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_find_peaks.FindPeaksPyAlgosParameters" class="doc doc-heading">
+            <code>FindPeaksPyAlgosParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters" href="../base/#io.models.base.TaskParameters">TaskParameters</a></code></p>
+
+
+      <p>Parameters for crystallographic (Bragg) peak finding using PyAlgos.</p>
+<p>This peak finding Task optionally has the ability to compress/decompress
+data with SZ for the purpose of compression validation.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_find_peaks.py</code></summary>
+                <pre class="highlight"><code class="language-python">class FindPeaksPyAlgosParameters(TaskParameters):
+    """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
+
+    This peak finding Task optionally has the ability to compress/decompress
+    data with SZ for the purpose of compression validation.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class SZCompressorParameters(BaseModel):
+        compressor: Literal["qoz", "sz3"] = Field(
+            "qoz", description='Compression algorithm ("qoz" or "sz3")'
+        )
+        abs_error: float = Field(10.0, description="Absolute error bound")
+        bin_size: int = Field(2, description="Bin size")
+        roi_window_size: int = Field(
+            9,
+            description="Default window size",
+        )
+
+    outdir: str = Field(
+        description="Output directory for cxi files",
+    )
+    n_events: int = Field(
+        0,
+        description="Number of events to process (0 to process all events)",
+    )
+    det_name: str = Field(
+        description="Psana name of the detector storing the image data",
+    )
+    event_receiver: Literal["evr0", "evr1"] = Field(
+        description="Event Receiver to be used: evr0 or evr1",
+    )
+    tag: str = Field(
+        "",
+        description="Tag to add to the output file names",
+    )
+    pv_camera_length: Union[str, float] = Field(
+        "",
+        description="PV associated with camera length "
+        "(if a number, camera length directly)",
+    )
+    event_logic: bool = Field(
+        False,
+        description="True if only events with a specific event code should be "
+        "processed. False if the event code should be ignored",
+    )
+    event_code: int = Field(
+        0,
+        description="Required events code for events to be processed if event logic "
+        "is True",
+    )
+    psana_mask: bool = Field(
+        False,
+        description="If True, apply mask from psana Detector object",
+    )
+    mask_file: Union[str, None] = Field(
+        None,
+        description="File with a custom mask to apply. If None, no custom mask is "
+        "applied",
+    )
+    min_peaks: int = Field(2, description="Minimum number of peaks per image")
+    max_peaks: int = Field(
+        2048,
+        description="Maximum number of peaks per image",
+    )
+    npix_min: int = Field(
+        2,
+        description="Minimum number of pixels per peak",
+    )
+    npix_max: int = Field(
+        30,
+        description="Maximum number of pixels per peak",
+    )
+    amax_thr: float = Field(
+        80.0,
+        description="Minimum intensity threshold for starting a peak",
+    )
+    atot_thr: float = Field(
+        120.0,
+        description="Minimum summed intensity threshold for pixel collection",
+    )
+    son_min: float = Field(
+        7.0,
+        description="Minimum signal-to-noise ratio to be considered a peak",
+    )
+    peak_rank: int = Field(
+        3,
+        description="Radius in which central peak pixel is a local maximum",
+    )
+    r0: float = Field(
+        3.0,
+        description="Radius of ring for background evaluation in pixels",
+    )
+    dr: float = Field(
+        2.0,
+        description="Width of ring for background evaluation in pixels",
+    )
+    nsigm: float = Field(
+        7.0,
+        description="Intensity threshold to include pixel in connected group",
+    )
+    compression: Optional[SZCompressorParameters] = Field(
+        None,
+        description="Options for the SZ Compression Algorithm",
+    )
+    out_file: str = Field(
+        "",
+        description="Path to output file.",
+        flag_type="-",
+        rename_param="o",
+        is_result=True,
+    )
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -&gt; str:
+        if out_file == "":
+            fname: Path = (
+                Path(values["outdir"])
+                / f"{values['lute_config'].experiment}_{values['lute_config'].run}_"
+                f"{values['tag']}.list"
+            )
+            return str(fname)
+        return out_file</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.sfx_find_peaks.FindPeaksPyAlgosParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters.Config" href="../base/#io.models.base.TaskParameters.Config">Config</a></code></p>
+
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_find_peaks.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(TaskParameters.Config):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.sfx_find_peaks.FindPeaksPyAlgosParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../base/" class="btn btn-neutral float-left" title="base"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../sfx_index/" class="btn btn-neutral float-right" title="sfx_index">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../base/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../sfx_index/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../../..';</script>
+    <script src="../../../../js/theme_extra.js" defer></script>
+    <script src="../../../../js/theme.js" defer></script>
+      <script src="../../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../../img/favicon.ico" />
+    <title>smd - LUTE</title>
+    <link rel="stylesheet" href="../../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "smd";
+        var mkdocs_page_input_path = "source/io/models/smd.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">io</a>
+    <ul class="current">
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">models</a>
+    <ul class="current">
+                <li class="toctree-l3"><a class="reference internal" href="../base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3 current"><a class="reference internal current" href="./">smd</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>io &raquo;</li>
+          <li>models &raquo;</li>
+      <li>smd</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/io/models/smd.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.smd"></a>
+    <div class="doc doc-contents first">
+
+      <p>Models for smalldata_tools Tasks.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.smd.SubmitSMDParameters" href="#io.models.smd.SubmitSMDParameters">SubmitSMDParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Parameters to run smalldata_tools
+to produce a smalldata HDF5 file.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.smd.FindOverlapXSSParameters" href="#io.models.smd.FindOverlapXSSParameters">FindOverlapXSSParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Parameter model for the
+FindOverlapXSS Task. Used to determine spatial/temporal overlap based on
+XSS difference signal.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.smd.FindOverlapXSSParameters" class="doc doc-heading">
+            <code>FindOverlapXSSParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters" href="../base/#io.models.base.TaskParameters">TaskParameters</a></code></p>
+
+
+      <p>TaskParameter model for FindOverlapXSS Task.</p>
+<p>This Task determines spatial or temporal overlap between an optical pulse
+and the FEL pulse based on difference scattering (XSS) signal. This Task
+uses SmallData HDF5 files as a source.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class FindOverlapXSSParameters(TaskParameters):
+    """TaskParameter model for FindOverlapXSS Task.
+
+    This Task determines spatial or temporal overlap between an optical pulse
+    and the FEL pulse based on difference scattering (XSS) signal. This Task
+    uses SmallData HDF5 files as a source.
+    """
+
+    class ExpConfig(BaseModel):
+        det_name: str
+        ipm_var: str
+        scan_var: Union[str, List[str]]
+
+    class Thresholds(BaseModel):
+        min_Iscat: Union[int, float]
+        min_ipm: Union[int, float]
+
+    class AnalysisFlags(BaseModel):
+        use_pyfai: bool = True
+        use_asymls: bool = False
+
+    exp_config: ExpConfig
+    thresholds: Thresholds
+    analysis_flags: AnalysisFlags</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.smd.SubmitSMDParameters" class="doc doc-heading">
+            <code>SubmitSMDParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for running smalldata to produce reduced HDF5 files.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class SubmitSMDParameters(ThirdPartyParameters):
+    """Parameters for running smalldata to produce reduced HDF5 files."""
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
+
+    executable: str = Field("mpirun", description="MPI executable.", flag_type="")
+    np: PositiveInt = Field(
+        max(int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1),
+        description="Number of processes",
+        flag_type="-",
+    )
+    p_arg1: str = Field(
+        "python", description="Executable to run with mpi (i.e. python).", flag_type=""
+    )
+    u: str = Field(
+        "", description="Python option for unbuffered output.", flag_type="-"
+    )
+    m: str = Field(
+        "mpi4py.run",
+        description="Python option to execute a module's contents as __main__ module.",
+        flag_type="-",
+    )
+    producer: str = Field(
+        "", description="Path to the SmallData producer Python script.", flag_type=""
+    )
+    run: str = Field(
+        os.environ.get("RUN_NUM", ""), description="DAQ Run Number.", flag_type="--"
+    )
+    experiment: str = Field(
+        os.environ.get("EXPERIMENT", ""),
+        description="LCLS Experiment Number.",
+        flag_type="--",
+    )
+    stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    nevents: int = Field(
+        int(1e9), description="Number of events to process.", flag_type="--"
+    )
+    directory: Optional[str] = Field(
+        None,
+        description="Optional output directory. If None, will be in ${EXP_FOLDER}/hdf5/smalldata.",
+        flag_type="--",
+    )
+    ## Need mechanism to set result_from_param=True ...
+    gather_interval: PositiveInt = Field(
+        25, description="Number of events to collect at a time.", flag_type="--"
+    )
+    norecorder: bool = Field(
+        False, description="Whether to ignore recorder streams.", flag_type="--"
+    )
+    url: HttpUrl = Field(
+        "https://pswww.slac.stanford.edu/ws-auth/lgbk",
+        description="Base URL for eLog posting.",
+        flag_type="--",
+    )
+    epicsAll: bool = Field(
+        False,
+        description="Whether to store all EPICS PVs. Use with care.",
+        flag_type="--",
+    )
+    full: bool = Field(
+        False,
+        description="Whether to store all data. Use with EXTRA care.",
+        flag_type="--",
+    )
+    fullSum: bool = Field(
+        False,
+        description="Whether to store sums for all area detector images.",
+        flag_type="--",
+    )
+    default: bool = Field(
+        False,
+        description="Whether to store only the default minimal set of data.",
+        flag_type="--",
+    )
+    image: bool = Field(
+        False,
+        description="Whether to save everything as images. Use with care.",
+        flag_type="--",
+    )
+    tiff: bool = Field(
+        False,
+        description="Whether to save all images as a single TIFF. Use with EXTRA care.",
+        flag_type="--",
+    )
+    centerpix: bool = Field(
+        False,
+        description="Whether to mask center pixels for Epix10k2M detectors.",
+        flag_type="--",
+    )
+    postRuntable: bool = Field(
+        False,
+        description="Whether to post run tables. Also used as a trigger for summary jobs.",
+        flag_type="--",
+    )
+    wait: bool = Field(
+        False, description="Whether to wait for a file to appear.", flag_type="--"
+    )
+    xtcav: bool = Field(
+        False,
+        description="Whether to add XTCAV processing to the HDF5 generation.",
+        flag_type="--",
+    )
+    noarch: bool = Field(
+        False, description="Whether to not use archiver data.", flag_type="--"
+    )
+
+    lute_template_cfg: TemplateConfig = TemplateConfig(template_name="", output_path="")
+
+    @validator("producer", always=True)
+    def validate_producer_path(cls, producer: str) -&gt; str:
+        return producer
+
+    @validator("lute_template_cfg", always=True)
+    def use_producer(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -&gt; TemplateConfig:
+        if not lute_template_cfg.output_path:
+            lute_template_cfg.output_path = values["producer"]
+        return lute_template_cfg
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -&gt; Dict[str, Any]:
+        exp: str = values["lute_config"].experiment
+        hutch: str = exp[:3]
+        run: int = int(values["lute_config"].run)
+        directory: Optional[str] = values["directory"]
+        if directory is None:
+            directory = f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata"
+        fname: str = f"{exp}_Run{run:04d}.h5"
+
+        cls.Config.result_from_params = f"{directory}/{fname}"
+        return values</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.smd.SubmitSMDParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters.Config" href="../base/#io.models.base.ThirdPartyParameters.Config">Config</a></code></p>
+
+
+      <p>Identical to super-class Config but includes a result.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/smd.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(ThirdPartyParameters.Config):
+    """Identical to super-class Config but includes a result."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.smd.SubmitSMDParameters.Config.result_from_params" class="doc doc-heading">
+            <code class="highlight language-python">result_from_params: str = ''</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Defines a result from the parameters. Use a validator to do so.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.smd.SubmitSMDParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sfx_solve/" class="btn btn-neutral float-left" title="sfx_solve"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../tests/" class="btn btn-neutral float-right" title="tests">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../sfx_solve/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../tests/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../../..';</script>
+    <script src="../../../../js/theme_extra.js" defer></script>
+    <script src="../../../../js/theme.js" defer></script>
+      <script src="../../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

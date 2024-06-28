@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="None" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="img/favicon.ico" />
+    <title>LUTE</title>
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Setup";
+        var mkdocs_page_input_path = "index.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href=".">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>Setup</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/index.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="setup">Setup</h1>
+<p>LUTE is publically available on <a href="https://github.com/slac-lcls/lute">GitHub</a>. In order to run it, the first step is to clone the repository:</p>
+<pre><code class="language-bash"># Navigate to the directory of your choice.
+git clone@github.com:slac-lcls/lute
+</code></pre>
+<p>The repostiory directory structure is as follows:</p>
+<pre><code>lute
+  |--- config             # Configuration YAML files (see below) and templates for third party config
+  |--- docs               # Documentation (including this page)
+  |--- launch_scripts     # Entry points for using SLURM and communicating with Airflow
+  |--- lute               # Code
+        |--- run_task.py  # Script to run an individual managed Task
+        |--- ...
+  |--- utilities          # Help utility programs
+  |--- workflows          # This directory contains workflow definitions. It is synced elsewhere and not used directly.
+
+</code></pre>
+<p>In general, most interactions with the software will be through scripts located in the <code>launch_scripts</code> directory. Some users (for certain use-cases) may also choose to run the <code>run_task.py</code> script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the <code>config</code> directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.</p>
+<h3 id="a-note-on-utilties">A note on utilties</h3>
+<p>In the <code>utilities</code> directory there are two useful programs to provide assistance with using the software:
+- <code>utilities/dbview</code>: LUTE stores all parameters for every analysis routine it runs (as well as results) in a database. This database is stored in the <code>work_dir</code> defined in the YAML file (see below). The <code>dbview</code> utility is a TUI application (Text-based user interface) which runs in the terminal. It allows you to navigate a LUTE database using the arrow keys, etc. Usage is: <code>utilities/dbview -p &lt;path/to/lute.db&gt;</code>.
+- <code>utilities/lute_help</code>: This utility provides help and usage information for running LUTE software. E.g., it provides access to parameter descriptions to assist in properly filling out a configuration YAML. It's usage is described in slightly more detail below.</p>
+<h1 id="basic-usage">Basic Usage</h1>
+<h2 id="overview">Overview</h2>
+<p>LUTE runs code as <code>Task</code>s that are managed by an <code>Executor</code>. The <code>Executor</code> provides modifications to the environment the <code>Task</code> runs in, as well as controls details of inter-process communication, reporting results to the eLog, etc. Combinations of specific <code>Executor</code>s and <code>Task</code>s are already provided, and are referred to as <strong>managed</strong> <code>Task</code>s. <strong>Managed</strong> <code>Task</code>s are submitted as a single unit. They can be run individually, or a series of independent steps can be submitted all at once in the form of a workflow, or <strong>directed acyclic graph</strong> (<strong>DAG</strong>). This latter option makes use of Airflow to manage the individual execution steps.</p>
+<p>Running analysis with LUTE is the process of submitting one or more <strong>managed</strong> <code>Task</code>s. This is generally a two step process.
+1. First, a configuration YAML file is prepared. This contains the parameterizations of all the <code>Task</code>s which you may run.
+2. Individual <strong>managed</strong> <code>Task</code> submission, or workflow (<strong>DAG</strong>) submission.</p>
+<p>These two steps are described below.</p>
+<h2 id="preparing-a-configuration-yaml">Preparing a Configuration YAML</h2>
+<p>All <code>Task</code>s are parameterized through a single configuration YAML file - even third party code which requires its own configuration files is managed through this YAML file. The basic structure is split into two documents, a brief header section which contains information that is applicable across all <code>Task</code>s, such as the experiment name, run numbers and the working directory, followed by per <code>Task</code> parameters:</p>
+<pre><code class="language-yaml">%YAML 1.3
+---
+title: &quot;Some title.&quot;
+experiment: &quot;MYEXP123&quot;
+# run: 12 # Does not need to be provided
+date: &quot;2024/05/01&quot;
+lute_version: 0.1
+task_timeout: 600
+work_dir: &quot;/sdf/scratch/users/d/dorlhiac&quot;
+...
+---
+TaskOne:
+  param_a: 123
+  param_b: 456
+  param_c:
+    sub_var: 3
+    sub_var2: 4
+
+TaskTwo:
+  new_param1: 3
+  new_param2: 4
+
+# ...
+...
+</code></pre>
+<p>In the first document, the header, it is important that the <code>work_dir</code> is properly specified. This is the root directory from which <code>Task</code> outputs will be written, and the LUTE database will be stored. It may also be desirable to modify the <code>task_timeout</code> parameter which defines the time limit for individual <code>Task</code> jobs. By default it is set to 10 minutes, although this may not be sufficient for long running jobs. This value will be applied to <strong>all</strong> <code>Task</code>s so should account for the longest running job you expect.</p>
+<p>The actual analysis parameters are defined in the second document. As these vary from <code>Task</code> to <code>Task</code>, a full description will not be provided here. An actual template with real <code>Task</code> parameters is available in <code>config/test.yaml</code>. Your analysis POC can also help you set up and choose the correct <code>Task</code>s to include as a starting point. The template YAML file has further descriptions of what each parameter does and how to fill it out. You can also refer to the <code>lute_help</code> program described under the following sub-heading.</p>
+<p>Some things to consider and possible points of confusion:
+- While we will be submitting <strong>managed</strong> <code>Task</code>s, the parameters are defined at the <code>Task</code> level. I.e. the <strong>managed</strong> <code>Task</code> and <code>Task</code> itself have different names, and the names in the YAML refer to the latter. This is because a single <code>Task</code> can be run using different <code>Executor</code> configurations, but using the same parameters. The list of <strong>managed</strong> <code>Task</code>s is in <code>lute/managed_tasks.py</code>. A table is also provided below for some routines of interest..</p>
+<table>
+<thead>
+<tr>
+<th align="center"><strong>Managed</strong> <code>Task</code></th>
+<th align="center">The <code>Task</code> it Runs</th>
+<th align="center"><code>Task</code> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>SmallDataProducer</code></td>
+<td align="center"><code>SubmitSMD</code></td>
+<td align="center">Smalldata production</td>
+</tr>
+<tr>
+<td align="center"><code>CrystFELIndexer</code></td>
+<td align="center"><code>IndexCrystFEL</code></td>
+<td align="center">Crystallographic indexing</td>
+</tr>
+<tr>
+<td align="center"><code>PartialatorMerger</code></td>
+<td align="center"><code>MergePartialator</code></td>
+<td align="center">Crystallographic merging</td>
+</tr>
+<tr>
+<td align="center"><code>HKLComparer</code></td>
+<td align="center"><code>CompareHKL</code></td>
+<td align="center">Crystallographic figures of merit</td>
+</tr>
+<tr>
+<td align="center"><code>HKLManipulator</code></td>
+<td align="center"><code>ManipulateHKL</code></td>
+<td align="center">Crystallographic format conversions</td>
+</tr>
+<tr>
+<td align="center"><code>DimpleSolver</code></td>
+<td align="center"><code>DimpleSolve</code></td>
+<td align="center">Crystallographic structure solution with molecular replacement</td>
+</tr>
+<tr>
+<td align="center"><code>PeakFinderPyAlgos</code></td>
+<td align="center"><code>FindPeaksPyAlgos</code></td>
+<td align="center">Peak finding with PyAlgos algorithm.</td>
+</tr>
+<tr>
+<td align="center"><code>PeakFinderPsocake</code></td>
+<td align="center"><code>FindPeaksPsocake</code></td>
+<td align="center">Peak finding with psocake algorithm.</td>
+</tr>
+<tr>
+<td align="center"><code>StreamFileConcatenator</code></td>
+<td align="center"><code>ConcatenateStreamFiles</code></td>
+<td align="center">Stream file concatenation.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-do-i-know-what-parameters-are-available-and-what-they-do">How do I know what parameters are available, and what they do?</h3>
+<p>A summary of <code>Task</code> parameters is available through the <code>lute_help</code> program.</p>
+<pre><code class="language-bash">&gt; utilities/lute_help -t [TaskName]
+</code></pre>
+<p>Note, some parameters may say "Unknown description" - this either means they are using an old-style defintion that does not include parameter help, or they may have some internal use. In particular you will see this for <code>lute_config</code> on every <code>Task</code>, this parameter is filled in automatically and should be ignored. E.g. as an example:</p>
+<pre><code class="language-bash">&gt; utilities/lute_help -t IndexCrystFEL
+INFO:__main__:Fetching parameter information for IndexCrystFEL.
+IndexCrystFEL
+-------------
+Parameters for CrystFEL's `indexamajig`.
+
+There are many parameters, and many combinations. For more information on
+usage, please refer to the CrystFEL documentation, here:
+https://www.desy.de/~twhite/crystfel/manual-indexamajig.html
+
+
+Required Parameters:
+--------------------
+[...]
+
+All Parameters:
+-------------
+[...]
+
+highres (number)
+    Mark all pixels greater than `x` has bad.
+
+profile (boolean) - Default: False
+    Display timing data to monitor performance.
+
+temp_dir (string)
+    Specify a path for the temp files folder.
+
+wait_for_file (integer) - Default: 0
+    Wait at most `x` seconds for a file to be created. A value of -1 means wait forever.
+
+no_image_data (boolean) - Default: False
+    Load only the metadata, no iamges. Can check indexability without high data requirements.
+
+[...]
+</code></pre>
+<h2 id="running-managed-tasks-and-workflows-dags">Running Managed <code>Task</code>s and Workflows (DAGs)</h2>
+<p>After a YAML file has been filled in you can run a <code>Task</code>. There are multiple ways to submit a <code>Task</code>, but there are 3 that are most likely:
+1. Run a single <strong>managed</strong> <code>Task</code> interactively by running <code>python ...</code>
+2. Run a single <strong>managed</strong> <code>Task</code> as a batch job (e.g. on S3DF) via a SLURM submission <code>submit_slurm.sh ...</code>
+3. Run a DAG (workflow with multiple <strong>managed</strong> <code>Task</code>s).</p>
+<p>These will be covered in turn below; however, in general all methods will require two parameters: the path to a configuration YAML file, and the name of the <strong>managed</strong> <code>Task</code> or workflow you want to run. When submitting via SLURM or submitting an entire workflow there are additional parameters to control these processes.</p>
+<h3 id="running-single-managed-tasks-interactively">Running single managed <code>Task</code>s interactively</h3>
+<p>The simplest submission method is just to run Python interactively. In most cases this is not practical for long-running analysis, but may be of use for short <code>Task</code>s or when debugging. From the root directory of the LUTE repository (or after installation) you can use the <code>run_task.py</code> script:</p>
+<pre><code class="language-bash">&gt; python -B [-O] run_task.py -t &lt;ManagedTaskName&gt; -c &lt;/path/to/config/yaml&gt;
+</code></pre>
+<p>The command-line arguments in square brackets <code>[]</code> are optional, while those in <code>&lt;&gt;</code> must be provided:
+- <code>-O</code> is the flag controlling whether you run in debug or non-debug mode. <strong>By default, i.e. if you do NOT provide this flag you will run in debug mode</strong> which enables verbose printing. Passing <code>-O</code> will turn off debug to minimize output.
+- <code>-t &lt;ManagedTaskName&gt;</code> is the name of the <strong>managed</strong> <code>Task</code> you want to run.
+- <code>-c &lt;/path/...&gt;</code> is the path to the configuration YAML.</p>
+<h3 id="submitting-a-single-managed-task-as-a-batch-job">Submitting a single managed <code>Task</code> as a batch job</h3>
+<p>On S3DF you can also submit individual <strong>managed</strong> <code>Task</code>s to run as batch jobs. To do so use <code>launch_scripts/submit_slurm.sh</code></p>
+<pre><code class="language-bash">&gt; launch_scripts/submit_slurm.sh -t &lt;ManagedTaskName&gt; -c &lt;/path/to/config/yaml&gt; [--debug] $SLURM_ARGS
+</code></pre>
+<p>As before command-line arguments in square brackets <code>[]</code> are optional, while those in <code>&lt;&gt;</code> must be provided
+- <code>-t &lt;ManagedTaskName&gt;</code> is the name of the <strong>managed</strong> <code>Task</code> you want to run.
+- <code>-c &lt;/path/...&gt;</code> is the path to the configuration YAML.
+- <code>--debug</code> is the flag to control whether or not to run in debug mode.</p>
+<p>In addition to the LUTE-specific arguments, SLURM arguments must also be provided (<code>$SLURM_ARGS</code> above). You can provide as many as you want; however you will need to at least provide:
+- <code>--partition=&lt;partition/queue&gt;</code> - The queue to run on, in general for LCLS this is <code>milano</code>
+- <code>--account=lcls:&lt;experiment&gt;</code> - The account to use for batch job accounting.</p>
+<p>You will likely also want to provide at a minimum:
+- <code>--ntasks=&lt;...&gt;</code> to control the number of cores in allocated.</p>
+<p>In general, it is best to prefer the long-form of the SLURM-argument (<code>--arg=&lt;...&gt;</code>) in order to avoid potential clashes with present or future LUTE arguments.</p>
+<h3 id="workflow-dag-submission">Workflow (DAG) submission</h3>
+<p><strong>NOTE</strong>: Support for submitting Airflow DAGs from the command-line is coming soon. As of 2024/05/03 you will need to use the instructions for <strong>DAG Submission from the</strong> <code>eLog</code> described below. This is due to authentication requirements - support for new API calls is in the works.</p>
+<p>Finally, you can submit a full workflow (e.g. SFX analysis, smalldata production and summary results, geometry optimization...). This can be done using a single script, <code>submit_launch_airflow.sh</code>, similarly to the SLURM submission above:</p>
+<pre><code class="language-bash">&gt; launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -c &lt;/path/to/yaml.yaml&gt; -w &lt;dag_name&gt; [--debug] [--test] $SLURM_ARGS
+</code></pre>
+<p>The submission process is slightly more complicated in this case. A more in-depth explanation is provided under "Airflow Launch Steps", in the advanced usage section below if interested. The parameters are as follows - as before command-line arguments in square brackets <code>[]</code> are optional, while those in <code>&lt;&gt;</code> must be provided:
+- The <strong>first argument</strong> (must be first) is the full path to the <code>launch_scripts/launch_airflow.py</code> script located in whatever LUTE installation you are running. All other arguments can come afterwards in any order.
+- <code>-c &lt;/path/...&gt;</code> is the path to the configuration YAML to use.
+- <code>-w &lt;dag_name&gt;</code> is the name of the DAG (workflow) to run. This replaces the task name provided when using the other two methods above. A DAG list is provided below.
+- <code>--debug</code> controls whether to use debug mode (verbose printing)
+- <code>--test</code> controls whether to use the test or production instance of Airflow to manage the DAG. The instances are running identical versions of Airflow, but the <code>test</code> instance may have "test" or more bleeding edge development DAGs.</p>
+<p>The <code>$SLURM_ARGS</code> must be provided in the same manner as when submitting an individual <strong>managed</strong> <code>Task</code> by hand to be run as batch job with the script above. <strong>Note</strong> that these parameters will be used as the starting point for the SLURM arguments of <strong>every managed</strong> <code>Task</code> in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments. For example, a single threaded analysis <code>Task</code> may be capped to running on one core, even if in general everything should be running on 100 cores, per the SLURM argument provided. These caps are added during development and cannot be disabled through configuration changes in the YAML.</p>
+<p><strong>DAG List</strong>
+- <code>find_peaks_index</code>
+- <code>psocake_sfx_phasing</code>
+- <code>pyalgos_sfx</code></p>
+<h4 id="dag-submission-from-the-elog">DAG Submission from the <code>eLog</code></h4>
+<p>You can use the script in the previous section to submit jobs through the eLog. To do so navigate to the <code>Workflow &gt; Definitions</code> tab using the blue navigation bar at the top of the eLog. On this tab, in the top-right corner (underneath the help and zoom icons) you can click the <code>+</code> sign to add a new workflow. This will bring up a "Workflow definition" UI window. When filling out the eLog workflow definition the following fields are needed (all of them):
+- <code>Name</code>: You can name the workflow anything you like. It should probably be something descriptive, e.g. if you are using LUTE to run smalldata_tools, you may call the workflow <code>lute_smd</code>.
+- <code>Executable</code>: In this field you will put the <strong>full path</strong> to the <code>submit_launch_airflow.sh</code> script:  <code>/path/to/lute/launch_scripts/submit_launch_airflow.sh</code>.
+- <code>Parameters</code>: You will use the parameters as described above. Remember the first argument will be the <strong>full path</strong> to the <code>launch_airflow.py</code> script (this is NOT the same as the bash script used in the executable!): <code>/full/path/to/lute/launch_scripts/launch_airflow.py -c &lt;path/to/yaml&gt; -w &lt;dag_name&gt; [--debug] [--test] $SLURM_ARGS</code>
+- <code>Location</code>: <strong>Be sure to set to</strong> <code>S3DF</code>.
+- <code>Trigger</code>: You can have the workflow trigger automatically or manually. Which option to choose will depend on the type of workflow you are running. In general the options <code>Manually triggered</code> (which displays as <code>MANUAL</code> on the definitions page) and <code>End of a run</code> (which displays as <code>END_OF_RUN</code> on the definitions page) are safe options for ALL workflows. The latter will be automatically submitted for you when data acquisition has finished. If you are running a workflow with <strong>managed</strong> <code>Task</code>s that work as data is being acquired (e.g. <code>SmallDataProducer</code>), you may also select <code>Start of a run</code> (which displays as <code>START_OF_RUN</code> on the definitions page).</p>
+<p>Upon clicking create you will see a new entry in the table on the definitions page. In order to run <code>MANUAL</code> workflows, or re-run automatic workflows, you must navigate to the <code>Workflows &gt; Control</code> tab. For each acquisition run you will find a drop down menu under the <code>Job</code> column. To submit a workflow you select it from this drop down menu by the <code>Name</code> you provided when creating its definition.</p>
+<h1 id="advanced-usage">Advanced Usage</h1>
+<h2 id="variable-substitution-in-yaml-files">Variable Substitution in YAML Files</h2>
+<p>Using <code>validator</code>s, it is possible to define (generally, default) model parameters for a <code>Task</code> in terms of other parameters. It is also possible to use validated Pydantic model parameters to substitute values into a configuration file required to run a third party <code>Task</code> (e.g. some <code>Task</code>s may require their own JSON, TOML files, etc. to run properly). For more information on these types of substitutions, refer to the <code>new_task.md</code> documentation on <code>Task</code> creation.</p>
+<p>These types of substitutions, however, have a limitation in that they are not easily adapted at run time. They therefore address only a small number of the possible combinations in the dependencies between different input parameters. In order to support more complex relationships between parameters, variable substitutions can also be used in the configuration YAML itself. Using a syntax similar to <code>Jinja</code> templates, you can define values for YAML parameters in terms of other parameters or environment variables. The values are substituted before Pydantic attempts to validate the configuration.</p>
+<p>It is perhaps easiest to illustrate with an example. A test case is provided in <code>config/test_var_subs.yaml</code> and is reproduced here:</p>
+<pre><code class="language-yaml">%YAML 1.3
+---
+title: &quot;Configuration to Test YAML Substitution&quot;
+experiment: &quot;TestYAMLSubs&quot;
+run: 12
+date: &quot;2024/05/01&quot;
+lute_version: 0.1
+task_timeout: 600
+work_dir: &quot;/sdf/scratch/users/d/dorlhiac&quot;
+...
+---
+OtherTask:
+  useful_other_var: &quot;USE ME!&quot;
+
+NonExistentTask:
+  test_sub: &quot;/path/to/{{ experiment }}/file_r{{ run:04d }}.input&quot;         # Substitute `experiment` and `run` from header above
+  test_env_sub: &quot;/path/to/{{ $EXPERIMENT }}/file.input&quot;                   # Substitute from the environment variable $EXPERIMENT
+  test_nested:
+    a: &quot;outfile_{{ run }}_one.out&quot;                                        # Substitute `run` from header above
+    b:
+      c: &quot;outfile_{{ run }}_two.out&quot;                                      # Also substitute `run` from header above
+      d: &quot;{{ OtherTask.useful_other_var }}&quot;                               # Substitute `useful_other_var` from `OtherTask`
+  test_fmt: &quot;{{ run:04d }}&quot;                                               # Subsitute `run` and format as 0012
+  test_env_fmt: &quot;{{ $RUN:04d }}&quot;                                          # Substitute environment variable $RUN and pad to 4 w/ zeros
+...
+</code></pre>
+<p>Input parameters in the config YAML can be substituted with either other input parameters or environment variables, with or without limited string formatting. All substitutions occur between double curly brackets: <code>{{ VARIABLE_TO_SUBSTITUTE }}</code>. Environment variables are indicated by <code>$</code> in front of the variable name. Parameters from the header, i.e. the first YAML document (top section) containing the <code>run</code>, <code>experiment</code>, version fields, etc. can be substituted without any qualification. If you want to use the <code>run</code> parameter, you can substitute it using <code>{{ run }}</code>. All other parameters, i.e. from other <code>Task</code>s or within <code>Task</code>s, must use a qualified name. Nested levels are delimited using a <code>.</code>. E.g. consider a structure like:</p>
+<pre><code class="language-yaml">Task:
+  param_set:
+    a: 1
+    b: 2
+    c: 3
+</code></pre>
+<p>In order to use parameter <code>c</code>, you would use <code>{{ Task.param_set.c }}</code> as the substitution.</p>
+<p>Take care when using substitutions! This process will not try to guess for you. When a substitution is not available, e.g. due to misspelling, one of two things will happen:
+- If it was an environment variable that does not exist, no substitution will be performed, although a message will be printed. I.e. you will be left with <code>param: /my/failed/{{ $SUBSTITUTION }}</code> as your parameter. This may or may not fail the model validation step, but is likely not what you intended.
+- If it was an attempt at substituting another YAML parameter which does not exist, an exception will be thrown and the program will exit.</p>
+<p><strong>Defining your own parameters</strong>
+The configuration file is <strong>not</strong> validated in its totality, only on a <code>Task</code>-by-<code>Task</code> basis, but it <strong>is read</strong> in its totality. E.g. when running <code>MyTask</code> only that portion of the configuration is validated even though the entire file has been read, and is available for substitutions. As a result, it is safe to introduce extra entries into the YAML file, as long as they are not entered under a specific <code>Task</code>'s configuration. This may be useful to create your own global substitutions, for example if there is a key variable that may be used across different <code>Task</code>s.
+E.g. Consider a case where you want to create a more generic configuration file where a single variable is used by multiple <code>Task</code>s. This single variable may be changed between experiments, for instance, but is likely static for the duration of a single set of analyses. In order to avoid a mistake when changing the configuration between experiments you can define this special variable (or variables) as a separate entry in the YAML, and make use of substitutions in each <code>Task</code>'s configuration. This way the variable only needs to be changed in one place.</p>
+<pre><code class="language-yaml"># Define our substitution. This is only for substitutiosns!
+MY_SPECIAL_SUB: &quot;EXPMT_DEPENDENT_VALUE&quot;  # Can change here once per experiment!
+
+RunTask1:
+  special_var: &quot;{{ MY_SPECIAL_SUB }}&quot;
+  var_1: 1
+  var_2: &quot;a&quot;
+  # ...
+
+RunTask2:
+  special_var: &quot;{{ MY_SPECIAL_SUB }}&quot;
+  var_3: &quot;abcd&quot;
+  var_4: 123
+  # ...
+
+RunTask3:
+  special_var: &quot;{{ MY_SPECIAL_SUB }}&quot;
+  #...
+
+# ... and so on
+</code></pre>
+<h3 id="gotchas">Gotchas!</h3>
+<p><strong>Order matters</strong>
+While in general you can use parameters that appear later in a YAML document to substitute for values of parameters that appear earlier, the substitutions themselves will be performed in order of appearance. It is therefore <strong>NOT possible</strong> to correctly use a later parameter as a substitution for an earlier one, if the later one itself depends on a substitution. The YAML document, however, can be rearranged without error. The order in the YAML document has no effect on execution order which is determined purely by the workflow definition. As mentioned above, the document is not validated in its entirety so rearrangements are allowed. For example consider the following situation which produces an incorrect substitution:</p>
+<pre><code class="language-yaml">%YAML 1.3
+---
+title: &quot;Configuration to Test YAML Substitution&quot;
+experiment: &quot;TestYAMLSubs&quot;
+run: 12
+date: &quot;2024/05/01&quot;
+lute_version: 0.1
+task_timeout: 600
+work_dir: &quot;/sdf/data/lcls/ds/exp/experiment/scratch&quot;
+...
+---
+RunTaskOne:
+  input_dir: &quot;{{ RunTaskTwo.path }}&quot;  # Will incorrectly be &quot;{{ work_dir }}/additional_path/{{ $RUN }}&quot;
+  # ...
+
+RunTaskTwo:
+  # Remember `work_dir` and `run` come from the header document and don't need to
+  # be qualified
+  path: &quot;{{ work_dir }}/additional_path/{{ run }}&quot;
+...
+</code></pre>
+<p>This configuration can be rearranged to achieve the desired result:</p>
+<pre><code class="language-yaml">%YAML 1.3
+---
+title: &quot;Configuration to Test YAML Substitution&quot;
+experiment: &quot;TestYAMLSubs&quot;
+run: 12
+date: &quot;2024/05/01&quot;
+lute_version: 0.1
+task_timeout: 600
+work_dir: &quot;/sdf/data/lcls/ds/exp/experiment/scratch&quot;
+...
+---
+RunTaskTwo:
+  # Remember `work_dir` comes from the header document and doesn't need to be qualified
+  path: &quot;{{ work_dir }}/additional_path/{{ run }}&quot;
+
+RunTaskOne:
+  input_dir: &quot;{{ RunTaskTwo.path }}&quot;  # Will now be /sdf/data/lcls/ds/exp/experiment/scratch/additional_path/12
+  # ...
+...
+</code></pre>
+<p>On the otherhand, relationships such as these may point to inconsistencies in the dependencies between <code>Task</code>s which may warrant a refactor.</p>
+<p><strong>Found unhashable key</strong>
+To avoid YAML parsing issues when using the substitution syntax, be sure to quote your substitutions. Before substitution is performed, a dictionary is first constructed by the <code>pyyaml</code> package which parses the document - it may fail to parse the document and raise an exception if the substitutions are not quoted.
+E.g.</p>
+<pre><code class="language-yaml"># USE THIS
+MyTask:
+  var_sub: &quot;{{ other_var:04d }}&quot;
+
+# **DO NOT** USE THIS
+MyTask:
+  var_sub: {{ other_var:04d }}
+</code></pre>
+<p>During validation, Pydantic will by default cast variables if possible, because of this it is generally safe to use strings for substitutions. E.g. if your parameter is expecting an integer, and after substitution you pass <code>"2"</code>, Pydantic will cast this to the <code>int</code> <code>2</code>, and validation will succeed. As part of the substitution process limited type casting will also be handled if it is necessary for any formatting strings provided. E.g. <code>"{{ run:04d }}"</code> requires that run be an integer, so it will be treated as such in order to apply the formatting.</p>
+<h2 id="debug-environment-variables">Debug Environment Variables</h2>
+<p>Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.</p>
+<p>Types of debug markers:
+- <code>LUTE_DEBUG_EXIT</code>: Will exit the program at this point if the corresponding environment variable has been set.</p>
+<p>Developers can insert these markers as needed into their code to add new exit points, although as a rule of thumb they should be used sparingly, and generally only after major steps in the execution flow (e.g. after parsing, after beginning a task, after returning a result, etc.).</p>
+<p>In order to include a new marker in your code:</p>
+<pre><code class="language-py">from lute.execution.debug_utils import LUTE_DEBUG_EXIT
+
+def my_code() -&gt; None:
+    # ...
+    LUTE_DEBUG_EXIT(&quot;MYENVVAR&quot;, &quot;Additional message to print&quot;)
+    # If MYENVVAR is not set, the above function does nothing
+</code></pre>
+<p>You can enable a marker by setting to 1, e.g. to enable the example marker above while running <code>Tester</code>:</p>
+<pre><code class="language-bash">MYENVVAR=1 python -B run_task.py -t Tester -c config/test.yaml
+</code></pre>
+<h3 id="currently-used-environment-variables">Currently used environment variables</h3>
+<ul>
+<li><code>LUTE_DEBUG_EXIT_AT_YAML</code>: Exits the program after reading in a YAML configuration file and performing variable substitutions, but BEFORE Pydantic validation.</li>
+<li><code>LUTE_DEBUG_BEFORE_TPP_EXEC</code>: Exits the program after a ThirdPartyTask has prepared its submission command, but before <code>exec</code> is used to run it.</li>
+</ul>
+<h2 id="airflow-launch-and-dag-execution-steps">Airflow Launch and DAG Execution Steps</h2>
+<p>The Airflow launch process actually involves a number of steps, and is rather complicated. There are two wrapper steps prior to getting to the actual Airflow API communication.
+1. <code>launch_scripts/submit_launch_airflow.sh</code> is run.
+2. This script calls <code>/sdf/group/lcls/ds/tools/lute_launcher</code> with all the same parameters that it was called with.
+3. <code>lute_launcher</code> runs the <code>launch_scripts/launch_airflow.py</code> script which was provided as the first argument. This is the <strong>true</strong> launch script
+4. <code>launch_airflow.py</code> communicates with the Airflow API, requesting that a specific DAG be launched. It then continues to run, and gathers the individual logs and the exit status of each step of the DAG.
+5. Airflow will then enter a loop of communication where it asks the JID to submit each step of the requested DAG as batch job using <code>launch_scripts/submit_slurm.sh</code>.</p>
+<p>There are some specific reasons for this complexity:
+- The use of <code>submit_launch_airflow.sh</code> as a thin-wrapper around <code>lute_launcher</code> is to allow the true Airflow launch script to be a long-lived job. This is for compatibility with the eLog and the ARP. When run from the eLog as a workflow, the job submission process must occur within 30 seconds due to a timeout built-in to the system. This is fine when submitting jobs to run on the batch-nodes, as the submission to the queue takes very little time. So here, <code>submit_launch_airflow.sh</code> serves as a thin script to have <code>lute_launcher</code> run as a batch job. It can then run as a long-lived job (for the duration of the entire DAG) collecting log files all in one place. This allows the log for each stage of the Airflow DAG to be inspected in a single file, and through the eLog browser interface.
+- The use <code>lute_launcher</code> as a wrapper around <code>launch_airflow.py</code> is to manage authentication and credentials. The <code>launch_airflow.py</code> script requires loading credentials in order to authenticate against the Airflow API. For the average user this is not possible, unless the script is run from within the <code>lute_launcher</code> process.</p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '.';</script>
+    <script src="js/theme_extra.js" defer></script>
+    <script src="js/theme.js" defer></script>
+      <script src="search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.4.2
+Build Date UTC : 2024-06-28 17:47:05.130811+00:00
+-->

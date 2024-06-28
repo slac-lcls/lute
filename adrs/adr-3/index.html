@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>[ADR-3] `Executor`s will run all `Task`s via subprocess - LUTE</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "[ADR-3] `Executor`s will run all `Task`s via subprocess";
+        var mkdocs_page_input_path = "adrs/adr-3.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>[ADR-3] `Executor`s will run all `Task`s via subprocess</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/adrs/adr-3.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="adr-3-executors-will-run-all-tasks-via-subprocess">[ADR-3] <code>Executor</code>s will run all <code>Task</code>s via subprocess</h1>
+<p><strong>Date:</strong> 2023-11-06</p>
+<h2 id="status">Status</h2>
+<p><strong>Proposed</strong></p>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
+<ul>
+<li>A mechanism is needed to submit <code>Task</code>s from within the <code>Executor</code> (cf. ADR-2)</li>
+<li>Ideally a single method can be used for all <code>Task</code>s, at all locations, but at the very least all <code>Task</code>s at a single location (e.g. S3DF, NERSC)</li>
+</ul>
+<h2 id="decision">Decision</h2>
+<h3 id="decision-drivers">Decision Drivers</h3>
+<ul>
+<li>Want to simplify the interface for <code>Task</code> submission, but have to submit both first-party and third-party code.</li>
+<li>Want to have execution/submission separated from the Task submission (cf. ADR-2)</li>
+<li>Need flexible method which can be used to run any task, and quickly adapted to new Tasks</li>
+</ul>
+<h3 id="considered-options">Considered Options</h3>
+<ul>
+<li>Executor submits a separate SLURM job.</li>
+<li>This strategy was employed by <code>JobScheduler</code> for <code>btx</code></li>
+<li>Challenging to maintain - non-trivial issues can arise, e.g. with MPI</li>
+<li>Use <code>multiprocessing</code> at the Python level.</li>
+<li>More complex to manage</li>
+<li>Provides more flexibility</li>
+<li>Different mechansims for third-party Task or first-party Tasks</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>Communication must be via pipes or files</li>
+<li>Very challenging to share state between executor and task</li>
+<li>Generally want to limit this, but makes certain communciation tasks harder (passing results e.g.)</li>
+<li>Easier to run binary (i.e. third party) tasks</li>
+<li>Simple to implement.</li>
+<li>Need a separate method (e.g. a single script) which is submitted as a subprocess</li>
+<li>This script, e.g., will select the Task based on options provided by the Executor</li>
+</ul>
+<h2 id="compliance">Compliance</h2>
+<ul>
+<li>Implementation will be at base class level for the executors</li>
+</ul>
+<h2 id="metadata">Metadata</h2>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

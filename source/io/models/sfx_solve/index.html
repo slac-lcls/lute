@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../../img/favicon.ico" />
+    <title>sfx_solve - LUTE</title>
+    <link rel="stylesheet" href="../../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "sfx_solve";
+        var mkdocs_page_input_path = "source/io/models/sfx_solve.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">io</a>
+    <ul class="current">
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">models</a>
+    <ul class="current">
+                <li class="toctree-l3"><a class="reference internal" href="../base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3 current"><a class="reference internal current" href="./">sfx_solve</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>io &raquo;</li>
+          <li>models &raquo;</li>
+      <li>sfx_solve</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/io/models/sfx_solve.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.sfx_solve"></a>
+    <div class="doc doc-contents first">
+
+      <p>Models for structure solution in serial femtosecond crystallography.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.sfx_solve.DimpleSolveParameters" href="#io.models.sfx_solve.DimpleSolveParameters">DimpleSolveParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Perform structure solution
+using CCP4's dimple (molecular replacement).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_solve.DimpleSolveParameters" class="doc doc-heading">
+            <code>DimpleSolveParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for CCP4's dimple program.</p>
+<p>There are many parameters. For more information on
+usage, please refer to the CCP4 documentation, here:
+https://ccp4.github.io/dimple/</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_solve.py</code></summary>
+                <pre class="highlight"><code class="language-python">class DimpleSolveParameters(ThirdPartyParameters):
+    """Parameters for CCP4's dimple program.
+
+    There are many parameters. For more information on
+    usage, please refer to the CCP4 documentation, here:
+    https://ccp4.github.io/dimple/
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/dimple",
+        description="CCP4 Dimple for solving structures with MR.",
+        flag_type="",
+    )
+    # Positional requirements - all required.
+    in_file: str = Field(
+        "",
+        description="Path to input mtz.",
+        flag_type="",
+    )
+    pdb: str = Field("", description="Path to a PDB.", flag_type="")
+    out_dir: str = Field("", description="Output DIRECTORY.", flag_type="")
+    # Most used options
+    mr_thresh: PositiveFloat = Field(
+        0.4,
+        description="Threshold for molecular replacement.",
+        flag_type="--",
+        rename_param="mr-when-r",
+    )
+    slow: Optional[bool] = Field(
+        False, description="Perform more refinement.", flag_type="--"
+    )
+    # Other options (IO)
+    hklout: str = Field(
+        "final.mtz", description="Output mtz file name.", flag_type="--"
+    )
+    xyzout: str = Field(
+        "final.pdb", description="Output PDB file name.", flag_type="--"
+    )
+    icolumn: Optional[str] = Field(
+        # "IMEAN",
+        description="Name for the I column.",
+        flag_type="--",
+    )
+    sigicolumn: Optional[str] = Field(
+        # "SIG&lt;ICOL&gt;",
+        description="Name for the Sig&lt;I&gt; column.",
+        flag_type="--",
+    )
+    fcolumn: Optional[str] = Field(
+        # "F",
+        description="Name for the F column.",
+        flag_type="--",
+    )
+    sigfcolumn: Optional[str] = Field(
+        # "F",
+        description="Name for the Sig&lt;F&gt; column.",
+        flag_type="--",
+    )
+    libin: Optional[str] = Field(
+        description="Ligand descriptions for refmac (LIBIN).", flag_type="--"
+    )
+    refmac_key: Optional[str] = Field(
+        description="Extra Refmac keywords to use in refinement.",
+        flag_type="--",
+        rename_param="refmac-key",
+    )
+    free_r_flags: Optional[str] = Field(
+        description="Path to a mtz file with freeR flags.",
+        flag_type="--",
+        rename_param="free-r-flags",
+    )
+    freecolumn: Optional[Union[int, float]] = Field(
+        # 0,
+        description="Refree column with an optional value.",
+        flag_type="--",
+    )
+    img_format: Optional[str] = Field(
+        description="Format of generated images. (png, jpeg, none).",
+        flag_type="-",
+        rename_param="f",
+    )
+    white_bg: bool = Field(
+        False,
+        description="Use a white background in Coot and in images.",
+        flag_type="--",
+        rename_param="white-bg",
+    )
+    no_cleanup: bool = Field(
+        False,
+        description="Retain intermediate files.",
+        flag_type="--",
+        rename_param="no-cleanup",
+    )
+    # Calculations
+    no_blob_search: bool = Field(
+        False,
+        description="Do not search for unmodelled blobs.",
+        flag_type="--",
+        rename_param="no-blob-search",
+    )
+    anode: bool = Field(
+        False, description="Use SHELX/AnoDe to find peaks in the anomalous map."
+    )
+    # Run customization
+    no_hetatm: bool = Field(
+        False,
+        description="Remove heteroatoms from the given model.",
+        flag_type="--",
+        rename_param="no-hetatm",
+    )
+    rigid_cycles: Optional[PositiveInt] = Field(
+        # 10,
+        description="Number of cycles of rigid-body refinement to perform.",
+        flag_type="--",
+        rename_param="rigid-cycles",
+    )
+    jelly: Optional[PositiveInt] = Field(
+        # 4,
+        description="Number of cycles of jelly-body refinement to perform.",
+        flag_type="--",
+    )
+    restr_cycles: Optional[PositiveInt] = Field(
+        # 8,
+        description="Number of cycles of refmac final refinement to perform.",
+        flag_type="--",
+        rename_param="restr-cycles",
+    )
+    lim_resolution: Optional[PositiveFloat] = Field(
+        description="Limit the final resolution.", flag_type="--", rename_param="reso"
+    )
+    weight: Optional[str] = Field(
+        # "auto-weight",
+        description="The refmac matrix weight.",
+        flag_type="--",
+    )
+    mr_prog: Optional[str] = Field(
+        # "phaser",
+        description="Molecular replacement program. phaser or molrep.",
+        flag_type="--",
+        rename_param="mr-prog",
+    )
+    mr_num: Optional[Union[str, int]] = Field(
+        # "auto",
+        description="Number of molecules to use for molecular replacement.",
+        flag_type="--",
+        rename_param="mr-num",
+    )
+    mr_reso: Optional[PositiveFloat] = Field(
+        # 3.25,
+        description="High resolution for molecular replacement. If &gt;10 interpreted as eLLG.",
+        flag_type="--",
+        rename_param="mr-reso",
+    )
+    itof_prog: Optional[str] = Field(
+        description="Program to calculate amplitudes. truncate, or ctruncate.",
+        flag_type="--",
+        rename_param="ItoF-prog",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -&gt; str:
+        if in_file == "":
+            get_hkl_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "ManipulateHKL", "out_file"
+            )
+            if get_hkl_file:
+                return get_hkl_file
+        return in_file
+
+    @validator("out_dir", always=True)
+    def validate_out_dir(cls, out_dir: str, values: Dict[str, Any]) -&gt; str:
+        if out_dir == "":
+            get_hkl_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "ManipulateHKL", "out_file"
+            )
+            if get_hkl_file:
+                return os.path.dirname(get_hkl_file)
+        return out_dir</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.sfx_solve.RunSHELXCParameters" class="doc doc-heading">
+            <code>RunSHELXCParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="../base/#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></p>
+
+
+      <p>Parameters for CCP4's SHELXC program.</p>
+<p>SHELXC prepares files for SHELXD and SHELXE.</p>
+<p>For more information please refer to the official documentation:
+https://www.ccp4.ac.uk/html/crank.html</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/sfx_solve.py</code></summary>
+                <pre class="highlight"><code class="language-python">class RunSHELXCParameters(ThirdPartyParameters):
+    """Parameters for CCP4's SHELXC program.
+
+    SHELXC prepares files for SHELXD and SHELXE.
+
+    For more information please refer to the official documentation:
+    https://www.ccp4.ac.uk/html/crank.html
+    """
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/shelxc",
+        description="CCP4 SHELXC. Generates input files for SHELXD/SHELXE.",
+        flag_type="",
+    )
+    placeholder: str = Field(
+        "xx", description="Placeholder filename stem.", flag_type=""
+    )
+    in_file: str = Field(
+        "",
+        description="Input file for SHELXC with reflections AND proper records.",
+        flag_type="",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -&gt; str:
+        if in_file == "":
+            # get_hkl needed to be run to produce an XDS format file...
+            xds_format_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "ManipulateHKL", "out_file"
+            )
+            if xds_format_file:
+                in_file = xds_format_file
+        if in_file[0] != "&lt;":
+            # Need to add a redirection for this program
+            # Runs like `shelxc xx &lt;input_file.xds`
+            in_file = f"&lt;{in_file}"
+        return in_file</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sfx_merge/" class="btn btn-neutral float-left" title="sfx_merge"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../smd/" class="btn btn-neutral float-right" title="smd">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../sfx_merge/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../smd/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../../..';</script>
+    <script src="../../../../js/theme_extra.js" defer></script>
+    <script src="../../../../js/theme.js" defer></script>
+      <script src="../../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

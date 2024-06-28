@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Creating a new Workflow - LUTE</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Creating a new Workflow";
+        var mkdocs_page_input_path = "tutorial/creating_workflows.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Creating a new Workflow</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#relevant-components">Relevant Components</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#launchsubmission-scripts">Launch/Submission Scripts</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#launch_airflowpy">launch_airflow.py</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#submit_launch_airflowsh">submit_launch_airflow.sh</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#submit_slurmsh">submit_slurm.sh</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#operators">Operators</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#jidslurmoperator-arguments">JIDSlurmOperator arguments</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Walkthroughs &raquo;</li>
+      <li>Creating a new Workflow</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/tutorial/creating_workflows.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="workflows-with-airflow">Workflows with Airflow</h1>
+<p><strong>Note:</strong> Airflow uses the term <strong>DAG</strong>, or directed acyclic graph, to describe workflows of tasks with defined (and acyclic) connectivities. This page will use the terms workflow and DAG interchangeably.</p>
+<h2 id="relevant-components">Relevant Components</h2>
+<p>In addition to the core LUTE package, a number of components are generally involved to run a workflow. The current set of scripts and objects are used to interface with Airflow, and the SLURM job scheduler. The core LUTE library can also be used to run workflows using different backends, and in the future these may be supported.</p>
+<p>For building and running workflows using SLURM and Airflow, the following components are necessary, and will be described in more detail below:
+- Airflow launch script: <code>launch_airflow.py</code>
+  - This has a wrapper batch submission script: <code>submit_launch_airflow.sh</code> . When running using the ARP (from the eLog), you <strong>MUST</strong> use this wrapper script instead of the Python script directly.
+- SLURM submission script: <code>submit_slurm.sh</code>
+- Airflow operators:
+  - <code>JIDSlurmOperator</code></p>
+<h2 id="launchsubmission-scripts">Launch/Submission Scripts</h2>
+<h2 id="launch_airflowpy"><code>launch_airflow.py</code></h2>
+<p>Sends a request to an Airflow instance to submit a specific DAG (workflow). This script prepares an HTTP request with the appropriate parameters in a specific format.</p>
+<p>A request involves the following information, most of which is retrieved automatically:</p>
+<pre><code class="language-py">dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
+    &quot;dag_run_id&quot;: str(uuid.uuid4()),
+    &quot;conf&quot;: {
+        &quot;experiment&quot;: os.environ.get(&quot;EXPERIMENT&quot;),
+        &quot;run_id&quot;: f&quot;{os.environ.get('RUN_NUM')}{datetime.datetime.utcnow().isoformat()}&quot;,
+        &quot;JID_UPDATE_COUNTERS&quot;: os.environ.get(&quot;JID_UPDATE_COUNTERS&quot;),
+        &quot;ARP_ROOT_JOB_ID&quot;: os.environ.get(&quot;ARP_JOB_ID&quot;),
+        &quot;ARP_LOCATION&quot;: os.environ.get(&quot;ARP_LOCATION&quot;, &quot;S3DF&quot;),
+        &quot;Authorization&quot;: os.environ.get(&quot;Authorization&quot;),
+        &quot;user&quot;: getpass.getuser(),
+        &quot;lute_params&quot;: params,
+        &quot;slurm_params&quot;: extra_args,
+    },
+}
+</code></pre>
+<p>Note that the environment variables are used to fill in the appropriate information because this script is intended to be launched primarily from the ARP (which passes these variables). The ARP allows for the launch job to be defined in the experiment eLog and submitted automatically for each new DAQ run. The environment variables <code>EXPERIMENT</code> and <code>RUN</code> can alternatively be defined prior to submitting the script on the command-line.</p>
+<p>The script takes a number of parameters:</p>
+<pre><code class="language-bash">launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test]
+</code></pre>
+<ul>
+<li><code>-c</code> refers to the path of the configuration YAML that contains the parameters for each <strong>managed</strong> <code>Task</code> in the requested workflow.</li>
+<li><code>-w</code> is the name of the DAG (workflow) to run. By convention each DAG is named by the Python file it is defined in. (See below).</li>
+<li><code>--debug</code> is an optional flag to run all steps of the workflow in debug mode for verbose logging and output.</li>
+<li><code>--test</code> is an optional flag which will use the test Airflow instance. By default the script will make requests of the standard production Airflow instance.</li>
+</ul>
+<p><strong>Lifetime</strong>
+This script will run for the entire duration of the <strong>workflow (DAG)</strong>. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed <code>Task</code>)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.</p>
+<h3 id="submit_launch_airflowsh"><code>submit_launch_airflow.sh</code></h3>
+<p>This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the <code>launch_airflow.py</code> job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the <code>launch_airflow.py</code> script to run on the S3DF batch nodes. Usage of this script is identical to <code>launch_airflow.py</code>. All the arguments are passed transparently to the underlying Python script. The wrapper will simply launch a batch job using minimal resources (1 core).</p>
+<h2 id="submit_slurmsh"><code>submit_slurm.sh</code></h2>
+<p>Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single <strong>managed</strong> <code>Task</code> at a time. The usage is as follows:</p>
+<pre><code class="language-bash">submit_slurm.sh -c &lt;path_to_config_yaml&gt; -t &lt;MANAGED_task_name&gt; [--debug] [--SLURM_ARGS ...]
+</code></pre>
+<p>As a reminder the <strong>managed</strong> <code>Task</code> refers to the <code>Executor</code>-<code>Task</code> combination. The script does not parse any SLURM specific parameters, and instead passes them transparently to SLURM. At least the following two SLURM arguments must be provided:</p>
+<pre><code class="language-bash">--partition=&lt;...&gt; # Usually partition=milano
+--account=&lt;...&gt; # Usually account=lcls:$EXPERIMENT
+</code></pre>
+<p>Generally, resource requests will also be included, such as the number of cores to use. A complete call may look like the following:</p>
+<pre><code class="language-bash">submit_slurm.sh -c /sdf/data/lcls/ds/hutch/experiment/scratch/config.yaml -t Tester --partition=milano --account=lcls:experiment --ntasks=100 [...]
+</code></pre>
+<p>When running a workflow using the <code>launch_airflow.py</code> script, each step of the workflow will be submitted using this script.</p>
+<h2 id="operators">Operators</h2>
+<p><code>Operator</code>s are the objects submitted as individual steps of a DAG by Airflow. They are conceptually linked to the idea of a task in that each task of a workflow is generally an operator. Care should be taken, not to confuse them with LUTE <code>Task</code>s or <strong>managed</strong> <code>Task</code>s though. There is, however, usually a one-to-one correspondance between a <code>Task</code> and an <code>Operator</code>.</p>
+<p>Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an <code>Operator</code> for each step of the DAG. However, the <code>Operator</code> itself cannot perform productive analysis without access to the data. The solution employed by <code>LUTE</code> is to have a limited set of <code>Operator</code>s which do not perform analysis, but instead request that a <code>LUTE</code> <strong>managed</strong> <code>Task</code>s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided <code>Operator</code>s do this, but in general they will all make a request to the <strong>job interface daemon</strong> (JID) that a new SLURM job be scheduled using the <code>submit_slurm.sh</code> script described above.</p>
+<p>Therefore, running a typical Airflow DAG involves the following steps:
+1. <code>launch_airflow.py</code> script is submitted, usually from a definition in the eLog.
+2. The <code>launch_airflow</code> script requests that Airflow run a specific DAG.
+3. The Airflow instance begins submitting the <code>Operator</code>s that makeup the DAG definition.
+4. Each <code>Operator</code> sends a request to the <code>JID</code> to submit a job.
+5. The <code>JID</code> submits the <code>elog_submit.sh</code> script with the appropriate <strong>managed</strong> <code>Task</code>.
+6. The <strong>managed</strong> <code>Task</code> runs on the batch nodes, while the <code>Operator</code>, requesting updates from the JID on job status, waits for it to complete.
+7. Once a <strong>managed</strong> <code>Task</code> completes, the <code>Operator</code> will receieve this information and tell the Airflow server whether the job completed successfully or resulted in failure.
+8. The Airflow server will then launch the next step of the DAG, and so on, until every step has been executed.</p>
+<p>Currently, the following <code>Operator</code>s are maintained:
+- <code>JIDSlurmOperator</code>: The standard <code>Operator</code>. Each instance has a one-to-one correspondance with a LUTE <strong>managed</strong> <code>Task</code>.</p>
+<h3 id="jidslurmoperator-arguments"><code>JIDSlurmOperator</code> arguments</h3>
+<ul>
+<li><code>task_id</code>: This is nominally the name of the task on the Airflow side. However, for simplicity this is used 1-1 to match the name of a <strong>managed</strong> Task defined in LUTE's <code>managed_tasks.py</code> module. I.e., it should the name of an <code>Executor("Task")</code> object which will run the specific Task of interest. This <strong>must</strong> match the name of a defined managed Task.</li>
+<li><code>max_cores</code>: Used to cap the maximum number of cores which should be requested of SLURM. By default all jobs will run with the same number of cores, which should be specified when running the <code>launch_airflow.py</code> script (either from the ARP, or by hand). This behaviour was chosen because in general we want to increase or decrease the core-count for all <code>Task</code>s uniformly, and we don't want to have to specify core number arguments for each job individually. Nonetheless, on occassion it may be necessary to cap the number of cores a specific job will use. E.g. if the default value specified when launching the Airflow DAG is multiple cores, and one job is single threaded, the core count can be capped for that single job to 1, while the rest run with multiple cores.</li>
+<li><code>max_nodes</code>: Similar to the above. This will make sure the <code>Task</code> is distributed across no more than a maximum number of nodes. This feature is useful for, e.g., multi-threaded software which does not make use of tools like <code>MPI</code>. So, the <code>Task</code> can run on multiple cores, but only within a single node.</li>
+</ul>
+<h1 id="creating-a-new-workflow">Creating a new workflow</h1>
+<p>Defining a new workflow involves creating a <strong>new</strong> module (Python file) in the directory <code>workflows/airflow</code>, creating a number of <code>Operator</code> instances within the module, and then drawing the connectivity between them. At the top of the file an Airflow DAG is created and given a name. By convention all <code>LUTE</code> workflows use the name of the file as the name of the DAG. The following code can be copied exactly into the file:</p>
+<pre><code class="language-py">from datetime import datetime
+import os
+from airflow import DAG
+from lute.operators.jidoperators import JIDSlurmOperator # Import other operators if needed
+
+dag_id: str = f&quot;lute_{os.path.splitext(os.path.basename(__file__))[0]}&quot;
+description: str = (
+    &quot;Run SFX processing using PyAlgos peak finding and experimental phasing&quot;
+)
+
+dag: DAG = DAG(
+    dag_id=dag_id,
+    start_date=datetime(2024, 3, 18),
+    schedule_interval=None,
+    description=description,
+)
+</code></pre>
+<p>Once the DAG has been created, a number of <code>Operator</code>s must be created to run the various LUTE analysis operations. As an example consider a partial SFX processing workflow which includes steps for peak finding, indexing, merging, and calculating figures of merit. Each of the 4 steps will have an <code>Operator</code> instance which will launch a corresponding <code>LUTE</code> <strong>managed</strong> <code>Task</code>, for example:</p>
+<pre><code class="language-py"># Using only the JIDSlurmOperator
+# syntax: JIDSlurmOperator(task_id=&quot;LuteManagedTaskName&quot;, dag=dag) # optionally, max_cores=123)
+peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id=&quot;PeakFinderPyAlgos&quot;, dag=dag)
+
+# We specify a maximum number of cores for the rest of the jobs.
+indexer: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=120, task_id=&quot;CrystFELIndexer&quot;, dag=dag
+)
+
+# Merge
+merger: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=120, task_id=&quot;PartialatorMerger&quot;, dag=dag
+)
+
+# Figures of merit
+hkl_comparer: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=8, task_id=&quot;HKLComparer&quot;, dag=dag
+)
+</code></pre>
+<p>Finally, the dependencies between the <code>Operator</code>s are "drawn", defining the execution order of the various steps. The <code>&gt;&gt;</code> operator has been overloaded for the <code>Operator</code> class, allowing it to be used to specify the next step in the DAG. In this case, a completely linear DAG is drawn as:</p>
+<pre><code class="language-py">peak_finder &gt;&gt; indexer &gt;&gt; merger &gt;&gt; hkl_comparer
+</code></pre>
+<p>Parallel execution can be added by using the <code>&gt;&gt;</code> operator multiple times. Consider a <code>task1</code> which upon successful completion starts a <code>task2</code> and <code>task3</code> in parallel. This dependency can be added to the DAG using:</p>
+<pre><code class="language-py">#task1: JIDSlurmOperator = JIDSlurmOperator(...)
+#task2 ...
+
+task1 &gt;&gt; task2
+task1 &gt;&gt; task3
+</code></pre>
+<p>As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../new_task/" class="btn btn-neutral float-left" title="Creating a new Task"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../source/managed_tasks/" class="btn btn-neutral float-right" title="managed_tasks">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../new_task/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../source/managed_tasks/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

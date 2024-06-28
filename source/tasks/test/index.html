@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>test - LUTE</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "test";
+        var mkdocs_page_input_path = "source/tasks/test.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">tasks</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="./">test</a>
+    <ul class="current">
+    </ul>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>tasks &raquo;</li>
+      <li>test</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/tasks/test.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="tasks.test"></a>
+    <div class="doc doc-contents first">
+
+      <p>Basic test Tasks for testing functionality.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.test.Test" href="#tasks.test.Test">Test</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Simplest test Task - runs a 10 iteration loop and returns a
+result.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.test.TestSocket" href="#tasks.test.TestSocket">TestSocket</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Test Task which sends larger data to test socket IPC.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.test.TestWriteOutput" href="#tasks.test.TestWriteOutput">TestWriteOutput</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Test Task which writes an output file.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.test.TestReadOutput" href="#tasks.test.TestReadOutput">TestReadOutput</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Test Task which reads in a file. Can be used to test
+database access.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.test.Test" class="doc doc-heading">
+            <code>Test</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="tasks.task.Task" href="../task/#tasks.task.Task">Task</a></code></p>
+
+
+      <p>Simple test Task to ensure subprocess and pipe-based IPC work.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/test.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Test(Task):
+    """Simple test Task to ensure subprocess and pipe-based IPC work."""
+
+    def __init__(self, *, params: TaskParameters) -&gt; None:
+        super().__init__(params=params)
+
+    def _run(self) -&gt; None:
+        for i in range(10):
+            time.sleep(1)
+            msg: Message = Message(contents=f"Test message {i}")
+            self._report_to_executor(msg)
+        if self._task_parameters.throw_error:
+            raise RuntimeError("Testing Error!")
+
+    def _post_run(self) -&gt; None:
+        self._result.summary = "Test Finished."
+        self._result.task_status = TaskStatus.COMPLETED
+        time.sleep(0.1)</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.test.TestReadOutput" class="doc doc-heading">
+            <code>TestReadOutput</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="tasks.task.Task" href="../task/#tasks.task.Task">Task</a></code></p>
+
+
+      <p>Simple test Task to read in output from the test Task above.</p>
+<p>Its pydantic model relies on a database access to retrieve the output file.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/test.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TestReadOutput(Task):
+    """Simple test Task to read in output from the test Task above.
+
+    Its pydantic model relies on a database access to retrieve the output file.
+    """
+
+    def __init__(self, *, params: TaskParameters) -&gt; None:
+        super().__init__(params=params)
+
+    def _run(self) -&gt; None:
+        array: np.ndarray = np.loadtxt(self._task_parameters.in_file, delimiter=",")
+        self._report_to_executor(msg=Message(contents="Successfully loaded data!"))
+        for i in range(5):
+            time.sleep(1)
+
+    def _post_run(self) -&gt; None:
+        super()._post_run()
+        self._result.summary = "Was able to load data."
+        self._result.payload = "This Task produces no output."
+        self._result.task_status = TaskStatus.COMPLETED</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.test.TestSocket" class="doc doc-heading">
+            <code>TestSocket</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="tasks.task.Task" href="../task/#tasks.task.Task">Task</a></code></p>
+
+
+      <p>Simple test Task to ensure basic IPC over Unix sockets works.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/test.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TestSocket(Task):
+    """Simple test Task to ensure basic IPC over Unix sockets works."""
+
+    def __init__(self, *, params: TaskParameters) -&gt; None:
+        super().__init__(params=params)
+
+    def _run(self) -&gt; None:
+        for i in range(self._task_parameters.num_arrays):
+            msg: Message = Message(contents=f"Sending array {i}")
+            self._report_to_executor(msg)
+            time.sleep(0.05)
+            msg: Message = Message(
+                contents=np.random.rand(self._task_parameters.array_size)
+            )
+            self._report_to_executor(msg)
+
+    def _post_run(self) -&gt; None:
+        super()._post_run()
+        self._result.summary = f"Sent {self._task_parameters.num_arrays} arrays"
+        self._result.payload = np.random.rand(self._task_parameters.array_size)
+        self._result.task_status = TaskStatus.COMPLETED</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.test.TestWriteOutput" class="doc doc-heading">
+            <code>TestWriteOutput</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="tasks.task.Task" href="../task/#tasks.task.Task">Task</a></code></p>
+
+
+      <p>Simple test Task to write output other Tasks depend on.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/test.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TestWriteOutput(Task):
+    """Simple test Task to write output other Tasks depend on."""
+
+    def __init__(self, *, params: TaskParameters) -&gt; None:
+        super().__init__(params=params)
+
+    def _run(self) -&gt; None:
+        for i in range(self._task_parameters.num_vals):
+            # Doing some calculations...
+            time.sleep(0.05)
+            if i % 10 == 0:
+                msg: Message = Message(contents=f"Processed {i+1} values!")
+                self._report_to_executor(msg)
+
+    def _post_run(self) -&gt; None:
+        super()._post_run()
+        work_dir: str = self._task_parameters.lute_config.work_dir
+        out_file: str = f"{work_dir}/{self._task_parameters.outfile_name}"
+        array: np.ndarray = np.random.rand(self._task_parameters.num_vals)
+        np.savetxt(out_file, array, delimiter=",")
+        self._result.summary = "Completed task successfully."
+        self._result.payload = out_file
+        self._result.task_status = TaskStatus.COMPLETED</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../sfx_index/" class="btn btn-neutral float-left" title="sfx_index"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../io/models/base/" class="btn btn-neutral float-right" title="base">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../sfx_index/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../io/models/base/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../..';</script>
+    <script src="../../../js/theme_extra.js" defer></script>
+    <script src="../../../js/theme.js" defer></script>
+      <script src="../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../../img/favicon.ico" />
+    <title>base - LUTE</title>
+    <link rel="stylesheet" href="../../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "base";
+        var mkdocs_page_input_path = "source/io/models/base.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../../tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">io</a>
+    <ul class="current">
+                <li class="toctree-l2 current"><a class="reference internal current" href="#">models</a>
+    <ul class="current">
+                <li class="toctree-l3 current"><a class="reference internal current" href="./">base</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>io &raquo;</li>
+          <li>models &raquo;</li>
+      <li>base</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/io/models/base.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="io.models.base"></a>
+    <div class="doc doc-contents first">
+
+      <p>Base classes for describing Task parameters.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.base.AnalysisHeader" href="#io.models.base.AnalysisHeader">AnalysisHeader</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Model holding shared configuration across Tasks.
+E.g. experiment name, run number and working directory.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters" href="#io.models.base.TaskParameters">TaskParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Base class for Task parameters. Subclasses
+specify a model of parameters and their types for validation.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.base.ThirdPartyParameters" href="#io.models.base.ThirdPartyParameters">ThirdPartyParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Base class for Third-party, binary
+executable Tasks.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.base.TemplateParameters" href="#io.models.base.TemplateParameters">TemplateParameters</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dataclass to represent parameters of binary
+(third-party) Tasks which are used for additional config files.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="io.models.base.TemplateConfig" href="#io.models.base.TemplateConfig">TemplateConfig</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Class for holding information on where templates
+are stored in order to properly handle ThirdPartyParameter objects.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.base.AnalysisHeader" class="doc doc-heading">
+            <code>AnalysisHeader</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+      <p>Header information for LUTE analysis runs.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class AnalysisHeader(BaseModel):
+    """Header information for LUTE analysis runs."""
+
+    title: str = Field(
+        "LUTE Task Configuration",
+        description="Description of the configuration or experiment.",
+    )
+    experiment: str = Field("", description="Experiment.")
+    run: Union[str, int] = Field("", description="Data acquisition run.")
+    date: str = Field("1970/01/01", description="Start date of analysis.")
+    lute_version: Union[float, str] = Field(
+        0.1, description="Version of LUTE used for analysis."
+    )
+    task_timeout: PositiveInt = Field(
+        600,
+        description=(
+            "Time in seconds until a task times out. Should be slightly shorter"
+            " than job timeout if using a job manager (e.g. SLURM)."
+        ),
+    )
+    work_dir: str = Field("", description="Main working directory for LUTE.")
+
+    @validator("work_dir", always=True)
+    def validate_work_dir(cls, directory: str, values: Dict[str, Any]) -&gt; str:
+        work_dir: str
+        if directory == "":
+            std_work_dir = (
+                f"/sdf/data/lcls/ds/{values['experiment'][:3]}/"
+                f"{values['experiment']}/scratch"
+            )
+            work_dir = std_work_dir
+        else:
+            work_dir = directory
+        # Check existence and permissions
+        if not os.path.exists(work_dir):
+            raise ValueError(f"Working Directory: {work_dir} does not exist!")
+        if not os.access(work_dir, os.W_OK):
+            # Need write access for database, files etc.
+            raise ValueError(f"Not write access for working directory: {work_dir}!")
+        return work_dir
+
+    @validator("run", always=True)
+    def validate_run(
+        cls, run: Union[str, int], values: Dict[str, Any]
+    ) -&gt; Union[str, int]:
+        if run == "":
+            # From Airflow RUN_NUM should have Format "RUN_DATETIME" - Num is first part
+            run_time: str = os.environ.get("RUN_NUM", "")
+            if run_time != "":
+                return int(run_time.split("_")[0])
+        return run
+
+    @validator("experiment", always=True)
+    def validate_experiment(cls, experiment: str, values: Dict[str, Any]) -&gt; str:
+        if experiment == "":
+            arp_exp: str = os.environ.get("EXPERIMENT", "EXPX00000")
+            return arp_exp
+        return experiment</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.base.TaskParameters" class="doc doc-heading">
+            <code>TaskParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseSettings">BaseSettings</span></code></p>
+
+
+      <p>Base class for models of task parameters to be validated.</p>
+<p>Parameters are read from a configuration YAML file and validated against
+subclasses of this type in order to ensure that both all parameters are
+present, and that the parameters are of the correct type.</p>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Pydantic is used for data validation. Pydantic does not perform "strict"
+validation by default. Parameter values may be cast to conform with the
+model specified by the subclass definition if it is possible to do so.
+Consider whether this may cause issues (e.g. if a float is cast to an
+int).</p>
+</details>
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TaskParameters(BaseSettings):
+    """Base class for models of task parameters to be validated.
+
+    Parameters are read from a configuration YAML file and validated against
+    subclasses of this type in order to ensure that both all parameters are
+    present, and that the parameters are of the correct type.
+
+    Note:
+        Pydantic is used for data validation. Pydantic does not perform "strict"
+        validation by default. Parameter values may be cast to conform with the
+        model specified by the subclass definition if it is possible to do so.
+        Consider whether this may cause issues (e.g. if a float is cast to an
+        int).
+    """
+
+    class Config:
+        """Configuration for parameters model.
+
+        The Config class holds Pydantic configuration. A number of LUTE-specific
+        configuration has also been placed here.
+
+        Attributes:
+            env_prefix (str): Pydantic configuration. Will set parameters from
+                environment variables containing this prefix. E.g. a model
+                parameter `input` can be set with an environment variable:
+                `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+            underscore_attrs_are_private (bool): Pydantic configuration. Whether
+                to hide attributes (parameters) prefixed with an underscore.
+
+            copy_on_model_validation (str): Pydantic configuration. How to copy
+                the input object passed to the class instance for model
+                validation. Set to perform a deep copy.
+
+            allow_inf_nan (bool): Pydantic configuration. Whether to allow
+                infinity or NAN in float fields.
+
+            run_directory (Optional[str]): None. If set, it should be a valid
+                path. The `Task` will be run from this directory. This may be
+                useful for some `Task`s which rely on searching the working
+                directory.
+
+            set_result (bool). False. If True, the model has information about
+                setting the TaskResult object from the parameters it contains.
+                E.g. it has an `output` parameter which is marked as the result.
+                The result can be set with a field value of `is_result=True` on
+                a specific parameter, or using `result_from_params` and a
+                validator.
+
+            result_from_params (Optional[str]): None. Optionally used to define
+                results from information available in the model using a custom
+                validator. E.g. use a `outdir` and `filename` field to set
+                `result_from_params=f"{outdir}/{filename}`, etc. Only used if
+                `set_result==True`
+
+            result_summary (Optional[str]): None. Defines a result summary that
+                can be known after processing the Pydantic model. Use of summary
+                depends on the Executor running the Task. All summaries are
+                stored in the database, however. Only used if `set_result==True`
+
+            impl_schemas (Optional[str]). Specifies a the schemas the
+                output/results conform to. Only used if `set_result==True`.
+        """
+
+        env_prefix = "LUTE_"
+        underscore_attrs_are_private: bool = True
+        copy_on_model_validation: str = "deep"
+        allow_inf_nan: bool = False
+
+        run_directory: Optional[str] = None
+        """Set the directory that the Task is run from."""
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+        result_from_params: Optional[str] = None
+        """Defines a result from the parameters. Use a validator to do so."""
+        result_summary: Optional[str] = None
+        """Format a TaskResult.summary from output."""
+        impl_schemas: Optional[str] = None
+        """Schema specification for output result. Will be passed to TaskResult."""
+
+    lute_config: AnalysisHeader</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.base.TaskParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+      <p>Configuration for parameters model.</p>
+<p>The Config class holds Pydantic configuration. A number of LUTE-specific
+configuration has also been placed here.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>env_prefix</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Will set parameters from
+environment variables containing this prefix. E.g. a model
+parameter <code>input</code> can be set with an environment variable:
+<code>{env_prefix}input</code>, in LUTE's case <code>LUTE_input</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>underscore_attrs_are_private</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Whether
+to hide attributes (parameters) prefixed with an underscore.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>copy_on_model_validation</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. How to copy
+the input object passed to the class instance for model
+validation. Set to perform a deep copy.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>allow_inf_nan</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Whether to allow
+infinity or NAN in float fields.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>run_directory</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. If set, it should be a valid
+path. The <code>Task</code> will be run from this directory. This may be
+useful for some <code>Task</code>s which rely on searching the working
+directory.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>result_from_params</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. Optionally used to define
+results from information available in the model using a custom
+validator. E.g. use a <code>outdir</code> and <code>filename</code> field to set
+<code>result_from_params=f"{outdir}/{filename}</code>, etc. Only used if
+<code>set_result==True</code></p>
+              </div>
+            </li>
+            <li>
+              <b><code>result_summary</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. Defines a result summary that
+can be known after processing the Pydantic model. Use of summary
+depends on the Executor running the Task. All summaries are
+stored in the database, however. Only used if <code>set_result==True</code></p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config:
+    """Configuration for parameters model.
+
+    The Config class holds Pydantic configuration. A number of LUTE-specific
+    configuration has also been placed here.
+
+    Attributes:
+        env_prefix (str): Pydantic configuration. Will set parameters from
+            environment variables containing this prefix. E.g. a model
+            parameter `input` can be set with an environment variable:
+            `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+        underscore_attrs_are_private (bool): Pydantic configuration. Whether
+            to hide attributes (parameters) prefixed with an underscore.
+
+        copy_on_model_validation (str): Pydantic configuration. How to copy
+            the input object passed to the class instance for model
+            validation. Set to perform a deep copy.
+
+        allow_inf_nan (bool): Pydantic configuration. Whether to allow
+            infinity or NAN in float fields.
+
+        run_directory (Optional[str]): None. If set, it should be a valid
+            path. The `Task` will be run from this directory. This may be
+            useful for some `Task`s which rely on searching the working
+            directory.
+
+        set_result (bool). False. If True, the model has information about
+            setting the TaskResult object from the parameters it contains.
+            E.g. it has an `output` parameter which is marked as the result.
+            The result can be set with a field value of `is_result=True` on
+            a specific parameter, or using `result_from_params` and a
+            validator.
+
+        result_from_params (Optional[str]): None. Optionally used to define
+            results from information available in the model using a custom
+            validator. E.g. use a `outdir` and `filename` field to set
+            `result_from_params=f"{outdir}/{filename}`, etc. Only used if
+            `set_result==True`
+
+        result_summary (Optional[str]): None. Defines a result summary that
+            can be known after processing the Pydantic model. Use of summary
+            depends on the Executor running the Task. All summaries are
+            stored in the database, however. Only used if `set_result==True`
+
+        impl_schemas (Optional[str]). Specifies a the schemas the
+            output/results conform to. Only used if `set_result==True`.
+    """
+
+    env_prefix = "LUTE_"
+    underscore_attrs_are_private: bool = True
+    copy_on_model_validation: str = "deep"
+    allow_inf_nan: bool = False
+
+    run_directory: Optional[str] = None
+    """Set the directory that the Task is run from."""
+    set_result: bool = False
+    """Whether the Executor should mark a specified parameter as a result."""
+    result_from_params: Optional[str] = None
+    """Defines a result from the parameters. Use a validator to do so."""
+    result_summary: Optional[str] = None
+    """Format a TaskResult.summary from output."""
+    impl_schemas: Optional[str] = None
+    """Schema specification for output result. Will be passed to TaskResult."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.TaskParameters.Config.impl_schemas" class="doc doc-heading">
+            <code class="highlight language-python">impl_schemas: Optional[str] = None</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Schema specification for output result. Will be passed to TaskResult.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.TaskParameters.Config.result_from_params" class="doc doc-heading">
+            <code class="highlight language-python">result_from_params: Optional[str] = None</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Defines a result from the parameters. Use a validator to do so.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.TaskParameters.Config.result_summary" class="doc doc-heading">
+            <code class="highlight language-python">result_summary: Optional[str] = None</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Format a TaskResult.summary from output.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.TaskParameters.Config.run_directory" class="doc doc-heading">
+            <code class="highlight language-python">run_directory: Optional[str] = None</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Set the directory that the Task is run from.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.TaskParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = False</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.base.TemplateConfig" class="doc doc-heading">
+            <code>TemplateConfig</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+      <p>Parameters used for templating of third party configuration files.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>template_name</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>The name of the template to use. This template must
+live in <code>config/templates</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>output_path</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>The FULL path, including filename to write the
+rendered template to.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TemplateConfig(BaseModel):
+    """Parameters used for templating of third party configuration files.
+
+    Attributes:
+        template_name (str): The name of the template to use. This template must
+            live in `config/templates`.
+
+        output_path (str): The FULL path, including filename to write the
+            rendered template to.
+    """
+
+    template_name: str
+    output_path: str</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.base.TemplateParameters" class="doc doc-heading">
+            <code>TemplateParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+
+      <p>Class for representing parameters for third party configuration files.</p>
+<p>These parameters can represent arbitrary data types and are used in
+conjunction with templates for modifying third party configuration files
+from the single LUTE YAML. Due to the storage of arbitrary data types, and
+the use of a template file, a single instance of this class can hold from a
+single template variable to an entire configuration file. The data parsing
+is done by jinja using the complementary template.
+All data is stored in the single model variable <code>params.</code></p>
+<p>The pydantic "dataclass" is used over the BaseModel/Settings to allow
+positional argument instantiation of the <code>params</code> Field.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class TemplateParameters:
+    """Class for representing parameters for third party configuration files.
+
+    These parameters can represent arbitrary data types and are used in
+    conjunction with templates for modifying third party configuration files
+    from the single LUTE YAML. Due to the storage of arbitrary data types, and
+    the use of a template file, a single instance of this class can hold from a
+    single template variable to an entire configuration file. The data parsing
+    is done by jinja using the complementary template.
+    All data is stored in the single model variable `params.`
+
+    The pydantic "dataclass" is used over the BaseModel/Settings to allow
+    positional argument instantiation of the `params` Field.
+    """
+
+    params: Any</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.models.base.ThirdPartyParameters" class="doc doc-heading">
+            <code>ThirdPartyParameters</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters" href="#io.models.base.TaskParameters">TaskParameters</a></code></p>
+
+
+      <p>Base class for third party task parameters.</p>
+<p>Contains special validators for extra arguments and handling of parameters
+used for filling in third party configuration files.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class ThirdPartyParameters(TaskParameters):
+    """Base class for third party task parameters.
+
+    Contains special validators for extra arguments and handling of parameters
+    used for filling in third party configuration files.
+    """
+
+    class Config(TaskParameters.Config):
+        """Configuration for parameters model.
+
+        The Config class holds Pydantic configuration and inherited configuration
+        from the base `TaskParameters.Config` class. A number of values are also
+        overridden, and there are some specific configuration options to
+        ThirdPartyParameters. A full list of options (with TaskParameters options
+        repeated) is described below.
+
+        Attributes:
+            env_prefix (str): Pydantic configuration. Will set parameters from
+                environment variables containing this prefix. E.g. a model
+                parameter `input` can be set with an environment variable:
+                `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+            underscore_attrs_are_private (bool): Pydantic configuration. Whether
+                to hide attributes (parameters) prefixed with an underscore.
+
+            copy_on_model_validation (str): Pydantic configuration. How to copy
+                the input object passed to the class instance for model
+                validation. Set to perform a deep copy.
+
+            allow_inf_nan (bool): Pydantic configuration. Whether to allow
+                infinity or NAN in float fields.
+
+            run_directory (Optional[str]): None. If set, it should be a valid
+                path. The `Task` will be run from this directory. This may be
+                useful for some `Task`s which rely on searching the working
+                directory.
+
+            set_result (bool). True. If True, the model has information about
+                setting the TaskResult object from the parameters it contains.
+                E.g. it has an `output` parameter which is marked as the result.
+                The result can be set with a field value of `is_result=True` on
+                a specific parameter, or using `result_from_params` and a
+                validator.
+
+            result_from_params (Optional[str]): None. Optionally used to define
+                results from information available in the model using a custom
+                validator. E.g. use a `outdir` and `filename` field to set
+                `result_from_params=f"{outdir}/{filename}`, etc.
+
+            result_summary (Optional[str]): None. Defines a result summary that
+                can be known after processing the Pydantic model. Use of summary
+                depends on the Executor running the Task. All summaries are
+                stored in the database, however.
+
+            impl_schemas (Optional[str]). Specifies a the schemas the
+                output/results conform to. Only used if set_result is True.
+
+            -----------------------
+            ThirdPartyTask-specific:
+
+            extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
+                arguments.
+
+            short_flags_use_eq (bool): False. If True, "short" command-line args
+                are passed as `-x=arg`. ThirdPartyTask-specific.
+
+            long_flags_use_eq (bool): False. If True, "long" command-line args
+                are passed as `--long=arg`. ThirdPartyTask-specific.
+        """
+
+        extra: str = "allow"
+        short_flags_use_eq: bool = False
+        """Whether short command-line arguments are passed like `-x=arg`."""
+        long_flags_use_eq: bool = False
+        """Whether long command-line arguments are passed like `--long=arg`."""
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    # lute_template_cfg: TemplateConfig
+
+    @root_validator(pre=False)
+    def extra_fields_to_thirdparty(cls, values: Dict[str, Any]):
+        for key in values:
+            if key not in cls.__fields__:
+                values[key] = TemplateParameters(values[key])
+
+        return values</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="io.models.base.ThirdPartyParameters.Config" class="doc doc-heading">
+            <code>Config</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="io.models.base.TaskParameters.Config" href="#io.models.base.TaskParameters.Config">Config</a></code></p>
+
+
+      <p>Configuration for parameters model.</p>
+<p>The Config class holds Pydantic configuration and inherited configuration
+from the base <code>TaskParameters.Config</code> class. A number of values are also
+overridden, and there are some specific configuration options to
+ThirdPartyParameters. A full list of options (with TaskParameters options
+repeated) is described below.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>env_prefix</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Will set parameters from
+environment variables containing this prefix. E.g. a model
+parameter <code>input</code> can be set with an environment variable:
+<code>{env_prefix}input</code>, in LUTE's case <code>LUTE_input</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>underscore_attrs_are_private</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Whether
+to hide attributes (parameters) prefixed with an underscore.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>copy_on_model_validation</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. How to copy
+the input object passed to the class instance for model
+validation. Set to perform a deep copy.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>allow_inf_nan</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>Pydantic configuration. Whether to allow
+infinity or NAN in float fields.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>run_directory</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. If set, it should be a valid
+path. The <code>Task</code> will be run from this directory. This may be
+useful for some <code>Task</code>s which rely on searching the working
+directory.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>result_from_params</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. Optionally used to define
+results from information available in the model using a custom
+validator. E.g. use a <code>outdir</code> and <code>filename</code> field to set
+<code>result_from_params=f"{outdir}/{filename}</code>, etc.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>result_summary</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>None. Defines a result summary that
+can be known after processing the Pydantic model. Use of summary
+depends on the Executor running the Task. All summaries are
+stored in the database, however.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>ThirdPartyTask-specific</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                
+              </div>
+            </li>
+            <li>
+              <b><code>extra</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>"allow". Pydantic configuration. Allow (or ignore) extra
+arguments.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>short_flags_use_eq</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>False. If True, "short" command-line args
+are passed as <code>-x=arg</code>. ThirdPartyTask-specific.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>long_flags_use_eq</code></b>
+                  (<code>bool</code>)
+              –
+              <div class="doc-md-description">
+                <p>False. If True, "long" command-line args
+are passed as <code>--long=arg</code>. ThirdPartyTask-specific.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+              <details class="quote">
+                <summary>Source code in <code>lute/io/models/base.py</code></summary>
+                <pre class="highlight"><code class="language-python">class Config(TaskParameters.Config):
+    """Configuration for parameters model.
+
+    The Config class holds Pydantic configuration and inherited configuration
+    from the base `TaskParameters.Config` class. A number of values are also
+    overridden, and there are some specific configuration options to
+    ThirdPartyParameters. A full list of options (with TaskParameters options
+    repeated) is described below.
+
+    Attributes:
+        env_prefix (str): Pydantic configuration. Will set parameters from
+            environment variables containing this prefix. E.g. a model
+            parameter `input` can be set with an environment variable:
+            `{env_prefix}input`, in LUTE's case `LUTE_input`.
+
+        underscore_attrs_are_private (bool): Pydantic configuration. Whether
+            to hide attributes (parameters) prefixed with an underscore.
+
+        copy_on_model_validation (str): Pydantic configuration. How to copy
+            the input object passed to the class instance for model
+            validation. Set to perform a deep copy.
+
+        allow_inf_nan (bool): Pydantic configuration. Whether to allow
+            infinity or NAN in float fields.
+
+        run_directory (Optional[str]): None. If set, it should be a valid
+            path. The `Task` will be run from this directory. This may be
+            useful for some `Task`s which rely on searching the working
+            directory.
+
+        set_result (bool). True. If True, the model has information about
+            setting the TaskResult object from the parameters it contains.
+            E.g. it has an `output` parameter which is marked as the result.
+            The result can be set with a field value of `is_result=True` on
+            a specific parameter, or using `result_from_params` and a
+            validator.
+
+        result_from_params (Optional[str]): None. Optionally used to define
+            results from information available in the model using a custom
+            validator. E.g. use a `outdir` and `filename` field to set
+            `result_from_params=f"{outdir}/{filename}`, etc.
+
+        result_summary (Optional[str]): None. Defines a result summary that
+            can be known after processing the Pydantic model. Use of summary
+            depends on the Executor running the Task. All summaries are
+            stored in the database, however.
+
+        impl_schemas (Optional[str]). Specifies a the schemas the
+            output/results conform to. Only used if set_result is True.
+
+        -----------------------
+        ThirdPartyTask-specific:
+
+        extra (str): "allow". Pydantic configuration. Allow (or ignore) extra
+            arguments.
+
+        short_flags_use_eq (bool): False. If True, "short" command-line args
+            are passed as `-x=arg`. ThirdPartyTask-specific.
+
+        long_flags_use_eq (bool): False. If True, "long" command-line args
+            are passed as `--long=arg`. ThirdPartyTask-specific.
+    """
+
+    extra: str = "allow"
+    short_flags_use_eq: bool = False
+    """Whether short command-line arguments are passed like `-x=arg`."""
+    long_flags_use_eq: bool = False
+    """Whether long command-line arguments are passed like `--long=arg`."""
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.ThirdPartyParameters.Config.long_flags_use_eq" class="doc doc-heading">
+            <code class="highlight language-python">long_flags_use_eq: bool = False</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether long command-line arguments are passed like <code>--long=arg</code>.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.ThirdPartyParameters.Config.set_result" class="doc doc-heading">
+            <code class="highlight language-python">set_result: bool = True</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether the Executor should mark a specified parameter as a result.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="io.models.base.ThirdPartyParameters.Config.short_flags_use_eq" class="doc doc-heading">
+            <code class="highlight language-python">short_flags_use_eq: bool = False</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Whether short command-line arguments are passed like <code>-x=arg</code>.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../../tasks/test/" class="btn btn-neutral float-left" title="test"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../sfx_find_peaks/" class="btn btn-neutral float-right" title="sfx_find_peaks">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../../../tasks/test/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../sfx_find_peaks/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../../..';</script>
+    <script src="../../../../js/theme_extra.js" defer></script>
+    <script src="../../../../js/theme.js" defer></script>
+      <script src="../../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

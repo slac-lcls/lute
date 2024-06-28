@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Creating a new Task - LUTE</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Creating a new Task";
+        var mkdocs_page_input_path = "tutorial/new_task.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Creating a new Task</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#creating-a-third-party-task">Creating a "Third-party" Task</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#specifying-a-taskparameters-model-for-your-task">Specifying a TaskParameters Model for your Task</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#faq">FAQ</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#specifying-an-executor-creating-a-runnable-managed-task">Specifying an Executor: Creating a runnable, "managed Task"</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#using-templates-managing-third-party-configuration-files">Using templates: managing third-party configuration files</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#additional-jinja-syntax">Additional Jinja Syntax</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#creating-a-first-party-task">Creating a "First-Party" Task</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#specifying-a-taskparameters-model-for-your-task_1">Specifying a TaskParameters Model for your Task</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#writing-the-task">Writing the Task</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#making-your-task-available">Making your Task available</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#defining-an-executor">Defining an Executor</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Walkthroughs &raquo;</li>
+      <li>Creating a new Task</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/tutorial/new_task.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="integrating-a-new-task">Integrating a New <code>Task</code></h1>
+<p><code>Task</code>s can be broadly categorized into two types:
+- "First-party" - where the analysis or executed code is maintained within this library.
+- "Third-party" - where the analysis, code, or program is maintained elsewhere and is simply called by a wrapping <code>Task</code>.</p>
+<p>Creating a new <code>Task</code> of either type generally involves the same steps, although for first-party <code>Task</code>s, the analysis code must of course also be written. Due to this difference, as well as additional considerations for parameter handling when dealing with "third-party" <code>Task</code>s, the "first-party" and "third-party" <code>Task</code> integration cases will be considered separately.</p>
+<h2 id="creating-a-third-party-task">Creating a "Third-party" <code>Task</code></h2>
+<p>There are two required steps for third-party <code>Task</code> integration, and one additional step which is optional, and may not be applicable to all possible third-party <code>Task</code>s. Generally, <code>Task</code> integration requires:
+1. Defining a <code>TaskParameters</code> (pydantic) model which fully parameterizes the <code>Task</code>. This involves specifying a path to a binary, and all the required command-line arguments to run the binary.
+2. Creating a <strong>managed <code>Task</code></strong> by specifying an <code>Executor</code> for the new third-party <code>Task</code>. At this stage, any additional environment variables can be added which are required for the execution environment.
+3. <strong>(Optional/Maybe applicable)</strong> Create a template for a third-party configuration file. If the new <code>Task</code> has its own configuration file, specifying a template will allow that file to be parameterized from the singular LUTE yaml configuration file. A couple of minor additions to the <code>pydantic</code> model specified in 1. are required to support template usage.</p>
+<p>Each of these stages will be discussed in detail below. The vast majority of the work is completed in step 1.</p>
+<h3 id="specifying-a-taskparameters-model-for-your-task">Specifying a <code>TaskParameters</code> Model for your <code>Task</code></h3>
+<p>A brief overview of parameters objects will be provided below. The following information goes into detail only about specifics related to LUTE configuration. An in depth description of pydantic is beyond the scope of this tutorial; please refer to the <a href="https://docs.pydantic.dev/1.10/">official documentation</a> for more information. Please note that due to environment constraints pydantic is currently pinned to version 1.10! Make sure to read the appropriate documentation for this version as many things are different compared to the newer releases. At the end this document there will be an example highlighting some supported behaviour as well as a FAQ to address some common integration considerations.</p>
+<p><strong><code>Task</code>s and <code>TaskParameter</code>s</strong></p>
+<p>All <code>Task</code>s have a corresponding <code>TaskParameters</code> object. These objects are linked <strong>exclusively</strong> by a named relationship. For a <code>Task</code> named <code>MyThirdPartyTask</code>, the parameters object <strong>must</strong> be named <code>MyThirdPartyTaskParameters</code>. For third-party <code>Task</code>s there are a number of additional requirements:
+- The model must inherit from a base class called <code>ThirdPartyParameters</code>.
+- The model must have one field specified called <code>executable</code>. The presence of this field indicates that the <code>Task</code> is a third-party <code>Task</code> and the specified executable must be called. This allows all third-party <code>Task</code>s to be defined exclusively by their parameters model. A single <code>ThirdPartyTask</code> class handles execution of <strong>all</strong> third-party <code>Task</code>s.</p>
+<p>All models are stored in <code>lute/io/models</code>. For any given <code>Task</code>, a new model can be added to an existing module contained in this directory or to a new module. If creating a new module, make sure to add an import statement to <code>lute.io.models.__init__</code>.</p>
+<p><strong>Defining <code>TaskParameter</code>s</strong></p>
+<p>When specifying parameters the default behaviour is to provide a one-to-one correspondance between the Python attribute specified in the parameter model, and the parameter specified on the command-line. Single-letter attributes are assumed to be passed using <code>-</code>, e.g. <code>n</code> will be passed as <code>-n</code> when the executable is launched. Longer attributes are passed using <code>--</code>, e.g. by default a model attribute named <code>my_arg</code> will be passed on the command-line as <code>--my_arg</code>. Positional arguments are specified using <code>p_argX</code> where <code>X</code> is a number. All parameters are passed in the order that they are specified in the model.</p>
+<p>However, because the number of possible command-line combinations is large, relying on the default behaviour above is <strong>NOT recommended</strong>. It is provided solely as a fallback. Instead, there are a number of configuration knobs which can be tuned to achieve the desired behaviour. The two main mechanisms for controlling behaviour are specification of model-wide configuration under the <code>Config</code> class within the model's definition, and parameter-by-parameter configuration using field attributes. For the latter, we define all parameters as <code>Field</code> objects. This allows parameters to have their own attributes, which are parsed by LUTE's task-layer. Given this, the preferred starting template for a <code>TaskParameters</code> model is the following - we assume we are integrating a new <code>Task</code> called <code>RunTask</code>:</p>
+<pre><code class="language-py">
+from pydantic import Field, validator
+# Also include any pydantic type specifications - Pydantic has many custom
+# validation types already, e.g. types for constrained numberic values, URL handling, etc.
+
+from .base import ThirdPartyParameters
+
+# Change class name as necessary
+class RunTaskParameters(ThirdPartyParameters):
+    &quot;&quot;&quot;Parameters for RunTask...&quot;&quot;&quot;
+
+    class Config(ThirdPartyParameters.Config): # MUST be exactly as written here.
+        ...
+        # Model-wide configuration will go here
+
+    executable: str = Field(&quot;/path/to/executable&quot;, description=&quot;...&quot;)
+    ...
+    # Additional params.
+    # param1: param1Type = Field(&quot;default&quot;, description=&quot;&quot;, ...)
+</code></pre>
+<p><strong>Config settings and options</strong>
+Under the class definition for <code>Config</code> in the model, we can modify global options for all the parameters. In addition, there are a number of configuration options related to specifying what the outputs/results from the associated <code>Task</code> are, and a number of options to modify runtime behaviour. Currently, the available configuration options are:</p>
+<table>
+<thead>
+<tr>
+<th align="center"><strong>Config Parameter</strong></th>
+<th align="center"><strong>Meaning</strong></th>
+<th align="center"><strong>Default Value</strong></th>
+<th align="center"><strong>ThirdPartyTask-specific?</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>run_directory</code></td>
+<td align="center">If provided, can be used to specify the directory from which a <code>Task</code> is run.</td>
+<td align="center"><code>None</code> (not provided)</td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>set_result</code></td>
+<td align="center"><code>bool</code>. If <code>True</code> search the model definition for a parameter that indicates what the result is.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>result_from_params</code></td>
+<td align="center">If <code>set_result</code> is <code>True</code> can define a result using this option and a validator. See also <code>is_result</code> below.</td>
+<td align="center"><code>None</code> (not provided)</td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>short_flags_use_eq</code></td>
+<td align="center">Use equals sign instead of space for arguments of <code>-</code> parameters.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>YES</strong> - Only affects <code>ThirdPartyTask</code>s</td>
+</tr>
+<tr>
+<td align="center"><code>long_flags_use_eq</code></td>
+<td align="center">Use equals sign instead of space for arguments of <code>-</code> parameters.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>YES</strong> - Only affects <code>ThirdPartyTask</code>s</td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<p>These configuration options modify how the parameter models are parsed and passed along on the command-line, as well as what we consider results and where a <code>Task</code> can run. The default behaviour is that parameters are assumed to be passed as <code>-p arg</code> and <code>--param arg</code>, the <code>Task</code> will be run in the current working directory (or scratch if submitted with the ARP), and we have no information about <code>Task</code> results . Setting the above options can modify this behaviour.</p>
+<ul>
+<li>By setting <code>short_flags_use_eq</code> and/or <code>long_flags_use_eq</code> to <code>True</code> parameters are instead passed as <code>-p=arg</code> and <code>--param=arg</code>.</li>
+<li>By setting <code>run_directory</code> to a valid path, we can force a <code>Task</code> to be run in a specific directory. By default the <code>Task</code> will be run from the directory you submit the job in, or from your scratch folder (<code>/sdf/scratch/...</code>) if you submit from the eLog. Some <code>ThirdPartyTask</code>s rely on searching the correct working directory in order run properly.</li>
+<li>By setting <code>set_result</code> to <code>True</code> we indicate that the <code>TaskParameters</code> model will provide information on what the <code>TaskResult</code> is. This setting must be used with one of two options, either the <code>result_from_params</code> <code>Config</code> option, described below, or the <strong>Field</strong> attribute <code>is_result</code> described in the next sub-section (<strong>Field Attributes</strong>).</li>
+<li><code>result_from_params</code> is a Config option that can be used when <code>set_result==True</code>. In conjunction with a <strong>validator</strong> (described a sections down) we can use this option to specify a result from all the information contained in the model. E.g. if you have a <code>Task</code> that has parameters for an <code>output_directory</code> and a <code>output_filename</code>, you can set <code>result_from_params==f"{output_directory}/{output_filename}"</code>.</li>
+</ul>
+<p><strong>Field attributes</strong>
+In addition to the global configuration options there are a couple of ways to specify individual parameters. The following <code>Field</code> attributes are used when parsing the model:</p>
+<table>
+<thead>
+<tr>
+<th align="center"><strong>Field Attribute</strong></th>
+<th align="center"><strong>Meaning</strong></th>
+<th align="center"><strong>Default Value</strong></th>
+<th align="center"><strong>Example</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>flag_type</code></td>
+<td align="center">Specify the type of flag for passing this argument. One of <code>"-"</code>, <code>"--"</code>, or <code>""</code></td>
+<td align="center">N/A</td>
+<td align="center"><code>p_arg1 = Field(..., flag_type="")</code></td>
+</tr>
+<tr>
+<td align="center"><code>rename_param</code></td>
+<td align="center">Change the name of the parameter as passed on the command-line.</td>
+<td align="center">N/A</td>
+<td align="center"><code>my_arg = Field(..., rename_param="my-arg")</code></td>
+</tr>
+<tr>
+<td align="center"><code>description</code></td>
+<td align="center">Documentation of the parameter's usage or purpose.</td>
+<td align="center">N/A</td>
+<td align="center"><code>arg = Field(..., description="Argument for...")</code></td>
+</tr>
+<tr>
+<td align="center"><code>is_result</code></td>
+<td align="center"><code>bool</code>. If the <code>set_result</code> <code>Config</code> option is <code>True</code>, we can set this to <code>True</code> to indicate a result.</td>
+<td align="center">N/A</td>
+<td align="center"><code>output_result = Field(..., is_result=true)</code></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>flag_type</code> attribute allows us to specify whether the parameter corresponds to a positional (<code>""</code>) command line argument, requires a single hyphen (<code>"-"</code>), or a double hyphen (<code>"--"</code>). By default, the parameter name is passed as-is on the command-line. However, command-line arguments can have characters which would not be valid in Python variable names. In particular, hyphens are frequently used. To handle this case, the <code>rename_param</code> attribute can be used to specify an alternative spelling of the parameter when it is passed on the command-line. This also allows for using more descriptive variable names internally than those used on the command-line. A <code>description</code> can also be provided for each Field to document the usage and purpose of that particular parameter.</p>
+<p>As an example, we can again consider defining a model for a <code>RunTask</code> <code>Task</code>. Consider an executable which would normally be called from the command-line as follows:</p>
+<pre><code class="language-bash">/sdf/group/lcls/ds/tools/runtask -n &lt;nthreads&gt; --method=&lt;algorithm&gt; -p &lt;algo_param&gt; [--debug]
+</code></pre>
+<p>A model specification for this <code>Task</code> may look like:</p>
+<pre><code class="language-py">class RunTaskParameters(ThirdPartyParameters):
+    &quot;&quot;&quot;Parameters for the runtask binary.&quot;&quot;&quot;
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True  # For the --method parameter
+
+    # Prefer using full/absolute paths where possible.
+    # No flag_type needed for this field
+    executable: str = Field(
+        &quot;/sdf/group/lcls/ds/tools/runtask&quot;, description=&quot;Runtask Binary v1.0&quot;
+    )
+
+    # We can provide a more descriptive name for -n
+    # Let's assume it's a number of threads, or processes, etc.
+    num_threads: int = Field(
+        1, description=&quot;Number of concurrent threads.&quot;, flag_type=&quot;-&quot;, rename_param=&quot;n&quot;
+    )
+
+    # In this case we will use the Python variable name directly when passing
+    # the parameter on the command-line
+    method: str = Field(&quot;algo1&quot;, description=&quot;Algorithm to use.&quot;, flag_type=&quot;--&quot;)
+
+    # For an actual parameter we would probably have a better name. Lets assume
+    # This parameter (-p) modifies the behaviour of the method above.
+    method_param1: int = Field(
+        3, description=&quot;Modify method performance.&quot;, flag_type=&quot;-&quot;, rename_param=&quot;p&quot;
+    )
+
+    # Boolean flags are only passed when True! `--debug` is an optional parameter
+    # which is not followed by any arguments.
+    debug: bool = Field(
+        False, description=&quot;Whether to run in debug mode.&quot;, flag_type=&quot;--&quot;
+    )
+</code></pre>
+<p>The <code>is_result</code> attribute allows us to specify whether the corresponding Field points to the output/result of the associated <code>Task</code>. Consider a <code>Task</code>, <code>RunTask2</code> which writes its output to a single file which is passed as a parameter.</p>
+<pre><code class="language-py">class RunTask2Parameters(ThirdPartyParameters):
+    &quot;&quot;&quot;Parameters for the runtask2 binary.&quot;&quot;&quot;
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True                     # This must be set here!
+        # result_from_params: Optional[str] = None  # We can use this for more complex result setups (see below). Ignore for now.
+
+    # Prefer using full/absolute paths where possible.
+    # No flag_type needed for this field
+    executable: str = Field(
+        &quot;/sdf/group/lcls/ds/tools/runtask2&quot;, description=&quot;Runtask Binary v2.0&quot;
+    )
+
+    # Lets assume we take one input and write one output file
+    # We will not provide a default value, so this parameter MUST be provided
+    input: str = Field(
+        description=&quot;Path to input file.&quot;, flag_type=&quot;--&quot;
+    )
+
+    # We will also not provide a default for the output
+    # BUT, we will specify that whatever is provided is the result
+    output: str = Field(
+        description=&quot;Path to write output to.&quot;,
+        flag_type=&quot;-&quot;,
+        rename_param=&quot;o&quot;,
+        is_result=True,   # This means this parameter points to the result!
+    )
+</code></pre>
+<p><strong>Additional Comments</strong>
+1. Model parameters of type <code>bool</code> are not passed with an argument and are only passed when <code>True</code>. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. <code>--debug</code>, <code>--test</code>, <code>--verbose</code>, etc.
+  - If you need to pass the literal words <code>"True"</code> or <code>"False"</code>, use a parameter of type <code>str</code>.
+2. You can use <code>pydantic</code> types to constrain parameters beyond the basic Python types. E.g. <code>conint</code> can be used to define lower and upper bounds for an integer. There are also types for common categories, positive/negative numbers, paths, URLs, IP addresses, etc.
+  - Even more custom behaviour can be achieved with <code>validator</code>s (see below).
+3. All <code>TaskParameters</code> objects and its subclasses have access to a <code>lute_config</code> parameter, which is of type <code>lute.io.models.base.AnalysisHeader</code>. This special parameter is ignored when constructing the call for a binary task, but it provides access to shared/common parameters between tasks. For example, the following parameters are available through the <code>lute_config</code> object, and may be of use when constructing validators. All fields can be accessed with <code>.</code> notation. E.g. <code>lute_config.experiment</code>.
+  - <code>title</code>: A user provided title/description of the analysis.
+  - <code>experiment</code>: The current experiment name
+  - <code>run</code>: The current acquisition run number
+  - <code>date</code>: The date of the experiment or the analysis.
+  - <code>lute_version</code>: The version of the software you are running.
+  - <code>task_timeout</code>: How long a <code>Task</code> can run before it is killed.
+  - <code>work_dir</code>: The main working directory for LUTE. Files and the database are created relative to this directory. This is separate from the <code>run_directory</code> config option. LUTE will write files to the work directory by default; however, the <code>Task</code> itself is run from <code>run_directory</code> if it is specified.</p>
+<p><strong>Validators</strong>
+Pydantic uses <code>validators</code> to determine whether a value for a specific field is appropriate. There are default validators for all the standard library types and the types specified within the pydantic package; however, it is straightforward to define custom ones as well. In the template code-snippet above we imported the <code>validator</code> decorator. To create our own validator we define a method (with any name) with the following prototype, and decorate it with the <code>validator</code> decorator:</p>
+<pre><code class="language-py">@validator(&quot;name_of_field_to_decorate&quot;)
+def my_custom_validator(cls, field: Any, values: Dict[str, Any]) -&gt; Any: ...
+</code></pre>
+<p>In this snippet, the <code>field</code> variable corresponds to the value for the specific field we want to validate. <code>values</code> is a dictionary of fields and their values which have been parsed prior to the current field. This means you can validate the value of a parameter based on the values provided for other parameters. Since pydantic always validates the fields in the order they are defined in the model, fields dependent on other fields should come later in the definition.</p>
+<p>For example, consider the <code>method_param1</code> field defined above for <code>RunTask</code>. We can provide a custom validator which changes the default value for this field depending on what type of algorithm is specified for the <code>--method</code> option. We will also constrain the options for <code>method</code> to two specific strings.</p>
+<pre><code class="language-py">from pydantic import Field, validator, ValidationError, root_validator
+class RunTaskParameters(ThirdPartyParameters):
+    &quot;&quot;&quot;Parameters for the runtask binary.&quot;&quot;&quot;
+
+    # [...]
+
+    # In this case we will use the Python variable name directly when passing
+    # the parameter on the command-line
+    method: str = Field(&quot;algo1&quot;, description=&quot;Algorithm to use.&quot;, flag_type=&quot;--&quot;)
+
+    # For an actual parameter we would probably have a better name. Lets assume
+    # This parameter (-p) modifies the behaviour of the method above.
+    method_param1: Optional[int] = Field(
+        description=&quot;Modify method performance.&quot;, flag_type=&quot;-&quot;, rename_param=&quot;p&quot;
+    )
+
+    # We will only allow method to take on one of two values
+    @validator(&quot;method&quot;)
+    def validate_method(cls, method: str, values: Dict[str, Any]) -&gt; str:
+        &quot;&quot;&quot;Method validator: --method can be algo1 or algo2.&quot;&quot;&quot;
+
+        valid_methods: List[str] = [&quot;algo1&quot;, &quot;algo2&quot;]
+        if method not in valid_methods:
+            raise ValueError(&quot;method must be algo1 or algo2&quot;)
+        return method
+
+    # Lets change the default value of `method_param1` depending on `method`
+    # NOTE: We didn't provide a default value to the Field above and made it
+    # optional. We can use this to test whether someone is purposefully
+    # overriding the value of it, and if not, set the default ourselves.
+    # We set `always=True` since pydantic will normally not use the validator
+    # if the default is not changed
+    @validator(&quot;method_param1&quot;, always=True)
+    def validate_method_param1(cls, param1: Optional[int], values: Dict[str, Any]) -&gt; int:
+        &quot;&quot;&quot;method param1 validator&quot;&quot;&quot;
+
+        # If someone actively defined it, lets just return that value
+        # We could instead do some additional validation to make sure that the
+        # value they provided is valid...
+        if param1 is not None:
+            return param1
+
+        # method_param1 comes after method, so this will be defined, or an error
+        # would have been raised.
+        method: str = values['method']
+        if method == &quot;algo1&quot;:
+            return 3
+        elif method == &quot;algo2&quot;:
+            return 5
+</code></pre>
+<p>The special <code>root_validator(pre=False)</code> can also be used to provide validation of the model as a whole. This is also the recommended method for specifying a result (using <code>result_from_params</code>) which has a complex dependence on the parameters of the model. This latter use-case is described in FAQ 2 below.</p>
+<h4 id="faq">FAQ</h4>
+<ol>
+<li>How can I specify a default value which depends on another parameter?</li>
+</ol>
+<p>Use a custom validator. The example above shows how to do this. The parameter that depends on another parameter must come LATER in the model defintion than the independent parameter.</p>
+<ol>
+<li>My <code>TaskResult</code> is determinable from the parameters model, but it isn't easily specified by one parameter. How can I use <code>result_from_params</code> to indicate the result?</li>
+</ol>
+<p>When a result can be identified from the set of parameters defined in a <code>TaskParameters</code> model, but is not as straightforward as saying it is equivalent to one of the parameters alone, we can set <code>result_from_params</code> using a custom validator. In the example below, we have two parameters which together determine what the result is, <code>output_dir</code> and <code>out_name</code>. Using a validator we will define a result from these two values.</p>
+<pre><code class="language-py">from pydantic import Field, root_validator
+
+class RunTask3Parameters(ThirdPartyParameters):
+    &quot;&quot;&quot;Parameters for the runtask3 binary.&quot;&quot;&quot;
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True       # This must be set here!
+        result_from_params: str = &quot;&quot;  # We will set this momentarily
+
+    # [...] executable, other params, etc.
+
+    output_dir: str = Field(
+        description=&quot;Directory to write output to.&quot;,
+        flag_type=&quot;--&quot;,
+        rename_param=&quot;dir&quot;,
+    )
+
+    out_name: str = Field(
+        description=&quot;The name of the final output file.&quot;,
+        flag_type=&quot;--&quot;,
+        rename_param=&quot;oname&quot;,
+    )
+
+    # We can still provide other validators as needed
+    # But for now, we just set result_from_params
+    # Validator name can be anything, we set pre=False so this runs at the end
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -&gt; Dict[str, Any]:
+        # Extract the values of output_dir and out_name
+        output_dir: str = values[&quot;output_dir&quot;]
+        out_name: str = values[&quot;out_name&quot;]
+
+        result: str = f&quot;{output_dir}/{out_name}&quot;
+        # Now we set result_from_params
+        cls.Config.result_from_params = result
+
+        # We haven't modified any other values, but we MUST return this!
+        return values
+</code></pre>
+<ol>
+<li>My new <code>Task</code> depends on the output of a previous <code>Task</code>, how can I specify this dependency?
+Parameters used to run a <code>Task</code> are recorded in a database for every <code>Task</code>. It is also recorded whether or not the execution of that specific parameter set was successful. A utility function is provided to access the most recent values from the database for a specific parameter of a specific <code>Task</code>. It can also be used to specify whether unsuccessful <code>Task</code>s should be included in the query. This utility can be used within a validator to specify dependencies. For example, suppose the input of <code>RunTask2</code> (parameter <code>input</code>) depends on the output location of <code>RunTask1</code> (parameter <code>outfile</code>). A validator of the following type can be used to retrieve the output file and make it the default value of the input parameter.</li>
+</ol>
+<pre><code class="language-py">from pydantic import Field, validator
+
+from .base import ThirdPartyParameters
+from ..db import read_latest_db_entry
+
+class RunTask2Parameters(ThirdPartyParameters):
+    input: str = Field(&quot;&quot;, description=&quot;Input file.&quot;, flag_type=&quot;--&quot;)
+
+    @validator(&quot;input&quot;)
+    def validate_input(cls, input: str, values: Dict[str, Any]) -&gt; str:
+        if input == &quot;&quot;:
+            task1_out: Optional[str] = read_latest_db_entry(
+                f&quot;{values['lute_config'].work_dir}&quot;,  # Working directory. We search for the database here.
+                &quot;RunTask1&quot;,                           # Name of Task we want to look up
+                &quot;outfile&quot;,                            # Name of parameter of the Task
+                valid_only=True,                      # We only want valid output files.
+            )
+            # read_latest_db_entry returns None if nothing is found
+            if task1_out is not None:
+                return task1_out
+        return input
+</code></pre>
+<p>There are more examples of this pattern spread throughout the various <code>Task</code> models.</p>
+<h3 id="specifying-an-executor-creating-a-runnable-managed-task">Specifying an <code>Executor</code>: Creating a runnable, "managed <code>Task</code>"</h3>
+<p><strong>Overview</strong></p>
+<p>After a pydantic model has been created, the next required step is to define a <strong>managed <code>Task</code></strong>. In the context of this library, a <strong>managed <code>Task</code></strong> refers to the combination of an <code>Executor</code> and a <code>Task</code> to run. The <code>Executor</code> manages the process of <code>Task</code> submission and the execution environment, as well as performing an logging, eLog communication, etc. There are currently two types of <code>Executor</code> to choose from. For most cases you will use the first option for third-party <code>Task</code>s.</p>
+<ol>
+<li><code>Executor</code>: This is the standard <code>Executor</code> and sufficient for most third-party uses cases.</li>
+<li><code>MPIExecutor</code>: This performs all the same types of operations as the option above; however, it will submit your <code>Task</code> using MPI.</li>
+<li>The <code>MPIExecutor</code> will submit the <code>Task</code> using the number of available cores - 1. The number of cores is determined from the physical core/thread count on your local machine, or the number of cores allocated by SLURM when submitting on the batch nodes.</li>
+</ol>
+<p>As mentioned, for most cases you can setup a third-party <code>Task</code> to use the first type of <code>Executor</code>. If, however, your third-party <code>Task</code> uses MPI, you can use either. When using the standard <code>Executor</code> for a <code>Task</code> requiring MPI, the <code>executable</code> in the pydantic model must be set to <code>mpirun</code>. For example, a third-party <code>Task</code> model, that uses MPI but can be run with the <code>Executor</code> may look like the following. We assume this <code>Task</code> runs a Python script using MPI.</p>
+<pre><code class="language-py">class RunMPITaskParameters(ThirdPartyParameters):
+    class Config(ThirdPartyParameters.Config):
+        ...
+
+    executable: str = Field(&quot;mpirun&quot;, description=&quot;MPI executable&quot;)
+    np: PositiveInt = Field(
+        max(int(os.environ.get(&quot;SLURM_NPROCS&quot;, len(os.sched_getaffinity(0)))) - 1, 1),
+        description=&quot;Number of processes&quot;,
+        flag_type=&quot;-&quot;,
+    )
+    pos_arg: str = Field(&quot;python&quot;, description=&quot;Python...&quot;, flag_type=&quot;&quot;)
+    script: str = Field(&quot;&quot;, description=&quot;Python script to run with MPI&quot;, flag_type=&quot;&quot;)
+</code></pre>
+<p><strong>Selecting the <code>Executor</code></strong></p>
+<p>After deciding on which <code>Executor</code> to use, a single line must be added to the <code>lute/managed_tasks.py</code> module:</p>
+<pre><code class="language-py"># Initialization: Executor(&quot;TaskName&quot;)
+TaskRunner: Executor = Executor(&quot;SubmitTask&quot;)
+# TaskRunner: MPIExecutor = MPIExecutor(&quot;SubmitTask&quot;) ## If using the MPIExecutor
+</code></pre>
+<p>In an attempt to make it easier to discern whether discussing a <code>Task</code> or <strong>managed <code>Task</code></strong>, the standard naming convention is that the <code>Task</code> (class name) will have a verb in the name, e.g. <code>RunTask</code>, <code>SubmitTask</code>. The corresponding <strong>managed <code>Task</code></strong> will use a related noun, e.g. <code>TaskRunner</code>, <code>TaskSubmitter</code>, etc.</p>
+<p>As a reminder, the <code>Task</code> name is the first part of the class name of the pydantic model, without the <code>Parameters</code> suffix. This name <strong>must</strong> match. E.g. if your pydantic model's class name is <code>RunTaskParameters</code>, the <code>Task</code> name is <code>RunTask</code>, and this is the string passed to the <code>Executor</code> initializer.</p>
+<p><strong>Modifying the environment</strong></p>
+<p>If your third-party <code>Task</code> can run in the standard <code>psana</code> environment with no further configuration files, the setup process is now complete and your <code>Task</code> can be run within the LUTE framework. If on the other hand your <code>Task</code> requires some changes to the environment, this is managed through the <code>Executor</code>. There are a couple principle methods that the <code>Executor</code> has to change the environment.</p>
+<ol>
+<li><code>Executor.update_environment</code>: if you only need to add a few environment variables, or update the <code>PATH</code> this is the method to use. The method takes a <code>Dict[str, str]</code> as input. Any variables can be passed/defined using this method. By default, any variables in the dictionary will overwrite those variable definitions in the current environment if they are already present, <strong>except</strong> for the variable <code>PATH</code>. By default <code>PATH</code> entries in the dictionary are prepended to the current <code>PATH</code> available in the environment the <code>Executor</code> runs in (the standard <code>psana</code> environment). This behaviour can be changed to either append, or overwrite the <code>PATH</code> entirely by an optional second argument to the method.</li>
+<li><code>Executor.shell_source</code>: This method will source a shell script which can perform numerous modifications of the environment (PATH changes, new environment variables, conda environments, etc.). The method takes a <code>str</code> which is the path to a shell script to source.</li>
+</ol>
+<p>As an example, we will update the <code>PATH</code> of one <code>Task</code> and source a script for a second.</p>
+<pre><code class="language-py">TaskRunner: Executor = Executor(&quot;RunTask&quot;)
+# update_environment(env: Dict[str,str], update_path: str = &quot;prepend&quot;) # &quot;append&quot; or &quot;overwrite&quot;
+TaskRunner.update_environment(
+    { &quot;PATH&quot;: &quot;/sdf/group/lcls/ds/tools&quot; }  # This entry will be prepended to the PATH available after sourcing `psconda.sh`
+)
+
+Task2Runner: Executor = Executor(&quot;RunTask2&quot;)
+Task2Runner.shell_source(&quot;/sdf/group/lcls/ds/tools/new_task_setup.sh&quot;) # Will source new_task_setup.sh script
+</code></pre>
+<h3 id="using-templates-managing-third-party-configuration-files">Using templates: managing third-party configuration files</h3>
+<p>Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the <code>Task</code>'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the <code>Task</code> implementer refer to the <a href="https://jinja.palletsprojects.com/en/3.1.x/">official Jinja documentation</a> for more information.</p>
+<p>LUTE provides two additional base models which are used for template parsing in conjunction with the primary <code>Task</code> model. These are:
+- <code>TemplateParameters</code> objects which hold parameters which will be used to render a portion of a template.
+- <code>TemplateConfig</code> objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.</p>
+<p><code>Task</code> models which inherit from the <code>ThirdPartyParameters</code> model, as all third-party <code>Task</code>s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as <code>TemplateParameters</code> objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the <strong>only</strong> requirement on the Python-side when adding template rendering functionality to the <code>Task</code> is the addition of one parameter - an instance of <code>TemplateConfig</code>. The instance <strong>MUST</strong> be called <code>lute_template_cfg</code>.</p>
+<pre><code class="language-py">from pydantic import Field, validator
+
+from .base import TemplateConfig
+
+class RunTaskParamaters(ThirdPartyParameters):
+    ...
+    # This parameter MUST be called lute_template_cfg!
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name=&quot;name_of_template.json&quot;,
+            output_path=&quot;/path/to/write/rendered_output_to.json&quot;,
+        ),
+        description=&quot;Template rendering configuration&quot;,
+    )
+</code></pre>
+<p>LUTE looks for the template in <code>config/templates</code>, so only the name of the template file to use within that directory is required for the <code>template_name</code> attribute of <code>lute_template_cfg</code>. LUTE can write the output anywhere (the user has permissions), and with any name, so the full absolute path including filename should be used for the <code>output_path</code> of <code>lute_template_cfg</code>.</p>
+<p>The rest of the work is done by the combination of Jinja, LUTE's configuration YAML file, and the template itself. Understanding the interplay between these components is perhaps best illustrated by an example. As such, let us consider a simple third-party <code>Task</code> whose only input parameter (on the command-line) is the location of a configuration JSON file. We'll call the third-party executable <code>jsonuser</code> and our <code>Task</code> model, the <code>RunJsonUserParameters</code>. We assume the program is run like:</p>
+<pre><code class="language-bash">jsonuser -i &lt;input_file.json&gt;
+</code></pre>
+<p>The first step is to setup the pydantic model as before.</p>
+<pre><code class="language-py">from pydantic import Field, validator
+
+from .base import TemplateConfig
+
+class RunJsonUserParameters:
+    executable: str = Field(
+        &quot;/path/to/jsonuser&quot;, description=&quot;Executable which requires a JSON configuration file.&quot;
+    )
+    # Lets assume the JSON file is passed as &quot;-i &lt;path_to_json&gt;&quot;
+    input_json: str = Field(
+        &quot;&quot;, description=&quot;Path to the input JSON file.&quot;, flag_type=&quot;-&quot;, rename_param=&quot;i&quot;
+    )
+</code></pre>
+<p>The next step is to create a template for the JSON file. Let's assume the JSON file looks like:</p>
+<pre><code>{
+    &quot;param1&quot;: &quot;arg1&quot;,
+    &quot;param2&quot;: 4,
+    &quot;param3&quot;: {
+        &quot;a&quot;: 1,
+        &quot;b&quot;: 2
+    },
+    &quot;param4&quot;: [
+        1,
+        2,
+        3
+    ]
+}
+</code></pre>
+<p>Any, or all of these values can be substituted for, and we can determine the way in which we will provide them. I.e. a substitution can be provided for each variable individually, or, for example for a nested hierarchy, a dictionary can be provided which will substitute all the items at once. For this simple case, let's provide variables for <code>param1</code>, <code>param2</code>, <code>param3.b</code> and assume that we want the first and second entries for <code>param4</code> to be identical for our use case (i.e., we can use one variable for them both. In total, this means we will perform 5 substitutions using 4 variables. Jinja will substitute a variable anywhere it sees the following syntax, <code>{{ variable_name }}</code>. As such a valid template for our use-case may look like:</p>
+<pre><code>{
+    &quot;param1&quot;: {{ str_var }},
+    &quot;param2&quot;: {{ int_var }},
+    &quot;param3&quot;: {
+        &quot;a&quot;: 1,
+        &quot;b&quot;: {{ p3_b }}
+    },
+    &quot;param4&quot;: [
+        {{ val }},
+        {{ val }},
+        3
+    ]
+}
+</code></pre>
+<p>We save this file as <code>jsonuser.json</code> in <code>config/templates</code>. Next, we will update the original pydantic model to include our template configuration. We still have an issue, however, in that we need to decide where to write the output of the template to. In this case, we can use the <code>input_json</code> parameter. We will assume that the user will provide this, although a default value can also be used. A custom validator will be added so that we can take the <code>input_json</code> value and update the value of <code>lute_template_cfg.output_path</code> with it.</p>
+<pre><code class="language-py"># from typing import Optional
+
+from pydantic import Field, validator
+
+from .base import TemplateConfig #, TemplateParameters
+
+class RunJsonUserParameters:
+    executable: str = Field(
+        &quot;jsonuser&quot;, description=&quot;Executable which requires a JSON configuration file.&quot;
+    )
+    # Lets assume the JSON file is passed as &quot;-i &lt;path_to_json&gt;&quot;
+    input_json: str = Field(
+        &quot;&quot;, description=&quot;Path to the input JSON file.&quot;, flag_type=&quot;-&quot;, rename_param=&quot;i&quot;
+    )
+    # Add template configuration! *MUST* be called `lute_template_cfg`
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name=&quot;jsonuser.json&quot;, # Only the name of the file here.
+            output_path=&quot;&quot;,
+        ),
+        description=&quot;Template rendering configuration&quot;,
+    )
+    # We do not need to include these TemplateParameters, they will be added
+    # automatically if provided in the YAML
+    #str_var: Optional[TemplateParameters]
+    #int_var: Optional[TemplateParameters]
+    #p3_b: Optional[TemplateParameters]
+    #val: Optional[TemplateParameters]
+
+
+    # Tell LUTE to write the rendered template to the location provided with
+    # `input_json`. I.e. update `lute_template_cfg.output_path`
+    @validator(&quot;lute_template_cfg&quot;, always=True)
+    def update_output_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -&gt; TemplateConfig:
+        if lute_template_cfg.output_path == &quot;&quot;:
+            lute_template_cfg.output_path = values[&quot;input_json&quot;]
+        return lute_template_cfg
+</code></pre>
+<p>All that is left to render the template, is to provide the variables we want to substitute in the LUTE configuration YAML. In our case we must provide the 4 variable names we included within the substitution syntax (<code>{{ var_name }}</code>). The names in the YAML must match those in the template.</p>
+<pre><code class="language-yaml">RunJsonUser:
+    input_json: &quot;/my/chosen/path.json&quot; # We'll come back to this...
+    str_var: &quot;arg1&quot; # Will substitute for &quot;param1&quot;: &quot;arg1&quot;
+    int_var: 4 # Will substitute for &quot;param2&quot;: 4
+    p3_b: 2  # Will substitute for &quot;param3: { &quot;b&quot;: 2 }
+    val: 2 # Will substitute for &quot;param4&quot;: [2, 2, 3] in the JSON
+</code></pre>
+<p>If on the other hand, a user were to have an already valid JSON file, it is possible to turn off the template rendering. (ALL) Template variables (<code>TemplateParameters</code>) are simply excluded from the configuration YAML.</p>
+<pre><code class="language-yaml">RunJsonUser:
+    input_json: &quot;/path/to/existing.json&quot;
+    #str_var: ...
+    #...
+</code></pre>
+<h4 id="additional-jinja-syntax">Additional Jinja Syntax</h4>
+<p>There are many other syntactical constructions we can use with Jinja. Some of the useful ones are:</p>
+<p><strong>If Statements</strong> - E.g. only include portions of the template if a value is defined.</p>
+<pre><code>{% if VARNAME is defined %}
+// Stuff to include
+{% endif %}
+</code></pre>
+<p><strong>Loops</strong> - E.g. Unpacking multiple elements from a dictionary.</p>
+<pre><code>{% for name, value in VARNAME.items() %}
+// Do stuff with name and value
+{% endfor %}
+</code></pre>
+<h2 id="creating-a-first-party-task">Creating a "First-Party" <code>Task</code></h2>
+<p>The process for creating a "First-Party" <code>Task</code> is very similar to that for a "Third-Party" <code>Task</code>, with the difference being that you must also write the analysis code. The steps for integration are:
+1. Write the <code>TaskParameters</code> model.
+2. Write the <code>Task</code> class. There are a few rules that need to be adhered to.
+3. Make your <code>Task</code> available by modifying the import function.
+4. Specify an <code>Executor</code></p>
+<h3 id="specifying-a-taskparameters-model-for-your-task_1">Specifying a <code>TaskParameters</code> Model for your <code>Task</code></h3>
+<p>Parameter models have a format that must be followed for "Third-Party" <code>Task</code>s, but "First-Party" <code>Task</code>s have a little more liberty in how parameters are dealt with, since the <code>Task</code> will do all the parsing itself.</p>
+<p>To create a model, the basic steps are:
+1. If necessary, create a new module (e.g. <code>new_task_category.py</code>) under <code>lute.io.models</code>, or find an appropriate pre-existing module in that directory.
+  - An <code>import</code> statement must be added to <code>lute.io.models._init_</code> if a new module is created, so it can be found.
+  - If defining the model in a pre-existing module, make sure to modify the <code>__all__</code> statement to include it.
+2. Create a new model that inherits from <code>TaskParameters</code>. You can look at <code>lute.models.io.tests.TestReadOutputParameters</code> for an example. <strong>The model must be named</strong> <code>&lt;YourTaskName&gt;Parameters</code>
+  - You should include <strong>all</strong> relevant parameters here, including input file, output file, and any potentially adjustable parameters. These parameters <strong>must</strong> be included even if there are some implicit dependencies between <code>Task</code>s and it would make sense for the parameter to be auto-populated based on some other output. Creating this dependency is done with validators (see step 3.). All parameters should be overridable, and all <code>Task</code>s should be fully-independently configurable, based solely on their model and the configuration YAML.
+  - To follow the preferred format, parameters should be defined as: <code>param_name: type = Field([default value], description="This parameter does X.")</code>
+3. Use validators to do more complex things for your parameters, including populating default values dynamically:
+  - E.g. create default values that depend on other parameters in the model - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/smd.py#L139">SubmitSMDParameters</a>.
+  - E.g. create default values that depend on other <code>Task</code>s by reading from the database - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75">TestReadOutputParameters</a>.
+4. The model will have access to some general configuration values by inheriting from <code>TaskParameters</code>. These parameters are all stored in <code>lute_config</code> which is an instance of <code>AnalysisHeader</code> (<a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42">defined here</a>).
+  - For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the <code>Task</code>.</p>
+<p>A number of configuration options and <strong>Field</strong> attributes are also available for "First-Party" <code>Task</code> models. These are identical to those used for the <code>ThirdPartyTask</code>s, although there is a smaller selection. These options are reproduced below for convenience.</p>
+<p><strong>Config settings and options</strong>
+Under the class definition for <code>Config</code> in the model, we can modify global options for all the parameters. In addition, there are a number of configuration options related to specifying what the outputs/results from the associated <code>Task</code> are, and a number of options to modify runtime behaviour. Currently, the available configuration options are:</p>
+<table>
+<thead>
+<tr>
+<th align="center"><strong>Config Parameter</strong></th>
+<th align="center"><strong>Meaning</strong></th>
+<th align="center"><strong>Default Value</strong></th>
+<th align="center"><strong>ThirdPartyTask-specific?</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>run_directory</code></td>
+<td align="center">If provided, can be used to specify the directory from which a <code>Task</code> is run.</td>
+<td align="center"><code>None</code> (not provided)</td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>set_result</code></td>
+<td align="center"><code>bool</code>. If <code>True</code> search the model definition for a parameter that indicates what the result is.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>result_from_params</code></td>
+<td align="center">If <code>set_result</code> is <code>True</code> can define a result using this option and a validator. See also <code>is_result</code> below.</td>
+<td align="center"><code>None</code> (not provided)</td>
+<td align="center"><strong>NO</strong></td>
+</tr>
+<tr>
+<td align="center"><code>short_flags_use_eq</code></td>
+<td align="center">Use equals sign instead of space for arguments of <code>-</code> parameters.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>YES</strong> - Only affects <code>ThirdPartyTask</code>s</td>
+</tr>
+<tr>
+<td align="center"><code>long_flags_use_eq</code></td>
+<td align="center">Use equals sign instead of space for arguments of <code>-</code> parameters.</td>
+<td align="center"><code>False</code></td>
+<td align="center"><strong>YES</strong> - Only affects <code>ThirdPartyTask</code>s</td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<p>These configuration options modify how the parameter models are parsed and passed along on the command-line, as well as what we consider results and where a <code>Task</code> can run. The default behaviour is that parameters are assumed to be passed as <code>-p arg</code> and <code>--param arg</code>, the <code>Task</code> will be run in the current working directory (or scratch if submitted with the ARP), and we have no information about <code>Task</code> results . Setting the above options can modify this behaviour.</p>
+<ul>
+<li>By setting <code>short_flags_use_eq</code> and/or <code>long_flags_use_eq</code> to <code>True</code> parameters are instead passed as <code>-p=arg</code> and <code>--param=arg</code>.</li>
+<li>By setting <code>run_directory</code> to a valid path, we can force a <code>Task</code> to be run in a specific directory. By default the <code>Task</code> will be run from the directory you submit the job in, or from your scratch folder (<code>/sdf/scratch/...</code>) if you submit from the eLog. Some <code>ThirdPartyTask</code>s rely on searching the correct working directory in order run properly.</li>
+<li>By setting <code>set_result</code> to <code>True</code> we indicate that the <code>TaskParameters</code> model will provide information on what the <code>TaskResult</code> is. This setting must be used with one of two options, either the <code>result_from_params</code> <code>Config</code> option, described below, or the <strong>Field</strong> attribute <code>is_result</code> described in the next sub-section (<strong>Field Attributes</strong>).</li>
+<li><code>result_from_params</code> is a Config option that can be used when <code>set_result==True</code>. In conjunction with a <strong>validator</strong> (described a sections down) we can use this option to specify a result from all the information contained in the model. E.g. if you have a <code>Task</code> that has parameters for an <code>output_directory</code> and a <code>output_filename</code>, you can set <code>result_from_params==f"{output_directory}/{output_filename}"</code>.</li>
+</ul>
+<p><strong>Field attributes</strong>
+In addition to the global configuration options there are a couple of ways to specify individual parameters. The following <code>Field</code> attributes are used when parsing the model:</p>
+<table>
+<thead>
+<tr>
+<th align="center"><strong>Field Attribute</strong></th>
+<th align="center"><strong>Meaning</strong></th>
+<th align="center"><strong>Default Value</strong></th>
+<th align="center"><strong>Example</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><code>description</code></td>
+<td align="center">Documentation of the parameter's usage or purpose.</td>
+<td align="center">N/A</td>
+<td align="center"><code>arg = Field(..., description="Argument for...")</code></td>
+</tr>
+<tr>
+<td align="center"><code>is_result</code></td>
+<td align="center"><code>bool</code>. If the <code>set_result</code> <code>Config</code> option is <code>True</code>, we can set this to <code>True</code> to indicate a result.</td>
+<td align="center">N/A</td>
+<td align="center"><code>output_result = Field(..., is_result=true)</code></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+<h3 id="writing-the-task">Writing the <code>Task</code></h3>
+<p>You can write your analysis code (or whatever code to be executed) as long as it adheres to the limited rules below. You can create a new module for your <code>Task</code> in <code>lute.tasks</code> or add it to any existing module, if it makes sense for it to belong there. The <code>Task</code> itself is a single class constructed as:
+1. Your analysis <code>Task</code> is a class named in a way that matches its Pydantic model. E.g. <code>RunTask</code> is the <code>Task</code>, and <code>RunTaskParameters</code> is the Pydantic model.
+2. The class must inherit from the <code>Task</code> class (see template below).
+3. You must provide an implementation of a <code>_run</code> method. This is the method that will be executed when the <code>Task</code> is run. You can in addition write as many methods as you need. For fine-grained execution control you can also provide <code>_pre_run()</code> and <code>_post_run()</code> methods, but this is optional.
+4. For all communication (including print statements) you should use the <code>_report_to_executor(msg: Message)</code> method. Since the <code>Task</code> is run as a subprocess this method will pass information to the controlling <code>Executor</code>. You can pass <strong>any</strong> type of object using this method, strings, plots, arrays, etc.
+5. If you did not use the <code>set_result</code> configuration option in your parameters model, make sure to provide a result when finished. This is done by setting <code>self._result.payload = ...</code>. You can set the result to be any object. If you have written the result to a file, for example, please provide a path.</p>
+<p>A minimal template is provided below.</p>
+<pre><code class="language-py">&quot;&quot;&quot;Standard docstring...&quot;&quot;&quot;
+
+__all__ = [&quot;RunTask&quot;]
+__author__ = &quot;&quot; # Please include so we know who the SME is
+
+# Include any imports you need here
+
+from lute.execution.ipc import Message # Message for communication
+from lute.io.models.base import *      # For TaskParameters
+from lute.tasks.task import *          # For Task
+
+class RunTask(Task): # Inherit from Task
+    &quot;&quot;&quot;Task description goes here, or in __init__&quot;&quot;&quot;
+
+    def __init__(self, *, params: TaskParameters) -&gt; None:
+        super().__init__(params=params) # Sets up Task, parameters, etc.
+        # Parameters will be available through:
+          # self._task_parameters
+          # You access with . operator: self._task_parameters.param1, etc.
+        # Your result object is availble through:
+          # self._result
+            # self._result.payload &lt;- Main result
+            # self._result.summary &lt;- Short summary
+            # self._result.task_status &lt;- Semi-automatic, but can be set manually
+
+    def _run(self) -&gt; None:
+        # THIS METHOD MUST BE PROVIDED
+        self.do_my_analysis()
+
+    def do_my_analysis(self) -&gt; None:
+        # Send a message, proper way to print:
+        msg: Message(contents=&quot;My message contents&quot;, signal=&quot;&quot;)
+        self._report_to_executor(msg)
+
+        # When done, set result - assume we wrote a file, e.g.
+        self._result.payload = &quot;/path/to/output_file.h5&quot;
+        # Optionally also set status - good practice but not obligatory
+        self._result.task_status = TaskStatus.COMPLETED
+</code></pre>
+<p>Signals in <code>Message</code> objects are strings and can be one of the following:</p>
+<pre><code class="language-py">LUTE_SIGNALS: Set[str] = {
+    &quot;NO_PICKLE_MODE&quot;,
+    &quot;TASK_STARTED&quot;,
+    &quot;TASK_FAILED&quot;,
+    &quot;TASK_STOPPED&quot;,
+    &quot;TASK_DONE&quot;,
+    &quot;TASK_CANCELLED&quot;,
+    &quot;TASK_RESULT&quot;,
+}
+</code></pre>
+<p>Each of these signals is associated with a hook on the <code>Executor</code>-side. They are for the most part used by base classes; however, you can choose to make use of them manually as well.</p>
+<h3 id="making-your-task-available">Making your <code>Task</code> available</h3>
+<p>Once the <code>Task</code> has been written, it needs to be made available for import. Since different <code>Task</code>s can have conflicting dependencies and environments, this is managed through an import function. When the <code>Task</code> is done, or ready for testing, a condition is added to <code>lute.tasks.__init__.import_task</code>. For example, assume the <code>Task</code> is called <code>RunXASAnalysis</code> and it's defined in a module called <code>xas.py</code>, we would add the following lines to the <code>import_task</code> function:</p>
+<pre><code class="language-py"># in lute.tasks.__init__
+
+# ...
+
+def import_task(task_name: str) -&gt; Type[Task]:
+    # ...
+    if task_name == &quot;RunXASAnalysis&quot;:
+        from .xas import RunXASAnalysis
+
+        return RunXASAnalysis
+</code></pre>
+<h3 id="defining-an-executor">Defining an <code>Executor</code></h3>
+<p>The process of <code>Executor</code> definition is identical to the process as described for <code>ThirdPartyTask</code>s above.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../usage/" class="btn btn-neutral float-left" title="Quick Start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../creating_workflows/" class="btn btn-neutral float-right" title="Creating a new Workflow">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../../usage/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../creating_workflows/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

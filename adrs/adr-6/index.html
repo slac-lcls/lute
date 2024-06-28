@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s - LUTE</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s";
+        var mkdocs_page_input_path = "adrs/adr-6.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>[ADR-6] Third-party Config Files Managed by Templates Rendered by `ThirdPartyTask`s</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/adrs/adr-6.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="adr-6-third-party-config-files-managed-by-templates-rendered-by-thirdpartytasks">[ADR-6] Third-party Config Files Managed by Templates Rendered by <code>ThirdPartyTask</code>s</h1>
+<p><strong>Date:</strong> 2024-02-12</p>
+<h2 id="status">Status</h2>
+<p><strong>Proposed</strong></p>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
+<ul>
+<li>While many third-party executables of interest to the LUTE platform can be fully configured via command-line arguments, some also require management of an additional config file.</li>
+<li>Config files may use a variety of languages and methods. E.g. YAML, TOML, JSON, or even direct management of Python scripts.</li>
+<li>From the perspective of a generic interface to manage these files this poses a challenge.</li>
+<li>Ideally all aspects of configuraiton could be managed from the single LUTE configuration file.</li>
+</ul>
+<h2 id="decision">Decision</h2>
+<p>Templates will be used for the third party configuration files. A generic interface to heterogenous templates will be provided through a combination of pydantic models and the <code>ThirdPartyTask</code> implementation. The pydantic models will label extra arguments to <code>ThirdPartyTask</code>s as being <code>TemplateParameters</code>. I.e. any extra parameters are considered to be for a templated configuration file. The <code>ThirdPartyTask</code> will find the necessary template and render it if any extra parameters are found. This puts the burden of correct parsing on the template definition itself.</p>
+<h3 id="decision-drivers">Decision Drivers</h3>
+<ul>
+<li>Need to be able to configure the necessary files from within the LUTE framework.</li>
+<li>Configuration files take many forms so need a generic interface to disparate file types.</li>
+<li>Want to maintain as simple a <code>Task</code> interface as possible - but due to the above, need a way of handling multiple output files.</li>
+<li>Text substiution provides a means to do this.</li>
+</ul>
+<h3 id="considered-options">Considered Options</h3>
+<ul>
+<li>Separate configuration <code>Task</code> to be run before the main <code>ThirdPartyTask</code>.</li>
+<li>Generate the configuration file in its entirety from within the <code>Task</code>.</li>
+<li>This removes the simplicity in allowing all <code>ThirdPartyTask</code>s to be run as instances of a single class.</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>Can configure and run third party tasks which require the use of a configuration file.</li>
+<li>Must manage templates in addition to the standard configuration parsing code.</li>
+<li>The templates themselves provide the specific "programming" for filling them in. I.e. the Python interface assumes that the template will properly handle the block of parameters it is sent.</li>
+<li>Due to the above, template errors can be fatal, and appropriate attention to template creation is necessary.</li>
+<li>Allowing for template parameters in the general configuration file requires accepting the possiblity of extra parameters not defined in the data validation (pydantic) models.</li>
+<li>Extra parameters are not validated in the same way as standard parameters.</li>
+<li>We have to assume the template will properly deal with them.</li>
+</ul>
+<h2 id="compliance">Compliance</h2>
+<h2 id="metadata">Metadata</h2>
+<ul>
+<li>This ADR WILL be revisited during the post-mortem of the first prototype.</li>
+<li>Compliance section will be updated as prototype evolves.</li>
+</ul>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

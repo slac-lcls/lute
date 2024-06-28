@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Architecture Decision Records - LUTE</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Architecture Decision Records";
+        var mkdocs_page_input_path = "adrs/README.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../source/managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../source/execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../source/tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../source/io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../source/io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>Architecture Decision Records</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/adrs/README.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="architecture-decision-records">Architecture Decision Records</h1>
+<ul>
+<li>This directory contains a list of architecture and major feature decisions.</li>
+<li>Please refer to the <code>madr_template.md</code> for creating new ADRs. This template was adapted from the <a href="https://adr.github.io/madr/">MADR template</a> (MIT License).</li>
+<li>A table of ADRs is provided below.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="center">ADR No.</th>
+<th align="center">Record Date</th>
+<th align="left">Title</th>
+<th align="center">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">1</td>
+<td align="center">2023-11-06</td>
+<td align="left">All analysis <code>Task</code>s inherit from a base class</td>
+<td align="center"><strong>Accepted</strong></td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2023-11-06</td>
+<td align="left">Analysis <code>Task</code> submission and communication is performed via <code>Executor</code>s</td>
+<td align="center"><strong>Accepted</strong></td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">2023-11-06</td>
+<td align="left"><code>Executor</code>s will run all <code>Task</code>s via subprocess</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">2023-11-06</td>
+<td align="left">Airflow <code>Operator</code>s and LUTE <code>Executor</code>s are separate entities.</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">2023-12-06</td>
+<td align="left">Task-Executor IPC is Managed by Communicator Objects</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">2024-02-12</td>
+<td align="left">Third-party Config Files Managed by Templates Rendered by <code>ThirdPartyTask</code>s</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">2024-02-12</td>
+<td align="left"><code>Task</code> Configuration is Stored in a Database Managed by <code>Executor</code>s</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">2024-03-18</td>
+<td align="left">Airflow credentials/authorization requires special launch program.</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">2024-04-15</td>
+<td align="left">Airflow launch script will run as long lived batch job.</td>
+<td align="center"><strong>Proposed</strong></td>
+</tr>
+<tr>
+<td align="center"></td>
+<td align="center"></td>
+<td align="left"></td>
+<td align="center"></td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

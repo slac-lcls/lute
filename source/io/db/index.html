@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>db - LUTE</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "db";
+        var mkdocs_page_input_path = "source/io/db.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../tasks/task/">task</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../tasks/dataclasses/">dataclasses</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../tasks/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../tasks/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../tasks/test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">io</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../config/">config</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="./">db</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>io &raquo;</li>
+      <li>db</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/io/db.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="io.db"></a>
+    <div class="doc doc-contents first">
+
+      <p>Tools for working with the LUTE parameter and configuration database.</p>
+<p>The current implementation relies on a sqlite backend database. In the future
+this may change - therefore relatively few high-level API function calls are
+intended to be public. These abstract away the details of the database interface
+and work exclusively on LUTE objects.</p>
+
+
+<p><span class="doc-section-title">Functions:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="io.db.record_analysis_db" href="#io.db.record_analysis_db">record_analysis_db</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>DescribedAnalysis) -&gt; None: Writes the configuration
+to the backend database.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="io.db.read_latest_db_entry" href="#io.db.read_latest_db_entry">read_latest_db_entry</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>str, task_name: str, param: str) -&gt; Any: Retrieve
+the most recent entry from a database for a specific Task.</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Raises:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><a class="autorefs autorefs-internal" title="io.db.DatabaseError" href="#io.db.DatabaseError">DatabaseError</a></code>
+              –
+              <div class="doc-md-description">
+                <p>Generic exception raised for LUTE database errors.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="io.db.DatabaseError" class="doc doc-heading">
+            <code>DatabaseError</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code>Exception</code></p>
+
+
+      <p>General LUTE database error.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/io/db.py</code></summary>
+                <pre class="highlight"><code class="language-python">class DatabaseError(Exception):
+    """General LUTE database error."""
+
+    ...</code></pre>
+              </details>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="io.db.read_latest_db_entry" class="doc doc-heading">
+            <code class="highlight language-python">read_latest_db_entry(db_dir, task_name, param, valid_only=True)</code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Read most recent value entered into the database for a Task parameter.</p>
+<p>(Will be updated for schema compliance as well as Task name.)</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>db_dir</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Database location.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>task_name</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>The name of the Task to check the database for.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>param</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>The parameter name for the Task that we want to retrieve.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>valid_only</code></b>
+                  (<code>bool</code>, default:
+                      <code>True</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Whether to consider only valid results or not. E.g.
+An input file may be useful even if the Task result is invalid
+(Failed). Default = True.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+<b><code>val</code></b>(                  <code><span title="typing.Any">Any</span></code>
+)              –
+              <div class="doc-md-description">
+                <p>The most recently entered value for <code>param</code> of <code>task_name</code>
+that can be found in the database. Returns None if nothing found.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+            <details class="quote">
+              <summary>Source code in <code>lute/io/db.py</code></summary>
+              <pre class="highlight"><code class="language-python">def read_latest_db_entry(
+    db_dir: str, task_name: str, param: str, valid_only: bool = True
+) -&gt; Optional[Any]:
+    """Read most recent value entered into the database for a Task parameter.
+
+    (Will be updated for schema compliance as well as Task name.)
+
+    Args:
+        db_dir (str): Database location.
+
+        task_name (str): The name of the Task to check the database for.
+
+        param (str): The parameter name for the Task that we want to retrieve.
+
+        valid_only (bool): Whether to consider only valid results or not. E.g.
+            An input file may be useful even if the Task result is invalid
+            (Failed). Default = True.
+
+    Returns:
+        val (Any): The most recently entered value for `param` of `task_name`
+            that can be found in the database. Returns None if nothing found.
+    """
+    import sqlite3
+    from ._sqlite import _select_from_db
+
+    con: sqlite3.Connection = sqlite3.Connection(f"{db_dir}/lute.db")
+    with con:
+        try:
+            cond: Dict[str, str] = {}
+            if valid_only:
+                cond = {"valid_flag": "1"}
+            entry: Any = _select_from_db(con, task_name, param, cond)
+        except sqlite3.OperationalError as err:
+            logger.debug(f"Cannot retrieve value {param} due to: {err}")
+            entry = None
+    return entry</code></pre>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="io.db.record_analysis_db" class="doc doc-heading">
+            <code class="highlight language-python">record_analysis_db(cfg)</code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Write an DescribedAnalysis object to the database.</p>
+<p>The DescribedAnalysis object is maintained by the Executor and contains all
+information necessary to fully describe a single <code>Task</code> execution. The
+contained fields are split across multiple tables within the database as
+some of the information can be shared across multiple Tasks. Refer to
+<code>docs/design/database.md</code> for more information on the database specification.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>lute/io/db.py</code></summary>
+              <pre class="highlight"><code class="language-python">def record_analysis_db(cfg: DescribedAnalysis) -&gt; None:
+    """Write an DescribedAnalysis object to the database.
+
+    The DescribedAnalysis object is maintained by the Executor and contains all
+    information necessary to fully describe a single `Task` execution. The
+    contained fields are split across multiple tables within the database as
+    some of the information can be shared across multiple Tasks. Refer to
+    `docs/design/database.md` for more information on the database specification.
+    """
+    import sqlite3
+    from ._sqlite import (
+        _make_shared_table,
+        _make_task_table,
+        _add_row_no_duplicate,
+        _add_task_entry,
+    )
+
+    try:
+        work_dir: str = cfg.task_parameters.lute_config.work_dir
+    except AttributeError:
+        logger.info(
+            (
+                "Unable to access TaskParameters object. Likely wasn't created. "
+                "Cannot store result."
+            )
+        )
+        return
+    del cfg.task_parameters.lute_config.work_dir
+
+    exec_entry, exec_columns = _cfg_to_exec_entry_cols(cfg)
+    task_name: str = cfg.task_result.task_name
+    # All `Task`s have an AnalysisHeader, but this info can be shared so is
+    # split into a different table
+    (
+        task_entry,  # Dict[str, Any]
+        task_columns,  # Dict[str, str]
+        gen_entry,  # Dict[str, Any]
+        gen_columns,  # Dict[str, str]
+    ) = _params_to_entry_cols(cfg.task_parameters)
+    x, y = _result_to_entry_cols(cfg.task_result)
+    task_entry.update(x)
+    task_columns.update(y)
+
+    con: sqlite3.Connection = sqlite3.Connection(f"{work_dir}/lute.db")
+    with con:
+        # --- Table Creation ---#
+        if not _make_shared_table(con, "gen_cfg", gen_columns):
+            raise DatabaseError("Could not make general configuration table!")
+        if not _make_shared_table(con, "exec_cfg", exec_columns):
+            raise DatabaseError("Could not make Executor configuration table!")
+        if not _make_task_table(con, task_name, task_columns):
+            raise DatabaseError(f"Could not make Task table for: {task_name}!")
+
+        # --- Row Addition ---#
+        gen_id: int = _add_row_no_duplicate(con, "gen_cfg", gen_entry)
+        exec_id: int = _add_row_no_duplicate(con, "exec_cfg", exec_entry)
+
+        full_task_entry: Dict[str, Any] = {
+            "gen_cfg_id": gen_id,
+            "exec_cfg_id": exec_id,
+        }
+        full_task_entry.update(task_entry)
+        # Prepare flag to indicate whether the task entry is valid or not
+        # By default we say it is assuming proper completion
+        valid_flag: int = (
+            1 if cfg.task_result.task_status == TaskStatus.COMPLETED else 0
+        )
+        full_task_entry.update({"valid_flag": valid_flag})
+
+        _add_task_entry(con, task_name, full_task_entry)</code></pre>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../config/" class="btn btn-neutral float-left" title="config"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../_sqlite/" class="btn btn-neutral float-right" title="_sqlite">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../config/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../_sqlite/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../..';</script>
+    <script src="../../../js/theme_extra.js" defer></script>
+    <script src="../../../js/theme.js" defer></script>
+      <script src="../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

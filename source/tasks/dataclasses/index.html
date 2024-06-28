@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GFD, VM" />
+      <link rel="shortcut icon" href="../../../img/favicon.ico" />
+    <title>dataclasses - LUTE</title>
+    <link rel="stylesheet" href="../../../css/theme.css" />
+    <link rel="stylesheet" href="../../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "dataclasses";
+        var mkdocs_page_input_path = "source/tasks/dataclasses.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../../../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../../.." class="icon icon-home"> LUTE
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../../usage/">Quick Start</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Walkthroughs</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/new_task/">Creating a new Task</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../tutorial/creating_workflows/">Creating a new Workflow</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Source Code</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../../managed_tasks/">managed_tasks</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/executor/">executor</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/ipc/">ipc</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../execution/debug_utils/">debug_utils</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">tasks</a>
+    <ul class="current">
+                <li class="toctree-l2"><a class="reference internal" href="../task/">task</a>
+                </li>
+                <li class="toctree-l2 current"><a class="reference internal current" href="./">dataclasses</a>
+    <ul class="current">
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../test/">test</a>
+                </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+    <ul>
+                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+    <ul>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/base/">base</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_find_peaks/">sfx_find_peaks</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_index/">sfx_index</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_merge/">sfx_merge</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/sfx_solve/">sfx_solve</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/smd/">smd</a>
+                </li>
+                <li class="toctree-l3"><a class="reference internal" href="../../io/models/tests/">tests</a>
+                </li>
+    </ul>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/config/">config</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/db/">db</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/_sqlite/">_sqlite</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/elog/">elog</a>
+                </li>
+                <li class="toctree-l2"><a class="reference internal" href="../../io/exceptions/">exceptions</a>
+                </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Design and Specifications</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../../design/database/">Database</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../..">LUTE</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+          <li>Source Code &raquo;</li>
+          <li>tasks &raquo;</li>
+      <li>dataclasses</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/slac-lcls/lute/edit/master/docs/source/tasks/dataclasses.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="tasks.dataclasses"></a>
+    <div class="doc doc-contents first">
+
+      <p>Classes for describing Task state and results.</p>
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.dataclasses.TaskResult" href="#tasks.dataclasses.TaskResult">TaskResult</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Output of a specific analysis task.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.dataclasses.TaskStatus" href="#tasks.dataclasses.TaskStatus">TaskStatus</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Enumeration of possible Task statuses (running, pending, failed,
+etc.).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tasks.dataclasses.DescribedAnalysis" href="#tasks.dataclasses.DescribedAnalysis">DescribedAnalysis</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>Executor's description of a <code>Task</code> run (results,
+parameters, env).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.dataclasses.DescribedAnalysis" class="doc doc-heading">
+            <code>DescribedAnalysis</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+
+      <p>Complete analysis description. Held by an Executor.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/dataclasses.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class DescribedAnalysis:
+    """Complete analysis description. Held by an Executor."""
+
+    task_result: TaskResult
+    task_parameters: Optional[TaskParameters]
+    task_env: Dict[str, str]
+    poll_interval: float
+    communicator_desc: List[str]</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.dataclasses.ElogSummaryPlots" class="doc doc-heading">
+            <code>ElogSummaryPlots</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+
+      <p>Holds a graphical summary intended for display in the eLog.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>display_name</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>This represents both a path and how the result will be
+displayed in the eLog. Can include "/" characters. E.g.
+<code>display_name = "scans/my_motor_scan"</code> will have plots shown
+on a "my_motor_scan" page, under a "scans" tab. This format mirrors
+how the file is stored on disk as well.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/dataclasses.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class ElogSummaryPlots:
+    """Holds a graphical summary intended for display in the eLog.
+
+    Attributes:
+        display_name (str): This represents both a path and how the result will be
+            displayed in the eLog. Can include "/" characters. E.g.
+            `display_name = "scans/my_motor_scan"` will have plots shown
+            on a "my_motor_scan" page, under a "scans" tab. This format mirrors
+            how the file is stored on disk as well.
+    """
+
+    display_name: str
+    figures: Union[pn.Tabs, hv.Image, plt.Figure]</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.dataclasses.TaskResult" class="doc doc-heading">
+            <code>TaskResult</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+
+      <p>Class for storing the result of a Task's execution with metadata.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>task_name</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Name of the associated task which produced it.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>task_status</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="tasks.dataclasses.TaskStatus" href="#tasks.dataclasses.TaskStatus">TaskStatus</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Status of associated task.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>summary</code></b>
+                  (<code>str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Short message/summary associated with the result.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>payload</code></b>
+                  (<code><span title="typing.Any">Any</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Actual result. May be data in any format.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>impl_schemas</code></b>
+                  (<code><span title="typing.Optional">Optional</span>[str]</code>)
+              –
+              <div class="doc-md-description">
+                <p>A string listing <code>Task</code> schemas implemented
+by the associated <code>Task</code>. Schemas define the category and expected
+output of the <code>Task</code>. An individual task may implement/conform to
+multiple schemas. Multiple schemas are separated by ';', e.g.
+    * impl_schemas = "schema1;schema2"</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/dataclasses.py</code></summary>
+                <pre class="highlight"><code class="language-python">@dataclass
+class TaskResult:
+    """Class for storing the result of a Task's execution with metadata.
+
+    Attributes:
+        task_name (str): Name of the associated task which produced it.
+
+        task_status (TaskStatus): Status of associated task.
+
+        summary (str): Short message/summary associated with the result.
+
+        payload (Any): Actual result. May be data in any format.
+
+        impl_schemas (Optional[str]): A string listing `Task` schemas implemented
+            by the associated `Task`. Schemas define the category and expected
+            output of the `Task`. An individual task may implement/conform to
+            multiple schemas. Multiple schemas are separated by ';', e.g.
+                * impl_schemas = "schema1;schema2"
+    """
+
+    task_name: str
+    task_status: TaskStatus
+    summary: str
+    payload: Any
+    impl_schemas: Optional[str] = None</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="tasks.dataclasses.TaskStatus" class="doc doc-heading">
+            <code>TaskStatus</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="enum.Enum">Enum</span></code></p>
+
+
+      <p>Possible Task statuses.</p>
+
+              <details class="quote">
+                <summary>Source code in <code>lute/tasks/dataclasses.py</code></summary>
+                <pre class="highlight"><code class="language-python">class TaskStatus(Enum):
+    """Possible Task statuses."""
+
+    PENDING = 0
+    """
+    Task has yet to run. Is Queued, or waiting for prior tasks.
+    """
+    RUNNING = 1
+    """
+    Task is in the process of execution.
+    """
+    COMPLETED = 2
+    """
+    Task has completed without fatal errors.
+    """
+    FAILED = 3
+    """
+    Task encountered a fatal error.
+    """
+    STOPPED = 4
+    """
+    Task was, potentially temporarily, stopped/suspended.
+    """
+    CANCELLED = 5
+    """
+    Task was cancelled prior to completion or failure.
+    """
+    TIMEDOUT = 6
+    """
+    Task did not reach completion due to timeout.
+    """</code></pre>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.CANCELLED" class="doc doc-heading">
+            <code class="highlight language-python">CANCELLED = 5</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task was cancelled prior to completion or failure.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.COMPLETED" class="doc doc-heading">
+            <code class="highlight language-python">COMPLETED = 2</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task has completed without fatal errors.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.FAILED" class="doc doc-heading">
+            <code class="highlight language-python">FAILED = 3</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task encountered a fatal error.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.PENDING" class="doc doc-heading">
+            <code class="highlight language-python">PENDING = 0</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task has yet to run. Is Queued, or waiting for prior tasks.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.RUNNING" class="doc doc-heading">
+            <code class="highlight language-python">RUNNING = 1</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task is in the process of execution.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.STOPPED" class="doc doc-heading">
+            <code class="highlight language-python">STOPPED = 4</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task was, potentially temporarily, stopped/suspended.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="tasks.dataclasses.TaskStatus.TIMEDOUT" class="doc doc-heading">
+            <code class="highlight language-python">TIMEDOUT = 6</code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Task did not reach completion due to timeout.</p>
+    </div>
+
+</div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../task/" class="btn btn-neutral float-left" title="task"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../sfx_find_peaks/" class="btn btn-neutral float-right" title="sfx_find_peaks">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+      <p>© 2024 LCLS</p>
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/slac-lcls/lute" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../task/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../sfx_find_peaks/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../../..';</script>
+    <script src="../../../js/theme_extra.js" defer></script>
+    <script src="../../../js/theme.js" defer></script>
+      <script src="../../../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
