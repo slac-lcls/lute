@@ -1,4 +1,4 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.60-py3/bin/python
+#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
 
 """Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
 
@@ -118,7 +118,14 @@ if __name__ == "__main__":
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
     # Check if was submitted from ARP - look for token
+    use_kerberos: bool = False
     if os.getenv("Authorization") is None:
+        use_kerberos = True
+        cache_file: Optional[str] = os.getenv("KRB5CCNAME")
+        if cache_file is None:
+            logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
+            sys.exit(-1)
+
         if args.experiment is None or args.run is None:
             logger.info(
                 (
@@ -264,6 +271,13 @@ if __name__ == "__main__":
             continue
         logger.info(f"DAG exited: {dag_state}")
         break
+
+    if use_kerberos:
+        # We had to do some funny business to get Kerberos credentials...
+        # Cleanup now that we're done
+        logger.debug("Removing duplicate Kerberos credentials.")
+        os.remove(cache_file)  # This should be defined if we get here
+        os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
         sys.exit(1)
