@@ -276,7 +276,9 @@ if __name__ == "__main__":
         # We had to do some funny business to get Kerberos credentials...
         # Cleanup now that we're done
         logger.debug("Removing duplicate Kerberos credentials.")
-        os.remove(cache_file)  # This should be defined if we get here
+        # This should be defined if we get here
+        # Format is FILE:/.../...
+        os.remove(cache_file[5:])
         os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
