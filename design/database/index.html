@@ -8,7 +8,7 @@
     <title>Database - LUTE</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
     
       <script>
@@ -18,12 +18,11 @@
         var mkdocs_page_url = null;
       </script>
     
-    <script src="../../js/jquery-3.6.0.min.js" defer></script>
     <!--[if lt IE 9]>
       <script src="../../js/html5shiv.min.js"></script>
     <![endif]-->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-      <script>hljs.initHighlightingOnLoad();</script> 
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
 </head>
 
 <body class="wy-body-for-nav" role="document">
@@ -35,7 +34,7 @@
           <a href="../.." class="icon icon-home"> LUTE
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
@@ -56,7 +55,7 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../../source/managed_tasks/">managed_tasks</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+                  <li class="toctree-l1"><a class="reference internal" >execution</a>
     <ul>
                 <li class="toctree-l2"><a class="reference internal" href="../../source/execution/executor/">executor</a>
                 </li>
@@ -66,7 +65,7 @@
                 </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+                  <li class="toctree-l1"><a class="reference internal" >tasks</a>
     <ul>
                 <li class="toctree-l2"><a class="reference internal" href="../../source/tasks/task/">task</a>
                 </li>
@@ -80,9 +79,9 @@
                 </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+                  <li class="toctree-l1"><a class="reference internal" >io</a>
     <ul>
-                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+                <li class="toctree-l2"><a class="reference internal" >models</a>
     <ul>
                 <li class="toctree-l3"><a class="reference internal" href="../../source/io/models/base/">base</a>
                 </li>
@@ -115,7 +114,7 @@
               </ul>
               <p class="caption"><span class="caption-text">Design and Specifications</span></p>
               <ul class="current">
-                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Database</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Database</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#basic-outline">Basic Outline</a>
         <ul>
@@ -171,9 +170,9 @@
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="../.." class="icon icon-home" alt="Docs"></a> &raquo;</li>
-          <li>Design and Specifications &raquo;</li>
-      <li>Database</li>
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Design and Specifications</li>
+      <li class="breadcrumb-item active">Database</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/slac-lcls/lute/edit/master/docs/design/database.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -205,33 +204,33 @@
 <table>
 <thead>
 <tr>
-<th align="center">id</th>
-<th align="center">title</th>
-<th align="center">experiment</th>
-<th align="center">run</th>
-<th align="center">date</th>
-<th align="center">lute_version</th>
-<th align="center">task_timeout</th>
+<th style="text-align: center;">id</th>
+<th style="text-align: center;">title</th>
+<th style="text-align: center;">experiment</th>
+<th style="text-align: center;">run</th>
+<th style="text-align: center;">date</th>
+<th style="text-align: center;">lute_version</th>
+<th style="text-align: center;">task_timeout</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">2</td>
-<td align="center">"My experiment desc"</td>
-<td align="center">"EXPx00000</td>
-<td align="center">1</td>
-<td align="center">YYYY/MM/DD</td>
-<td align="center">0.1</td>
-<td align="center">6000</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">"My experiment desc"</td>
+<td style="text-align: center;">"EXPx00000</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">YYYY/MM/DD</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: center;">6000</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -240,42 +239,42 @@
 <table>
 <thead>
 <tr>
-<th align="center"><strong>Column</strong></th>
-<th align="center"><strong>Description</strong></th>
+<th style="text-align: center;"><strong>Column</strong></th>
+<th style="text-align: center;"><strong>Description</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center"><code>id</code></td>
-<td align="center">ID of the entry in this table.</td>
+<td style="text-align: center;"><code>id</code></td>
+<td style="text-align: center;">ID of the entry in this table.</td>
 </tr>
 <tr>
-<td align="center"><code>title</code></td>
-<td align="center">Arbitrary description/title of the purpose of analysis. E.g. what kind of experiment is being conducted</td>
+<td style="text-align: center;"><code>title</code></td>
+<td style="text-align: center;">Arbitrary description/title of the purpose of analysis. E.g. what kind of experiment is being conducted</td>
 </tr>
 <tr>
-<td align="center"><code>experiment</code></td>
-<td align="center">LCLS Experiment. Can be a placeholder if debugging, etc.</td>
+<td style="text-align: center;"><code>experiment</code></td>
+<td style="text-align: center;">LCLS Experiment. Can be a placeholder if debugging, etc.</td>
 </tr>
 <tr>
-<td align="center"><code>run</code></td>
-<td align="center">LCLS Acquisition run. Can be a placeholder if debugging, testing, etc.</td>
+<td style="text-align: center;"><code>run</code></td>
+<td style="text-align: center;">LCLS Acquisition run. Can be a placeholder if debugging, testing, etc.</td>
 </tr>
 <tr>
-<td align="center"><code>date</code></td>
-<td align="center">Date the configuration file was first setup.</td>
+<td style="text-align: center;"><code>date</code></td>
+<td style="text-align: center;">Date the configuration file was first setup.</td>
 </tr>
 <tr>
-<td align="center"><code>lute_version</code></td>
-<td align="center">Version of the codebase being used to execute <code>Task</code>s.</td>
+<td style="text-align: center;"><code>lute_version</code></td>
+<td style="text-align: center;">Version of the codebase being used to execute <code>Task</code>s.</td>
 </tr>
 <tr>
-<td align="center"><code>task_timeout</code></td>
-<td align="center">The maximum amount of time in seconds that a <code>Task</code> can run before being cancelled.</td>
+<td style="text-align: center;"><code>task_timeout</code></td>
+<td style="text-align: center;">The maximum amount of time in seconds that a <code>Task</code> can run before being cancelled.</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -284,24 +283,24 @@
 <table>
 <thead>
 <tr>
-<th align="center">id</th>
-<th align="center">env</th>
-<th align="center">poll_interval</th>
-<th align="center">communicator_desc</th>
+<th style="text-align: center;">id</th>
+<th style="text-align: center;">env</th>
+<th style="text-align: center;">poll_interval</th>
+<th style="text-align: center;">communicator_desc</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">2</td>
-<td align="center">"VAR1=val1;VAR2=val2"</td>
-<td align="center">0.1</td>
-<td align="center">"PipeCommunicator...;SocketCommunicator..."</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">"VAR1=val1;VAR2=val2"</td>
+<td style="text-align: center;">0.1</td>
+<td style="text-align: center;">"PipeCommunicator...;SocketCommunicator..."</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -309,30 +308,30 @@
 <table>
 <thead>
 <tr>
-<th align="center"><strong>Column</strong></th>
-<th align="center"><strong>Description</strong></th>
+<th style="text-align: center;"><strong>Column</strong></th>
+<th style="text-align: center;"><strong>Description</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center"><code>id</code></td>
-<td align="center">ID of the entry in this table.</td>
+<td style="text-align: center;"><code>id</code></td>
+<td style="text-align: center;">ID of the entry in this table.</td>
 </tr>
 <tr>
-<td align="center"><code>env</code></td>
-<td align="center">Execution environment used by the Executor and by proxy any Tasks submitted by an Executor matching this entry. Environment is stored as a string with variables delimited by ";"</td>
+<td style="text-align: center;"><code>env</code></td>
+<td style="text-align: center;">Execution environment used by the Executor and by proxy any Tasks submitted by an Executor matching this entry. Environment is stored as a string with variables delimited by ";"</td>
 </tr>
 <tr>
-<td align="center"><code>poll_interval</code></td>
-<td align="center">Polling interval used for Task monitoring.</td>
+<td style="text-align: center;"><code>poll_interval</code></td>
+<td style="text-align: center;">Polling interval used for Task monitoring.</td>
 </tr>
 <tr>
-<td align="center"><code>communicator_desc</code></td>
-<td align="center">Description of the Communicators used.</td>
+<td style="text-align: center;"><code>communicator_desc</code></td>
+<td style="text-align: center;">Description of the Communicators used.</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -342,66 +341,66 @@
 <table>
 <thead>
 <tr>
-<th align="center">id</th>
-<th align="center">timestamp</th>
-<th align="center">gen_cfg_id</th>
-<th align="center">exec_cfg_id</th>
-<th align="center">P1</th>
-<th align="center">P2</th>
-<th align="center">...</th>
-<th align="center">Pn</th>
-<th align="center">result.task_status</th>
-<th align="center">result.summary</th>
-<th align="center">result.payload</th>
-<th align="center">result.impl_schemas</th>
-<th align="center">valid_flag</th>
+<th style="text-align: center;">id</th>
+<th style="text-align: center;">timestamp</th>
+<th style="text-align: center;">gen_cfg_id</th>
+<th style="text-align: center;">exec_cfg_id</th>
+<th style="text-align: center;">P1</th>
+<th style="text-align: center;">P2</th>
+<th style="text-align: center;">...</th>
+<th style="text-align: center;">Pn</th>
+<th style="text-align: center;">result.task_status</th>
+<th style="text-align: center;">result.summary</th>
+<th style="text-align: center;">result.payload</th>
+<th style="text-align: center;">result.impl_schemas</th>
+<th style="text-align: center;">valid_flag</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">2</td>
-<td align="center">"YYYY-MM-DD HH:MM:SS"</td>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">2</td>
-<td align="center">...</td>
-<td align="center">3</td>
-<td align="center">"COMPLETED"</td>
-<td align="center">"Summary"</td>
-<td align="center">"XYZ"</td>
-<td align="center">"schema1;schema3;"</td>
-<td align="center">1</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">"YYYY-MM-DD HH:MM:SS"</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">...</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">"COMPLETED"</td>
+<td style="text-align: center;">"Summary"</td>
+<td style="text-align: center;">"XYZ"</td>
+<td style="text-align: center;">"schema1;schema3;"</td>
+<td style="text-align: center;">1</td>
 </tr>
 <tr>
-<td align="center">3</td>
-<td align="center">"YYYY-MM-DD HH:MM:SS"</td>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
-<td align="center">1</td>
-<td align="center">...</td>
-<td align="center">4</td>
-<td align="center">"FAILED"</td>
-<td align="center">"Summary"</td>
-<td align="center">"XYZ"</td>
-<td align="center">"schema1;schema3;"</td>
-<td align="center">0</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">"YYYY-MM-DD HH:MM:SS"</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">...</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">"FAILED"</td>
+<td style="text-align: center;">"Summary"</td>
+<td style="text-align: center;">"XYZ"</td>
+<td style="text-align: center;">"schema1;schema3;"</td>
+<td style="text-align: center;">0</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -409,54 +408,54 @@
 <table>
 <thead>
 <tr>
-<th align="center"><strong>Column</strong></th>
-<th align="center"><strong>Description</strong></th>
+<th style="text-align: center;"><strong>Column</strong></th>
+<th style="text-align: center;"><strong>Description</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center"><code>id</code></td>
-<td align="center">ID of the entry in this table.</td>
+<td style="text-align: center;"><code>id</code></td>
+<td style="text-align: center;">ID of the entry in this table.</td>
 </tr>
 <tr>
-<td align="center"><code>CURRENT_TIMESTAMP</code></td>
-<td align="center">Full timestamp for the entry.</td>
+<td style="text-align: center;"><code>CURRENT_TIMESTAMP</code></td>
+<td style="text-align: center;">Full timestamp for the entry.</td>
 </tr>
 <tr>
-<td align="center"><code>gen_cfg_id</code></td>
-<td align="center">ID of the entry in the general config table that applies to this <code>Task</code> entry. That table has, e.g., experiment and run number.</td>
+<td style="text-align: center;"><code>gen_cfg_id</code></td>
+<td style="text-align: center;">ID of the entry in the general config table that applies to this <code>Task</code> entry. That table has, e.g., experiment and run number.</td>
 </tr>
 <tr>
-<td align="center"><code>exec_cfg_id</code></td>
-<td align="center">The ID of the entry in the <code>Executor</code> table which applies to this <code>Task</code> entry.</td>
+<td style="text-align: center;"><code>exec_cfg_id</code></td>
+<td style="text-align: center;">The ID of the entry in the <code>Executor</code> table which applies to this <code>Task</code> entry.</td>
 </tr>
 <tr>
-<td align="center"><code>P1</code> - <code>Pn</code></td>
-<td align="center">The specific parameters of the <code>Task</code>. The <code>P{1..n}</code> are replaced by the actual parameter names.</td>
+<td style="text-align: center;"><code>P1</code> - <code>Pn</code></td>
+<td style="text-align: center;">The specific parameters of the <code>Task</code>. The <code>P{1..n}</code> are replaced by the actual parameter names.</td>
 </tr>
 <tr>
-<td align="center"><code>task_status</code></td>
-<td align="center">Reported exit status of the <code>Task</code>. Note that the output may still be labeled invalid by the <code>valid_flag</code> (see below).</td>
+<td style="text-align: center;"><code>task_status</code></td>
+<td style="text-align: center;">Reported exit status of the <code>Task</code>. Note that the output may still be labeled invalid by the <code>valid_flag</code> (see below).</td>
 </tr>
 <tr>
-<td align="center"><code>summary</code></td>
-<td align="center">Short text summary of the <code>Task</code> result. This is provided by the <code>Task</code>, or sometimes the <code>Executor</code>.</td>
+<td style="text-align: center;"><code>summary</code></td>
+<td style="text-align: center;">Short text summary of the <code>Task</code> result. This is provided by the <code>Task</code>, or sometimes the <code>Executor</code>.</td>
 </tr>
 <tr>
-<td align="center"><code>payload</code></td>
-<td align="center">Full description of result from the <code>Task</code>. If the object is incompatible with the database, will instead be a pointer to where it can be found.</td>
+<td style="text-align: center;"><code>payload</code></td>
+<td style="text-align: center;">Full description of result from the <code>Task</code>. If the object is incompatible with the database, will instead be a pointer to where it can be found.</td>
 </tr>
 <tr>
-<td align="center"><code>impl_schemas</code></td>
-<td align="center">A string of semi-colon separated schema(s) implemented by the <code>Task</code>. Schemas describe conceptually the type output the <code>Task</code> produces.</td>
+<td style="text-align: center;"><code>impl_schemas</code></td>
+<td style="text-align: center;">A string of semi-colon separated schema(s) implemented by the <code>Task</code>. Schemas describe conceptually the type output the <code>Task</code> produces.</td>
 </tr>
 <tr>
-<td align="center"><code>valid_flag</code></td>
-<td align="center">A boolean flag for whether the result is valid. May be <code>0</code> (False) if e.g., data is missing, or corrupt, or reported status is failed.</td>
+<td style="text-align: center;"><code>valid_flag</code></td>
+<td style="text-align: center;">A boolean flag for whether the result is valid. May be <code>0</code> (False) if e.g., data is missing, or corrupt, or reported status is failed.</td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -523,14 +522,15 @@
     
   </span>
 </div>
-    <script>var base_url = '../..';</script>
-    <script src="../../js/theme_extra.js" defer></script>
-    <script src="../../js/theme.js" defer></script>
-      <script src="../../search/main.js" defer></script>
-    <script defer>
-        window.onload = function () {
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
             SphinxRtdTheme.Navigation.enable(true);
-        };
+        });
     </script>
 
 </body>

@@ -8,7 +8,7 @@
     <title>Architecture Decision Records - LUTE</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
         <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
     
       <script>
@@ -18,12 +18,11 @@
         var mkdocs_page_url = null;
       </script>
     
-    <script src="../js/jquery-3.6.0.min.js" defer></script>
     <!--[if lt IE 9]>
       <script src="../js/html5shiv.min.js"></script>
     <![endif]-->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-      <script>hljs.initHighlightingOnLoad();</script> 
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
 </head>
 
 <body class="wy-body-for-nav" role="document">
@@ -35,7 +34,7 @@
           <a href=".." class="icon icon-home"> LUTE
         </a><div role="search">
   <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
-      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
   </form>
 </div>
       </div>
@@ -56,7 +55,7 @@
               <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../source/managed_tasks/">managed_tasks</a>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">execution</a>
+                  <li class="toctree-l1"><a class="reference internal" >execution</a>
     <ul>
                 <li class="toctree-l2"><a class="reference internal" href="../source/execution/executor/">executor</a>
                 </li>
@@ -66,7 +65,7 @@
                 </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">tasks</a>
+                  <li class="toctree-l1"><a class="reference internal" >tasks</a>
     <ul>
                 <li class="toctree-l2"><a class="reference internal" href="../source/tasks/task/">task</a>
                 </li>
@@ -80,9 +79,9 @@
                 </li>
     </ul>
                   </li>
-                  <li class="toctree-l1"><a class="reference internal" href="#">io</a>
+                  <li class="toctree-l1"><a class="reference internal" >io</a>
     <ul>
-                <li class="toctree-l2"><a class="reference internal" href="#">models</a>
+                <li class="toctree-l2"><a class="reference internal" >models</a>
     <ul>
                 <li class="toctree-l3"><a class="reference internal" href="../source/io/models/base/">base</a>
                 </li>
@@ -131,8 +130,8 @@
       <div class="wy-nav-content">
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href=".." class="icon icon-home" alt="Docs"></a> &raquo;</li>
-      <li>Architecture Decision Records</li>
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Architecture Decision Records</li>
     <li class="wy-breadcrumbs-aside">
           <a href="https://github.com/slac-lcls/lute/edit/master/docs/adrs/README.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
@@ -151,72 +150,72 @@
 <table>
 <thead>
 <tr>
-<th align="center">ADR No.</th>
-<th align="center">Record Date</th>
-<th align="left">Title</th>
-<th align="center">Status</th>
+<th style="text-align: center;">ADR No.</th>
+<th style="text-align: center;">Record Date</th>
+<th style="text-align: left;">Title</th>
+<th style="text-align: center;">Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">1</td>
-<td align="center">2023-11-06</td>
-<td align="left">All analysis <code>Task</code>s inherit from a base class</td>
-<td align="center"><strong>Accepted</strong></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">2023-11-06</td>
+<td style="text-align: left;">All analysis <code>Task</code>s inherit from a base class</td>
+<td style="text-align: center;"><strong>Accepted</strong></td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">2023-11-06</td>
-<td align="left">Analysis <code>Task</code> submission and communication is performed via <code>Executor</code>s</td>
-<td align="center"><strong>Accepted</strong></td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">2023-11-06</td>
+<td style="text-align: left;">Analysis <code>Task</code> submission and communication is performed via <code>Executor</code>s</td>
+<td style="text-align: center;"><strong>Accepted</strong></td>
 </tr>
 <tr>
-<td align="center">3</td>
-<td align="center">2023-11-06</td>
-<td align="left"><code>Executor</code>s will run all <code>Task</code>s via subprocess</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">2023-11-06</td>
+<td style="text-align: left;"><code>Executor</code>s will run all <code>Task</code>s via subprocess</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">4</td>
-<td align="center">2023-11-06</td>
-<td align="left">Airflow <code>Operator</code>s and LUTE <code>Executor</code>s are separate entities.</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">2023-11-06</td>
+<td style="text-align: left;">Airflow <code>Operator</code>s and LUTE <code>Executor</code>s are separate entities.</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">5</td>
-<td align="center">2023-12-06</td>
-<td align="left">Task-Executor IPC is Managed by Communicator Objects</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">2023-12-06</td>
+<td style="text-align: left;">Task-Executor IPC is Managed by Communicator Objects</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">6</td>
-<td align="center">2024-02-12</td>
-<td align="left">Third-party Config Files Managed by Templates Rendered by <code>ThirdPartyTask</code>s</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">2024-02-12</td>
+<td style="text-align: left;">Third-party Config Files Managed by Templates Rendered by <code>ThirdPartyTask</code>s</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">7</td>
-<td align="center">2024-02-12</td>
-<td align="left"><code>Task</code> Configuration is Stored in a Database Managed by <code>Executor</code>s</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">7</td>
+<td style="text-align: center;">2024-02-12</td>
+<td style="text-align: left;"><code>Task</code> Configuration is Stored in a Database Managed by <code>Executor</code>s</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">8</td>
-<td align="center">2024-03-18</td>
-<td align="left">Airflow credentials/authorization requires special launch program.</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">2024-03-18</td>
+<td style="text-align: left;">Airflow credentials/authorization requires special launch program.</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center">9</td>
-<td align="center">2024-04-15</td>
-<td align="left">Airflow launch script will run as long lived batch job.</td>
-<td align="center"><strong>Proposed</strong></td>
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">2024-04-15</td>
+<td style="text-align: left;">Airflow launch script will run as long lived batch job.</td>
+<td style="text-align: center;"><strong>Proposed</strong></td>
 </tr>
 <tr>
-<td align="center"></td>
-<td align="center"></td>
-<td align="left"></td>
-<td align="center"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
@@ -252,14 +251,15 @@
     
   </span>
 </div>
-    <script>var base_url = '..';</script>
-    <script src="../js/theme_extra.js" defer></script>
-    <script src="../js/theme.js" defer></script>
-      <script src="../search/main.js" defer></script>
-    <script defer>
-        window.onload = function () {
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
             SphinxRtdTheme.Navigation.enable(true);
-        };
+        });
     </script>
 
 </body>
