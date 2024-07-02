@@ -1,4 +1,4 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.60-py3/bin/python
+#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
 
 """Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
 
@@ -46,6 +46,44 @@ def _retrieve_pw(instance: str = "prod") -> str:
     return pw
 
 
+def _request_arp_token(exp: str, lifetime: int = 300) -> str:
+    """Request an ARP token via Kerberos endpoint.
+
+    A token is required for job submission.
+
+    Args:
+        exp (str): The experiment to request the token for. All tokens are
+            scoped to a single experiment.
+
+        lifetime (int): The lifetime, in minutes, of the token. After the token
+            expires, it can no longer be used for job submission. The maximum
+            time you can request is 480 minutes (i.e. 8 hours). NOTE: since this
+            token is used for the entirety of a workflow, it must have a lifetime
+            equal or longer than the duration of the workflow's execution time.
+    """
+    from kerberos import GSSError
+    from krtc import KerberosTicket
+
+    try:
+        krbheaders: Dict[str, str] = KerberosTicket(
+            "HTTP@pswww.slac.stanford.edu"
+        ).getAuthHeaders()
+    except GSSError:
+        logger.info(
+            "Cannot proceed without credentials. Try running `kinit` from the command-line."
+        )
+        raise
+    base_url: str = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
+    token_endpoint: str = (
+        f"{base_url}/{exp}/ws/generate_arp_token?token_lifetime={lifetime}"
+    )
+    resp: requests.models.Response = requests.get(token_endpoint, headers=krbheaders)
+    resp.raise_for_status()
+    token: str = resp.json()["value"]
+    formatted_token: str = f"Bearer {token}"
+    return formatted_token
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="trigger_airflow_lute_dag",
@@ -60,10 +98,50 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w", "--workflow", type=str, help="Workflow to run.", default="test"
     )
+    # Optional arguments for when running from command-line
+    parser.add_argument(
+        "-e",
+        "--experiment",
+        type=str,
+        help="Provide an experiment if not running with ARP.",
+        required=False,
+    )
+    parser.add_argument(
+        "-r",
+        "--run",
+        type=str,
+        help="Provide a run number if not running with ARP.",
+        required=False,
+    )
 
     args: argparse.Namespace
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
+    # Check if was submitted from ARP - look for token
+    use_kerberos: bool = False
+    if os.getenv("Authorization") is None:
+        use_kerberos = True
+        cache_file: Optional[str] = os.getenv("KRB5CCNAME")
+        if cache_file is None:
+            logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
+            sys.exit(-1)
+
+        if args.experiment is None or args.run is None:
+            logger.info(
+                (
+                    "You must provide a `-e ${EXPERIMENT}` and `-r ${RUN_NUM}` "
+                    "if not running with the ARP!\n"
+                    "If you submitted this from the eLog and are seeing this error "
+                    "please contact the maintainers."
+                )
+            )
+            sys.exit(-1)
+        os.environ["EXPERIMENT"] = args.experiment
+        os.environ["RUN_NUM"] = args.run
+
+        os.environ["Authorization"] = _request_arp_token(args.experiment)
+        os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
+
     airflow_instance: str
     instance_str: str
     if args.test:
@@ -193,6 +271,15 @@ if __name__ == "__main__":
             continue
         logger.info(f"DAG exited: {dag_state}")
         break
+
+    if use_kerberos:
+        # We had to do some funny business to get Kerberos credentials...
+        # Cleanup now that we're done
+        logger.debug("Removing duplicate Kerberos credentials.")
+        # This should be defined if we get here
+        # Format is FILE:/.../...
+        os.remove(cache_file[5:])
+        os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
         sys.exit(1)
