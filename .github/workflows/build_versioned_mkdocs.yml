@@ -30,6 +30,10 @@ jobs:
           python-version: 3.10.14
       - name: Install dependencies
         run: pip install mkdocs mkdocs-material mkdocstrings "mkdocstrings[python]" mike
+      - name: Git Config
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "<>"
       - name: Build dev version
         if: steps.branch-names.outputs.current_branch == 'dev'
         run: mike deploy --push dev
