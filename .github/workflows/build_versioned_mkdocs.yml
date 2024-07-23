@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: 3.10.14
       - name: Install dependencies
-        run: pip install mkdocs mkdocs-material mkdocstrings mike
+        run: pip install mkdocs mkdocs-material mkdocstrings "mkdocstrings[python]" mike
       - name: Build dev version
         if: steps.branch-names.outputs.current_branch == 'dev'
         run: mike deploy --push dev
