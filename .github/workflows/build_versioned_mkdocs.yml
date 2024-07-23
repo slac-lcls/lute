@@ -1,0 +1,39 @@
+name: Build Documentation
+on:
+  push:
+    branches:
+      - dev
+    tags:
+      - '*'
+    #paths:
+    #  - 'docs/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  mkdocs_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get branch name
+        id: branch-names
+        uses: tj-actions/branch-names@v8
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10
+      - name: Install dependencies
+        run: pip install mkdocs mkdocs-material mkdocstrings mike
+      - name: Build dev version
+        if: steps.branch-names.outputs.current_branch == 'dev'
+        run: mike deploy --push dev
+      - name: Build release
+        #if: steps.branch-names.outputs.current_branch == 'main'
+        if: steps.branch-names.outputs.is_tag == 'true'
+        run: mike deploy --push --update-aliases ${{ steps.branch-names.outputs.tag }} latest
