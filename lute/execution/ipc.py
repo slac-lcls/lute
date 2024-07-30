@@ -352,6 +352,9 @@ class SocketCommunicator(Communicator):
         """
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc: str = "Communicates through a Unix socket."
+        if self._party == Party.EXECUTOR:
+            # Executor created first so we can define the hostname env variable
+            os.environ["LUTE_EXECUTOR_HOST"] = socket.gethostname()
 
         self._use_ssh_tunnel: bool = False
         self._ssh_proc: Optional[subprocess.Popen] = None
