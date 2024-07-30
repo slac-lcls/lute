@@ -30,10 +30,11 @@ import socket
 import subprocess
 import sys
 import warnings
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set
+from typing import Any, Optional, Set, List
 
 import _io
 from typing_extensions import Self
@@ -318,6 +319,17 @@ class SocketCommunicator(Communicator):
     Messages that are received to a queue. Read requests retrieve Messages from
     the queue. Task-side Communicators are fleeting so they open a connection,
     send data, and immediately close and clean up.
+
+    If the Task process is run on a different machine than the Executor, the
+    Task-side Communicator will open a ssh-tunnel to forward traffic from a local
+    Unix socket to the Executor Unix socket. Opening of the tunnel relies on the
+    environment variable:
+                      `LUTE_EXECUTOR_HOST=<hostname>`
+    to determine the Executor's host. This variable should be defined by the
+    Executor and passed to the Task process automatically, but it can also be
+    defined manually if launching the Task process separately. The Task will use
+    the local socket `<LUTE_SOCKET>.task`. Currently, it is assumed that the
+    user is identical on both the Task machine and Executor machine.
     """
 
     READ_TIMEOUT: float = 0.01
@@ -341,6 +353,8 @@ class SocketCommunicator(Communicator):
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc: str = "Communicates through a Unix socket."
 
+        self._use_ssh_tunnel: bool = False
+        self._ssh_proc: Optional[subprocess.Popen] = None
         self._data_socket: socket.socket = self._create_socket()
         self._data_socket.setblocking(0)
 
@@ -395,6 +409,16 @@ class SocketCommunicator(Communicator):
     def _create_socket(self) -> socket.socket:
         """Returns a socket object.
 
+        On the Task (client-side), this method will also open a SSH tunnel to
+        forward a local Unix socket to an Executor Unix socket if the Task and
+        Executor processes are on different machines.
+
+        The SSH tunnel is opened with `ssh -NTf -L <local>:<remote>`.
+        These options are for:
+        - `-N`: Do not execute remote command (useful for port forwarding).
+        - `-T`: Disable pseudo-terminal.
+        - `-f`: Go to background before command execution.
+
         Returns:
             data_socket (socket.socket): Unix socket object.
         """
@@ -419,7 +443,26 @@ class SocketCommunicator(Communicator):
             data_socket.bind(socket_path)
             data_socket.listen(1)
         elif self._party == Party.TASK:
-            data_socket.connect(socket_path)
+            hostname: str = socket.gethostname()
+            executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
+            if executor_hostname is None:
+                logger.info("Hostname for Executor process not found! Exiting!")
+                self._data_socket.close()
+                sys.exit(-1)
+            if hostname == executor_hostname:
+                data_socket.connect(socket_path)
+            else:
+                self._use_ssh_tunnel = True
+                ssh_cmd: List[str] = [
+                    "ssh",
+                    "-NTf",
+                    "-L",
+                    f"{socket_path}.task:{socket_path}",
+                    executor_hostname,
+                ]
+                self._ssh_proc = subprocess.Popen(ssh_cmd)
+                time.sleep(0.2)  # Need to wait... -> Use single Task comm at beginning?
+                data_socket.connect(f"{socket_path}.task")
 
         return data_socket
 
@@ -438,15 +481,20 @@ class SocketCommunicator(Communicator):
         # Check the object exists in case the Communicator is cleaned up before
         # opening any connections
         if hasattr(self, "_data_socket"):
-            socket_path: str = self._data_socket.getsockname()
+            socket_path: str = self.socket_path
             self._data_socket.close()
-
-            if self._party == Party.EXECUTOR:
+            if self._party == Party.EXECUTOR or self._use_ssh_tunnel:
                 os.unlink(socket_path)
+                if self._ssh_proc is not None:
+                    self._ssh_proc.terminate()
 
     @property
     def socket_path(self) -> str:
         socket_path: str = self._data_socket.getsockname()
+        if not socket_path:
+            socket_path = os.environ["LUTE_SOCKET"]
+            if self._party == Party.TASK:
+                socket_path = f"{socket_path}.task"
         return socket_path
 
     def __exit__(self):
