@@ -27,6 +27,8 @@ WriteTester: Executor = Executor("TestWriteOutput")
 ReadTester: Executor = Executor("TestReadOutput")
 """Runs a test to confirm database reading."""
 
+MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunication")
+"""Runs a test to confirm communication works between multiple nodes."""
 
 # SmallData-related
 ###################
