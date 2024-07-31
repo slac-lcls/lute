@@ -328,8 +328,9 @@ class SocketCommunicator(Communicator):
     to determine the Executor's host. This variable should be defined by the
     Executor and passed to the Task process automatically, but it can also be
     defined manually if launching the Task process separately. The Task will use
-    the local socket `<LUTE_SOCKET>.task`. Currently, it is assumed that the
-    user is identical on both the Task machine and Executor machine.
+    the local socket `<LUTE_SOCKET>.task{##}`. Multiple local sockets may be
+    created. Currently, it is assumed that the user is identical on both the Task
+    machine and Executor machine.
     """
 
     READ_TIMEOUT: float = 0.01
@@ -358,6 +359,7 @@ class SocketCommunicator(Communicator):
 
         self._use_ssh_tunnel: bool = False
         self._ssh_proc: Optional[subprocess.Popen] = None
+        self._local_socket_path: Optional[str] = None
         self._data_socket: socket.socket = self._create_socket()
         self._data_socket.setblocking(0)
 
@@ -444,7 +446,7 @@ class SocketCommunicator(Communicator):
             if os.path.exists(socket_path):
                 os.unlink(socket_path)
             data_socket.bind(socket_path)
-            data_socket.listen(1)
+            data_socket.listen(10)
         elif self._party == Party.TASK:
             hostname: str = socket.gethostname()
             executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
@@ -455,17 +457,21 @@ class SocketCommunicator(Communicator):
             if hostname == executor_hostname:
                 data_socket.connect(socket_path)
             else:
+                if "uuid" not in locals():
+                    import uuid
+                self._local_socket_path = f"{socket_path}.task{uuid.uuid4().hex[:4]}"
                 self._use_ssh_tunnel = True
                 ssh_cmd: List[str] = [
                     "ssh",
                     "-NTf",
                     "-L",
-                    f"{socket_path}.task:{socket_path}",
+                    f"{self._local_socket_path}:{socket_path}",
                     executor_hostname,
                 ]
+                logger.debug(f"Opening tunnel from {hostname} to {executor_hostname}")
                 self._ssh_proc = subprocess.Popen(ssh_cmd)
                 time.sleep(0.2)  # Need to wait... -> Use single Task comm at beginning?
-                data_socket.connect(f"{socket_path}.task")
+                data_socket.connect(self._local_socket_path)
 
         return data_socket
 
@@ -496,8 +502,9 @@ class SocketCommunicator(Communicator):
         socket_path: str = self._data_socket.getsockname()
         if not socket_path:
             socket_path = os.environ["LUTE_SOCKET"]
-            if self._party == Party.TASK:
-                socket_path = f"{socket_path}.task"
+            if self._party == Party.TASK and self._use_ssh_tunnel:
+                # If _use_ssh_tunnel _local_socket_path is defined.
+                return self._local_socket_path
         return socket_path
 
     def __exit__(self):

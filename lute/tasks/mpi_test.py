@@ -8,6 +8,7 @@ Classes:
 __all__ = ["TestMultiNodeCommunication"]
 __author__ = "Gabriel Dorlhiac"
 
+import os
 import time
 
 import numpy as np
@@ -41,6 +42,7 @@ class TestMultiNodeCommunication(Task):
         time.sleep(self._rank)
         msg: Message = Message(
             f"Rank {self._rank} of {self._world_size} sending message."
+            f"  From {MPI.Get_processor_name()} to {os.getenv('LUTE_EXECUTOR_HOST')}."
         )
         self._report_to_executor(msg)
         if self._task_parameters.send_obj == "array":
@@ -49,11 +51,11 @@ class TestMultiNodeCommunication(Task):
                 arr_size = self._task_parameters.arr_size
             else:
                 arr_size = 512
-            msg = Message(contents=np.rand(arr_size))
+            msg = Message(contents=np.random.rand(arr_size))
             self._report_to_executor(msg)
         elif self._task_parameters.send_obj == "plot":
             x: np.ndarray[np.float_] = np.linspace(0, 49, 50)
-            y: np.ndarray[np.float_] = np.random.rand([50])
+            y: np.ndarray[np.float_] = np.random.rand(50)
             fig, ax = plt.subplots(1, 1)
             ax.plot(x, y, label="Test")
             ax.set_title("Multi-Node Communication Test")
