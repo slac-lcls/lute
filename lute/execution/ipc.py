@@ -29,12 +29,14 @@ import select
 import socket
 import subprocess
 import sys
-import warnings
 import time
+import threading
+import warnings
+import queue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set, List, Literal, Union
+from typing import Any, Optional, Set, List, Literal, Union, Tuple
 
 import _io
 from typing_extensions import Self
@@ -348,9 +350,9 @@ class RawSocketCommunicator(Communicator):
     machine and Executor machine.
     """
 
-    READ_TIMEOUT: float = 0.01
+    ACCEPT_TIMEOUT: float = 5
     """
-    Maximum time to wait to retrieve data.
+    Maximum time to wait to accept connections. Used by Executor-side.
     """
 
     def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -> None:
@@ -368,17 +370,136 @@ class RawSocketCommunicator(Communicator):
         """
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc: str = "Communicates through a TCP or Unix socket."
+
+        self._data_socket: socket.socket = self._create_socket()
+        # self._data_socket.setblocking(0)
+
         if self._party == Party.EXECUTOR:
             # Executor created first so we can define the hostname env variable
             os.environ["LUTE_EXECUTOR_HOST"] = socket.gethostname()
-
-        self._use_ssh_tunnel: bool = False
-        self._ssh_proc: Optional[subprocess.Popen] = None
-        self._local_socket_path: Optional[str] = None
-        self._data_socket: socket.socket = self._create_socket()
-        self._data_socket.setblocking(0)
+            # Setup reader thread
+            self._reader_thread: threading.Thread = threading.Thread(
+                target=self._read_socket
+            )
+            self._msg_queue: queue.Queue = queue.Queue()
+            self._partial_msg: Optional[bytes] = None
+            self._stop_thread: bool = False
+            self._data_socket.settimeout(RawSocketCommunicator.ACCEPT_TIMEOUT)
+            self._reader_thread.start()
+        else:
+            # Only used by Party.TASK
+            self._use_ssh_tunnel: bool = False
+            self._ssh_proc: Optional[subprocess.Popen] = None
+            self._local_socket_path: Optional[str] = None
 
     def read(self, proc: subprocess.Popen) -> Message:
+        """Return a message from the queue if available.
+
+        Socket(s) are continuously monitored, and read from when new data is
+        available.
+
+        Args:
+            proc (subprocess.Popen): The process to read from. Provided for
+                compatibility with other Communicator subtypes. Is ignored.
+
+        Returns:
+             msg (Message): The message read, containing contents and signal.
+        """
+        msg: Message
+        try:
+            msg = self._msg_queue.get(timeout=RawSocketCommunicator.ACCEPT_TIMEOUT)
+        except queue.Empty:
+            msg = Message()
+
+        return msg
+
+    def _read_socket(self) -> None:
+        """Read data from a socket.
+
+        Socket(s) are continuously monitored, and read from when new data is
+        available.
+
+        Args:
+            proc (subprocess.Popen): The process to read from. Provided for
+                compatibility with other Communicator subtypes. Is ignored.
+
+        Returns:
+             msg (Message): The message read, containing contents and signal.
+        """
+        while True:
+            if self._stop_thread:
+                logger.debug("Stopping socket reader thread.")
+                break
+            connection: socket.socket
+            addr: Union[str, Tuple[str, int]]
+            try:
+                connection, addr = self._data_socket.accept()
+            except socket.timeout:
+                continue
+            full_data: bytes = b""
+            while True:
+                data: bytes = connection.recv(8192)
+                if data:
+                    full_data += data
+                else:
+                    break
+            self._unpack_messages(full_data)
+            connection.close()
+
+    def _unpack_messages(self, data: bytes) -> None:
+        """Unpacks a byte stream into individual messages.
+
+        Messages are encoded in the following format:
+                      MSG,<len(msg)>,<msg>,GSM
+        The items between <> represent the expected length of the message and
+        the message itself while the bytes versions of the literals "MSG", ","
+        and "GSM" are used to delineate and bookend the actual data.
+
+        Partial messages (a series of bytes which cannot be converted to a full
+        message) are stored for later. An attempt is made to reconstruct the
+        message with the next call to this method.
+
+        Args:
+            data (bytes): A raw byte stream containing anywhere from a partial
+                message to multiple full messages.
+        """
+        msg: Message
+        working_data: bytes
+        if self._partial_msg:
+            # Concatenate the previous partial message to the beginning
+            working_data = self._partial_msg + data
+            self._partial_msg = None
+        else:
+            working_data = data
+        while working_data:
+            try:
+                # Messages are encoded as MSG,<len>,<msg>,GSM
+                end = working_data.find(b",GSM")
+                msg_parts: List[bytes] = working_data[:end].split(b",")
+                if len(msg_parts) != 3:
+                    self._partial_msg = working_data
+                    break
+
+                cmd: bytes
+                nbytes: bytes
+                raw_msg: bytes
+                cmd, nbytes, raw_msg = msg_parts
+                if len(raw_msg) != int(nbytes):
+                    self._partial_msg = working_data
+                    break
+
+                msg = pickle.loads(raw_msg)
+                self._msg_queue.put(msg)
+            except pickle.UnpicklingError:
+                self._partial_msg = working_data
+                break
+            if end < len(working_data):
+                # Add 4 since end marks the start of ,GSM sequence
+                working_data = working_data[end + 4 :]
+            else:
+                working_data = b""
+
+    def _read_socket_select(self) -> None:
         """Read data from a socket.
 
         Socket(s) are continuously monitored, and read from when new data is
@@ -395,7 +516,7 @@ class RawSocketCommunicator(Communicator):
             [self._data_socket],
             [],
             [self._data_socket],
-            RawSocketCommunicator.READ_TIMEOUT,
+            RawSocketCommunicator.ACCEPT_TIMEOUT,
         )
 
         msg: Message
@@ -590,13 +711,34 @@ class RawSocketCommunicator(Communicator):
         return sock
 
     def _write_socket(self, msg: Message) -> None:
-        """Sends data over a socket from the 'client' (Task) side."""
-        self._data_socket.sendall(pickle.dumps(msg))
+        """Sends data over a socket from the 'client' (Task) side.
+
+        Messages are encoded in the following format:
+                      MSG,<len(msg)>,<msg>,GSM
+        The items between <> are replaced with the length of the message and
+        the message itself while the bytes versions of the literals "MSG", ","
+        and "GSM" are used to delineate and bookend the actual data.
+
+        This structure is used for decoding the message on the other end.
+        """
+        data: bytes = pickle.dumps(msg)
+        cmd: bytes = b"MSG"
+        size: bytes = b"%d" % len(data)
+        end: bytes = b"GSM"
+        sep: bytes = b","
+        packed_msg: bytes = cmd + sep + size + sep + data + sep + end
+        # self._data_socket.sendall(pickle.dumps(msg))
+        self._data_socket.sendall(packed_msg)
 
     def _clean_up(self) -> None:
         """Clean up connections."""
         # Check the object exists in case the Communicator is cleaned up before
         # opening any connections
+        if self._party == Party.EXECUTOR:
+            self._stop_thread = True
+            self._reader_thread.join()
+            logger.debug("Closed reading thread.")
+
         if hasattr(self, "_data_socket") and not self._data_socket._closed:
             socket_path: str = self.socket_path
             self._data_socket.close()
@@ -616,6 +758,16 @@ class RawSocketCommunicator(Communicator):
                 # If _use_ssh_tunnel _local_socket_path is defined.
                 return self._local_socket_path
         return socket_path
+
+    @property
+    def has_messages(self) -> bool:
+        if self._party == Party.TASK:
+            # Shouldn't be called on Task-side
+            return False
+
+        if self._msg_queue.qsize() > 0:
+            return True
+        return False
 
     def __exit__(self):
         self._clean_up()
