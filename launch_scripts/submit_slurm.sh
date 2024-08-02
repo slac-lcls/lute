@@ -72,7 +72,12 @@ LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S'
 SLURM_ARGS+=" --output=${LOG_FILE}.out"
 SLURM_ARGS+=" --error=${LOG_FILE}.out"
 
-export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
+# If LUTE_USE_TCP is unset use TCP
+if [[ -z ${LUTE_USE_TCP} || ${LUTE_USE_TCP} != 0 ]]; then
+    export LUTE_USE_TCP=1
+else
+    export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
+fi
 
 # By default source the psana environment since most Tasks will use it.
 source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
