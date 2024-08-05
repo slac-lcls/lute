@@ -36,7 +36,7 @@ import queue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set, List, Literal, Union, Tuple
+from typing import Any, Optional, Set, List, Literal, Union, Tuple, Type
 
 import _io
 from typing_extensions import Self
@@ -123,6 +123,15 @@ class Communicator(ABC):
         return self
 
     def __exit__(self) -> None: ...
+
+    @property
+    def has_messages(self) -> bool:
+        """Whether the Communicator has remaining messages.
+
+        The precise method for determining whether there are remaining messages
+        will depend on the specific Communicator sub-class.
+        """
+        return False
 
     def stage_communicator(self):
         """Alternative method for staging outside of context manager."""
@@ -350,7 +359,7 @@ class RawSocketCommunicator(Communicator):
     machine and Executor machine.
     """
 
-    ACCEPT_TIMEOUT: float = 5
+    ACCEPT_TIMEOUT: float = 0.01
     """
     Maximum time to wait to accept connections. Used by Executor-side.
     """
@@ -372,7 +381,6 @@ class RawSocketCommunicator(Communicator):
         self.desc: str = "Communicates through a TCP or Unix socket."
 
         self._data_socket: socket.socket = self._create_socket()
-        # self._data_socket.setblocking(0)
 
         if self._party == Party.EXECUTOR:
             # Executor created first so we can define the hostname env variable
@@ -388,6 +396,11 @@ class RawSocketCommunicator(Communicator):
             self._reader_thread.start()
         else:
             # Only used by Party.TASK
+            import struct
+
+            self._data_socket.setsockopt(
+                socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 10)
+            )
             self._use_ssh_tunnel: bool = False
             self._ssh_proc: Optional[subprocess.Popen] = None
             self._local_socket_path: Optional[str] = None
@@ -487,7 +500,6 @@ class RawSocketCommunicator(Communicator):
                 if len(raw_msg) != int(nbytes):
                     self._partial_msg = working_data
                     break
-
                 msg = pickle.loads(raw_msg)
                 self._msg_queue.put(msg)
             except pickle.UnpicklingError:
@@ -587,7 +599,7 @@ class RawSocketCommunicator(Communicator):
         port: Optional[Union[str, int]] = os.getenv("LUTE_PORT")
         if self._party == Party.EXECUTOR:
             if port is None:
-                # If port is None find one
+                # If port is None find onex
                 # Executor code executes first
                 port = self._find_random_port()
                 if port is None:
@@ -602,6 +614,7 @@ class RawSocketCommunicator(Communicator):
             data_socket.bind(("", int(port)))
             data_socket.listen()
         else:
+            hostname: str = socket.gethostname()
             executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
             if executor_hostname is None or port is None:
                 logger.info(
@@ -609,7 +622,10 @@ class RawSocketCommunicator(Communicator):
                     " Check environment variables! Exiting!"
                 )
                 sys.exit(-1)
-            data_socket.connect((executor_hostname, int(port)))
+            if hostname == executor_hostname:
+                data_socket.connect(("localhost", int(port)))
+            else:
+                data_socket.connect((executor_hostname, int(port)))
         return data_socket
 
     def _init_unix_socket(self) -> socket.socket:
@@ -1041,14 +1057,9 @@ class ZMQCommunicator(Communicator):
         self._clean_up()
 
 
-def SocketCommunicator(*args, **kwargs) -> Communicator:
-    """Selector for RawSocketCommunicator or ZMQCommunicator.
-
-    Returns:
-        communicator (Communicator): RawSocketCommunicator. ZMQCommunicator
-            is currently unused.
-    """
-    use_zmq: bool = False
-    if use_zmq:
-        return ZMQCommunicator(*args, **kwargs)
-    return RawSocketCommunicator(*args, **kwargs)
+SocketCommunicator: Type[Communicator]
+use_zmq: bool = False
+if use_zmq:
+    SocketCommunicator = RawSocketCommunicator
+else:
+    SocketCommunicator = ZMQCommunicator
