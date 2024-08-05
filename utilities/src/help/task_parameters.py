@@ -1,7 +1,7 @@
 import sys
 import argparse
 import logging
-from typing import Dict, Optional, List, Set, Tuple
+from typing import Dict, Optional, List, Set, Tuple, Any
 from typing_extensions import TypedDict
 
 import pprint
@@ -52,7 +52,10 @@ parser: argparse.ArgumentParser = argparse.ArgumentParser(
     description="Display parameter descriptions and types for a specified Task.",
     epilog="Refer to https://github.com/slac-lcls/lute for more information.",
 )
-parser.add_argument("-T", "--Task", type=str, help="Name of the Task to inspect.")
+parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
+parser.add_argument(
+    "-T", "--Task", type=str, help="Name of the Task to inspect.", required=False
+)
 parser.add_argument(
     "--full_schema",
     action="store_true",
@@ -89,44 +92,69 @@ def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
 
 if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
+    if args.list:
+        logger.info(f"Fetching Task list.")
+        task_list_msg: str = "Task List"
+        task_list_msg = f"{task_list_msg}\n{'-'*len(task_list_msg)}"
+        for key in dir(lute.io.models):
+            if "Parameters" in key and key not in (
+                "ThirdPartyParameters",
+                "TaskParameters",
+                "TemplateParameters",
+            ):
+                task_list_msg = f"{task_list_msg}\n\n- {key.replace('Parameters','')}"
+                obj: TaskParameters = getattr(lute.io.models, key)
+                parameter_schema: ModelSchema = obj.schema()
+                description: str = parameter_schema["description"]
+                for line in description.split("\n"):
+                    new_line: str
+                    if line:
+                        new_line = f"\n\t{line}"
+                    else:
+                        new_line = f"\n{line}"
+                    task_list_msg = f"{task_list_msg}{new_line}"
+
+        print(task_list_msg)
+
     task_name: str = args.Task
-    model_name: str = f"{task_name}Parameters"
+    if task_name:
+        model_name: str = f"{task_name}Parameters"
 
-    if hasattr(lute.io.models, model_name):
-        parameter_model: TaskParameters = getattr(lute.io.models, model_name)
-        logger.info(f"Fetching parameter information for {task_name}.")
-    else:
-        logger.info(f"No Task named {task_name} found! Exiting!")
-        sys.exit(-1)
+        if hasattr(lute.io.models, model_name):
+            parameter_model: TaskParameters = getattr(lute.io.models, model_name)
+            logger.info(f"Fetching parameter information for {task_name}.")
+        else:
+            logger.info(f"No Task named {task_name} found! Exiting!")
+            sys.exit(-1)
 
-    # For types need to check for key `type` or a list of dicts `anyOf=[{'type': ...}, {'type': ...}]`
-    parameter_schema: ModelSchema = parameter_model.schema()
+        # For types need to check for key `type` or a list of dicts `anyOf=[{'type': ...}, {'type': ...}]`
+        parameter_schema: ModelSchema = parameter_model.schema()
 
-    if args.full_schema:
-        pprint.pprint(parameter_schema)
-        sys.exit(0)
+        if args.full_schema:
+            pprint.pprint(parameter_schema)
+            sys.exit(0)
 
-    task_description: str = parameter_schema["description"]
-    required_parameters: Optional[List[Tuple[str, PropertyDict]]] = None
-    if (
-        "required" in parameter_schema.keys()
-        and parameter_schema["required"] is not None
-    ):
-        required_parameters = [
-            (param, parameter_schema["properties"][param])
-            for param in parameter_schema["required"]
-        ]
+        task_description: str = parameter_schema["description"]
+        required_parameters: Optional[List[Tuple[str, PropertyDict]]] = None
+        if (
+            "required" in parameter_schema.keys()
+            and parameter_schema["required"] is not None
+        ):
+            required_parameters = [
+                (param, parameter_schema["properties"][param])
+                for param in parameter_schema["required"]
+            ]
 
-    out_msg: str = f"{task_name}\n{'-'*len(task_name)}\n"
-    out_msg = f"{out_msg}{task_description}\n\n\n"
-    if required_parameters is not None:
-        out_msg = f"{out_msg}Required Parameters:\n--------------------\n"
-        for param in required_parameters:
-            out_msg = f"{out_msg}{_format_parameter_row(param[0], param[1])}"
-        out_msg = f"{out_msg}\n\n"
+        out_msg: str = f"{task_name}\n{'-'*len(task_name)}\n"
+        out_msg = f"{out_msg}{task_description}\n\n\n"
+        if required_parameters is not None:
+            out_msg = f"{out_msg}Required Parameters:\n--------------------\n"
+            for param in required_parameters:
+                out_msg = f"{out_msg}{_format_parameter_row(param[0], param[1])}"
+            out_msg = f"{out_msg}\n\n"
 
-    out_msg = f"{out_msg}All Parameters:\n-------------\n"
-    for param in parameter_schema["properties"]:
-        out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param])}"
+        out_msg = f"{out_msg}All Parameters:\n-------------\n"
+        for param in parameter_schema["properties"]:
+            out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param])}"
 
-    print(out_msg)
+        print(out_msg)
