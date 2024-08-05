@@ -122,6 +122,7 @@ class JIDSlurmOperator(BaseOperator):
         poke_interval: float = 30.0,
         max_cores: Optional[int] = None,
         max_nodes: Optional[int] = None,
+        require_partition: Optional[str] = None,
         *args,
         **kwargs,
     ) -> None:
@@ -131,6 +132,7 @@ class JIDSlurmOperator(BaseOperator):
         self.poke_interval: float = poke_interval
         self.max_cores: Optional[int] = max_cores
         self.max_nodes: Optional[int] = max_nodes
+        self.require_partition: Optional[str] = require_partition
 
     def _sub_overridable_arguments(self, slurm_param_str: str) -> str:
         """Overrides certain SLURM arguments given instance options.
@@ -165,9 +167,8 @@ class JIDSlurmOperator(BaseOperator):
         # Cap max nodes. Unlike above search for everything, if not present, add it.
         if self.max_nodes is not None:
             pattern = r"nodes=\S+"
-            nnodes_str: str
             try:
-                nnodes_str = re.findall(pattern, slurm_param_str)[0]
+                _ = re.findall(pattern, slurm_param_str)[0]
                 # Check if present with above. Below does nothing but does not
                 # throw error if pattern not present.
                 slurm_param_str = re.sub(
@@ -175,6 +176,21 @@ class JIDSlurmOperator(BaseOperator):
                 )
             except IndexError:  # `--nodes` not present
                 slurm_param_str = f"{slurm_param_str} --nodes=0-{self.max_nodes}"
+
+        # Force use of a specific partition
+        if self.require_partition is not None:
+            pattern = r"partition=\S+"
+            try:
+                _ = re.findall(pattern, slurm_param_str)[0]
+                # Check if present with above. Below does nothing but does not
+                # throw error if pattern not present.
+                slurm_param_str = re.sub(
+                    pattern, f"partition={self.require_partition}", slurm_param_str
+                )
+            except IndexError:  # --partition not present. This shouldn't happen
+                slurm_param_str = (
+                    f"{slurm_param_str} --partition={self.require_partition}"
+                )
 
         return slurm_param_str
 
@@ -217,15 +233,9 @@ class JIDSlurmOperator(BaseOperator):
 
         # slurm_params holds a List[str]
         slurm_param_str: str = " ".join(dagrun_config.get("slurm_params"))
-        # Cap max cores used by a managed Task if that is requested
-        pattern: str = r"(?<=\bntasks=)\d+"
-        ntasks: int
-        try:
-            ntasks = int(re.findall(pattern, slurm_param_str)[0])
-        except IndexError as err:  # If `ntasks` not passed - 1 is default
-            ntasks = 1
-        if self.max_cores is not None and ntasks > self.max_cores:
-            slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+
+        # Make any requested SLURM argument substitutions
+        slurm_param_str = self._sub_overridable_arguments(slurm_param_str)
 
         parameter_str: str = f"{lute_param_str} {slurm_param_str}"
 
