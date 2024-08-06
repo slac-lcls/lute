@@ -1,0 +1,36 @@
+name: Bug Report
+description: Report BUGs encountered with LUTE
+title: "BUG "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use this form to report any bugs that are encountered: program crashes, behaviour that does not match documentation etc.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Bug description
+      description: Please describe the encountered bug.
+      placeholder: Please describe the encountered bug.
+      value: "Task X crashes on launch with error Y."
+    validations:
+      required: true
+  - type: textarea
+    id: how-to-reproduce
+    attributes:
+      label: Reproduction steps
+      description: Please describe how to reproduce the bug.
+      placeholder: Please describe how to reproduce the bug.
+      value: "Describe how the program was launched and any additional steps to reproduce the error."
+    validations:
+      required: true
+  - type: textarea
+    id: log-files
+    attributes:
+      label: Logs
+      description: If there are logs, please provide them.
+      placeholder: If there are logs, please provide them.
+      value: "Paste relevant logs here, or include a path to a logfile if they still exist."
+    validations:
+      required: false
