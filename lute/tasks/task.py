@@ -58,7 +58,7 @@ class Task(ABC):
         name (str): The name of the Task.
     """
 
-    def __init__(self, *, params: TaskParameters) -> None:
+    def __init__(self, *, params: TaskParameters, use_mpi: bool = False) -> None:
         """Initialize a Task.
 
         Args:
@@ -66,6 +66,11 @@ class Task(ABC):
                 the analysis task. These are NOT related to execution parameters
                 (number of cores, etc), except, potentially, in case of binary
                 executable sub-classes.
+
+            use_mpi (bool): Whether this Task requires the use of MPI.
+                This determines the behaviour and timing of certain signals
+                and ensures appropriate barriers are placed to not end
+                processing until all ranks have finished.
         """
         self.name: str = str(type(self)).split("'")[1].split(".")[-1]
         self._result: TaskResult = TaskResult(
@@ -90,6 +95,7 @@ class Task(ABC):
                     ),
                     category=UserWarning,
                 )
+        self._use_mpi: bool = use_mpi
 
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
@@ -141,13 +147,27 @@ class Task(ABC):
             contents=self._task_parameters, signal="TASK_STARTED"
         )
         self._result.task_status = TaskStatus.RUNNING
-        self._report_to_executor(start_msg)
+        if self._use_mpi:
+            from mpi4py import MPI
+
+            comm: MPI.Intracomm = MPI.COMM_WORLD
+            rank: int = comm.Get_rank()
+            comm.Barrier()
+            if rank == 0:
+                self._report_to_executor(start_msg)
 
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
         signal: str = "TASK_RESULT"
         results_msg: Message = Message(contents=self.result, signal=signal)
-        self._report_to_executor(results_msg)
+        if self._use_mpi:
+            from mpi4py import MPI
+
+            comm: MPI.Intracomm = MPI.COMM_WORLD
+            rank: int = comm.Get_rank()
+            comm.Barrier()
+            if rank == 0:
+                self._report_to_executor(results_msg)
         time.sleep(0.1)
 
     def _report_to_executor(self, msg: Message) -> None:
@@ -166,6 +186,7 @@ class Task(ABC):
             communicator = SocketCommunicator()
 
         communicator.write(msg)
+        communicator.clear_communicator()
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""
