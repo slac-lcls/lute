@@ -596,17 +596,20 @@ class Executor(BaseExecutor):
         that its finished.
         """
         for communicator in self._communicators:
-            msg: Message = communicator.read(proc)
-            if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                hook: Callable[[Executor, Message], None] = getattr(
-                    self.Hooks, msg.signal.lower()
-                )
-                hook(self, msg)
-            if msg.contents is not None:
-                if isinstance(msg.contents, str) and msg.contents != "":
-                    logger.info(msg.contents)
-                elif not isinstance(msg.contents, str):
-                    logger.info(msg.contents)
+            while True:
+                msg: Message = communicator.read(proc)
+                if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
+                    hook: Callable[[Executor, Message], None] = getattr(
+                        self.Hooks, msg.signal.lower()
+                    )
+                    hook(self, msg)
+                if msg.contents is not None:
+                    if isinstance(msg.contents, str) and msg.contents != "":
+                        logger.info(msg.contents)
+                    elif not isinstance(msg.contents, str):
+                        logger.info(msg.contents)
+                if not communicator.has_messages:
+                    break
 
     def _finalize_task(self, proc: subprocess.Popen) -> None:
         """Any actions to be performed after the Task has ended.
