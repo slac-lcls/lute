@@ -41,6 +41,8 @@ from typing import Any, Optional, Set, List, Literal, Union, Tuple, Type
 import _io
 from typing_extensions import Self
 
+import zmq
+
 LUTE_SIGNALS: Set[str] = {
     "NO_PICKLE_MODE",
     "TASK_STARTED",
@@ -363,6 +365,14 @@ class RawSocketCommunicator(Communicator):
     """
     Maximum time to wait to accept connections. Used by Executor-side.
     """
+    MSG_HEAD: bytes = b"MSG"
+    """
+    Start signal of a message. The end of a message is indicated by MSG_HEAD[::-1].
+    """
+    MSG_SEP: bytes = b";;;"
+    """
+    Separator for parts of a message. Messages have a start, length, message and end.
+    """
 
     def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -> None:
         """IPC over a TCP or Unix socket.
@@ -463,10 +473,13 @@ class RawSocketCommunicator(Communicator):
         """Unpacks a byte stream into individual messages.
 
         Messages are encoded in the following format:
-                      MSG,<len(msg)>,<msg>,GSM
-        The items between <> represent the expected length of the message and
-        the message itself while the bytes versions of the literals "MSG", ","
-        and "GSM" are used to delineate and bookend the actual data.
+                 <HEAD><SEP><len(msg)><SEP><msg><SEP><HEAD[::-1]>
+        The items between <> are replaced as follows:
+            - <HEAD>: A start marker
+            - <SEP>: A separator for components of the message
+            - <len(msg)>: The length of the message payload in bytes.
+            - <msg>: The message payload in bytes
+            - <HEAD[::-1]>: The start marker in reverse to indicate the end.
 
         Partial messages (a series of bytes which cannot be converted to a full
         message) are stored for later. An attempt is made to reconstruct the
@@ -486,9 +499,14 @@ class RawSocketCommunicator(Communicator):
             working_data = data
         while working_data:
             try:
-                # Messages are encoded as MSG,<len>,<msg>,GSM
-                end = working_data.find(b",GSM")
-                msg_parts: List[bytes] = working_data[:end].split(b",")
+                # Message encoding: <HEAD><SEP><len><SEP><msg><SEP><HEAD[::-1]>
+                end = working_data.find(
+                    RawSocketCommunicator.MSG_SEP + RawSocketCommunicator.MSG_HEAD[::-1]
+                )
+                msg_parts: List[bytes] = working_data[:end].split(
+                    RawSocketCommunicator.MSG_SEP
+                )
+                # print(f"PART LENGTH: {len(msg_parts)}", flush=True)
                 if len(msg_parts) != 3:
                     self._partial_msg = working_data
                     break
@@ -502,51 +520,18 @@ class RawSocketCommunicator(Communicator):
                     break
                 msg = pickle.loads(raw_msg)
                 self._msg_queue.put(msg)
+                print(msg, flush=True)
             except pickle.UnpicklingError:
                 self._partial_msg = working_data
                 break
             if end < len(working_data):
-                # Add 4 since end marks the start of ,GSM sequence
-                working_data = working_data[end + 4 :]
+                # Add len(SEP+HEAD) since end marks the start of <SEP><HEAD[::-1]
+                offset: int = len(
+                    RawSocketCommunicator.MSG_SEP + RawSocketCommunicator.MSG_HEAD
+                )
+                working_data = working_data[end + offset :]
             else:
                 working_data = b""
-
-    def _read_socket_select(self) -> None:
-        """Read data from a socket.
-
-        Socket(s) are continuously monitored, and read from when new data is
-        available.
-
-        Args:
-            proc (subprocess.Popen): The process to read from. Provided for
-                compatibility with other Communicator subtypes. Is ignored.
-
-        Returns:
-             msg (Message): The message read, containing contents and signal.
-        """
-        has_data, _, has_error = select.select(
-            [self._data_socket],
-            [],
-            [self._data_socket],
-            RawSocketCommunicator.ACCEPT_TIMEOUT,
-        )
-
-        msg: Message
-        if has_data:
-            connection, _ = has_data[0].accept()
-            full_data: bytes = b""
-            while True:
-                data: bytes = connection.recv(8192)
-                if data:
-                    full_data += data
-                else:
-                    break
-            msg = pickle.loads(full_data) if full_data else Message()
-            connection.close()
-        else:
-            msg = Message()
-
-        return msg
 
     def write(self, msg: Message) -> None:
         """Send a single Message.
@@ -730,20 +715,22 @@ class RawSocketCommunicator(Communicator):
         """Sends data over a socket from the 'client' (Task) side.
 
         Messages are encoded in the following format:
-                      MSG,<len(msg)>,<msg>,GSM
-        The items between <> are replaced with the length of the message and
-        the message itself while the bytes versions of the literals "MSG", ","
-        and "GSM" are used to delineate and bookend the actual data.
+                 <HEAD><SEP><len(msg)><SEP><msg><SEP><HEAD[::-1]>
+        The items between <> are replaced as follows:
+            - <HEAD>: A start marker
+            - <SEP>: A separator for components of the message
+            - <len(msg)>: The length of the message payload in bytes.
+            - <msg>: The message payload in bytes
+            - <HEAD[::-1]>: The start marker in reverse to indicate the end.
 
         This structure is used for decoding the message on the other end.
         """
         data: bytes = pickle.dumps(msg)
-        cmd: bytes = b"MSG"
+        cmd: bytes = RawSocketCommunicator.MSG_HEAD
         size: bytes = b"%d" % len(data)
-        end: bytes = b"GSM"
-        sep: bytes = b","
+        end: bytes = RawSocketCommunicator.MSG_HEAD[::-1]
+        sep: bytes = RawSocketCommunicator.MSG_SEP
         packed_msg: bytes = cmd + sep + size + sep + data + sep + end
-        # self._data_socket.sendall(pickle.dumps(msg))
         self._data_socket.sendall(packed_msg)
 
     def _clean_up(self) -> None:
@@ -787,12 +774,6 @@ class RawSocketCommunicator(Communicator):
 
     def __exit__(self):
         self._clean_up()
-
-    def __del__(self):
-        self._clean_up()
-
-
-import zmq
 
 
 class ZMQCommunicator(Communicator):
@@ -1053,13 +1034,5 @@ class ZMQCommunicator(Communicator):
     def __exit__(self):
         self._clean_up()
 
-    def __del__(self):
-        self._clean_up()
 
-
-SocketCommunicator: Type[Communicator]
-use_zmq: bool = False
-if use_zmq:
-    SocketCommunicator = RawSocketCommunicator
-else:
-    SocketCommunicator = ZMQCommunicator
+SocketCommunicator = RawSocketCommunicator
