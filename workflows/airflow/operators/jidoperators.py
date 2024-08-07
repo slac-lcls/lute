@@ -133,6 +133,11 @@ class JIDSlurmOperator(BaseOperator):
         self.max_cores: Optional[int] = max_cores
         self.max_nodes: Optional[int] = max_nodes
         self.require_partition: Optional[str] = require_partition
+        self.lute_task_id: str = kwargs.get("task_id", "")
+        if "." in self.lute_task_id:
+            # In a task_group the group id is prepended to task_id
+            # We want to remove this and only keep the last portion
+            self.lute_task_id = self.lute_task_id.split(".")[-1]
 
     def _sub_overridable_arguments(self, slurm_param_str: str) -> str:
         """Overrides certain SLURM arguments given instance options.
@@ -227,9 +232,11 @@ class JIDSlurmOperator(BaseOperator):
         # managed task!
         lute_param_str: str
         if lute_params["debug"]:
-            lute_param_str = f"--taskname {self.task_id} --config {config_path} --debug"
+            lute_param_str = (
+                f"--taskname {self.lute_task_id} --config {config_path} --debug"
+            )
         else:
-            lute_param_str = f"--taskname {self.task_id} --config {config_path}"
+            lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
         # slurm_params holds a List[str]
         slurm_param_str: str = " ".join(dagrun_config.get("slurm_params"))
@@ -241,7 +248,7 @@ class JIDSlurmOperator(BaseOperator):
 
         jid_job_definition: Dict[str, str] = {
             "_id": str(uuid.uuid4()),
-            "name": self.task_id,
+            "name": self.lute_task_id,
             "executable": f"{self.lute_location}/launch_scripts/submit_slurm.sh",
             "trigger": "MANUAL",
             "location": dagrun_config.get("ARP_LOCATION", "S3DF"),
