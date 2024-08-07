@@ -22,7 +22,7 @@ lute
 
 In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.
 
-### A note on utilties
+## A note on utilties
 In the `utilities` directory there are two useful programs to provide assistance with using the software:
 
 - `utilities/dbview`: LUTE stores all parameters for every analysis routine it runs (as well as results) in a database. This database is stored in the `work_dir` defined in the YAML file (see below). The `dbview` utility is a TUI application (Text-based user interface) which runs in the terminal. It allows you to navigate a LUTE database using the arrow keys, etc. Usage is: `utilities/dbview -p <path/to/lute.db>`.
@@ -135,6 +135,21 @@ no_image_data (boolean) - Default: False
 	Load only the metadata, no iamges. Can check indexability without high data requirements.
 
 [...]
+```
+
+`lute_help` can also be used to retrieve a list of all currently available `Task`s.
+
+```bash
+> ./lute/utilities/lute_help -l
+INFO:__main__:Fetching Task list.
+Task List
+---------
+
+- CompareHKL
+	Parameters for CrystFEL's `compare_hkl` for calculating figures of merit.
+
+	There are many parameters, and many combinations. For more information on
+	usage, please refer to the CrystFEL documentation, here:
 ```
 
 ## Running Managed `Task`s and Workflows (DAGs)

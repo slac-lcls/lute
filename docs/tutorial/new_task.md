@@ -1,6 +1,7 @@
 # Integrating a New `Task`
 
 `Task`s can be broadly categorized into two types:
+
 - "First-party" - where the analysis or executed code is maintained within this library.
 - "Third-party" - where the analysis, code, or program is maintained elsewhere and is simply called by a wrapping `Task`.
 
@@ -9,6 +10,7 @@ Creating a new `Task` of either type generally involves the same steps, although
 ## Creating a "Third-party" `Task`
 
 There are two required steps for third-party `Task` integration, and one additional step which is optional, and may not be applicable to all possible third-party `Task`s. Generally, `Task` integration requires:
+
 1. Defining a `TaskParameters` (pydantic) model which fully parameterizes the `Task`. This involves specifying a path to a binary, and all the required command-line arguments to run the binary.
 2. Creating a **managed `Task`** by specifying an `Executor` for the new third-party `Task`. At this stage, any additional environment variables can be added which are required for the execution environment.
 3. **(Optional/Maybe applicable)** Create a template for a third-party configuration file. If the new `Task` has its own configuration file, specifying a template will allow that file to be parameterized from the singular LUTE yaml configuration file. A couple of minor additions to the `pydantic` model specified in 1. are required to support template usage.
@@ -22,6 +24,7 @@ A brief overview of parameters objects will be provided below. The following inf
 **`Task`s and `TaskParameter`s**
 
 All `Task`s have a corresponding `TaskParameters` object. These objects are linked **exclusively** by a named relationship. For a `Task` named `MyThirdPartyTask`, the parameters object **must** be named `MyThirdPartyTaskParameters`. For third-party `Task`s there are a number of additional requirements:
+
 - The model must inherit from a base class called `ThirdPartyParameters`.
 - The model must have one field specified called `executable`. The presence of this field indicates that the `Task` is a third-party `Task` and the specified executable must be called. This allows all third-party `Task`s to be defined exclusively by their parameters model. A single `ThirdPartyTask` class handles execution of **all** third-party `Task`s.
 
@@ -164,6 +167,7 @@ class RunTask2Parameters(ThirdPartyParameters):
 ```
 
 **Additional Comments**
+
 1. Model parameters of type `bool` are not passed with an argument and are only passed when `True`. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. `--debug`, `--test`, `--verbose`, etc.
   - If you need to pass the literal words `"True"` or `"False"`, use a parameter of type `str`.
 2. You can use `pydantic` types to constrain parameters beyond the basic Python types. E.g. `conint` can be used to define lower and upper bounds for an integer. There are also types for common categories, positive/negative numbers, paths, URLs, IP addresses, etc.
@@ -328,6 +332,7 @@ After a pydantic model has been created, the next required step is to define a *
 
 1. `Executor`: This is the standard `Executor` and sufficient for most third-party uses cases.
 2. `MPIExecutor`: This performs all the same types of operations as the option above; however, it will submit your `Task` using MPI.
+
   - The `MPIExecutor` will submit the `Task` using the number of available cores - 1. The number of cores is determined from the physical core/thread count on your local machine, or the number of cores allocated by SLURM when submitting on the batch nodes.
 
 As mentioned, for most cases you can setup a third-party `Task` to use the first type of `Executor`. If, however, your third-party `Task` uses MPI, you can use either. When using the standard `Executor` for a `Task` requiring MPI, the `executable` in the pydantic model must be set to `mpirun`. For example, a third-party `Task` model, that uses MPI but can be run with the `Executor` may look like the following. We assume this `Task` runs a Python script using MPI.
@@ -386,6 +391,7 @@ Task2Runner.shell_source("/sdf/group/lcls/ds/tools/new_task_setup.sh") # Will so
 Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the `Task`'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the `Task` implementer refer to the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/) for more information.
 
 LUTE provides two additional base models which are used for template parsing in conjunction with the primary `Task` model. These are:
+
 - `TemplateParameters` objects which hold parameters which will be used to render a portion of a template.
 - `TemplateConfig` objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.
 
@@ -558,16 +564,20 @@ The process for creating a "First-Party" `Task` is very similar to that for a "T
 Parameter models have a format that must be followed for "Third-Party" `Task`s, but "First-Party" `Task`s have a little more liberty in how parameters are dealt with, since the `Task` will do all the parsing itself.
 
 To create a model, the basic steps are:
+
 1. If necessary, create a new module (e.g. `new_task_category.py`) under `lute.io.models`, or find an appropriate pre-existing module in that directory.
   - An `import` statement must be added to `lute.io.models._init_` if a new module is created, so it can be found.
   - If defining the model in a pre-existing module, make sure to modify the `__all__` statement to include it.
 2. Create a new model that inherits from `TaskParameters`. You can look at `lute.models.io.tests.TestReadOutputParameters` for an example. **The model must be named** `<YourTaskName>Parameters`
+
   - You should include **all** relevant parameters here, including input file, output file, and any potentially adjustable parameters. These parameters **must** be included even if there are some implicit dependencies between `Task`s and it would make sense for the parameter to be auto-populated based on some other output. Creating this dependency is done with validators (see step 3.). All parameters should be overridable, and all `Task`s should be fully-independently configurable, based solely on their model and the configuration YAML.
   - To follow the preferred format, parameters should be defined as: `param_name: type = Field([default value], description="This parameter does X.")`
 3. Use validators to do more complex things for your parameters, including populating default values dynamically:
+
   - E.g. create default values that depend on other parameters in the model - see for example: [SubmitSMDParameters](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/smd.py#L139).
   - E.g. create default values that depend on other `Task`s by reading from the database - see for example: [TestReadOutputParameters](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75).
 4. The model will have access to some general configuration values by inheriting from `TaskParameters`. These parameters are all stored in `lute_config` which is an instance of `AnalysisHeader` ([defined here](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42)).
+
   - For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the `Task`.
 
 A number of configuration options and **Field** attributes are also available for "First-Party" `Task` models. These are identical to those used for the `ThirdPartyTask`s, although there is a smaller selection. These options are reproduced below for convenience.
@@ -603,6 +613,7 @@ In addition to the global configuration options there are a couple of ways to sp
 
 ### Writing the `Task`
 You can write your analysis code (or whatever code to be executed) as long as it adheres to the limited rules below. You can create a new module for your `Task` in `lute.tasks` or add it to any existing module, if it makes sense for it to belong there. The `Task` itself is a single class constructed as:
+
 1. Your analysis `Task` is a class named in a way that matches its Pydantic model. E.g. `RunTask` is the `Task`, and `RunTaskParameters` is the Pydantic model.
 2. The class must inherit from the `Task` class (see template below).
 3. You must provide an implementation of a `_run` method. This is the method that will be executed when the `Task` is run. You can in addition write as many methods as you need. For fine-grained execution control you can also provide `_pre_run()` and `_post_run()` methods, but this is optional.
