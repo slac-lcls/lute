@@ -1286,15 +1286,18 @@ no_image_data (boolean) - Default: False
 <p>In general, it is best to prefer the long-form of the SLURM-argument (<code>--arg=&lt;...&gt;</code>) in order to avoid potential clashes with present or future LUTE arguments.</p>
 <h3 id="workflow-dag-submission">Workflow (DAG) submission</h3>
 <p>Finally, you can submit a full workflow (e.g. SFX analysis, smalldata production and summary results, geometry optimization...). This can be done using a single script, <code>submit_launch_airflow.sh</code>, similarly to the SLURM submission above:</p>
-<pre><code class="language-bash">&gt; launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -c &lt;/path/to/yaml.yaml&gt; -w &lt;dag_name&gt; [--debug] [--test] $SLURM_ARGS
+<pre><code class="language-bash">&gt; launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -c &lt;/path/to/yaml.yaml&gt; -w &lt;dag_name&gt; [--debug] [--test] [-e &lt;exp&gt;] [-r &lt;run&gt;] $SLURM_ARGS
 </code></pre>
 <p>The submission process is slightly more complicated in this case. A more in-depth explanation is provided under "Airflow Launch Steps", in the advanced usage section below if interested. The parameters are as follows - as before command-line arguments in square brackets <code>[]</code> are optional, while those in <code>&lt;&gt;</code> must be provided:</p>
 <ul>
 <li>The <strong>first argument</strong> (must be first) is the full path to the <code>launch_scripts/launch_airflow.py</code> script located in whatever LUTE installation you are running. All other arguments can come afterwards in any order.</li>
 <li><code>-c &lt;/path/...&gt;</code> is the path to the configuration YAML to use.</li>
 <li><code>-w &lt;dag_name&gt;</code> is the name of the DAG (workflow) to run. This replaces the task name provided when using the other two methods above. A DAG list is provided below.</li>
+<li><strong>NOTE:</strong> For advanced usage, a custom DAG can be provided at <strong>run</strong> time using <code>-W</code> (capital W) followed by the path to the workflow instead of <code>-w</code>. See below for further discussion on this use case.</li>
 <li><code>--debug</code> controls whether to use debug mode (verbose printing)</li>
 <li><code>--test</code> controls whether to use the test or production instance of Airflow to manage the DAG. The instances are running identical versions of Airflow, but the <code>test</code> instance may have "test" or more bleeding edge development DAGs.</li>
+<li><code>-e</code> is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.</li>
+<li><code>-r</code> is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.</li>
 </ul>
 <p>The <code>$SLURM_ARGS</code> must be provided in the same manner as when submitting an individual <strong>managed</strong> <code>Task</code> by hand to be run as batch job with the script above. <strong>Note</strong> that these parameters will be used as the starting point for the SLURM arguments of <strong>every managed</strong> <code>Task</code> in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments. For example, a single threaded analysis <code>Task</code> may be capped to running on one core, even if in general everything should be running on 100 cores, per the SLURM argument provided. These caps are added during development and cannot be disabled through configuration changes in the YAML.</p>
 <p><strong>DAG List</strong></p>
@@ -1439,6 +1442,46 @@ MyTask:
   var_sub: {{ other_var:04d }}
 </code></pre>
 <p>During validation, Pydantic will by default cast variables if possible, because of this it is generally safe to use strings for substitutions. E.g. if your parameter is expecting an integer, and after substitution you pass <code>"2"</code>, Pydantic will cast this to the <code>int</code> <code>2</code>, and validation will succeed. As part of the substitution process limited type casting will also be handled if it is necessary for any formatting strings provided. E.g. <code>"{{ run:04d }}"</code> requires that run be an integer, so it will be treated as such in order to apply the formatting.</p>
+<h2 id="custom-run-time-dags">Custom Run-Time DAGs</h2>
+<p>In most cases, standard DAGs should be called as described above. However, Airflow also supports the dynamic creation of DAGs, e.g. to vary the input data to various steps, or the number of steps that will occur. Some of this functionality has been used to allow for user-defined DAGs which are passed in the form of a dictionary, allowing Airflow to construct the workflow as it is running.</p>
+<p>A basic YAML syntax is used to construct a series of nested dictionaries which define a DAG. Consider a simplified serial femtosecond crystallography DAG which runs peak finding through merging and then calculates some statistics. I.e. we want an execution order that looks like:</p>
+<pre><code class="language-python">peak_finder &gt;&gt; indexer &gt;&gt; merger &gt;&gt; hkl_comparer
+</code></pre>
+<p>We can alternatively define this DAG in YAML:</p>
+<pre><code class="language-yaml">task_name: PeakFinderPyAlgos
+slurm_params: ''
+next:
+- task_name: CrystFELIndexer
+  slurm_params: ''
+  next: []
+  - task_name: PartialatorMerger
+    slurm_params: ''
+    next: []
+    - task_name: HKLComparer
+      slurm_params: ''
+      next:
+</code></pre>
+<p>I.e. we define a tree where each node is constructed using <code>Node(task_name: str, slurm_params: str, next: List[Node])</code>.</p>
+<ul>
+<li>The <code>task_name</code> is the name of a <strong>managed</strong> <code>Task</code>. This name <strong>must</strong> be identical to a <strong>managed</strong> <code>Task</code> defined in the LUTE installation you are using.</li>
+<li>A custom string of slurm arguments can be passed using <code>slurm_params</code>. This is a complete string of <strong>all</strong> the arguments to use for the corresponding <strong>managed</strong> <code>Task</code>. Use of this field is <strong>all or nothing!</strong> - if it is left as an empty string, the default parameters (passed on the command-line using the launch script) are used, otherwise this string is used in its stead. Because of this <strong>remember to include a partition and account</strong> if using it.</li>
+<li>The <code>next</code> field is composed of either an empty list (meaning no <strong>managed</strong> <code>Task</code>s are run after the current node), or additional nodes. All nodes in the <code>next</code> list are run in parallel.</li>
+</ul>
+<p>As a second example, to run <code>task1</code> followed by <code>task2</code> and <code>task3</code> in parellel we would use:</p>
+<pre><code class="language-yaml">task_name: Task1
+slurm_params: ''
+next:
+- task_name: Task2
+  slurm_params: ''
+  next: []
+- task_name: Task3
+  slurm_params: ''
+  next: []
+</code></pre>
+<p>In order to run a DAG defined in this way, we pass the <strong>path</strong> to the YAML file we have defined it in to the launch script using <code>-W &lt;path_to_dag&gt;</code>. This is instead of calling it by name. E.g.</p>
+<pre><code class="language-bash">/path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e &lt;exp&gt; -r &lt;run&gt; -c /path/to/config -W &lt;path_to_dag&gt; --test [--debug] [SLURM_ARGS]
+</code></pre>
+<p>Note that fewer options are currently supported for configuring the operators for each step of the DAG.  The slurm arguments can be replaced in their entirety using a custom <code>slurm_params</code> string but individual options cannot be modified.</p>
 <h2 id="debug-environment-variables">Debug Environment Variables</h2>
 <p>Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.</p>
 <p>Types of debug markers:</p>

@@ -1296,26 +1296,34 @@
         &quot;user&quot;: getpass.getuser(),
         &quot;lute_params&quot;: params,
         &quot;slurm_params&quot;: extra_args,
+        &quot;workflow&quot;: wf_defn,  # Used only for custom DAGs. See below under advanced usage.
     },
 }
 </code></pre>
 <p>Note that the environment variables are used to fill in the appropriate information because this script is intended to be launched primarily from the ARP (which passes these variables). The ARP allows for the launch job to be defined in the experiment eLog and submitted automatically for each new DAQ run. The environment variables <code>EXPERIMENT</code> and <code>RUN</code> can alternatively be defined prior to submitting the script on the command-line.</p>
 <p>The script takes a number of parameters:</p>
-<pre><code class="language-bash">launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test]
+<pre><code class="language-bash">launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test] [-e &lt;exp&gt;] [-r &lt;run&gt;] [SLURM_ARGS]
 </code></pre>
 <ul>
 <li><code>-c</code> refers to the path of the configuration YAML that contains the parameters for each <strong>managed</strong> <code>Task</code> in the requested workflow.</li>
 <li><code>-w</code> is the name of the DAG (workflow) to run. By convention each DAG is named by the Python file it is defined in. (See below).</li>
+<li><strong>NOTE:</strong> For advanced usage, a custom DAG can be provided at <strong>run</strong> time using <code>-W</code> (capital W) followed by the path to the workflow instead of <code>-w</code>. See below for further discussion on this use case.</li>
 <li><code>--debug</code> is an optional flag to run all steps of the workflow in debug mode for verbose logging and output.</li>
 <li><code>--test</code> is an optional flag which will use the test Airflow instance. By default the script will make requests of the standard production Airflow instance.</li>
+<li><code>-e</code> is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.</li>
+<li><code>-r</code> is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.</li>
+<li><code>SLURM_ARGS</code> are SLURM arguments to be passed to the <code>submit_slurm.sh</code> script which are used for each individual <strong>managed</strong> <code>Task</code>. These arguments to do NOT affect the submission parameters for the job running <code>launch_airflow.py</code> (if using <code>submit_launch_airflow.sh</code> below).</li>
 </ul>
 <p><strong>Lifetime</strong>
 This script will run for the entire duration of the <strong>workflow (DAG)</strong>. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed <code>Task</code>)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.</p>
 <h3 id="submit_launch_airflowsh"><code>submit_launch_airflow.sh</code></h3>
-<p>This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the <code>launch_airflow.py</code> job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the <code>launch_airflow.py</code> script to run on the S3DF batch nodes. Usage of this script is identical to <code>launch_airflow.py</code>. All the arguments are passed transparently to the underlying Python script. The wrapper will simply launch a batch job using minimal resources (1 core).</p>
+<p>This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the <code>launch_airflow.py</code> job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the <code>launch_airflow.py</code> script to run on the S3DF batch nodes. Usage of this script is mostly identical to <code>launch_airflow.py</code>. All the arguments are passed transparently to the underlying Python script with the exception of the first argument which <strong>must</strong> be the location of the underlying <code>launch_airflow.py</code> script. The wrapper will simply launch a batch job using minimal resources (1 core). While the primary purpose of the script is to allow running from the eLog, it is also an useful wrapper generally, to be able to submit the previous script as a SLURM job.</p>
+<p>Usage:</p>
+<pre><code class="language-bash">submit_launch_airflow.sh /path/to/launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test] [-e &lt;exp&gt;] [-r &lt;run&gt;] [SLURM_ARGS]
+</code></pre>
 <h2 id="submit_slurmsh"><code>submit_slurm.sh</code></h2>
 <p>Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single <strong>managed</strong> <code>Task</code> at a time. The usage is as follows:</p>
-<pre><code class="language-bash">submit_slurm.sh -c &lt;path_to_config_yaml&gt; -t &lt;MANAGED_task_name&gt; [--debug] [--SLURM_ARGS ...]
+<pre><code class="language-bash">submit_slurm.sh -c &lt;path_to_config_yaml&gt; -t &lt;MANAGED_task_name&gt; [--debug] [SLURM_ARGS ...]
 </code></pre>
 <p>As a reminder the <strong>managed</strong> <code>Task</code> refers to the <code>Executor</code>-<code>Task</code> combination. The script does not parse any SLURM specific parameters, and instead passes them transparently to SLURM. At least the following two SLURM arguments must be provided:</p>
 <pre><code class="language-bash">--partition=&lt;...&gt; # Usually partition=milano
@@ -1328,15 +1336,17 @@ This script will run for the entire duration of the <strong>workflow (DAG)</stro
 <h2 id="operators">Operators</h2>
 <p><code>Operator</code>s are the objects submitted as individual steps of a DAG by Airflow. They are conceptually linked to the idea of a task in that each task of a workflow is generally an operator. Care should be taken, not to confuse them with LUTE <code>Task</code>s or <strong>managed</strong> <code>Task</code>s though. There is, however, usually a one-to-one correspondance between a <code>Task</code> and an <code>Operator</code>.</p>
 <p>Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an <code>Operator</code> for each step of the DAG. However, the <code>Operator</code> itself cannot perform productive analysis without access to the data. The solution employed by <code>LUTE</code> is to have a limited set of <code>Operator</code>s which do not perform analysis, but instead request that a <code>LUTE</code> <strong>managed</strong> <code>Task</code>s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided <code>Operator</code>s do this, but in general they will all make a request to the <strong>job interface daemon</strong> (JID) that a new SLURM job be scheduled using the <code>submit_slurm.sh</code> script described above.</p>
-<p>Therefore, running a typical Airflow DAG involves the following steps:
-1. <code>launch_airflow.py</code> script is submitted, usually from a definition in the eLog.
-2. The <code>launch_airflow</code> script requests that Airflow run a specific DAG.
-3. The Airflow instance begins submitting the <code>Operator</code>s that makeup the DAG definition.
-4. Each <code>Operator</code> sends a request to the <code>JID</code> to submit a job.
-5. The <code>JID</code> submits the <code>elog_submit.sh</code> script with the appropriate <strong>managed</strong> <code>Task</code>.
-6. The <strong>managed</strong> <code>Task</code> runs on the batch nodes, while the <code>Operator</code>, requesting updates from the JID on job status, waits for it to complete.
-7. Once a <strong>managed</strong> <code>Task</code> completes, the <code>Operator</code> will receieve this information and tell the Airflow server whether the job completed successfully or resulted in failure.
-8. The Airflow server will then launch the next step of the DAG, and so on, until every step has been executed.</p>
+<p>Therefore, running a typical Airflow DAG involves the following steps:</p>
+<ol>
+<li><code>launch_airflow.py</code> script is submitted, usually from a definition in the eLog.</li>
+<li>The <code>launch_airflow</code> script requests that Airflow run a specific DAG.</li>
+<li>The Airflow instance begins submitting the <code>Operator</code>s that makeup the DAG definition.</li>
+<li>Each <code>Operator</code> sends a request to the <code>JID</code> to submit a job.</li>
+<li>The <code>JID</code> submits the <code>elog_submit.sh</code> script with the appropriate <strong>managed</strong> <code>Task</code>.</li>
+<li>The <strong>managed</strong> <code>Task</code> runs on the batch nodes, while the <code>Operator</code>, requesting updates from the JID on job status, waits for it to complete.</li>
+<li>Once a <strong>managed</strong> <code>Task</code> completes, the <code>Operator</code> will receieve this information and tell the Airflow server whether the job completed successfully or resulted in failure.</li>
+<li>The Airflow server will then launch the next step of the DAG, and so on, until every step has been executed.</li>
+</ol>
 <p>Currently, the following <code>Operator</code>s are maintained:
 - <code>JIDSlurmOperator</code>: The standard <code>Operator</code>. Each instance has a one-to-one correspondance with a LUTE <strong>managed</strong> <code>Task</code>.</p>
 <h3 id="jidslurmoperator-arguments"><code>JIDSlurmOperator</code> arguments</h3>
@@ -1344,6 +1354,8 @@ This script will run for the entire duration of the <strong>workflow (DAG)</stro
 <li><code>task_id</code>: This is nominally the name of the task on the Airflow side. However, for simplicity this is used 1-1 to match the name of a <strong>managed</strong> Task defined in LUTE's <code>managed_tasks.py</code> module. I.e., it should the name of an <code>Executor("Task")</code> object which will run the specific Task of interest. This <strong>must</strong> match the name of a defined managed Task.</li>
 <li><code>max_cores</code>: Used to cap the maximum number of cores which should be requested of SLURM. By default all jobs will run with the same number of cores, which should be specified when running the <code>launch_airflow.py</code> script (either from the ARP, or by hand). This behaviour was chosen because in general we want to increase or decrease the core-count for all <code>Task</code>s uniformly, and we don't want to have to specify core number arguments for each job individually. Nonetheless, on occassion it may be necessary to cap the number of cores a specific job will use. E.g. if the default value specified when launching the Airflow DAG is multiple cores, and one job is single threaded, the core count can be capped for that single job to 1, while the rest run with multiple cores.</li>
 <li><code>max_nodes</code>: Similar to the above. This will make sure the <code>Task</code> is distributed across no more than a maximum number of nodes. This feature is useful for, e.g., multi-threaded software which does not make use of tools like <code>MPI</code>. So, the <code>Task</code> can run on multiple cores, but only within a single node.</li>
+<li><code>require_partition</code>: This option is a string that forces the use of a specific S3DF partition for the <strong>managed</strong> <code>Task</code> submitted by the Operator. E.g. typically a LCLS user will use <code>--partition=milano</code> for CPU-based workflows; however, if a specific <code>Task</code> requires a GPU you may use <code>JIDSlurmOperator("MyTaskRunner", require_partition="ampere")</code> to override the partition for that single <code>Task</code>.</li>
+<li><code>custom_slurm_params</code>: You can provide a string of parameters which will be used in its entirety to replace any and all default arguments passed by the launch script. This method is not recommended for general use and is mostly used for dynamic DAGs described at the end of the document.</li>
 </ul>
 <h1 id="creating-a-new-workflow">Creating a new workflow</h1>
 <p>Defining a new workflow involves creating a <strong>new</strong> module (Python file) in the directory <code>workflows/airflow</code>, creating a number of <code>Operator</code> instances within the module, and then drawing the connectivity between them. At the top of the file an Airflow DAG is created and given a name. By convention all <code>LUTE</code> workflows use the name of the file as the name of the DAG. The following code can be copied exactly into the file:</p>
@@ -1373,6 +1385,12 @@ peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id=&quot;PeakFinderPyAlgos
 indexer: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=120, task_id=&quot;CrystFELIndexer&quot;, dag=dag
 )
+# We can alternatively specify this task be only ever run with the following args.
+# indexer: JIDSlurmOperator = JIDSlurmOperator(
+#     custom_slurm_params=&quot;--partition=milano --ntasks=120 --account=lcls:myaccount&quot;,
+#     task_id=&quot;CrystFELIndexer&quot;,
+#     dag=dag,
+# )
 
 # Merge
 merger: JIDSlurmOperator = JIDSlurmOperator(
@@ -1395,6 +1413,48 @@ task1 &gt;&gt; task2
 task1 &gt;&gt; task3
 </code></pre>
 <p>As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.</p>
+<p><strong>Note:</strong> Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the <code>submit_slurm.sh</code> script and the independent <strong>managed</strong> <code>Task</code> names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can use the advanced run-time DAGs defined below as well.</p>
+<h1 id="advanced-usage">Advanced Usage</h1>
+<h2 id="run-time-dag-creation">Run-time DAG creation</h2>
+<p>In most cases, standard DAGs should be defined as described above and called by name. However, Airflow also supports the creation of DAGs dynamically, e.g. to vary the input data to various steps, or the number of steps that will occur. Some of this functionality has been used to allow for user-defined DAGs which are passed in the form of a dictionary, allowing Airflow to construct the workflow as it is running.</p>
+<p>A basic YAML syntax is used to construct a series of nested dictionaries which define a DAG. Considering the first example DAG defined above (for serial femtosecond crystallography), the standard DAG looked like:</p>
+<pre><code class="language-python">peak_finder &gt;&gt; indexer &gt;&gt; merger &gt;&gt; hkl_comparer
+</code></pre>
+<p>We can alternatively define this DAG in YAML:</p>
+<pre><code class="language-yaml">task_name: PeakFinderPyAlgos
+slurm_params: ''
+next:
+- task_name: CrystFELIndexer
+  slurm_params: ''
+  next: []
+  - task_name: PartialatorMerger
+    slurm_params: ''
+    next: []
+    - task_name: HKLComparer
+      slurm_params: ''
+      next: []
+</code></pre>
+<p>I.e. we define a tree where each node is constructed using <code>Node(task_name: str, slurm_params: str, next: List[Node])</code>. </p>
+<ul>
+<li>The <code>task_name</code> is the name of a <strong>managed</strong> <code>Task</code> as before, in the same way that would be passed to the <code>JIDSlurmOperator</code>.</li>
+<li>A custom string of slurm arguments can be passed using <code>slurm_params</code>. This is a complete string of <strong>all</strong> the arguments to use for the corresponding <strong>managed</strong> <code>Task</code>. Use of this field is <strong>all or nothing!</strong> - if it is left as an empty string, the default parameters (passed on the command-line using the launch script) are used, otherwise this string is used in its stead. Because of this <strong>remember to include a partition and account</strong> if using it.</li>
+<li>The <code>next</code> field is composed of either an empty list (meaning no <strong>managed</strong> <code>Task</code>s are run after the current node), or additional nodes. All nodes in the list are run in parallel. </li>
+</ul>
+<p>As a second example, to run <code>task1</code> followed by <code>task2</code> and <code>task3</code> in parellel we would use:</p>
+<pre><code class="language-yaml">task_name: Task1
+slurm_params: ''
+next:
+- task_name: Task2
+  slurm_params: ''
+  next: []
+- task_name: Task3
+  slurm_params: ''
+  next: []
+</code></pre>
+<p>In order to run a DAG defined this way we pass the <strong>path</strong> to the YAML file we have defined it in to the launch script using <code>-W &lt;path_to_dag&gt;</code>. This is instead of calling it by name. E.g.</p>
+<pre><code class="language-bash">/path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e &lt;exp&gt; -r &lt;run&gt; -c /path/to/config -W &lt;path_to_dag&gt; --test [--debug] [SLURM_ARGS]
+</code></pre>
+<p>Note that fewer options are currently supported for configuring the operators for each step of the DAG. The slurm arguments can be replaced in their entirety using a custom <code>slurm_params</code> string but individual options cannot be modified.</p>
 
 
 
