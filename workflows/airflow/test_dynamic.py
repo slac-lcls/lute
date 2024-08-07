@@ -31,8 +31,9 @@ def create_links(
 ) -> JIDSlurmOperator:
     print(wf_dict)
     # return JIDSlurmOperator(task_id="BinaryTester", max_cores=5)
+    slurm_params: str = wf_dict.get("slurm_params", "")
     new_op: JIDSlurmOperator = JIDSlurmOperator(
-        task_id=wf_dict["task_name"], max_cores=2
+        task_id=wf_dict["task_name"], custom_slurm_params=slurm_params
     )
     task_list.append(new_op)
     if wf_dict["next"] == []:

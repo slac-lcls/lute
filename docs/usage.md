@@ -386,23 +386,36 @@ We can alternatively define this DAG in YAML:
 
 ```yaml
 task_name: PeakFinderPyAlgos
+slurm_params: ''
 next:
 - task_name: CrystFELIndexer
+  slurm_params: ''
   next: []
   - task_name: PartialatorMerger
+    slurm_params: ''
     next: []
     - task_name: HKLComparer
+      slurm_params: ''
       next:
 ```
 
-I.e. we define a tree where each node is constructed using `Node(task_name: str, next: List[Node])`. The `task_name` is the name of a **managed** `Task`. This name **must** be identical to a **managed** `Task` defined in the LUTE installation you are using. The `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the `next` list are run in parallel. For example to run `task1` followed by `task2` and `task3` in parellel we would use:
+I.e. we define a tree where each node is constructed using `Node(task_name: str, slurm_params: str, next: List[Node])`.
+
+- The `task_name` is the name of a **managed** `Task`. This name **must** be identical to a **managed** `Task` defined in the LUTE installation you are using.
+- A custom string of slurm arguments can be passed using `slurm_params`. This is a complete string of **all** the arguments to use for the corresponding **managed** `Task`. Use of this field is **all or nothing!** - if it is left as an empty string, the default parameters (passed on the command-line using the launch script) are used, otherwise this string is used in its stead. Because of this **remember to include a partition and account** if using it.
+- The `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the `next` list are run in parallel.
+
+As a second example, to run `task1` followed by `task2` and `task3` in parellel we would use:
 
 ```yaml
 task_name: Task1
+slurm_params: ''
 next:
 - task_name: Task2
+  slurm_params: ''
   next: []
 - task_name: Task3
+  slurm_params: ''
   next: []
 ```
 
@@ -412,7 +425,7 @@ In order to run a DAG defined in this way, we pass the **path** to the YAML file
 /path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e <exp> -r <run> -c /path/to/config -W <path_to_dag> --test [--debug] [SLURM_ARGS]
 ```
 
-Note that fewer options are currently supported for configuring the operators for each step of the DAG.
+Note that fewer options are currently supported for configuring the operators for each step of the DAG.  The slurm arguments can be replaced in their entirety using a custom `slurm_params` string but individual options cannot be modified.
 
 ## Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.

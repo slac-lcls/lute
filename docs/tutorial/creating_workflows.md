@@ -86,6 +86,7 @@ When running a workflow using the `launch_airflow.py` script, each step of the w
 Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an `Operator` for each step of the DAG. However, the `Operator` itself cannot perform productive analysis without access to the data. The solution employed by `LUTE` is to have a limited set of `Operator`s which do not perform analysis, but instead request that a `LUTE` **managed** `Task`s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided `Operator`s do this, but in general they will all make a request to the **job interface daemon** (JID) that a new SLURM job be scheduled using the `submit_slurm.sh` script described above.
 
 Therefore, running a typical Airflow DAG involves the following steps:
+
 1. `launch_airflow.py` script is submitted, usually from a definition in the eLog.
 2. The `launch_airflow` script requests that Airflow run a specific DAG.
 3. The Airflow instance begins submitting the `Operator`s that makeup the DAG definition.
@@ -103,6 +104,7 @@ Currently, the following `Operator`s are maintained:
 - `max_cores`: Used to cap the maximum number of cores which should be requested of SLURM. By default all jobs will run with the same number of cores, which should be specified when running the `launch_airflow.py` script (either from the ARP, or by hand). This behaviour was chosen because in general we want to increase or decrease the core-count for all `Task`s uniformly, and we don't want to have to specify core number arguments for each job individually. Nonetheless, on occassion it may be necessary to cap the number of cores a specific job will use. E.g. if the default value specified when launching the Airflow DAG is multiple cores, and one job is single threaded, the core count can be capped for that single job to 1, while the rest run with multiple cores.
 - `max_nodes`: Similar to the above. This will make sure the `Task` is distributed across no more than a maximum number of nodes. This feature is useful for, e.g., multi-threaded software which does not make use of tools like `MPI`. So, the `Task` can run on multiple cores, but only within a single node.
 - `require_partition`: This option is a string that forces the use of a specific S3DF partition for the **managed** `Task` submitted by the Operator. E.g. typically a LCLS user will use `--partition=milano` for CPU-based workflows; however, if a specific `Task` requires a GPU you may use `JIDSlurmOperator("MyTaskRunner", require_partition="ampere")` to override the partition for that single `Task`.
+- `custom_slurm_params`: You can provide a string of parameters which will be used in its entirety to replace any and all default arguments passed by the launch script. This method is not recommended for general use and is mostly used for dynamic DAGs described at the end of the document.
 
 
 # Creating a new workflow
@@ -138,6 +140,12 @@ peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id="PeakFinderPyAlgos", da
 indexer: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=120, task_id="CrystFELIndexer", dag=dag
 )
+# We can alternatively specify this task be only ever run with the following args.
+# indexer: JIDSlurmOperator = JIDSlurmOperator(
+#     custom_slurm_params="--partition=milano --ntasks=120 --account=lcls:myaccount",
+#     task_id="CrystFELIndexer",
+#     dag=dag,
+# )
 
 # Merge
 merger: JIDSlurmOperator = JIDSlurmOperator(
@@ -184,23 +192,36 @@ We can alternatively define this DAG in YAML:
 
 ```yaml
 task_name: PeakFinderPyAlgos
+slurm_params: ''
 next:
 - task_name: CrystFELIndexer
+  slurm_params: ''
   next: []
   - task_name: PartialatorMerger
+    slurm_params: ''
     next: []
     - task_name: HKLComparer
-      next:
+      slurm_params: ''
+      next: []
 ```
 
-I.e. we define a tree where each node is constructed using `Node(task_name: str, next: List[Node])`. The `task_name` is the name of a **managed** `Task` as before, in the same way that would be passed to the `JIDSlurmOperator`. the `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the list are run in parallel. For example to run `task1` followed by `task2` and `task3` in parellel we would use:
+I.e. we define a tree where each node is constructed using `Node(task_name: str, slurm_params: str, next: List[Node])`. 
+
+- The `task_name` is the name of a **managed** `Task` as before, in the same way that would be passed to the `JIDSlurmOperator`.
+- A custom string of slurm arguments can be passed using `slurm_params`. This is a complete string of **all** the arguments to use for the corresponding **managed** `Task`. Use of this field is **all or nothing!** - if it is left as an empty string, the default parameters (passed on the command-line using the launch script) are used, otherwise this string is used in its stead. Because of this **remember to include a partition and account** if using it.
+- The `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the list are run in parallel. 
+
+As a second example, to run `task1` followed by `task2` and `task3` in parellel we would use:
 
 ```yaml
 task_name: Task1
+slurm_params: ''
 next:
 - task_name: Task2
+  slurm_params: ''
   next: []
 - task_name: Task3
+  slurm_params: ''
   next: []
 ```
 
@@ -210,4 +231,4 @@ In order to run a DAG defined this way we pass the **path** to the YAML file we 
 /path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e <exp> -r <run> -c /path/to/config -W <path_to_dag> --test [--debug] [SLURM_ARGS]
 ```
 
-Note that fewer options are currently supported for configuring the operators for each step of the DAG.
+Note that fewer options are currently supported for configuring the operators for each step of the DAG. The slurm arguments can be replaced in their entirety using a custom `slurm_params` string but individual options cannot be modified.

@@ -123,9 +123,31 @@ class JIDSlurmOperator(BaseOperator):
         max_cores: Optional[int] = None,
         max_nodes: Optional[int] = None,
         require_partition: Optional[str] = None,
+        custom_slurm_params: str = "",
         *args,
         **kwargs,
     ) -> None:
+        """Runs a LUTE managed Task on the batch nodes.
+
+        Args:
+            user (str): User to run the SLURM job as.
+            poke_interval (float): How frequently to ping the JID for status
+                updates.
+            max_cores (Optional[int]): The maximum number of cores to allow
+                for this job. If more cores are requested in the Airflow context
+                setting this parameter will make sure the job request is capped.
+            max_nodes (Optional[int]): The maximum number of nodes to allow
+                this job to run across. If more nodes are requested, or no node
+                specification is provided this parameter will cap the requested
+                node count. This can be used, e.g. to prevent non-MPI jobs from
+                running on multiple nodes.
+            require_partition (Optional[str]): Force the job to run on a specific
+                partition. Will override the passed partition if it is different.
+            custom_slurm_params (str): If a non-empty string this will replace
+                ALL the SLURM arguments that are passed via Airflow context. If
+                used it therefore MUST contain every needed argument e.g.:
+                     "--partition=<...> --account=<...> --ntasks=<...>"
+        """
         super().__init__(*args, **kwargs)  # Initializes self.task_id
         self.lute_location: str = ""
         self.user: str = user
@@ -138,6 +160,7 @@ class JIDSlurmOperator(BaseOperator):
             # In a task_group the group id is prepended to task_id
             # We want to remove this and only keep the last portion
             self.lute_task_id = self.lute_task_id.split(".")[-1]
+        self.custom_slurm_params: str = custom_slurm_params
 
     def _sub_overridable_arguments(self, slurm_param_str: str) -> str:
         """Overrides certain SLURM arguments given instance options.
@@ -238,11 +261,15 @@ class JIDSlurmOperator(BaseOperator):
         else:
             lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
-        # slurm_params holds a List[str]
-        slurm_param_str: str = " ".join(dagrun_config.get("slurm_params"))
+        slurm_param_str: str
+        if self.custom_slurm_params:  # SLURM params != ""
+            slurm_param_str = self.custom_slurm_params
+        else:
+            # slurm_params holds a List[str]
+            slurm_param_str = " ".join(dagrun_config.get("slurm_params"))
 
-        # Make any requested SLURM argument substitutions
-        slurm_param_str = self._sub_overridable_arguments(slurm_param_str)
+            # Make any requested SLURM argument substitutions
+            slurm_param_str = self._sub_overridable_arguments(slurm_param_str)
 
         parameter_str: str = f"{lute_param_str} {slurm_param_str}"
 
