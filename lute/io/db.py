@@ -168,6 +168,17 @@ def _dict_to_flatdicts(
     """Flattens a dictionary delimiting parameters with a '.'.
 
     Works recursively. Also returns the type of each flattened value.
+    Tuples/lists are handled flattened as well, using an indexing scheme. E.g.
+    a["b"] in the nested dictionaries below:
+                          {
+                              "a": {
+                                  "b": (1, 2),
+                              },
+                              # ...
+                          }
+    will be addressed as:
+                          a.b[0] and a.b[1]
+    for the values of 1 and 2, respectively.
 
     Args:
         d (Dict[str, Any]): Dictionary to flatten.
@@ -195,6 +206,12 @@ def _dict_to_flatdicts(
             x, y = _dict_to_flatdicts(corrected_value, curr_key=flat_key)
             param_list.extend(x.items())
             type_list.extend(y.items())
+        elif isinstance(corrected_value, tuple) or isinstance(corrected_value, list):
+            indexed_flat_key: str
+            for idx, indexed_value in enumerate(corrected_value):
+                indexed_flat_key = f"{flat_key}[{idx}]"
+                param_list.append((indexed_flat_key, indexed_value))
+                type_list.append((indexed_flat_key, _check_type(indexed_value)))
         else:
             param_list.append((flat_key, corrected_value))
             type_list.append((flat_key, _check_type(corrected_value)))

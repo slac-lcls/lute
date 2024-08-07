@@ -122,15 +122,45 @@ class JIDSlurmOperator(BaseOperator):
         poke_interval: float = 30.0,
         max_cores: Optional[int] = None,
         max_nodes: Optional[int] = None,
+        require_partition: Optional[str] = None,
+        custom_slurm_params: str = "",
         *args,
         **kwargs,
     ) -> None:
+        """Runs a LUTE managed Task on the batch nodes.
+
+        Args:
+            user (str): User to run the SLURM job as.
+            poke_interval (float): How frequently to ping the JID for status
+                updates.
+            max_cores (Optional[int]): The maximum number of cores to allow
+                for this job. If more cores are requested in the Airflow context
+                setting this parameter will make sure the job request is capped.
+            max_nodes (Optional[int]): The maximum number of nodes to allow
+                this job to run across. If more nodes are requested, or no node
+                specification is provided this parameter will cap the requested
+                node count. This can be used, e.g. to prevent non-MPI jobs from
+                running on multiple nodes.
+            require_partition (Optional[str]): Force the job to run on a specific
+                partition. Will override the passed partition if it is different.
+            custom_slurm_params (str): If a non-empty string this will replace
+                ALL the SLURM arguments that are passed via Airflow context. If
+                used it therefore MUST contain every needed argument e.g.:
+                     "--partition=<...> --account=<...> --ntasks=<...>"
+        """
         super().__init__(*args, **kwargs)  # Initializes self.task_id
         self.lute_location: str = ""
         self.user: str = user
         self.poke_interval: float = poke_interval
         self.max_cores: Optional[int] = max_cores
         self.max_nodes: Optional[int] = max_nodes
+        self.require_partition: Optional[str] = require_partition
+        self.lute_task_id: str = kwargs.get("task_id", "")
+        if "." in self.lute_task_id:
+            # In a task_group the group id is prepended to task_id
+            # We want to remove this and only keep the last portion
+            self.lute_task_id = self.lute_task_id.split(".")[-1]
+        self.custom_slurm_params: str = custom_slurm_params
 
     def _sub_overridable_arguments(self, slurm_param_str: str) -> str:
         """Overrides certain SLURM arguments given instance options.
@@ -165,9 +195,8 @@ class JIDSlurmOperator(BaseOperator):
         # Cap max nodes. Unlike above search for everything, if not present, add it.
         if self.max_nodes is not None:
             pattern = r"nodes=\S+"
-            nnodes_str: str
             try:
-                nnodes_str = re.findall(pattern, slurm_param_str)[0]
+                _ = re.findall(pattern, slurm_param_str)[0]
                 # Check if present with above. Below does nothing but does not
                 # throw error if pattern not present.
                 slurm_param_str = re.sub(
@@ -175,6 +204,21 @@ class JIDSlurmOperator(BaseOperator):
                 )
             except IndexError:  # `--nodes` not present
                 slurm_param_str = f"{slurm_param_str} --nodes=0-{self.max_nodes}"
+
+        # Force use of a specific partition
+        if self.require_partition is not None:
+            pattern = r"partition=\S+"
+            try:
+                _ = re.findall(pattern, slurm_param_str)[0]
+                # Check if present with above. Below does nothing but does not
+                # throw error if pattern not present.
+                slurm_param_str = re.sub(
+                    pattern, f"partition={self.require_partition}", slurm_param_str
+                )
+            except IndexError:  # --partition not present. This shouldn't happen
+                slurm_param_str = (
+                    f"{slurm_param_str} --partition={self.require_partition}"
+                )
 
         return slurm_param_str
 
@@ -211,27 +255,27 @@ class JIDSlurmOperator(BaseOperator):
         # managed task!
         lute_param_str: str
         if lute_params["debug"]:
-            lute_param_str = f"--taskname {self.task_id} --config {config_path} --debug"
+            lute_param_str = (
+                f"--taskname {self.lute_task_id} --config {config_path} --debug"
+            )
         else:
-            lute_param_str = f"--taskname {self.task_id} --config {config_path}"
+            lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
-        # slurm_params holds a List[str]
-        slurm_param_str: str = " ".join(dagrun_config.get("slurm_params"))
-        # Cap max cores used by a managed Task if that is requested
-        pattern: str = r"(?<=\bntasks=)\d+"
-        ntasks: int
-        try:
-            ntasks = int(re.findall(pattern, slurm_param_str)[0])
-        except IndexError as err:  # If `ntasks` not passed - 1 is default
-            ntasks = 1
-        if self.max_cores is not None and ntasks > self.max_cores:
-            slurm_param_str = re.sub(pattern, f"{self.max_cores}", slurm_param_str)
+        slurm_param_str: str
+        if self.custom_slurm_params:  # SLURM params != ""
+            slurm_param_str = self.custom_slurm_params
+        else:
+            # slurm_params holds a List[str]
+            slurm_param_str = " ".join(dagrun_config.get("slurm_params"))
+
+            # Make any requested SLURM argument substitutions
+            slurm_param_str = self._sub_overridable_arguments(slurm_param_str)
 
         parameter_str: str = f"{lute_param_str} {slurm_param_str}"
 
         jid_job_definition: Dict[str, str] = {
             "_id": str(uuid.uuid4()),
-            "name": self.task_id,
+            "name": self.lute_task_id,
             "executable": f"{self.lute_location}/launch_scripts/submit_slurm.sh",
             "trigger": "MANUAL",
             "location": dagrun_config.get("ARP_LOCATION", "S3DF"),
