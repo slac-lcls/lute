@@ -98,6 +98,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w", "--workflow", type=str, help="Workflow to run.", default="test"
     )
+    parser.add_argument(
+        "-W",
+        "--workflow_defn",
+        type=str,
+        help="Path to a YAML file with workflow.",
+        default="",
+    )
     # Optional arguments for when running from command-line
     parser.add_argument(
         "-e",
@@ -142,6 +149,16 @@ if __name__ == "__main__":
         os.environ["Authorization"] = _request_arp_token(args.experiment)
         os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
 
+    wf_name: str
+    use_custom_defn: bool
+    if args.workflow_defn:
+        wf_name = "test_dynamic"
+        use_custom_defn = True
+        logger.info("Will attempt running custom DAG")
+    else:
+        wf_name = args.workflow
+        use_custom_defn = False
+
     airflow_instance: str
     instance_str: str
     if args.test:
@@ -153,10 +170,10 @@ if __name__ == "__main__":
 
     airflow_api_endpoints: Dict[str, str] = {
         "health": "api/v1/health",
-        "run_dag": f"api/v1/dags/lute_{args.workflow}/dagRuns",
-        "get_tasks": f"api/v1/dags/lute_{args.workflow}/tasks",
+        "run_dag": f"api/v1/dags/lute_{wf_name}/dagRuns",
+        "get_tasks": f"api/v1/dags/lute_{wf_name}/tasks",
         "get_xcom": (  # Need to format dag_run_id, task_id, xcom_key
-            f"api/v1/dags/lute_{args.workflow}/dagRuns/{{dag_run_id}}/taskInstances"
+            f"api/v1/dags/lute_{wf_name}/dagRuns/{{dag_run_id}}/taskInstances"
             f"/{{task_id}}/xcomEntries/{{xcom_key}}"
         ),
     }
@@ -174,6 +191,16 @@ if __name__ == "__main__":
         "debug": args.debug,
     }
 
+    wf_defn: Dict[str, Any] = {}
+    if use_custom_defn:
+        import yaml
+
+        if not os.path.exists(args.workflow_defn):
+            logger.error("Workflow definition path does not exist! Exiting!")
+            sys.exit(-1)
+        with open(args.workflow_defn, "r") as f:
+            wf_defn = yaml.load(f, yaml.FullLoader)
+
     # Experiment, run #, and ARP env variables come from ARP submission only
     dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
         "dag_run_id": str(uuid.uuid4()),
@@ -188,6 +215,7 @@ if __name__ == "__main__":
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
             "lute_params": params,
             "slurm_params": extra_args,
+            "workflow": wf_defn,  # Only used for custom defined workflows.
         },
     }
 
@@ -198,7 +226,7 @@ if __name__ == "__main__":
     )
     resp.raise_for_status()
     dag_run_id: str = dag_run_data["dag_run_id"]
-    logger.info(f"Submitted DAG (Workflow): {args.workflow}\nDAG_RUN_ID: {dag_run_id}")
+    logger.info(f"Submitted DAG (Workflow): {wf_name}\nDAG_RUN_ID: {dag_run_id}")
     dag_state: str = resp.json()["state"]
     logger.info(f"DAG is {dag_state}")
 
