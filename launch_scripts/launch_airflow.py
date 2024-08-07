@@ -20,6 +20,7 @@ from typing import Dict, Union, List, Optional, Any
 
 import requests
 from requests.auth import HTTPBasicAuth
+from requests.exceptions import HTTPError
 
 # Requests, urllib have lots of debug statements. Only set level for this logger
 logger: logging.Logger = logging.getLogger("Launch_Airflow")
@@ -281,13 +282,17 @@ if __name__ == "__main__":
                         task_id=task_id,
                         xcom_key=xcom_key,
                     )
-                    resp = requests.get(xcom_url, auth=auth)
-                    resp.raise_for_status()
-                    logs: str = resp.json()["value"]  # Only want to print once.
-                    logger.info(f"Providing logs for {task_id}")
-                    print("-" * 50, flush=True)
-                    print(logs, flush=True)
-                    print("-" * 50, flush=True)
+                    try:
+                        resp = requests.get(xcom_url, auth=auth)
+                        resp.raise_for_status()
+                        logs: str = resp.json()["value"]  # Only want to print once.
+                        logger.info(f"Providing logs for {task_id}")
+                        print("-" * 50, flush=True)
+                        print(logs, flush=True)
+                        print("-" * 50, flush=True)
+                    except HTTPError:
+                        # retrieve_workflow has no logs...
+                        logger.info(f"No logs for {task_id}.")
                     logger.info(f"End of logs for {task_id}")
                     completed_tasks[task_id] = task_state
 
