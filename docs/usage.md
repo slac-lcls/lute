@@ -188,15 +188,18 @@ In general, it is best to prefer the long-form of the SLURM-argument (`--arg=<..
 Finally, you can submit a full workflow (e.g. SFX analysis, smalldata production and summary results, geometry optimization...). This can be done using a single script, `submit_launch_airflow.sh`, similarly to the SLURM submission above:
 
 ```bash
-> launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -c </path/to/yaml.yaml> -w <dag_name> [--debug] [--test] $SLURM_ARGS
+> launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -c </path/to/yaml.yaml> -w <dag_name> [--debug] [--test] [-e <exp>] [-r <run>] $SLURM_ARGS
 ```
 The submission process is slightly more complicated in this case. A more in-depth explanation is provided under "Airflow Launch Steps", in the advanced usage section below if interested. The parameters are as follows - as before command-line arguments in square brackets `[]` are optional, while those in `<>` must be provided:
 
 - The **first argument** (must be first) is the full path to the `launch_scripts/launch_airflow.py` script located in whatever LUTE installation you are running. All other arguments can come afterwards in any order.
 - `-c </path/...>` is the path to the configuration YAML to use.
 - `-w <dag_name>` is the name of the DAG (workflow) to run. This replaces the task name provided when using the other two methods above. A DAG list is provided below.
+  - **NOTE:** For advanced usage, a custom DAG can be provided at **run** time using `-W` (capital W) followed by the path to the workflow instead of `-w`. See below for further discussion on this use case.
 - `--debug` controls whether to use debug mode (verbose printing)
 - `--test` controls whether to use the test or production instance of Airflow to manage the DAG. The instances are running identical versions of Airflow, but the `test` instance may have "test" or more bleeding edge development DAGs.
+- `-e` is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.
+- `-r` is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.
 
 The `$SLURM_ARGS` must be provided in the same manner as when submitting an individual **managed** `Task` by hand to be run as batch job with the script above. **Note** that these parameters will be used as the starting point for the SLURM arguments of **every managed** `Task` in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments. For example, a single threaded analysis `Task` may be capped to running on one core, even if in general everything should be running on 100 cores, per the SLURM argument provided. These caps are added during development and cannot be disabled through configuration changes in the YAML.
 
@@ -369,6 +372,47 @@ MyTask:
 ```
 
 During validation, Pydantic will by default cast variables if possible, because of this it is generally safe to use strings for substitutions. E.g. if your parameter is expecting an integer, and after substitution you pass `"2"`, Pydantic will cast this to the `int` `2`, and validation will succeed. As part of the substitution process limited type casting will also be handled if it is necessary for any formatting strings provided. E.g. `"{{ run:04d }}"` requires that run be an integer, so it will be treated as such in order to apply the formatting.
+
+## Custom Run-Time DAGs
+In most cases, standard DAGs should be called as described above. However, Airflow also supports the dynamic creation of DAGs, e.g. to vary the input data to various steps, or the number of steps that will occur. Some of this functionality has been used to allow for user-defined DAGs which are passed in the form of a dictionary, allowing Airflow to construct the workflow as it is running.
+
+A basic YAML syntax is used to construct a series of nested dictionaries which define a DAG. Consider a simplified serial femtosecond crystallography DAG which runs peak finding through merging and then calculates some statistics. I.e. we want an execution order that looks like:
+
+```python
+peak_finder >> indexer >> merger >> hkl_comparer
+```
+
+We can alternatively define this DAG in YAML:
+
+```yaml
+task_name: PeakFinderPyAlgos
+next:
+- task_name: CrystFELIndexer
+  next: []
+  - task_name: PartialatorMerger
+    next: []
+    - task_name: HKLComparer
+      next:
+```
+
+I.e. we define a tree where each node is constructed using `Node(task_name: str, next: List[Node])`. The `task_name` is the name of a **managed** `Task`. This name **must** be identical to a **managed** `Task` defined in the LUTE installation you are using. The `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the `next` list are run in parallel. For example to run `task1` followed by `task2` and `task3` in parellel we would use:
+
+```yaml
+task_name: Task1
+next:
+- task_name: Task2
+  next: []
+- task_name: Task3
+  next: []
+```
+
+In order to run a DAG defined in this way, we pass the **path** to the YAML file we have defined it in to the launch script using `-W <path_to_dag>`. This is instead of calling it by name. E.g.
+
+```bash
+/path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e <exp> -r <run> -c /path/to/config -W <path_to_dag> --test [--debug] [SLURM_ARGS]
+```
+
+Note that fewer options are currently supported for configuring the operators for each step of the DAG.
 
 ## Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.

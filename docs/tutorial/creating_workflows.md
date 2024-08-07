@@ -29,6 +29,7 @@ dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
         "user": getpass.getuser(),
         "lute_params": params,
         "slurm_params": extra_args,
+        "workflow": wf_defn,  # Used only for custom DAGs. See below under advanced usage.
     },
 }
 ```
@@ -37,25 +38,35 @@ Note that the environment variables are used to fill in the appropriate informat
 The script takes a number of parameters:
 
 ```bash
-launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test]
+launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test] [-e <exp>] [-r <run>] [SLURM_ARGS]
 ```
 
 - `-c` refers to the path of the configuration YAML that contains the parameters for each **managed** `Task` in the requested workflow.
 - `-w` is the name of the DAG (workflow) to run. By convention each DAG is named by the Python file it is defined in. (See below).
+  - **NOTE:** For advanced usage, a custom DAG can be provided at **run** time using `-W` (capital W) followed by the path to the workflow instead of `-w`. See below for further discussion on this use case.
 - `--debug` is an optional flag to run all steps of the workflow in debug mode for verbose logging and output.
 - `--test` is an optional flag which will use the test Airflow instance. By default the script will make requests of the standard production Airflow instance.
+- `-e` is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.
+- `-r` is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.
+- `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm.sh` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
 
 
 **Lifetime**
 This script will run for the entire duration of the **workflow (DAG)**. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed `Task`)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.
 
 ### `submit_launch_airflow.sh`
-This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the `launch_airflow.py` job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the `launch_airflow.py` script to run on the S3DF batch nodes. Usage of this script is identical to `launch_airflow.py`. All the arguments are passed transparently to the underlying Python script. The wrapper will simply launch a batch job using minimal resources (1 core).
+This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the `launch_airflow.py` job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the `launch_airflow.py` script to run on the S3DF batch nodes. Usage of this script is mostly identical to `launch_airflow.py`. All the arguments are passed transparently to the underlying Python script with the exception of the first argument which **must** be the location of the underlying `launch_airflow.py` script. The wrapper will simply launch a batch job using minimal resources (1 core). While the primary purpose of the script is to allow running from the eLog, it is also an useful wrapper generally, to be able to submit the previous script as a SLURM job.
+
+Usage:
+
+```bash
+submit_launch_airflow.sh /path/to/launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test] [-e <exp>] [-r <run>] [SLURM_ARGS]
+```
 
 ## `submit_slurm.sh`
 Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single **managed** `Task` at a time. The usage is as follows:
 ```bash
-submit_slurm.sh -c <path_to_config_yaml> -t <MANAGED_task_name> [--debug] [--SLURM_ARGS ...]
+submit_slurm.sh -c <path_to_config_yaml> -t <MANAGED_task_name> [--debug] [SLURM_ARGS ...]
 ```
 As a reminder the **managed** `Task` refers to the `Executor`-`Task` combination. The script does not parse any SLURM specific parameters, and instead passes them transparently to SLURM. At least the following two SLURM arguments must be provided:
 ```bash
@@ -156,3 +167,47 @@ task1 >> task3
 ```
 
 As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.
+
+**Note:** Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can use the advanced run-time DAGs defined below as well.
+
+# Advanced Usage
+## Run-time DAG creation
+In most cases, standard DAGs should be defined as described above and called by name. However, Airflow also supports the creation of DAGs dynamically, e.g. to vary the input data to various steps, or the number of steps that will occur. Some of this functionality has been used to allow for user-defined DAGs which are passed in the form of a dictionary, allowing Airflow to construct the workflow as it is running.
+
+A basic YAML syntax is used to construct a series of nested dictionaries which define a DAG. Considering the first example DAG defined above (for serial femtosecond crystallography), the standard DAG looked like:
+
+```python
+peak_finder >> indexer >> merger >> hkl_comparer
+```
+
+We can alternatively define this DAG in YAML:
+
+```yaml
+task_name: PeakFinderPyAlgos
+next:
+- task_name: CrystFELIndexer
+  next: []
+  - task_name: PartialatorMerger
+    next: []
+    - task_name: HKLComparer
+      next:
+```
+
+I.e. we define a tree where each node is constructed using `Node(task_name: str, next: List[Node])`. The `task_name` is the name of a **managed** `Task` as before, in the same way that would be passed to the `JIDSlurmOperator`. the `next` field is composed of either an empty list (meaning no **managed** `Task`s are run after the current node), or additional nodes. All nodes in the list are run in parallel. For example to run `task1` followed by `task2` and `task3` in parellel we would use:
+
+```yaml
+task_name: Task1
+next:
+- task_name: Task2
+  next: []
+- task_name: Task3
+  next: []
+```
+
+In order to run a DAG defined this way we pass the **path** to the YAML file we have defined it in to the launch script using `-W <path_to_dag>`. This is instead of calling it by name. E.g.
+
+```bash
+/path/to/lute/launch_scripts/submit_launch_airflow.sh /path/to/lute/launch_scripts/launch_airflow.py -e <exp> -r <run> -c /path/to/config -W <path_to_dag> --test [--debug] [SLURM_ARGS]
+```
+
+Note that fewer options are currently supported for configuring the operators for each step of the DAG.
