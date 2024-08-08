@@ -861,7 +861,14 @@ class SocketCommunicator(Communicator):
                 self._local_socket_path = self._setup_unix_ssh_tunnel(
                     socket_path, hostname, executor_hostname
                 )
-                data_socket.connect(self._local_socket_path)
+                while 1:
+                    # Keep trying reconnect until ssh tunnel works.
+                    try:
+                        data_socket.connect(self._local_socket_path)
+                        break
+                    except FileNotFoundError:
+                        continue
+
         return data_socket
 
     def _init_unix_socket_zmq(self, data_socket: zmq.sugar.socket.Socket) -> None:
