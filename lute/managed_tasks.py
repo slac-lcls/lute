@@ -49,6 +49,11 @@ CrystFELIndexer.update_environment(
 PartialatorMerger: Executor = Executor("MergePartialator")
 """Runs crystallographic merging using CrystFEL's partialator."""
 
+CarelessMerger: Executor = Executor("MergeCareless")
+"""Runs crystallographic mergin using Careless."""
+
+CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
+
 HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit
 """Runs analysis on merge results for statistics/figures of merit.."""
 
@@ -59,6 +64,7 @@ DimpleSolver: Executor = Executor("DimpleSolve")
 """Solves a crystallographic structure using molecular replacement."""
 
 DimpleSolver.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+
 PeakFinderPyAlgos: MPIExecutor = MPIExecutor("FindPeaksPyAlgos")
 """Performs Bragg peak finding using the PyAlgos algorithm."""
 
@@ -66,6 +72,7 @@ SHELXCRunner: Executor = Executor("RunSHELXC")
 """Runs CCP4 SHELXC - needed for crystallographic phasing."""
 
 SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
 
