@@ -30,7 +30,7 @@ __all__ = [
     "Communicator",
     "PipeCommunicator",
     "LUTE_SIGNALS",
-    "SocketCommunicator",  # Points to one of two classes below. See bottom
+    "SocketCommunicator",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -735,7 +735,7 @@ class SocketCommunicator(Communicator):
         port: Optional[Union[str, int]] = os.getenv("LUTE_PORT")
         if self._party == Party.EXECUTOR:
             if port is None:
-                # If port is None find onex
+                # If port is None find one
                 # Executor code executes first
                 port = self._find_random_port()
                 if port is None:
