@@ -659,7 +659,7 @@ class RunTask(Task): # Inherit from Task
 
 #### Using MPI for your `Task`
 
-In the case your `Task` is written to use `MPI` a slight modification to the template above is needed. Specifically, an additional keyword argument should be passed to the base class initializer: `use_mpi=True`. This tells the base class to adjust signalling/communication behaviour appropriately for a multi-rank MPI program. Doing this prevents tricky-to-track-dow problems due to ranks starting, completing and sending messages at different times. The rest of your code can, as before, be written as you see fit. The use of this keyword argument will also synchronize the start of all ranks and wait until all ranks have finished to exit.
+In the case your `Task` is written to use `MPI` a slight modification to the template above is needed. Specifically, an additional keyword argument should be passed to the base class initializer: `use_mpi=True`. This tells the base class to adjust signalling/communication behaviour appropriately for a multi-rank MPI program. Doing this prevents tricky-to-track-down problems due to ranks starting, completing and sending messages at different times. The rest of your code can, as before, be written as you see fit. The use of this keyword argument will also synchronize the start of all ranks and wait until all ranks have finished to exit.
 
 ```py
 """Task which needs to run with MPI"""

@@ -252,8 +252,9 @@ class BaseExecutor(ABC):
             # Not great, but experience shows we need a bit of time to setup
             # network.
             time.sleep(0.1)
-        # Propagate any env vars setup by Communicators
-        self._analysis_desc.task_env.update(os.environ)
+        # Propagate any env vars setup by Communicators - only update LUTE_ vars
+        tmp: Dict[str, str] = {key: os.environ[key] for key in os.environ if "LUTE_" in key}
+        self._analysis_desc.task_env.update(tmp)
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
