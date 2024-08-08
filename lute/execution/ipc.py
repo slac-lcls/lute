@@ -157,6 +157,10 @@ class Communicator(ABC):
         """Alternative exit method outside of context manager."""
         self.__exit__()
 
+    def delayed_setup(self):
+        """Any setup that should be done later than init."""
+        ...
+
 
 class PipeCommunicator(Communicator):
     """Provides communication through pipes over stderr/stdout.
@@ -407,6 +411,14 @@ class SocketCommunicator(Communicator):
         """
         super().__init__(party=party, use_pickle=use_pickle)
 
+    def delayed_setup(self) -> None:
+        """Delays the creation of socket objects.
+
+        The Executor initializes the Communicator when it is created. Since
+        all Executors are created and available at once we want to delay
+        acquisition of socket resources until a single Executor is ready
+        to use them.
+        """
         self._data_socket: Union[socket.socket, zmq.sugar.socket.Socket]
         if USE_ZMQ:
             self.desc: str = "Communicates using ZMQ through TCP or Unix sockets."

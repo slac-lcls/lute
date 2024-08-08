@@ -189,6 +189,7 @@ class Task(ABC):
         else:
             communicator = SocketCommunicator()
 
+        communicator.delayed_setup()
         communicator.write(msg)
         communicator.clear_communicator()
 

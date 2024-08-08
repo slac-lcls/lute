@@ -245,7 +245,15 @@ class BaseExecutor(ABC):
         This method may or may not be used by subclasses. It may be useful
         for logging etc.
         """
-        ...
+        # This prevents the Executors in managed_tasks.py from all acquiring
+        # resources like sockets.
+        for communicator in self._communicators:
+            communicator.delayed_setup()
+            # Not great, but experience shows we need a bit of time to setup
+            # network.
+            time.sleep(0.1)
+        # Propagate any env vars setup by Communicators
+        self._analysis_desc.task_env.update(os.environ)
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
@@ -299,6 +307,7 @@ class BaseExecutor(ABC):
 
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
+        self._pre_task()
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
         if lute_path is None:
             logger.debug("Absolute path to subprocess_task.py not found.")
