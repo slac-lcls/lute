@@ -133,7 +133,7 @@ TestSocket:
 
 TestMultiNodeCommunication:
   send_obj: "plot" # Either "plot" or "array". Type of object to send
-  arr_size: 5  	   # Size of the array if sending array
+  arr_size: 5      # Size of the array if sending array
 
 FindPeaksPyAlgos:
     outdir: ""
