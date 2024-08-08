@@ -8,6 +8,7 @@ import pprint
 
 import lute.io.models
 from lute.io.models.base import TaskParameters
+from lute import managed_tasks
 
 
 class PropertyDict(TypedDict):
@@ -94,6 +95,17 @@ if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
     if args.list:
         logger.info(f"Fetching Task list.")
+        # Construct Task <-> Executor mapping
+        # [task_name, [managed_task1, managed_task2, ...]
+        managed_task_map: Dict[str, List[str]] = {}
+        for key in dir(managed_tasks):
+            obj: Any = getattr(managed_tasks, key)
+            if isinstance(obj, managed_tasks.BaseExecutor):
+                task_name: str = obj._analysis_desc.task_result.task_name
+                if task_name in managed_task_map:
+                    managed_task_map[task_name].append(key)
+                else:
+                    managed_task_map[task_name] = [key]
         task_list_msg: str = "Task List"
         task_list_msg = f"{task_list_msg}\n{'-'*len(task_list_msg)}"
         for key in dir(lute.io.models):
@@ -102,7 +114,12 @@ if __name__ == "__main__":
                 "TaskParameters",
                 "TemplateParameters",
             ):
-                task_list_msg = f"{task_list_msg}\n\n- {key.replace('Parameters','')}"
+                task_name: str = key.replace("Parameters", "")
+                task_list_msg = f"{task_list_msg}\n\n- {task_name}\n"
+                task_list_msg = f"{task_list_msg}  Current Managed Tasks:"
+                if task_name in managed_task_map:
+                    for mgd_task in managed_task_map[task_name]:
+                        task_list_msg = f"{task_list_msg} {mgd_task},"
                 obj: TaskParameters = getattr(lute.io.models, key)
                 parameter_schema: ModelSchema = obj.schema()
                 description: str = parameter_schema["description"]
