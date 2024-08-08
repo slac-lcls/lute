@@ -131,6 +131,10 @@ TestSocket:
   array_size: 8000 # Size of arrays to send. 8000 floats ~ 6.4e4
   num_arrays: 10 # Number of arrays to send.
 
+TestMultiNodeCommunication:
+  send_obj: "plot" # Either "plot" or "array". Type of object to send
+  arr_size: 5      # Size of the array if sending array
+
 FindPeaksPyAlgos:
     outdir: ""
     n_events: 100

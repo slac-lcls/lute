@@ -245,7 +245,16 @@ class BaseExecutor(ABC):
         This method may or may not be used by subclasses. It may be useful
         for logging etc.
         """
-        ...
+        # This prevents the Executors in managed_tasks.py from all acquiring
+        # resources like sockets.
+        for communicator in self._communicators:
+            communicator.delayed_setup()
+            # Not great, but experience shows we need a bit of time to setup
+            # network.
+            time.sleep(0.1)
+        # Propagate any env vars setup by Communicators - only update LUTE_ vars
+        tmp: Dict[str, str] = {key: os.environ[key] for key in os.environ if "LUTE_" in key}
+        self._analysis_desc.task_env.update(tmp)
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
@@ -299,6 +308,7 @@ class BaseExecutor(ABC):
 
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
+        self._pre_task()
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
         if lute_path is None:
             logger.debug("Absolute path to subprocess_task.py not found.")
@@ -596,17 +606,20 @@ class Executor(BaseExecutor):
         that its finished.
         """
         for communicator in self._communicators:
-            msg: Message = communicator.read(proc)
-            if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                hook: Callable[[Executor, Message], None] = getattr(
-                    self.Hooks, msg.signal.lower()
-                )
-                hook(self, msg)
-            if msg.contents is not None:
-                if isinstance(msg.contents, str) and msg.contents != "":
-                    logger.info(msg.contents)
-                elif not isinstance(msg.contents, str):
-                    logger.info(msg.contents)
+            while True:
+                msg: Message = communicator.read(proc)
+                if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
+                    hook: Callable[[Executor, Message], None] = getattr(
+                        self.Hooks, msg.signal.lower()
+                    )
+                    hook(self, msg)
+                if msg.contents is not None:
+                    if isinstance(msg.contents, str) and msg.contents != "":
+                        logger.info(msg.contents)
+                    elif not isinstance(msg.contents, str):
+                        logger.info(msg.contents)
+                if not communicator.has_messages:
+                    break
 
     def _finalize_task(self, proc: subprocess.Popen) -> None:
         """Any actions to be performed after the Task has ended.
