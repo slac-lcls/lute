@@ -78,6 +78,7 @@ if [[ -z ${LUTE_USE_TCP} || ${LUTE_USE_TCP} != 0 ]]; then
     export LUTE_USE_TCP=1
 else
     echo "Using Unix sockets"
+    unset LUTE_USE_TCP
     export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
 fi
 

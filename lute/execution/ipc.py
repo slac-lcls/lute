@@ -9,8 +9,20 @@ pipes to Unix sockets, etc. All communicators pass a single object called a
 
 
 Classes:
+    Party: Enum describing whether Communicator is on Task-side or Executor-side.
 
+    Message: A dataclass used for passing information from Task to Executor.
+
+    Communicator: Abstract base class for Communicator types.
+
+    PipeCommunicator: Manages communication between Task and Executor via pipes
+        (stderr and stdout).
+
+    SocketCommunicator: Manages communication using sockets, either raw or using
+        zmq. Supports both TCP and Unix sockets.
 """
+
+from __future__ import annotations
 
 __all__ = [
     "Party",
@@ -25,7 +37,6 @@ __author__ = "Gabriel Dorlhiac"
 import logging
 import os
 import pickle
-import select
 import socket
 import subprocess
 import sys
@@ -41,7 +52,10 @@ from typing import Any, Optional, Set, List, Literal, Union, Tuple, Type
 import _io
 from typing_extensions import Self
 
-import zmq
+
+USE_ZMQ: bool = False
+if USE_ZMQ:
+    import zmq
 
 LUTE_SIGNALS: Set[str] = {
     "NO_PICKLE_MODE",
@@ -320,8 +334,12 @@ class PipeCommunicator(Communicator):
             sys.stdout.write(raw_contents)
 
 
-class RawSocketCommunicator(Communicator):
-    """Provides communication over raw Unix or TCP sockets.
+class SocketCommunicator(Communicator):
+    """Provides communication over Unix or TCP sockets.
+
+    Communication is provided either using sockets with the Python socket library
+    or using ZMQ. The choice of implementation is controlled by the global bool
+    `USE_ZMQ`.
 
     Whether to use TCP or Unix sockets is controlled by the environment:
                            `LUTE_USE_TCP=1`
@@ -388,9 +406,16 @@ class RawSocketCommunicator(Communicator):
                 passing False does not change behaviour.
         """
         super().__init__(party=party, use_pickle=use_pickle)
-        self.desc: str = "Communicates through a TCP or Unix socket."
 
-        self._data_socket: socket.socket = self._create_socket()
+        self._data_socket: Union[socket.socket, zmq.sugar.socket.Socket]
+        if USE_ZMQ:
+            self.desc: str = "Communicates using ZMQ through TCP or Unix sockets."
+            self._context: zmq.context.Context = zmq.Context()
+            self._data_socket = self._create_socket_zmq()
+        else:
+            self.desc: str = "Communicates through a TCP or Unix socket."
+            self._data_socket = self._create_socket_raw()
+            self._data_socket.settimeout(SocketCommunicator.ACCEPT_TIMEOUT)
 
         if self._party == Party.EXECUTOR:
             # Executor created first so we can define the hostname env variable
@@ -402,18 +427,15 @@ class RawSocketCommunicator(Communicator):
             self._msg_queue: queue.Queue = queue.Queue()
             self._partial_msg: Optional[bytes] = None
             self._stop_thread: bool = False
-            self._data_socket.settimeout(RawSocketCommunicator.ACCEPT_TIMEOUT)
             self._reader_thread.start()
         else:
             # Only used by Party.TASK
-            import struct
-
-            self._data_socket.setsockopt(
-                socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 10)
-            )
             self._use_ssh_tunnel: bool = False
             self._ssh_proc: Optional[subprocess.Popen] = None
             self._local_socket_path: Optional[str] = None
+
+    # Read
+    ############################################################################
 
     def read(self, proc: subprocess.Popen) -> Message:
         """Return a message from the queue if available.
@@ -430,7 +452,7 @@ class RawSocketCommunicator(Communicator):
         """
         msg: Message
         try:
-            msg = self._msg_queue.get(timeout=RawSocketCommunicator.ACCEPT_TIMEOUT)
+            msg = self._msg_queue.get(timeout=SocketCommunicator.ACCEPT_TIMEOUT)
         except queue.Empty:
             msg = Message()
 
@@ -442,23 +464,27 @@ class RawSocketCommunicator(Communicator):
         Socket(s) are continuously monitored, and read from when new data is
         available.
 
-        Args:
-            proc (subprocess.Popen): The process to read from. Provided for
-                compatibility with other Communicator subtypes. Is ignored.
-
-        Returns:
-             msg (Message): The message read, containing contents and signal.
+        Calls an underlying method for either raw sockets or ZMQ.
         """
+
         while True:
             if self._stop_thread:
                 logger.debug("Stopping socket reader thread.")
                 break
-            connection: socket.socket
-            addr: Union[str, Tuple[str, int]]
-            try:
-                connection, addr = self._data_socket.accept()
-            except socket.timeout:
-                continue
+            if USE_ZMQ:
+                self._read_socket_zmq()
+            else:
+                self._read_socket_raw()
+
+    def _read_socket_raw(self) -> None:
+        """Read data from a socket.
+
+        Raw socket implementation for the reader thread.
+        """
+        connection: socket.socket
+        addr: Union[str, Tuple[str, int]]
+        try:
+            connection, addr = self._data_socket.accept()
             full_data: bytes = b""
             while True:
                 data: bytes = connection.recv(8192)
@@ -466,8 +492,21 @@ class RawSocketCommunicator(Communicator):
                     full_data += data
                 else:
                     break
-            self._unpack_messages(full_data)
             connection.close()
+            self._unpack_messages(full_data)
+        except socket.timeout:
+            pass
+
+    def _read_socket_zmq(self) -> None:
+        """Read data from a socket.
+
+        ZMQ implementation for the reader thread.
+        """
+        try:
+            full_data: bytes = self._data_socket.recv(0)
+            self._unpack_messages(full_data)
+        except zmq.ZMQError:
+            pass
 
     def _unpack_messages(self, data: bytes) -> None:
         """Unpacks a byte stream into individual messages.
@@ -501,12 +540,11 @@ class RawSocketCommunicator(Communicator):
             try:
                 # Message encoding: <HEAD><SEP><len><SEP><msg><SEP><HEAD[::-1]>
                 end = working_data.find(
-                    RawSocketCommunicator.MSG_SEP + RawSocketCommunicator.MSG_HEAD[::-1]
+                    SocketCommunicator.MSG_SEP + SocketCommunicator.MSG_HEAD[::-1]
                 )
                 msg_parts: List[bytes] = working_data[:end].split(
-                    RawSocketCommunicator.MSG_SEP
+                    SocketCommunicator.MSG_SEP
                 )
-                # print(f"PART LENGTH: {len(msg_parts)}", flush=True)
                 if len(msg_parts) != 3:
                     self._partial_msg = working_data
                     break
@@ -520,18 +558,45 @@ class RawSocketCommunicator(Communicator):
                     break
                 msg = pickle.loads(raw_msg)
                 self._msg_queue.put(msg)
-                print(msg, flush=True)
             except pickle.UnpicklingError:
                 self._partial_msg = working_data
                 break
             if end < len(working_data):
                 # Add len(SEP+HEAD) since end marks the start of <SEP><HEAD[::-1]
                 offset: int = len(
-                    RawSocketCommunicator.MSG_SEP + RawSocketCommunicator.MSG_HEAD
+                    SocketCommunicator.MSG_SEP + SocketCommunicator.MSG_HEAD
                 )
                 working_data = working_data[end + offset :]
             else:
                 working_data = b""
+
+    # Write
+    ############################################################################
+
+    def _write_socket(self, msg: Message) -> None:
+        """Sends data over a socket from the 'client' (Task) side.
+
+        Messages are encoded in the following format:
+                 <HEAD><SEP><len(msg)><SEP><msg><SEP><HEAD[::-1]>
+        The items between <> are replaced as follows:
+            - <HEAD>: A start marker
+            - <SEP>: A separator for components of the message
+            - <len(msg)>: The length of the message payload in bytes.
+            - <msg>: The message payload in bytes
+            - <HEAD[::-1]>: The start marker in reverse to indicate the end.
+
+        This structure is used for decoding the message on the other end.
+        """
+        data: bytes = pickle.dumps(msg)
+        cmd: bytes = SocketCommunicator.MSG_HEAD
+        size: bytes = b"%d" % len(data)
+        end: bytes = SocketCommunicator.MSG_HEAD[::-1]
+        sep: bytes = SocketCommunicator.MSG_SEP
+        packed_msg: bytes = cmd + sep + size + sep + data + sep + end
+        if USE_ZMQ:
+            self._data_socket.send(packed_msg)
+        else:
+            self._data_socket.sendall(packed_msg)
 
     def write(self, msg: Message) -> None:
         """Send a single Message.
@@ -543,6 +608,80 @@ class RawSocketCommunicator(Communicator):
             msg (Message): The Message to send.
         """
         self._write_socket(msg)
+
+    # Generic create
+    ############################################################################
+
+    def _create_socket_raw(self) -> socket.socket:
+        """Create either a Unix or TCP socket.
+
+        If the environment variable:
+                              `LUTE_USE_TCP=1`
+        is defined, a TCP socket is returned, otherwise a Unix socket.
+
+        Refer to the individual initialization methods for additional environment
+        variables controlling the behaviour of these two communication types.
+
+        Returns:
+            data_socket (socket.socket): TCP or Unix socket.
+        """
+        import struct
+
+        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
+        sock: socket.socket
+        if use_tcp is not None:
+            if self._party == Party.EXECUTOR:
+                logger.info("Will use raw TCP sockets.")
+            sock = self._init_tcp_socket_raw()
+        else:
+            if self._party == Party.EXECUTOR:
+                logger.info("Will use raw Unix sockets.")
+            sock = self._init_unix_socket_raw()
+        sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 10000)
+        )
+        return sock
+
+    def _create_socket_zmq(self) -> zmq.sugar.socket.Socket:
+        """Create either a Unix or TCP socket.
+
+        If the environment variable:
+                              `LUTE_USE_TCP=1`
+        is defined, a TCP socket is returned, otherwise a Unix socket.
+
+        Refer to the individual initialization methods for additional environment
+        variables controlling the behaviour of these two communication types.
+
+        Returns:
+            data_socket (socket.socket): Unix socket object.
+        """
+        socket_type: Literal[zmq.PULL, zmq.PUSH]
+        if self._party == Party.EXECUTOR:
+            socket_type = zmq.PULL
+        else:
+            socket_type = zmq.PUSH
+
+        data_socket: zmq.sugar.socket.Socket = self._context.socket(socket_type)
+        data_socket.set_hwm(160000)
+        # Need to multiply by 1000 since ZMQ uses ms
+        data_socket.setsockopt(
+            zmq.RCVTIMEO, int(SocketCommunicator.ACCEPT_TIMEOUT * 1000)
+        )
+        # Try TCP first
+        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
+        if use_tcp is not None:
+            if self._party == Party.EXECUTOR:
+                logger.info("Will use TCP (ZMQ).")
+            self._init_tcp_socket_zmq(data_socket)
+        else:
+            if self._party == Party.EXECUTOR:
+                logger.info("Will use Unix sockets (ZMQ).")
+            self._init_unix_socket_zmq(data_socket)
+
+        return data_socket
+
+    # TCP Init
+    ############################################################################
 
     def _find_random_port(
         self, min_port: int = 41923, max_port: int = 64324, max_tries: int = 100
@@ -563,7 +702,7 @@ class RawSocketCommunicator(Communicator):
                 continue
         return None
 
-    def _init_tcp_socket(self) -> socket.socket:
+    def _init_tcp_socket_raw(self) -> socket.socket:
         """Initialize a TCP socket.
 
         Executor-side code should always be run first. It checks to see if
@@ -613,282 +752,11 @@ class RawSocketCommunicator(Communicator):
                 data_socket.connect((executor_hostname, int(port)))
         return data_socket
 
-    def _init_unix_socket(self) -> socket.socket:
-        """Returns a Unix socket object.
+    def _init_tcp_socket_zmq(self, data_socket: zmq.sugar.socket.Socket) -> None:
+        """Initialize a TCP socket using ZMQ.
 
-        Executor-side code should always be run first. It checks to see if
-        the environment variable
-                                `LUTE_SOCKET=XYZ`
-        is defined, if so binds it, otherwise it will create a new path and
-        define the environment variable for the Task-side to find.
-
-        On the Task (client-side), this method will also open a SSH tunnel to
-        forward a local Unix socket to an Executor Unix socket if the Task and
-        Executor processes are on different machines.
-
-        The SSH tunnel is opened with `ssh -L <local>:<remote> sleep 2`.
-        This method of communication is slightly slower and incurs additional
-        overhead - it should only be used as a backup. If communication across
-        multiple hosts is required consider using TCP.  The Task will use
-        the local socket `<LUTE_SOCKET>.task{##}`. Multiple local sockets may be
-        created. It is assumed that the user is identical on both the
-        Task machine and Executor machine.
-
-        Returns:
-            data_socket (socket.socket): Unix socket object.
-        """
-        socket_path: str
-        try:
-            socket_path = os.environ["LUTE_SOCKET"]
-        except KeyError as err:
-            import uuid
-            import tempfile
-
-            # Define a path,up and add to environment
-            # Executor-side always created first, Task will use the same one
-            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
-            os.environ["LUTE_SOCKET"] = socket_path
-            logger.debug(f"UnixSocketCommunicator defines socket_path: {socket_path}")
-        data_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        if self._party == Party.EXECUTOR:
-            if os.path.exists(socket_path):
-                os.unlink(socket_path)
-            data_socket.bind(socket_path)
-            data_socket.listen()
-        elif self._party == Party.TASK:
-            hostname: str = socket.gethostname()
-            executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
-            if executor_hostname is None:
-                logger.info("Hostname for Executor process not found! Exiting!")
-                self._data_socket.close()
-                sys.exit(-1)
-            if hostname == executor_hostname:
-                data_socket.connect(socket_path)
-            else:
-                if "uuid" not in locals():
-                    import uuid
-                self._local_socket_path = f"{socket_path}.task{uuid.uuid4().hex[:4]}"
-                self._use_ssh_tunnel = True
-                ssh_cmd: List[str] = [
-                    "ssh",
-                    "-o",
-                    "LogLevel=quiet",
-                    "-L",
-                    f"{self._local_socket_path}:{socket_path}",
-                    executor_hostname,
-                    "sleep",
-                    "2",
-                ]
-                logger.debug(f"Opening tunnel from {hostname} to {executor_hostname}")
-                self._ssh_proc = subprocess.Popen(ssh_cmd)
-                time.sleep(0.4)  # Need to wait... -> Use single Task comm at beginning?
-                data_socket.connect(self._local_socket_path)
-        return data_socket
-
-    def _create_socket(self) -> socket.socket:
-        """Create either a Unix or TCP socket.
-
-        If the environment variable:
-                              `LUTE_USE_TCP=1`
-        is defined, a TCP socket is returned, otherwise a Unix socket.
-
-        Refer to the individual initialization methods for additional environment
-        variables controlling the behaviour of these two communication types.
-
-        Returns:
-            data_socket (socket.socket): TCP or Unix socket.
-        """
-        import struct
-
-        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
-        sock: socket.socket
-        if use_tcp is not None:
-            sock = self._init_tcp_socket()
-        else:
-            sock = self._init_unix_socket()
-        sock.setsockopt(
-            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 10000)
-        )
-        return sock
-
-    def _write_socket(self, msg: Message) -> None:
-        """Sends data over a socket from the 'client' (Task) side.
-
-        Messages are encoded in the following format:
-                 <HEAD><SEP><len(msg)><SEP><msg><SEP><HEAD[::-1]>
-        The items between <> are replaced as follows:
-            - <HEAD>: A start marker
-            - <SEP>: A separator for components of the message
-            - <len(msg)>: The length of the message payload in bytes.
-            - <msg>: The message payload in bytes
-            - <HEAD[::-1]>: The start marker in reverse to indicate the end.
-
-        This structure is used for decoding the message on the other end.
-        """
-        data: bytes = pickle.dumps(msg)
-        cmd: bytes = RawSocketCommunicator.MSG_HEAD
-        size: bytes = b"%d" % len(data)
-        end: bytes = RawSocketCommunicator.MSG_HEAD[::-1]
-        sep: bytes = RawSocketCommunicator.MSG_SEP
-        packed_msg: bytes = cmd + sep + size + sep + data + sep + end
-        self._data_socket.sendall(packed_msg)
-
-    def _clean_up(self) -> None:
-        """Clean up connections."""
-        # Check the object exists in case the Communicator is cleaned up before
-        # opening any connections
-        if self._party == Party.EXECUTOR:
-            self._stop_thread = True
-            self._reader_thread.join()
-            logger.debug("Closed reading thread.")
-
-        if hasattr(self, "_data_socket") and not self._data_socket._closed:
-            socket_path: str = self.socket_path
-            self._data_socket.close()
-            if os.getenv("LUTE_USE_TCP"):
-                return
-            if self._party == Party.EXECUTOR or self._use_ssh_tunnel:
-                os.unlink(socket_path)
-                if self._ssh_proc is not None:
-                    self._ssh_proc.terminate()
-
-    @property
-    def socket_path(self) -> str:
-        socket_path: str = self._data_socket.getsockname()
-        if not socket_path:
-            socket_path = os.environ["LUTE_SOCKET"]
-            if self._party == Party.TASK and self._use_ssh_tunnel:
-                # If _use_ssh_tunnel _local_socket_path is defined.
-                return self._local_socket_path
-        return socket_path
-
-    @property
-    def has_messages(self) -> bool:
-        if self._party == Party.TASK:
-            # Shouldn't be called on Task-side
-            return False
-
-        if self._msg_queue.qsize() > 0:
-            return True
-        return False
-
-    def __exit__(self):
-        self._clean_up()
-
-
-class ZMQCommunicator(Communicator):
-    """Provides communication over Unix or TCP sockets with ZMQ.
-
-    Whether to use TCP or Unix sockets is controlled by the environment:
-                           `LUTE_USE_TCP=1`
-    If defined, TCP sockets will be used, otherwise Unix sockets will be used.
-
-    Regardless of socket type, the environment variable
-                      `LUTE_EXECUTOR_HOST=<hostname>`
-    will be defined by the Executor-side Communicator.
-
-
-    For TCP sockets:
-    The Executor-side Communicator should be run first and will bind to all
-    interfaces on the port determined by the environment variable:
-                            `LUTE_PORT=###`
-    If no port is defined, ZMQ will bind a random port. The Communicator
-    will then define the environment variable so the Task-side can pick it up.
-
-    For Unix sockets:
-    The path to the Unix socket is defined by the environment variable:
-                      `LUTE_SOCKET=/path/to/socket`
-    This class assumes proper permissions and that this above environment
-    variable has been defined. The `Task` is configured as what would commonly
-    be referred to as the `client`, while the `Executor` is configured as the
-    server.
-
-    If the Task process is run on a different machine than the Executor, the
-    Task-side Communicator will open a ssh-tunnel to forward traffic from a local
-    Unix socket to the Executor Unix socket. Opening of the tunnel relies on the
-    environment variable:
-                      `LUTE_EXECUTOR_HOST=<hostname>`
-    to determine the Executor's host. This variable should be defined by the
-    Executor and passed to the Task process automatically, but it can also be
-    defined manually if launching the Task process separately. The Task will use
-    the local socket `<LUTE_SOCKET>.task{##}`. Multiple local sockets may be
-    created. Currently, it is assumed that the user is identical on both the Task
-    machine and Executor machine.
-    """
-
-    READ_TIMEOUT: float = 0.01
-    """
-    Maximum time to wait to retrieve data.
-    """
-
-    def __init__(self, party: Party = Party.TASK, use_pickle: bool = True) -> None:
-        """IPC over a TCP or Unix socket.
-
-        Args:
-            party (Party): Which object (side/process) the Communicator is
-                managing IPC for. I.e., is this the "Task" or "Executor" side.
-
-            use_pickle (bool): Whether to use pickle. Always True currently,
-                passing False does not change behaviour.
-        """
-        super().__init__(party=party, use_pickle=use_pickle)
-        self.desc: str = "Communicates using ZMQ through TCP or Unix sockets."
-        if self._party == Party.EXECUTOR:
-            # Executor created first so we can define the hostname env variable
-            os.environ["LUTE_EXECUTOR_HOST"] = socket.gethostname()
-
-        self._context: zmq.context.Context = zmq.Context()
-        self._use_ssh_tunnel: bool = False
-        self._ssh_proc: Optional[subprocess.Popen] = None
-        self._local_socket_path: Optional[str] = None
-        self._data_socket: zmq.sugar.socket.Socket = self._create_socket()
-
-    def read(self, proc: subprocess.Popen) -> Message:
-        """Read data from a socket.
-
-        Socket(s) are continuously monitored, and read from when new data is
-        available.
-
-        Args:
-            proc (subprocess.Popen): The process to read from. Provided for
-                compatibility with other Communicator subtypes. Is ignored.
-
-        Returns:
-             msg (Message): The message read, containing contents and signal.
-        """
-        msg: Message = Message()
-        try:
-            data: bytes = self._data_socket.recv(zmq.NOBLOCK)
-            msg = pickle.loads(data)
-        except zmq.error.Again:
-            pass
-        finally:
-            return msg
-
-    def write(self, msg: Message) -> None:
-        """Send a single Message.
-
-        The entire Message (signal and contents) is serialized and sent through
-        a connection over Unix socket.
-
-        Args:
-            msg (Message): The Message to send.
-        """
-        self._write_socket(msg)
-
-    def _init_tcp_socket(self, data_socket: zmq.sugar.socket.Socket) -> None:
-        """Initialize a TCP socket.
-
-        Executor-side code should always be run first. It checks to see if
-        the environment variable
-                                `LUTE_PORT=###`
-        is defined, if so binds it, otherwise find a free port from a selection
-        of random ports. If a port search is performed, the `LUTE_PORT` variable
-        will be defined so it can be picked up by the the Task-side Communicator.
-
-        In the event that no port can be bound on the Executor-side, or the port
-        and hostname information is unavailable to the Task-side, the program
-        will exit.
+        Equivalent as the method above but requires passing in a ZMQ socket
+        object instead of returning one.
 
         Args:
             data_socket (zmq.socket.Socket): Socket object.
@@ -909,8 +777,6 @@ class ZMQCommunicator(Communicator):
             else:
                 data_socket.bind(f"tcp://*:{port}")
             logger.debug(f"Executor bound port {port}")
-            # data_socket.subscribe(b"") # Can define topics later.
-            # data_socket.setsockopt(zmq.LINGER,0)
         else:
             executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
             if executor_hostname is None or port is None:
@@ -921,8 +787,34 @@ class ZMQCommunicator(Communicator):
                 sys.exit(-1)
             data_socket.connect(f"tcp://{executor_hostname}:{port}")
 
-    def _init_unix_socket(self, data_socket: zmq.sugar.socket.Socket) -> None:
-        """Initialize a Unix socket object.
+    # Unix Init
+    ############################################################################
+
+    def _get_socket_path(self) -> str:
+        """Return the socket path, defining one if it is not available.
+
+        Returns:
+            socket_path (str): Path to the Unix socket.
+        """
+        socket_path: str
+        try:
+            socket_path = os.environ["LUTE_SOCKET"]
+        except KeyError as err:
+            import uuid
+            import tempfile
+
+            # Define a path, and add to environment
+            # Executor-side always created first, Task will use the same one
+            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
+            os.environ["LUTE_SOCKET"] = socket_path
+            logger.debug(f"SocketCommunicator defines socket_path: {socket_path}")
+        if USE_ZMQ:
+            return f"ipc://{socket_path}"
+        else:
+            return socket_path
+
+    def _init_unix_socket_raw(self) -> socket.socket:
+        """Returns a Unix socket object.
 
         Executor-side code should always be run first. It checks to see if
         the environment variable
@@ -934,35 +826,46 @@ class ZMQCommunicator(Communicator):
         forward a local Unix socket to an Executor Unix socket if the Task and
         Executor processes are on different machines.
 
-        The SSH tunnel is opened with `ssh -L <local>:<remote> sleep 2`.
-        This method of communication is slightly slower and incurs additional
-        overhead - it should only be used as a backup. If communication across
-        multiple hosts is required consider using TCP.  The Task will use
-        the local socket `<LUTE_SOCKET>.task{##}`. Multiple local sockets may be
-        created. It is assumed that the user is identical on both the
-        Task machine and Executor machine.
-
-        Args:
-            data_socket (socket.socket): ZMQ object.
+        Returns:
+            data_socket (socket.socket): Unix socket object.
         """
-        try:
-            socket_path = os.environ["LUTE_SOCKET"]
-        except KeyError:
-            import uuid
-            import tempfile
-
-            # Define a path,up and add to environment
-            # Executor-side always created first, Task will use the same one
-            socket_path = f"{tempfile.gettempdir()}/lute_{uuid.uuid4().hex}.sock"
-            os.environ["LUTE_SOCKET"] = socket_path
-            logger.debug(f"ZMQCommunicator defines socket_path: {socket_path}")
-
-        socket_path = f"ipc:/{socket_path}"
+        socket_path: str = self._get_socket_path()
+        data_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         if self._party == Party.EXECUTOR:
             if os.path.exists(socket_path):
                 os.unlink(socket_path)
             data_socket.bind(socket_path)
-            # data_socket.subscribe(b"")
+            data_socket.listen()
+        elif self._party == Party.TASK:
+            hostname: str = socket.gethostname()
+            executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
+            if executor_hostname is None:
+                logger.info("Hostname for Executor process not found! Exiting!")
+                data_socket.close()
+                sys.exit(-1)
+            if hostname == executor_hostname:
+                data_socket.connect(socket_path)
+            else:
+                self._local_socket_path = self._setup_unix_ssh_tunnel(
+                    socket_path, hostname, executor_hostname
+                )
+                data_socket.connect(self._local_socket_path)
+        return data_socket
+
+    def _init_unix_socket_zmq(self, data_socket: zmq.sugar.socket.Socket) -> None:
+        """Initialize a Unix socket object, using ZMQ.
+
+        Equivalent as the method above but requires passing in a ZMQ socket
+        object instead of returning one.
+
+        Args:
+            data_socket (socket.socket): ZMQ object.
+        """
+        socket_path = self._get_socket_path()
+        if self._party == Party.EXECUTOR:
+            if os.path.exists(socket_path):
+                os.unlink(socket_path)
+            data_socket.bind(socket_path)
         elif self._party == Party.TASK:
             hostname: str = socket.gethostname()
             executor_hostname: Optional[str] = os.getenv("LUTE_EXECUTOR_HOST")
@@ -973,66 +876,84 @@ class ZMQCommunicator(Communicator):
             if hostname == executor_hostname:
                 data_socket.connect(socket_path)
             else:
-                if "uuid" not in locals():
-                    import uuid
-                self._local_socket_path = f"{socket_path}.task{uuid.uuid4().hex[:4]}"
-                self._use_ssh_tunnel = True
-                ssh_cmd: List[str] = [
-                    "ssh",
-                    "-o",
-                    "LogLevel=quiet",
-                    "-L",
-                    f"{self._local_socket_path[5:]}:{socket_path[5:]}",  # remove ipc:/
-                    executor_hostname,
-                    "sleep",
-                    "2",
-                ]
-                logger.debug(f"Opening tunnel from {hostname} to {executor_hostname}")
-                self._ssh_proc = subprocess.Popen(ssh_cmd)
-                time.sleep(0.4)  # Need to wait... -> Use single Task comm at beginning?
-                data_socket.connect(self._local_socket_path)
+                # Need to remove ipc:// from socket_path for forwarding
+                self._local_socket_path = self._setup_unix_ssh_tunnel(
+                    socket_path[6:], hostname, executor_hostname
+                )
+                # Need to add it back
+                path: str = f"ipc://{self._local_socket_path}"
+                data_socket.connect(path)
 
-    def _create_socket(self) -> zmq.sugar.socket.Socket:
-        """Create either a Unix or TCP socket.
+    def _setup_unix_ssh_tunnel(
+        self, socket_path: str, hostname: str, executor_hostname: str
+    ) -> str:
+        """Prepares an SSH tunnel for forwarding between Unix sockets on two hosts.
 
-        If the environment variable:
-                              `LUTE_USE_TCP=1`
-        is defined, a TCP socket is returned, otherwise a Unix socket.
-
-        Refer to the individual initialization methods for additional environment
-        variables controlling the behaviour of these two communication types.
+        An SSH tunnel is opened with `ssh -L <local>:<remote> sleep 2`.
+        This method of communication is slightly slower and incurs additional
+        overhead - it should only be used as a backup. If communication across
+        multiple hosts is required consider using TCP.  The Task will use
+        the local socket `<LUTE_SOCKET>.task{##}`. Multiple local sockets may be
+        created. It is assumed that the user is identical on both the
+        Task machine and Executor machine.
 
         Returns:
-            data_socket (socket.socket): Unix socket object.
+            local_socket_path (str): The local Unix socket to connect to.
         """
-        socket_type: Literal[zmq.SUB, zmq.PUB]
-        if self._party == Party.EXECUTOR:
-            socket_type = zmq.PULL
-        else:
-            socket_type = zmq.PUSH
+        if "uuid" not in globals():
+            import uuid
+        local_socket_path = f"{socket_path}.task{uuid.uuid4().hex[:4]}"
+        self._use_ssh_tunnel = True
+        ssh_cmd: List[str] = [
+            "ssh",
+            "-o",
+            "LogLevel=quiet",
+            "-L",
+            f"{local_socket_path}:{socket_path}",
+            executor_hostname,
+            "sleep",
+            "2",
+        ]
+        logger.debug(f"Opening tunnel from {hostname} to {executor_hostname}")
+        self._ssh_proc = subprocess.Popen(ssh_cmd)
+        time.sleep(0.4)  # Need to wait... -> Use single Task comm at beginning?
+        return local_socket_path
 
-        data_socket: zmq.sugar.socket.Socket = self._context.socket(socket_type)
-        data_socket.set_hwm(160000)
-        # Try TCP first
-        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
-        if use_tcp is not None:
-            self._init_tcp_socket(data_socket)
-        else:
-            self._init_unix_socket(data_socket)
-
-        return data_socket
-
-    def _write_socket(self, msg: Message) -> None:
-        """Sends data over a socket from the 'client' (Task) side."""
-        self._data_socket.send(pickle.dumps(msg))
+    # Clean up and properties
+    ############################################################################
 
     def _clean_up(self) -> None:
         """Clean up connections."""
+        if self._party == Party.EXECUTOR:
+            self._stop_thread = True
+            self._reader_thread.join()
+            logger.debug("Closed reading thread.")
+
         self._data_socket.close()
-        self._context.term()
+        if USE_ZMQ:
+            self._context.term()
+        else:
+            ...
+
+        if os.getenv("LUTE_USE_TCP"):
+            return
+        else:
+            if self._party == Party.EXECUTOR:
+                os.unlink(os.getenv("LUTE_SOCKET"))  # Should be defined
+                return
+            elif self._use_ssh_tunnel:
+                if self._ssh_proc is not None:
+                    self._ssh_proc.terminate()
+
+    @property
+    def has_messages(self) -> bool:
+        if self._party == Party.TASK:
+            # Shouldn't be called on Task-side
+            return False
+
+        if self._msg_queue.qsize() > 0:
+            return True
+        return False
 
     def __exit__(self):
         self._clean_up()
-
-
-SocketCommunicator = RawSocketCommunicator
