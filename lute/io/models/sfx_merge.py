@@ -247,7 +247,7 @@ class MergeCarelessParameters(ThirdPartyParameters):
         description="Path to input file (mtz or stream).",
         flag_type=""
     )
-    out_file: str = Field(
+    out_dir: str = Field(
         "",
         description="Path to output directory.",
         is_result=True,
@@ -315,7 +315,7 @@ class MergeCarelessParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="positional-encoding-keys",
     )
-    positional_encoding_frequenciess: Option[int] = Field(
+    positional_encoding_frequencies: Option[int] = Field(
         description="",
         flag_type="--",
         rename_param="positional-encoding-frequencies",
