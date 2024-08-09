@@ -66,4 +66,8 @@ def import_task(task_name: str) -> Type[Task]:
 
         return ConcatenateStreamFiles
 
+    if task_name == "TestMultiNodeCommunication":
+        from .mpi_test import TestMultiNodeCommunication
+
+        return TestMultiNodeCommunication
     raise TaskNotFoundError
