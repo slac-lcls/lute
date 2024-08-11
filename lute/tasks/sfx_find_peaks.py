@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Literal, TextIO, Tuple
 
 import h5py
 import numpy
-from libpressio import PressioCompressor
+#from libpressio import PressioCompressor
 from mpi4py.MPI import COMM_WORLD, SUM
 from numpy.typing import NDArray
 from psalgos.pypsalgos import PyAlgos
@@ -580,6 +580,9 @@ class FindPeaksPyAlgos(Task):
 
     def __init__(self, *, params: TaskParameters) -> None:
         super().__init__(params=params)
+        if self._task_parameters.compression is not None:
+            from libpressio import PressioCompressor
+
 
     def _run(self) -> None:
         ds: Any = MPIDataSource(
