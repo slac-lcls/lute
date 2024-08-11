@@ -255,7 +255,7 @@ class MergeCarelessParameters(ThirdPartyParameters):
 
     mc_samples: Optional[int] = Field(
         description="",
-        flag_type="--"
+        flag_type="--",
         rename_param='mc-samples',
     )
     kl_weight: Optional[float] = Field(
@@ -305,27 +305,27 @@ class MergeCarelessParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="half-dataset-repeats",
     )
-    studentt_likelihood_dof: Option[int] = Field(
+    studentt_likelihood_dof: Optional[int] = Field(
         description="",
         flag_type="--",
         rename_param="studentt-likelihood-dof",
     )
-    positional_encoding_keys: Option[str] = Field(
+    positional_encoding_keys: Optional[str] = Field(
         description="",
         flag_type="--",
         rename_param="positional-encoding-keys",
     )
-    positional_encoding_frequencies: Option[int] = Field(
+    positional_encoding_frequencies: Optional[int] = Field(
         description="",
         flag_type="--",
         rename_param="positional-encoding-frequencies",
     )
-    intensity_key: Option[str] = Field(
+    intensity_key: Optional[str] = Field(
         description="",
         flag_type="--",
         rename_param="intensity-key",
     )
-    uncertainty_key: Option[str] = Field(
+    uncertainty_key: Optional[str] = Field(
         description="",
         flag_type="--",
         rename_param="uncertainty-key",
