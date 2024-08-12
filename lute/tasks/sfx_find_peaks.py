@@ -578,8 +578,8 @@ class FindPeaksPyAlgos(Task):
     writes the peak information to CXI files.
     """
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+    def __init__(self, *, params: TaskParameters) -> None:
+        super().__init__(params=params)
         if self._task_parameters.compression is not None:
             from libpressio import PressioCompressor
 
