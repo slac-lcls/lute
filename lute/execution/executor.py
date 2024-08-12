@@ -253,7 +253,9 @@ class BaseExecutor(ABC):
             # network.
             time.sleep(0.1)
         # Propagate any env vars setup by Communicators - only update LUTE_ vars
-        tmp: Dict[str, str] = {key: os.environ[key] for key in os.environ if "LUTE_" in key}
+        tmp: Dict[str, str] = {
+            key: os.environ[key] for key in os.environ if "LUTE_" in key
+        }
         self._analysis_desc.task_env.update(tmp)
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
