@@ -158,6 +158,9 @@ class Task(ABC):
         else:
             self._report_to_executor(start_msg)
 
+        # We stop process here so Executor can do any tasklet work if needed
+        os.kill(os.getpid(), signal.SIGSTOP)
+
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
         signal: str = "TASK_RESULT"

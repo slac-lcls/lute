@@ -33,11 +33,12 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any
-from typing_extensions import Self
+from typing import Dict, Callable, List, Optional, Any, Tuple
+from typing_extensions import Self, TypedDict
 from abc import ABC, abstractmethod
 import warnings
 import copy
+import re
 
 from .ipc import *
 from ..tasks.task import *
@@ -57,6 +58,11 @@ else:
     os.environ["PYTHONWARNINGS"] = "ignore"
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+class TaskletDict(TypedDict):
+    before: Optional[List[Tuple[Callable[[Any], Any], List[Any], bool, bool]]]
+    after: Optional[List[Tuple[Callable[[Any], Any], List[Any], bool, bool]]]
 
 
 class BaseExecutor(ABC):
@@ -91,19 +97,33 @@ class BaseExecutor(ABC):
         signal.
         """
 
-        def no_pickle_mode(self: Self, msg: Message): ...
+        def no_pickle_mode(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_started(self: Self, msg: Message): ...
+        def task_started(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_failed(self: Self, msg: Message): ...
+        def task_failed(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_stopped(self: Self, msg: Message): ...
+        def task_stopped(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_done(self: Self, msg: Message): ...
+        def task_done(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_cancelled(self: Self, msg: Message): ...
+        def task_cancelled(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
-        def task_result(self: Self, msg: Message): ...
+        def task_result(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ): ...
 
     def __init__(
         self,
@@ -144,8 +164,100 @@ class BaseExecutor(ABC):
             poll_interval=poll_interval,
             communicator_desc=communicator_desc,
         )
+        self._tasklets: TaskletDict = {"before": None, "after": None}
 
-    def add_hook(self, event: str, hook: Callable[[Self, Message], None]) -> None:
+    def add_tasklet(
+        self,
+        tasklet: Callable[[Any], Any],
+        args: List[Any],
+        when: str = "after",
+        set_result: bool = False,
+        set_summary: bool = False,
+    ) -> None:
+        """Add/register a tasklet to be run by the Executor.
+
+        Adds a tasklet to be run by the Executor in addition to the main Task.
+        The tasklet can be run before or after the main Task has been run.
+
+        Args:
+            tasklet (Callable[[Any], Any]): The tasklet (function) to run.
+
+            args (List[Any]): A list of all the arguments to be passed to the
+                tasklet. Arguments can include substitutions for parameters to
+                be extracted from the TaskParameters object. The same jinja-like
+                syntax used in configuration file substiutions is used to specify
+                a parameter substitution in an argument. E.g. if a Task to be
+                run has a parameter `input_file`, the parameter can be substituted
+                in the tasklet argument using: `"{{ input_file  }}"`. Note that
+                substitutions must be passed as strings. Conversions will be done
+                during substitution if required.
+
+            when (str): When to run the tasklet. Either `before` or `after` the
+                main Task. Default is after.
+
+            set_result (bool): Whether to use the output from the tasklet as the
+                result of the main Task. Default is False.
+
+            set_summary (bool): Whether to use the output from the tasklet as the
+                summary of the main Task. Default is False.
+        """
+        if when not in ("before", "after"):
+            logger.error("Can only run tasklet `before` or `after` Task! Ignoring...")
+            return
+        tasklet_tuple: Tuple[Callable[[Any], Any], List[Any], bool, bool]
+        tasklet_tuple = (tasklet, args, set_result, set_summary)
+        if self._tasklets[when] is None:
+            self._tasklets[when] = [tasklet_tuple]
+        else:
+            self._tasklets[when].append(tasklet_tuple)
+
+    def _sub_tasklet_parameters(self, args: List[Any]) -> List[Any]:
+        """Substitute tasklet arguments using TaskParameters members."""
+        sub_pattern = r"\{\{[^}{]*\}\}"
+        new_args: List[Any] = []
+        for arg in args:
+            new_arg: Any = arg
+            matches: List[str] = re.findall(sub_pattern, arg)
+            for m in matches:
+                param_name: str = m[2:-2].strip()  # Remove {{}}
+                if hasattr(self._analysis_desc.task_parameters, param_name):
+                    pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
+                    sub: Any = getattr(self._analysis_desc.task_parameters, param_name)
+                    new_arg = re.sub(pattern, sub, new_arg)
+                if new_arg.isnumeric():
+                    new_arg = int(new_arg)
+                else:
+                    try:
+                        new_arg = float(new_arg)
+                    except ValueError:
+                        pass
+                new_args.append(new_arg)
+        return new_args
+
+    def _run_tasklets(self, *, when: str) -> None:
+        """Run all tasklets of the specified kind."""
+        if when not in self._tasklets.keys():
+            logger.error(f"Ignore request to run tasklets of unknown kind: {when}")
+            return
+        for tasklet_spec in self._tasklets[when]:
+            tasklet: Callable[[Any], Any]
+            args: List[Any]
+            set_result: bool
+            set_summary: bool
+            tasklet, args, set_result, set_summary = tasklet_spec
+            args = self._sub_tasklet_parameters(args)
+            logger.debug(f"Running {tasklet} with {args}")
+            output: Any = tasklet(*args)  # Many don't return anything
+            if set_result and output is not None:
+                self._analysis_desc.task_result.payload = output
+            if set_summary and output is not None:
+                self._analysis_desc.task_result.summary = output
+
+    def add_hook(
+        self,
+        event: str,
+        hook: Callable[[Self, Message, Optional[subprocess.Popen]], None],
+    ) -> None:
         """Add a new hook.
 
         Each hook is a function called any time the Executor receives a signal
@@ -527,7 +639,9 @@ class Executor(BaseExecutor):
     def add_default_hooks(self) -> None:
         """Populate the set of default event hooks."""
 
-        def no_pickle_mode(self: Executor, msg: Message):
+        def no_pickle_mode(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             for idx, communicator in enumerate(self._communicators):
                 if isinstance(communicator, PipeCommunicator):
                     self._communicators[idx] = PipeCommunicator(
@@ -536,14 +650,16 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message):
+        def task_started(self: Executor, msg: Message, proc: subprocess.Popen):
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
-                # Maybe just run this no matter what? Rely on the other guards?
-                # Perhaps just check if ThirdPartyParameters?
-                # if isinstance(self._analysis_desc.task_parameters, ThirdPartyParameters):
+                # Run "before" tasklets
+                if self._tasklets["before"] is not None:
+                    self._run_tasklets(when="before")
+                # Need to continue since Task._signal_start raises SIGSTOP
+                self._continue(proc)
                 if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
-                    # Third party Tasks may mark a parameter as the result
+                    # Tasks may mark a parameter as the result
                     # If so, setup the result now.
                     self._set_result_from_parameters()
             logger.info(
@@ -557,7 +673,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message):
+        def task_failed(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "FAILED",
             }
@@ -565,7 +683,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message):
+        def task_stopped(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
             }
@@ -573,7 +693,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message):
+        def task_done(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
@@ -581,7 +703,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message):
+        def task_cancelled(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
@@ -589,7 +713,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_cancelled", task_cancelled)
 
-        def task_result(self: Executor, msg: Message):
+        def task_result(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ):
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
@@ -614,7 +740,7 @@ class Executor(BaseExecutor):
                     hook: Callable[[Executor, Message], None] = getattr(
                         self.Hooks, msg.signal.lower()
                     )
-                    hook(self, msg)
+                    hook(self, msg, proc)
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
