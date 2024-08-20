@@ -38,8 +38,10 @@ else:
 def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
     user_type: str
     if is_admin:
+        logger.debug("Running as operator.")
         user_type = "admin"
     else:
+        logger.debug("Running as user.")
         user_type = "user"
     path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}_{user_type}.txt"
     if instance == "prod" or instance == "test":
