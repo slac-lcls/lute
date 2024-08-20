@@ -13,17 +13,18 @@ Classes:
 
 __all__ = [
     "MergePartialatorParameters",
+    "MergeCCTBXXFELParameters",
     "CompareHKLParameters",
     "ManipulateHKLParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any
 
-from pydantic import Field, validator
+from pydantic import Field, validator, BaseModel
 
-from .base import ThirdPartyParameters
+from .base import ThirdPartyParameters, TemplateConfig
 from ..db import read_latest_db_entry
 
 
@@ -211,6 +212,66 @@ class MergePartialatorParameters(ThirdPartyParameters):
             else:
                 return "partialator.hkl"
         return out_file
+
+
+class MergeCCTBXXFELParameters(ThirdPartyParameters):
+    """Parameters for merging with cctbx.xfel."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class PhilParameters(BaseModel):
+        """Template parameters for CCTBX phil file."""
+
+        compressor: Literal["qoz", "sz3"] = Field(
+            "qoz", description='Compression algorithm ("qoz" or "sz3")'
+        )
+        abs_error: float = Field(10.0, description="Absolute error bound")
+        bin_size: int = Field(2, description="Bin size")
+        roi_window_size: int = Field(
+            9,
+            description="Default window size",
+        )
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
+        description="CCTBX merge program.",
+        flag_type="",
+    )
+    phil_file: str = Field(
+        "",
+        description="Location of the input settings ('phil') file.",
+        flag_type="",
+    )
+    phil_parameters: Optional[PhilParameters] = Field(
+        None,
+        description="Optional template parameters to fill in a CCTBX phil file.",
+        flag_type="",  # Does nothing since always None by time it's seen by Task
+    )
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="cctbx_merge.phil",
+            output_path="",
+        ),
+        description="Template information for the cctbx_merge file.",
+    )
+
+    @validator("lute_template_cfg", always=True)
+    def set_phil_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -> TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["phil_file"]
+        return lute_template_cfg
+
+    @validator("phil_parameters", always=True)
+    def set_phil_template_parameters(
+        cls, phil_params: PhilParameters, values: Dict[str, Any]
+    ) -> None:
+        if phil_params is not None:
+            ...
+        return None
 
 
 class CompareHKLParameters(ThirdPartyParameters):

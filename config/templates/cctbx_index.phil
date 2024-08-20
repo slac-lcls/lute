@@ -1,0 +1,358 @@
+input {
+  file_list = None
+  glob = None
+  image_tag = None
+  show_image_tags = False
+  max_images = None
+}
+dispatch {
+  process_percent = None
+  hit_finder {
+    enable = True
+    minimum_number_of_reflections = 16
+    maximum_number_of_reflections = None
+  }
+}
+output {
+  output_dir = .
+  composite_output = True
+  logging_dir = None
+  logging_option = normal *suppressed disabled
+  experiments_filename = None
+  strong_filename = None
+  indexed_filename = %s_indexed.refl
+  refined_experiments_filename = %s_refined.expt
+  integrated_filename = %s_integrated.refl
+  integrated_experiments_filename = %s_integrated.expt
+  coset_filename = %s_coset%d.refl
+  coset_experiments_filename = %s_coset%d.expt
+  profile_filename = None
+}
+mp {
+  method = *multiprocessing sge lsf pbs mpi
+  nproc = 1
+  composite_stride = None
+}
+input {
+  reference_geometry = None
+  sync_reference_geom = True
+}
+output {
+  shoeboxes = True
+}
+spotfinder {
+  lookup {
+    mask = None
+  }
+  write_hot_mask = False
+  hot_mask_prefix = 'hot_mask'
+  force_2d = False
+  scan_range = None
+  region_of_interest = None
+  compute_mean_background = False
+  filter {
+    min_spot_size = Auto
+    max_spot_size = 1000
+    max_strong_pixel_fraction = 0.25
+    border = 0
+    d_min = None
+    d_max = None
+    disable_parallax_correction = False
+    resolution_range = None
+    untrusted {
+      panel = None
+      circle = None
+      rectangle = None
+      polygon = None
+      pixel = None
+    }
+    ice_rings {
+      filter = False
+    }
+  }
+  mp {
+    method = *none drmaa sge lsf pbs
+    njobs = 1
+    nproc = 1
+    chunksize = auto
+    min_chunksize = 20
+  }
+  threshold {
+    algorithm = dispersion *dispersion_extended radial_profile
+    dispersion {
+      gain = None
+      global_threshold = 0
+    }
+    radial_profile {
+      n_iqr = 6
+      blur = narrow wide
+      n_bins = 100
+    }
+  }
+}
+indexing {
+  nproc = 1
+  known_symmetry {
+    space_group = None
+    unit_cell = None
+  }
+  index_assignment {
+    simple {
+      hkl_tolerance = 0.3
+    }
+  }
+  check_misindexing {
+    grid_search_scope = 0
+  }
+  refinement_protocol {
+    n_macro_cycles = 5
+    d_min_step = Auto
+    d_min_start = None
+    d_min_final = None
+  }
+  stills {
+    ewald_proximity_resolution_cutoff = 2.0
+    refine_all_candidates = True
+    rmsd_min_px = 2
+    ewald_proximal_volume_max = 0.0025
+    isoforms {
+      name = None
+      cell = None
+      lookup_symbol = None
+      rmsd_target_mm = None
+      beam_restraint = None
+    }
+    set_domain_size_ang_value = None
+    set_mosaic_half_deg_value = None
+  }
+}
+indexing {
+  method = *fft1d fft3d real_space_grid_search low_res_spot_match \
+           pink_indexer
+}
+refinement {
+  parameterisation {
+    scan_varying = False
+    interval_width_degrees = None
+    set_scan_varying_errors = False
+    beam {
+      fix = *all in_spindle_plane out_spindle_plane wavelength
+    }
+    crystal {
+      fix = all cell orientation
+    }
+    detector {
+      fix = *all position orientation distance
+    }
+    goniometer {
+      fix = *all in_beam_plane out_beam_plane
+    }
+  }
+  reflections {
+    outlier {
+      algorithm = null *auto mcd tukey sauter_poon
+    }
+  }
+}
+integration {
+  lookup {
+    mask = None
+  }
+  block {
+    size = auto
+    units = *degrees radians frames
+    threshold = 0.95
+    force = False
+    max_memory_usage = 0.90
+  }
+  use_dynamic_mask = True
+  debug {
+    reference {
+      filename = "reference_profiles.refl"
+      output = False
+    }
+    during = modelling *integration
+    output = False
+    separate_files = True
+    delete_shoeboxes = False
+    select = None
+    split_experiments = True
+  }
+  profile {
+    fitting = False
+    validation {
+      number_of_partitions = 1
+      min_partition_size = 100
+    }
+  }
+  overlaps_filter {
+    foreground_foreground {
+      enable = False
+    }
+    foreground_background {
+      enable = False
+    }
+  }
+  mp {
+    method = *multiprocessing drmaa sge lsf pbs
+    njobs = 1
+    nproc = 1
+    multiprocessing.n_subset_split = None
+  }
+  summation {
+    detector_gain = 1
+  }
+  background {
+    algorithm = Auto glm gmodel null *simple
+    glm {
+      robust {
+        tuning_constant = 1.345
+      }
+      model {
+        algorithm = constant2d *constant3d loglinear2d loglinear3d
+      }
+      min_pixels = 10
+    }
+    gmodel {
+      robust {
+        algorithm = False
+        tuning_constant = 1.345
+      }
+      min_pixels = 10
+      model = None
+    }
+    simple {
+      outlier {
+        algorithm = null nsigma truncated normal *plane tukey
+      }
+      model {
+        algorithm = constant2d constant3d *linear2d linear3d
+      }
+      min_pixels = 10
+    }
+  }
+  centroid {
+    algorithm = *simple
+  }
+}
+profile {
+  algorithm = ellipsoid *gaussian_rs
+  ellipsoid {
+    rlp_mosaicity {
+      model = simple1 *simple6 simple1angular1 simple1angular3 \
+              simple6angular1
+    }
+    wavelength_spread {
+      model = *delta
+    }
+    unit_cell {
+      fixed = False
+    }
+    orientation {
+      fixed = False
+    }
+    indexing {
+      fail_on_bad_index = False
+    }
+    refinement {
+      max_separation = 2
+      outlier_probability = 0.975
+      n_macro_cycles = 3
+      n_cycles = 3
+      min_n_reflections = 10
+      max_iter = 100
+      LL_tolerance = 1e-3
+      mosaicity_max_limit = 0.004
+      max_cell_volume_change_fraction = 0.2
+    }
+    prediction {
+      d_min = None
+      probability = 0.997300
+    }
+  }
+  gaussian_rs {
+    scan_varying = False
+    min_spots {
+      overall = 0
+      per_degree = 20
+    }
+    sigma_m_algorithm = basic *extended
+    centroid_definition = com *s1
+    parameters {
+      n_sigma = 3.0
+      sigma_b = None
+      sigma_m = None
+    }
+    filter {
+      min_zeta = 0.05
+    }
+    fitting {
+      scan_step = 5
+      grid_size = 5
+      threshold = 0.02
+      grid_method = single *regular_grid circular_grid spherical_grid
+      fit_method = *reciprocal_space detector_space
+      detector_space {
+        deconvolution = False
+      }
+    }
+  }
+}
+prediction {
+  d_min = None
+  d_max = None
+  margin = 1
+  force_static = False
+  padding = 1.0
+}
+indexing {
+  stills {
+    method_list = None
+    reflection_subsampling {
+      enable = False
+      step_start = 100
+      step_stop = 50
+      step_size = 2
+      n_attempts_per_step = 1
+    }
+  }
+}
+integration {
+  absorption_correction {
+    apply = False
+    algorithm = fuller_kapton kapton_2019 other
+    fuller_kapton {
+      xtal_height_above_kapton_mm {
+        value = 0.02
+        sigma = 0.01
+      }
+      rotation_angle_deg {
+        value = 1.15
+        sigma = 0.1
+      }
+      kapton_half_width_mm {
+        value = 1.5875
+        sigma = 0.5
+      }
+      kapton_thickness_mm {
+        value = 0.05
+        sigma = 0.005
+      }
+      smart_sigmas = False
+      within_spot_sigmas = True
+    }
+  }
+  coset {
+    transformation = 6
+  }
+  integration_only_overrides {
+    trusted_range = None
+  }
+}
+profile {
+  gaussian_rs {
+    parameters {
+      sigma_b_cutoff = 0.1
+    }
+  }
+}

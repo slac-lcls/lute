@@ -5,7 +5,11 @@ Classes:
         CrystFEL's `indexamajig`.
 """
 
-__all__ = ["IndexCrystFELParameters", "ConcatenateStreamFilesParameters"]
+__all__ = [
+    "IndexCrystFELParameters",
+    "ConcatenateStreamFilesParameters",
+    "IndexCCTBXXFELParameters",
+]
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -13,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from pydantic import (
+    BaseModel,
     AnyUrl,
     Field,
     NonNegativeInt,
@@ -23,7 +28,7 @@ from pydantic import (
 )
 
 from ..db import read_latest_db_entry
-from .base import ThirdPartyParameters, TaskParameters
+from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
 class IndexCrystFELParameters(ThirdPartyParameters):
@@ -482,3 +487,55 @@ class ConcatenateStreamFilesParameters(TaskParameters):
             )
             return stream_out_file
         return tag
+
+
+class IndexCCTBXXFELParameters(ThirdPartyParameters):
+    """Parameters for indexing with cctbx.xfel."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class PhilParameters(BaseModel):
+        """Template parameters for CCTBX phil file."""
+
+        ...
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
+        description="CCTBX indexing program (DIALS).",
+        flag_type="",
+    )
+    phil_file: str = Field(
+        "",
+        description="Location of the input settings ('phil') file.",
+        flag_type="",
+    )
+    phil_parameters: Optional[PhilParameters] = Field(
+        None,
+        description="Optional template parameters to fill in a CCTBX phil file.",
+        flag_type="",  # Does nothing since always None by time it's seen by Task
+    )
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="cctbx_index.phil",
+            output_path="",
+        ),
+        description="Template information for the cctbx_index file.",
+    )
+
+    @validator("lute_template_cfg", always=True)
+    def set_phil_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -> TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["phil_file"]
+        return lute_template_cfg
+
+    @validator("phil_parameters", always=True)
+    def set_phil_template_parameters(
+        cls, phil_params: PhilParameters, values: Dict[str, Any]
+    ) -> None:
+        if phil_params is not None:
+            ...
+        return None
