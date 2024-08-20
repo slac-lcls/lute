@@ -224,15 +224,7 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        compressor: Literal["qoz", "sz3"] = Field(
-            "qoz", description='Compression algorithm ("qoz" or "sz3")'
-        )
-        abs_error: float = Field(10.0, description="Absolute error bound")
-        bin_size: int = Field(2, description="Bin size")
-        roi_window_size: int = Field(
-            9,
-            description="Default window size",
-        )
+        ...
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
@@ -257,8 +249,14 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         description="Template information for the cctbx_merge file.",
     )
 
+    @validator("phil_file", always=True)
+    def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
+        if phil_file == "":
+            return f"{values['lute_config'].work_dir}/cctbx_merge.phil"
+        return phil_file
+
     @validator("lute_template_cfg", always=True)
-    def set_phil_path(
+    def set_phil_template_path(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
         if lute_template_cfg.output_path == "":

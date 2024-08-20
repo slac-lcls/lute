@@ -524,8 +524,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         description="Template information for the cctbx_index file.",
     )
 
+    @validator("phil_file", always=True)
+    def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
+        if phil_file == "":
+            return f"{values['lute_config'].work_dir}/cctbx_index.phil"
+        return phil_file
+
     @validator("lute_template_cfg", always=True)
-    def set_phil_path(
+    def set_phil_template_path(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
         if lute_template_cfg.output_path == "":
