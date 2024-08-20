@@ -188,7 +188,8 @@ if __name__ == "__main__":
     }
 
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
-    auth: HTTPBasicAuth = HTTPBasicAuth("btx", pw)
+    user_name: str = "btx" if args.admin else "lcls_user"
+    auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
     resp: requests.models.Response = requests.get(
         f"{airflow_instance}/{airflow_api_endpoints['health']}",
         auth=auth,
