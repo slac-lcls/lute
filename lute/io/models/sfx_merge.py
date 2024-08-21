@@ -268,10 +268,11 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     def set_phil_template_parameters(
         cls, phil_params: PhilParameters, values: Dict[str, Any]
     ) -> None:
-        for param, value in phil_params:
+        if phil_params is not None:
             # Add as template parameters, i.e. add to __dict__ but not __fields__
             # Schema information is updated by class method `schema`
-            values[param] = value
+            for param, value in phil_params:
+                values[param] = value
         return None
 
     @classmethod
