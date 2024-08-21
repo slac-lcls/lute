@@ -39,12 +39,12 @@ from abc import ABC, abstractmethod
 import warnings
 import copy
 
-from .ipc import *
-from ..tasks.task import *
-from ..tasks.dataclasses import *
-from ..io.models.base import TaskParameters
-from ..io.db import record_analysis_db
-from ..io.elog import post_elog_run_status
+from lute.execution.ipc import *
+from lute.tasks.task import *
+from lute.tasks.dataclasses import *
+from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.io.db import record_analysis_db
+from lute.io.elog import post_elog_run_status
 
 if __debug__:
     warnings.simplefilter("default")
@@ -437,6 +437,9 @@ class BaseExecutor(ABC):
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
             for param, value in self._analysis_desc.task_parameters.dict().items():
+                if isinstance(value, TemplateParameters):
+                    # Extract TemplateParameters if needed
+                    value = value.params
                 param_attrs: Dict[str, Any] = schema["properties"][param]
                 if "is_result" in param_attrs:
                     is_result: bool = param_attrs["is_result"]
