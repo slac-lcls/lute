@@ -1,472 +1,66 @@
-dispatch {
-  step_list = None
-}
 input {
-  override_identifiers = False
-  alist {
-    file = None
-    type = *tags files
-    op = *keep reject
-  }
-  persistent_refl_cols = None
-  keep_imagesets = True
-  read_image_headers = False
-  path = None
-  reflections_suffix = _integrated.refl
-  experiments_suffix = _integrated.expt
+  path = {{ input_path }}
+  experiments_suffix = {{ input_experiments_suffix }}
+  reflections_suffix = {{ input_reflections_suffix }}
   parallel_file_load {
-    method = *uniform node_memory
-    node_memory {
-      architecture = "Cori KNL"
-      limit = 90.0
-      pickle_to_memory = 3.5
-    }
-    ranks_per_node = 68
-    balance = *global1 global2 per_node
-    balance_verbose = False
+    method = {{ input_parallel_file_load_method }}
   }
-}
-mp {
-  method = *mpi
-  debug {
-    cProfile = False
-  }
-}
-tdata {
-  output_path = None
 }
 filter {
-  algorithm = n_obs reindex resolution unit_cell report
-  n_obs {
-    min = 15
-  }
-  reindex {
-    data_reindex_op = h,k,l
-    reverse_lookup = None
-    sampling_number_of_lattices = 1000
-  }
-  resolution {
-    d_min = None
-    model_or_image = model image
-  }
+  algorithm = {{ filter_algorithm }}
   unit_cell {
-    algorithm = range *value cluster
-    value {
-      target_unit_cell = Auto
-      relative_length_tolerance = 0.1
-      absolute_angle_tolerance = 2.
-      target_space_group = Auto
-    }
+    algorithm = {{ filter_unit_cell_algorithm }}
     cluster {
-      algorithm = rodgriguez_laio dbscan *covariance
       covariance {
-        file = None
-        component = 0
-        skip_component = None
-        mahalanobis = 4.0
-        skip_mahalanobis = 4.0
+        file = {{ filter_unit_cell_cluster_covariance_file }}
+        component = {{ filter_unit_cell_cluster_covariance_component }}
+        mahalanobis = {{ filter_unit_cell_cluster_covariance_mahalanobis }}
       }
-      isoform = None
     }
   }
   outlier {
-    mad_thresh = None
-    min_corr = 0.1
-    assmann_diederichs {
-    }
-  }
-}
-modify {
-  algorithm = *polarization
-  reindex_to_reference {
-    dataframe = None
-  }
-  cosym {
-    partiality_threshold = 0.4
-    unit_cell_clustering {
-      threshold = 5000
-      log = False
-    }
-    reference_model {
-    }
-    normalisation = kernel quasi *ml_iso ml_aniso
-    d_min = Auto
-    min_i_mean_over_sigma_mean = 4
-    min_cc_half = 0.6
-    lattice_group = None
-    space_group = None
-    lattice_symmetry_max_delta = 5.0
-    best_monoclinic_beta = True
-    dimensions = Auto
-    use_curvatures = False
-    weights = count standard_error
-    cc_weights = None sigma
-    min_pairs = 3
-    minimization {
-      engine = *scitbx scipy
-      max_iterations = 100
-      max_calls = None
-    }
-    nproc = Auto
-    relative_length_tolerance = 0.05
-    absolute_angle_tolerance = 2
-    min_reflections = 10
-    seed = 230
-    output {
-      suffix = "_reindexed"
-      log = dials.cosym.log
-      experiments = "symmetrized.expt"
-      reflections = "symmetrized.refl"
-      json = dials.cosym.json
-      html = dials.cosym.html
-    }
-    dataframe = None
-    anchor = False
-    tranch_size = 600
-    twin_axis = None
-    twin_rotation = None
-    single_cb_op_to_minimum = False
-    voting_method = *consensus majority
-    plot {
-      do_plot = True
-      n_max = 1
-      interactive = False
-      format = *png pdf
-      filename = cosym_embedding
-    }
-  }
-  reindex_to_abc {
-    change_of_basis_op = a,b,c
-    hkl_offset = None
-    space_group = None
-    reference {
-      experiments = None
-      reflections = None
-      reference_model {
-      }
-    }
-    output {
-      experiments = reindexed.expt
-      reflections = reindexed.refl
-      log = dials.reindex.log
-    }
+    min_corr = {{ filter_outlier_min_corr }}
   }
 }
 select {
-  algorithm = panel cspad_sensor significance_filter
-  cspad_sensor {
-    number = None
-    operation = *deselect select
-  }
+  algorithm = {{ select_algorithm }}
   significance_filter {
-    n_bins = 12
-    min_ct = 10
-    max_ct = 50
-    sigma = 0.5
+    sigma = {{ select_significance_filter_sigma }}
   }
 }
 scaling {
-  model = None
-  unit_cell = None
-  space_group = None
-  model_reindex_op = h,k,l
-  resolution_scalar = 0.969
-  mtz {
-    mtz_column_F = fobs
-    minimum_common_hkls = -1
-  }
-  pdb {
-    include_bulk_solvent = True
-    k_sol = 0.35
-    b_sol = 46.00
-    solvent_algorithm = *mosaic flat
-  }
-  algorithm = *mark0 mark1
-  weights = *unit icalc icalc_sigma
+  model = {{ scaling_model }}
+  resolution_scalar = {{ scaling_resolution_scalar }}
 }
 postrefinement {
-  partiality_threshold_hcfix = 0.2
-  rs {
-    fix = thetax thetay *RS G BFACTOR
-  }
-  rs2 {
-  }
-  rs_hybrid {
-    partiality_threshold = 0.2
-  }
-  target_weighting = *unit variance gentle extreme
-  merge_weighting = *variance
-  merge_partiality_exponent = 0
-  lineshape = *lorentzian gaussian
-  show_trumpet_plot = False
-  delta_corr_limit = 0.1
+  enable = {{ postrefinement_enable }}
+  algorithm = {{ postrefinement_algorithm }}
 }
 merging {
-  minimum_multiplicity = 2
+  d_min = {{ merging_d_min }}
+  merge_anomalous = {{ merging_merge_anomalous }}
+  set_average_unit_cell = {{ merging_set_average_unit_cell }}
   error {
-    model = ha14 *ev11 mm24 errors_from_sample_residuals
-    ev11 {
-      minimizer = *lbfgs LevMar
-      refine_propagated_errors = False
-      show_finite_differences = False
-      plot_refinement_steps = False
-    }
-    mm24 {
-      expected_gain = None
-      number_of_intensity_bins = 100
-      n_degrees = 2
-      tuning_param = 10
-      n_max_differences = 100
-      random_seed = 50298
-      tuning_param_opt = False
-      likelihood = normal *t-dist
-      cc_after_pr = True
-      do_diagnostics = False
-    }
+    model = {{ merging_error_model }}
   }
-  plot_single_index_histograms = False
-  set_average_unit_cell = True
-  d_min = None
-  d_max = None
-  merge_anomalous = False
-  include_multiplicity_column = False
-}
-output {
-  expanded_bookkeeping = False
-  prefix = iobs
-  title = None
-  output_dir = .
-  tmp_dir = None
-  do_timing = False
-  log_level = 1
-  save_experiments_and_reflections = False
 }
 statistics {
-  shuffle_ids = False
-  n_bins = 10
-  cc1_2 {
-    hash_filenames = False
-  }
+  n_bins = {{ statistics_n_bins }}
+  report_ML = {{ statistics_report_ML }}
   cciso {
-    mtz_file = None
-    mtz_column_F = fobs
+    mtz_file = {{ statistics_cciso_mtz_file }}
+    mtz_column_F = {{ statistics_cciso_mtz_column_F }}
   }
-  predictions_to_edge {
-    apply = False
-    image = None
-    detector_phil = None
-  }
-  report_ML = True
-  uc_precision = 2
+}
+output {
+  prefix = {{ output_prefix }}
+  output_dir = {{ output_output_dir }}
+  tmp_dir = {{ output_tmp_dir }}
+  do_timing = {{ output_do_timing }}
+  log_level = {{ output_log_level }}
+  save_experiments_and_reflections = {{ output_save_experiments_and_reflections }}
 }
 parallel {
+  a2a = {{ parallel_a2a }}
 }
-lunus {
-  deck_file = None
-}
-publish {
-  drive {
-    credential_file = None
-    shared_folder_id = None
-  }
-  input {
-    mtz_file = None
-    disregard_mtz = False
-    log_file = None
-    other_files = None
-    dataset_root = None
-    version = None
-    guess_root_and_version = True
-  }
-}
-diffBragg {
-  simulator {
-    oversample = 0
-    device_id = 0
-    init_scale = 1
-    total_flux = 1e12
-    crystal {
-      ncells_abc = (10,10,10)
-      ncells_def = (0,0,0)
-      has_isotropic_ncells = False
-      has_isotropic_mosaicity = False
-      mosaicity = 0
-      anisotropic_mosaicity = None
-      num_mosaicity_samples = 1
-      mos_angles_per_axis = 10
-      num_mos_axes = 10
-      mosaicity_method = 2
-      rotXYZ_ucell = None
-    }
-    gonio {
-      delta_phi = None
-      phi_steps = 50
-    }
-    structure_factors {
-      from_pdb {
-        name = None
-        add_anom = True
-        k_sol = None
-        b_sol = None
-      }
-      mtz_name = None
-      mtz_column = None
-      dmin = 1
-      dmax = None
-      default_F = 0
-    }
-    spectrum {
-      filename = None
-      stride = 1
-      filename_list = None
-      gauss_spec {
-        fwhm = 10
-        nchannels = 20
-        res = 1
-      }
-    }
-    beam {
-      size_mm = 1
-    }
-    detector {
-      thick = None
-      atten = None
-      force_zero_thickness = False
-      thicksteps = 1
-    }
-    psf {
-      use = False
-      fwhm = 100
-      radius = 7
-    }
-  }
-  refiner {
-    check_expt_format = True
-    refldata_trusted = *allValid fg bg
-    refldata_to_photons = False
-    load_data_from_refl = False
-    test_gathered_file = False
-    gather_dir = None
-    break_signal = None
-    debug_pixel_panelfastslow = None
-    gain_map_min_max = [.5,2]
-    refine_gain_map = False
-    save_gain_freq = 10
-    region_size = [50,50]
-    res_ranges = None
-    force_symbol = None
-    force_unit_cell = None
-    num_devices = 1
-    refine_Fcell = None
-    refine_spot_scale = None
-    refine_Nabc = False
-    gain_restraint = None
-    max_calls = [100]
-    panel_group_file = None
-    update_oversample_during_refinement = False
-    sigma_r = 3
-    adu_per_photon = 1
-    use_curvatures_threshold = 10
-    curvatures = False
-    start_with_curvatures = False
-    tradeps = 1e-2
-    io {
-      restart_file = None
-      output_dir = None
-    }
-    quiet = False
-    verbose = 0
-    num_macro_cycles = 1
-    ncells_mask = *000 110 101 011 111
-    reference_geom = None
-    stage_two {
-      use_nominal_hkl = True
-      save_model_freq = 50
-      save_Z_freq = 25
-      min_multiplicity = 1
-      Fref_mtzname = None
-      Fref_mtzcol = "Famp(+),Famp(-)"
-      d_min = 2
-      d_max = 999
-      n_bin = 10
-    }
-  }
-  roi {
-    centroid = *obs cal
-    trusted_range = None
-    mask_all_if_any_outside_trusted_range = True
-    mask_outside_trusted_range = False
-    only_filter_zingers_above_mean = True
-    cache_dir_only = False
-    fit_tilt = False
-    force_negative_background_to_zero = False
-    background_threshold = 3.5
-    pad_shoebox_for_background_estimation = None
-    shoebox_size = 10
-    deltaQ = None
-    reject_edge_reflections = True
-    reject_roi_with_hotpix = True
-    hotpixel_mask = None
-    panels = None
-    fit_tilt_using_weights = False
-    allow_overlapping_spots = False
-    skip_roi_with_negative_bg = True
-  }
-  geometry {
-    save_state_freq = 50
-    save_state_overwrite = True
-    pandas_dir = None
-    optimized_results_tag = None
-    refls_key = stage1_refls
-    optimize_method = *lbfgsb nelder
-    input_pkl = None
-    input_pkl_glob = None
-    optimize = False
-    save_optimized_det_freq = 1
-    optimized_detector_name = "diffBragg_detector.expt"
-    min {
-      panel_rotations = -1,-1,-1
-      panel_translations = -1,-1,-1
-    }
-    max {
-      panel_rotations = 1,1,1
-      panel_translations = 1,1,1
-    }
-    center {
-      panel_rotations = 0,0,0
-      panel_translations = 0,0,0
-    }
-    betas {
-      panel_rot = 1e6,1e6,1e6
-      panel_xyz = 1e6,1e6,1e6
-      close_distances = None
-    }
-    fix {
-      panel_rotations = 0,0,0
-      panel_translations = 0,0,0
-    }
-  }
-  predictions {
-    use_peak_detection = False
-    verbose = False
-    laue_mode = False
-    qcut = 0.1
-    label_weak_col = "xyzobs.px.value"
-    weak_fraction = 0.5
-    threshold = 1e-3
-    thicksteps_override = None
-    use_diffBragg_mtz = False
-    pink_stride_override = None
-    default_Famplitude = 1e3
-    resolution_range = [1,999]
-    symbol_override = None
-    method = *diffbragg exascale
-  }
-}
-monitor {
-  detail = *rank node rank0 none
-  period = 5.0
-  plot = True
-  prefix = monitor
-  write = True
-}
+

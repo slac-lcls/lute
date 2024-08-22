@@ -219,13 +219,115 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for merging with cctbx.xfel."""
 
     class Config(ThirdPartyParameters.Config):
-        set_result: bool = True
+        set_result: bool = False
         """Whether the Executor should mark a specified parameter as a result."""
 
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        ...
+        # Generic input settings: input_
+        input_path: str = Field(
+            "",
+            description="Input file(s).",
+        )
+        input_experiments_suffix: str = Field(
+            "_integrated.expt", description="Suffix appened to experiments."
+        )
+        input_reflections_suffix: str = Field(
+            "_integrated.refl", description="Suffix appened to experiments."
+        )
+        input_parallel_file_load_method: str = Field(
+            "uniform",  # *uniform node_memory
+            description="Parallel file loading method.",
+        )
+
+        # Filtering settings: filter_
+        filter_algorithm: str = Field(
+            "unit_cell",  # n_obs reindex resolution unit_cell report
+            description="",
+        )
+        filter_unit_cell_algorithm: str = Field(
+            "cluster", description=""  # range *value cluster
+        )
+        filter_unit_cell_cluster_covariance_file: str = Field(
+            "",  # $MODULES/$COV?
+            description="",
+        )
+        filter_unit_cell_cluster_covariance_component: int = Field(
+            0,
+            description="",
+        )
+        filter_unit_cell_cluster_covariance_mahalanobis: float = Field(
+            5.0,
+            description="",
+        )
+        filter_outlier_min_corr: float = Field(
+            -1.0,
+            description="",
+        )
+
+        # Selection settings: select_
+        select_algorithm: str = Field(
+            "significance_filter",
+            description="",
+        )
+        select_significance_filter_sigma: float = Field(
+            0.1,
+            description="",
+        )
+
+        # Scaling settings: scaling_
+        scaling_model: str = Field(
+            "",  # $MODULES/$COV?
+            description="",
+        )
+        scaling_resolution_scalar: float = Field(
+            0.993420862158964,
+            description="",
+        )
+
+        # Post-refinement: postrefinement_
+        postrefinement_enable: bool = Field(
+            True, description="Enable post-refinement processing?"
+        )
+        postrefinement_algorithm: str = Field("rs", description="")
+
+        # Merging: merging_
+        merging_d_min: int = Field(
+            3,  # What's a good default?
+            description="",
+        )
+        merging_merge_anomalous: bool = Field(False, description="")
+        merging_set_average_unit_cell: bool = Field(True, description="")
+        merging_error_model: str = Field(
+            "ev11", description=""  # ha14 *ev11 mm24 errors_from_sample_residuals
+        )
+
+        # Statistics: statistics_
+        statistics_n_bins: int = Field(20, description="")
+        statistics_report_ML: bool = Field(True, description="")
+        statistics_cciso_mtz_file: str = Field(
+            "",  # $H5_SIM_PATH/ground_truth.mtz
+            description="",
+        )
+        statistics_cciso_mtz_column_F: str = Field("F", description="")
+
+        # Output settings: output_
+        output_prefix: str = Field("", description="")
+        output_output_dir: str = Field(
+            "",
+            description="",
+        )
+        output_tmp_dir: str = Field(
+            "",
+            description="",
+        )
+        output_do_timing: bool = Field(True, description="")
+        output_log_level: int = Field(0, description="")
+        output_save_experiments_and_reflections: bool = Field(True, description="")
+
+        # Parallel processing settings: parallel_
+        parallel_a2a: int = Field(1, description="")
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
