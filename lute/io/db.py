@@ -52,7 +52,7 @@ def _cfg_to_exec_entry_cols(
     selected_env_vars: Dict[str, str] = {
         key: cfg.task_env[key]
         for key in cfg.task_env
-        if "LUTE_" in key or "SLURM_" in key
+        if ("LUTE_" in key and "_TENV_" not in key) or "SLURM_" in key
     }
     entry: Dict[str, Any] = {
         "env": ";".join(f"{key}={value}" for key, value in selected_env_vars.items()),

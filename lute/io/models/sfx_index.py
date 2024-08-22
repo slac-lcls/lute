@@ -500,7 +500,62 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        ...
+        # Generic output settings: output_
+        output_output_dir: str = Field(
+            "",
+            description="Where to put output.",
+        )
+        output_composite_output: bool = Field(True, description="")
+        output_logging_dir: str = Field(".", description="")
+
+        # Dispatch settings: dispatch_
+        dispatch_index: bool = Field(True, description="Perform indexing?")
+        dispatch_refine: bool = Field(True, description="Perform refinement?")
+        dispatch_integrate: bool = Field(True, description="Perform integration?")
+
+        # Parallel processing parameters: mp_
+        mp_mpi_method: str = Field(
+            "mpi",  # *multiprocessing sge lsf pbs mpi
+            description="",
+        )
+
+        # Spotfinding parameters: spotfinder_
+        spotfinder_threshold_dispersion_gain: float = Field(1.6, description="")
+        spotfinder_threshold_dispersion_sigma_bkgnd: int = Field(2, description="")
+        spotfinder_threshold_dispersion_sigma_strong: int = Field(2, description="")
+        spotfinder_threshold_dispersion_global_thresh: int = Field(10, description="")
+        spotfinder_threshold_dispersion_kernel_size: int = Field(6, description="")
+        spotfinder_filter_min_spot_size: int = Field(3, description="")
+        spotfinder_filter_d_min: int = Field(
+            3, description=""
+        )  # What's a good default?
+
+        # Indexing parameters: indexing_
+        indexing_stills_refine_candidates_with_known_symmetry: bool = Field(
+            True, description=""
+        )
+        indexing_stills_refine_all_candidates: bool = Field(False, description="")
+        indexing_stills_nv_reject_outliers: bool = Field(False, description="")
+        indexing_known_symmetry_space_group: Optional[str] = Field(
+            None, description="Space group."
+        )
+        indexing_known_symmetry_unit_cell: Optional[str] = Field(
+            None, description="Unit cell."
+        )
+
+        # Integration parameters: integration_
+        integration_background_simple_outlier_plane_n_sigma: int = Field(
+            10, description=""
+        )
+        integration_summation_detector_gain: float = Field(1.0, description="")
+
+        # Profiling parameters: profile_
+        profile_gaussian_rs_centroid_definition: str = Field("com", description="")
+
+        # Refinement options: refinement_
+        refinement_reflections_outlier_algorithm: Optional[str] = Field(
+            None, description=""
+        )
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",

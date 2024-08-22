@@ -413,6 +413,9 @@ class ThirdPartyTask(Task):
         new_env: Dict[str, str] = {}
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
+                # Set if using a custom environment
                 new_key: str = key[6:]
                 new_env[new_key] = value
-        os.environ = new_env
+        if new_env != {}:
+            # Is empty if using current environment
+            os.environ = new_env
