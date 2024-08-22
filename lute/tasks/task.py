@@ -414,7 +414,7 @@ class ThirdPartyTask(Task):
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
-                new_key: str = key[6:]
+                new_key: str = key[10:]
                 new_env[new_key] = value
         if new_env != {}:
             # Is empty if using current environment

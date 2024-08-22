@@ -241,6 +241,8 @@ class BaseExecutor(ABC):
         new_environment: Dict[str, str] = {}
         for key, value in tmp_environment.items():
             new_environment[f"LUTE_TENV_{key}"] = value
+            if key == "PATH":
+                new_environment[key] = value
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
