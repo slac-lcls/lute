@@ -79,6 +79,7 @@ class AnalysisHeader(BaseModel):
         if not os.access(work_dir, os.W_OK):
             # Need write access for database, files etc.
             raise ValueError(f"Not write access for working directory: {work_dir}!")
+        os.environ["LUTE_WORK_DIR"] = work_dir
         return work_dir
 
     @validator("run", always=True)

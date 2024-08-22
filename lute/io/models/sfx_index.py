@@ -494,11 +494,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for indexing with cctbx.xfel."""
 
     class Config(ThirdPartyParameters.Config):
-        set_result: bool = True
+        set_result: bool = False
         """Whether the Executor should mark a specified parameter as a result."""
 
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
+
+        class Config(BaseModel.Config):
+            extra: str = "allow"
 
         # Generic output settings: output_
         output_output_dir: str = Field(
