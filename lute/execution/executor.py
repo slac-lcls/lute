@@ -9,14 +9,11 @@ to an Executor.
 
 
 Classes:
-    AnalysisConfig: Data class for holding a managed Task's configuration.
-
     BaseExecutor: Abstract base class from which all Executors are derived.
 
     Executor: Default Executor implementing all basic functionality and IPC.
 
-    BinaryExecutor: Can execute any arbitrary binary/command as a managed task
-        within the framework provided by LUTE.
+    MPIExecutor: Runs exactly as the Executor but submits the Task using MPI.
 
 Exceptions
 ----------
@@ -218,11 +215,15 @@ class BaseExecutor(ABC):
 
         Unlike `update_environment` this method sources a new file.
 
+        We prepend a token to each environment variable. This allows the initial
+        part of the Task to be run using the appropriate environment.
+
+        The environment variables containing the token will be swapped in using
+        their appropriate form prior to the actual execution of Task code.
+
         Args:
             env (str): Path to the script to source.
         """
-        import sys
-
         if not os.path.exists(env):
             logger.info(f"Cannot source environment from {env}!")
             return
@@ -236,7 +237,10 @@ class BaseExecutor(ABC):
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE
         ).communicate()
-        new_environment: Dict[str, str] = eval(o)
+        tmp_environment: Dict[str, str] = eval(o)
+        new_environment: Dict[str, str] = {}
+        for key, value in tmp_environment.items():
+            new_environment[f"LUTE_TENV_{key}"] = value
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
@@ -292,6 +296,11 @@ class BaseExecutor(ABC):
 
         May be overridden by subclasses.
 
+        The default submission uses the Executor environment. This ensures that
+        all necessary packages (e.g. Pydantic for validation) are available to
+        the startup scripts. If a Task has a different environment it will be
+        swapped prior to execution.
+
         Args:
             executable_path (str): Path to the LUTE subprocess script.
 
@@ -302,9 +311,9 @@ class BaseExecutor(ABC):
         """
         cmd: str = ""
         if __debug__:
-            cmd = f"python -B {executable_path} {params}"
+            cmd = f"{sys.executable} -B {executable_path} {params}"
         else:
-            cmd = f"python -OB {executable_path} {params}"
+            cmd = f"{sys.executable} -OB {executable_path} {params}"
 
         return cmd
 

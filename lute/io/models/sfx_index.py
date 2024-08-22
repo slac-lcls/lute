@@ -512,6 +512,11 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         description="Location of the input settings ('phil') file.",
         flag_type="",
     )
+    in_file: str = Field(
+        "",
+        description="Input file or glob of files.",
+        flag_type="",
+    )
     phil_parameters: Optional[PhilParameters] = Field(
         None,
         description="Optional template parameters to fill in a CCTBX phil file.",
