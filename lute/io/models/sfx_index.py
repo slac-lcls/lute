@@ -579,7 +579,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         flag_type="",
     )
     cctbx_executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.process",
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
         description="CCTBX indexing program (DIALS).",
         flag_type="",
     )
@@ -629,7 +629,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             lute_template_cfg.output_path = values["phil_file"]
         return lute_template_cfg
 
-    @validator("in_files", always=True)
+    @validator("in_file", always=True)
     def set_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             exp: str = values["lute_config"].experiment
