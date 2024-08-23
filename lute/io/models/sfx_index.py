@@ -14,7 +14,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -527,7 +527,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         spotfinder_threshold_dispersion_sigma_bkgnd: int = Field(2, description="")
         spotfinder_threshold_dispersion_sigma_strong: int = Field(2, description="")
         spotfinder_threshold_dispersion_global_thresh: int = Field(10, description="")
-        spotfinder_threshold_dispersion_kernel_size: int = Field(6, description="")
+        spotfinder_threshold_dispersion_kernel_size: str = Field("6 6", description="")
         spotfinder_filter_min_spot_size: int = Field(3, description="")
         spotfinder_filter_d_min: int = Field(
             3, description=""
@@ -538,7 +538,6 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             True, description=""
         )
         indexing_stills_refine_all_candidates: bool = Field(False, description="")
-        indexing_stills_nv_reject_outliers: bool = Field(False, description="")
         indexing_known_symmetry_space_group: Optional[str] = Field(
             None, description="Space group."
         )
@@ -560,19 +559,45 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             None, description=""
         )
 
+        @validator("output_output_dir", always=True)
+        def set_output_dir(cls, output: str, values: Dict[str, Any]) -> str:
+            if output == "":
+                return os.getenv("LUTE_WORK_DIR", ".")
+            return output
+
+        @validator("output_logging_dir", always=True)
+        def set_output_log_dir(cls, output: str, values: Dict[str, Any]) -> str:
+            if output == "":
+                return values["output_output_dir"]
+            return output
+
     executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
+        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        description="MPI executable.",
+        flag_type="",
+    )
+    cctbx_executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.process",
         description="CCTBX indexing program (DIALS).",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description=(
+            "The location of a data specification for LCLS. "
+            "This file will be written for you based on the data_spec parameter. "
+            "If not running at LCLS, this can be an input file, or a glob."
+        ),
+        flag_type="",
+    )
+    data_spec: Optional[Dict[str, Union[str, float, int]]] = Field(
+        None,
+        description="Provide a CCTBX specification for data access.",
         flag_type="",
     )
     phil_file: str = Field(
         "",
         description="Location of the input settings ('phil') file.",
-        flag_type="",
-    )
-    in_file: str = Field(
-        "",
-        description="Input file or glob of files.",
         flag_type="",
     )
     phil_parameters: Optional[PhilParameters] = Field(
@@ -611,6 +636,28 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             # Schema information is updated by class method `schema`
             for param, value in phil_params:
                 values[param] = value
+        return None
+
+    @validator("in_files", always=True)
+    def set_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            exp: str = values["lute_config"].experiment
+            run: str = str(values["lute_config"].run)
+            work_dir: str = values["lute_config"].work_dir
+            return f"{work_dir}/data_{exp}_{run}.loc"
+        return in_file
+
+    @validator("data_spec", always=True)
+    def write_data_spec_file(
+        cls,
+        data_spec: Optional[Dict[str, Union[str, float, int]]],
+        values: Dict[str, Any],
+    ) -> None:
+        if data_spec is not None:
+            with open(values["in_file"], "w") as f:
+                for key, value in data_spec.items():
+                    spec_line: str = f"{key}={value}\n"
+                    f.write(spec_line)
         return None
 
     @classmethod

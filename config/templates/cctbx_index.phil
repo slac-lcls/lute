@@ -31,7 +31,6 @@ indexing {
   stills {
     refine_candidates_with_known_symmetry = {{ indexing_stills_refine_candidates_with_known_symmetry }}
     refine_all_candidates = {{ indexing_stills_refine_all_candidates }}
-    nv_reject_outliers = {{ indexing_stills_nv_reject_outliers }}
   }
   known_symmetry {
     space_group = {{ indexing_known_symmetry_space_group if indexing_known_symmetry_space_group else "None" }}
@@ -42,10 +41,8 @@ integration {
   background {
     simple {
       outlier {
-        outlier {
-          plane {
+        plane {
             n_sigma = {{ integration_background_simple_outlier_plane_n_sigma }}
-          }
         }
       }
     }

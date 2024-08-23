@@ -174,6 +174,18 @@ IndexCrystFEL:
 
 IndexCCTBXXFEL:
   #phil_file: ...
+  #in_file: ...
+  # Comment out data_spec if providing one
+  # Make sure in_file is appropriately set in that case.
+  data_spec:
+    experiment: "{{ experiment }}"
+    run: "{{ run }}"
+    detector_address: "Rayonix"
+    wavelength_offset: -0.004414643434400234
+    spectrum_eV_per_pixel: 0.07523816551020232
+    spectrum_eV_offset: 9723.778479641995
+    rayonix.bin_size: 4
+
   # Begin template parameters for .phil file
   # Comment out to avoid re-writing .phil
   phil_parameters:
@@ -188,12 +200,11 @@ IndexCCTBXXFEL:
     spotfinder_threshold_dispersion_sigma_bkgnd: 2
     spotfinder_threshold_dispersion_sigma_strong: 2
     spotfinder_threshold_dispersion_global_thresh: 10
-    spotfinder_threshold_dispersion_kernel_size: 6
+    spotfinder_threshold_dispersion_kernel_size: "6 6"
     spotfinder_filter_min_spot_size: 3
     spotfinder_filter_d_min: 3
     indexing_stills_refine_candidates_with_known_symmetry: true
     indexing_stills_refine_all_candidates: false
-    indexing_stills_nv_reject_outliers: false
     indexing_known_symmetry_space_group: "..."
     indexing_known_symmetry_unit_cell: "..."
     integration_background_simple_outlier_plane_n_sigma: 10
