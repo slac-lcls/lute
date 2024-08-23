@@ -448,10 +448,25 @@ class BaseExecutor(ABC):
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
             for param, value in self._analysis_desc.task_parameters.dict().items():
+                param_attrs: Dict[str, Any]
                 if isinstance(value, TemplateParameters):
                     # Extract TemplateParameters if needed
                     value = value.params
-                param_attrs: Dict[str, Any] = schema["properties"][param]
+                    extra_models: List[str] = schema["definitions"].keys()
+                    for model in extra_models:
+                        if model in ("AnalysisHeader", "TemplateConfig"):
+                            continue
+                        if param in schema["definitions"][model]["properties"]:
+                            param_attrs = schema["definitions"][model]["properties"][
+                                param
+                            ]
+                            break
+                    else:
+                        param_attrs = self._analysis_desc.task_parameters._unknown_template_params[
+                            param
+                        ]
+                else:
+                    param_attrs = schema["properties"][param]
                 if "is_result" in param_attrs:
                     is_result: bool = param_attrs["is_result"]
                     if isinstance(is_result, bool) and is_result:

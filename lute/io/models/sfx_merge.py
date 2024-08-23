@@ -25,8 +25,9 @@ from typing import Union, Optional, Dict, Any
 from pydantic import Field, validator, BaseModel
 from pydantic.schema import model_schema, default_ref_template  # Update `schema` method
 
-from .base import ThirdPartyParameters, TemplateConfig
-from ..db import read_latest_db_entry
+from lute.io.db import read_latest_db_entry
+from lute.io.models.base import ThirdPartyParameters, TemplateConfig
+from lute.io.models.validators import template_parameter_validator
 
 
 class MergePartialatorParameters(ThirdPartyParameters):
@@ -332,6 +333,8 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         # Parallel processing settings: parallel_
         parallel_a2a: int = Field(1, description="")
 
+    _set_phil_template_parameters = template_parameter_validator("phil_parameters")
+
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
         description="CCTBX merge program.",
@@ -368,50 +371,6 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         if lute_template_cfg.output_path == "":
             lute_template_cfg.output_path = values["phil_file"]
         return lute_template_cfg
-
-    @validator("phil_parameters", always=True)
-    def set_phil_template_parameters(
-        cls, phil_params: PhilParameters, values: Dict[str, Any]
-    ) -> None:
-        if phil_params is not None:
-            # Add as template parameters, i.e. add to __dict__ but not __fields__
-            # Schema information is updated by class method `schema`
-            for param, value in phil_params:
-                values[param] = value
-        return None
-
-    @classmethod
-    def schema(
-        cls, by_alias: bool = True, ref_template: str = default_ref_template
-    ) -> Dict[str, Any]:
-        """Overload the base-class schema.
-
-        This class method is provided to overload the schema method provided by the
-        base class. We update a portion of the model schema with the schema
-        information of our model for this class' TemplateParameters. The schema
-        is used to access information about command-line arguments (flag_type) or
-        for understanding if a specific parameter is a result. Since
-        TemplateParameters are added after the fact, they are not present as fields
-        in the model and normally do not have any schema information.
-
-        This mechanism is only needed because this model is designed to provide
-        type checking of template parameters.
-        """
-        cached: Optional[Dict[str, Any]] = cls.__schema_cache__.get(
-            (by_alias, ref_template)
-        )
-        if cached is not None:
-            return cached
-        my_schema: Dict[str, Any] = model_schema(
-            cls, by_alias=by_alias, ref_template=ref_template
-        )
-        # Next two lines are the only difference vs base-class
-        template_schema: Dict[str, Any] = model_schema(
-            cls.PhilParameters, by_alias=by_alias, ref_template=ref_template
-        )
-        my_schema["properties"].update(template_schema["properties"])
-        cls.__schema_cache__[(by_alias, ref_template)] = my_schema
-        return my_schema
 
 
 class CompareHKLParameters(ThirdPartyParameters):
