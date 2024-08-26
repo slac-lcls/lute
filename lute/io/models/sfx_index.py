@@ -534,7 +534,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             ),
         )
         output_logging_dir: str = Field(
-            ".", description="Directory output log files will be placed"
+            "", description="Directory output log files will be placed"
         )
 
         # Dispatch settings: dispatch_
@@ -596,8 +596,8 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
                 "this value to be part of the background."
             ),
         )
-        spotfinder_threshold_dispersion_kernel_size: str = Field(
-            "6 6",
+        spotfinder_threshold_dispersion_kernel_size: Tuple[int, int] = Field(
+            (6, 6),
             description=(
                 "The size of the local area around the spot in which to "
                 "calculate the mean and variance. The kernel is given as a box "
