@@ -389,6 +389,10 @@ Task2Runner.shell_source("/sdf/group/lcls/ds/tools/new_task_setup.sh") # Will so
 
 Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the `Task`'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the `Task` implementer refer to the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/) for more information.
 
+**Note:** By default templated parameters are **NOT** validated, i.e., type-checked. This default case is handled first below. If knowledgeable about appropriate typing for the template variables, further modification of the `TaskParameters` model is possible to include validation. This advanced use-case is described second.
+
+#### Non-validated template parameters
+
 LUTE provides two additional base models which are used for template parsing in conjunction with the primary `Task` model. These are:
 - `TemplateParameters` objects which hold parameters which will be used to render a portion of a template.
 - `TemplateConfig` objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.
@@ -533,6 +537,91 @@ RunJsonUser:
     #str_var: ...
     #...
 ```
+
+#### Validated template parameters
+
+If you are able to provide validation for template parameters this is preferred, although it is not always straightforward to determine appropriate parameter types/validators. LUTE provides a custom validator which can be used in conjunction with a separate pydantic model for the template parameters to provide type-checking.
+
+By way of example, we will re-write the model above for the `RunJsonUser` `Task` in order to validate the template parameters. We begin by creating a new pydantic `BaseModel` to hold all the template parameters. This class can be defined anywhere, but for organizational purposes the class is often defined within the `TaskParameters` class.
+
+```py
+# Import BaseModel if not present - required for validation!
+from pydantic import BaseModel
+
+class RunJsonUserParameters:
+
+    class RunJsonTemplateParameters(BaseModel):
+        # If you want to allow extra, un-validated parameters include this
+        # Config as well.
+        # class Config(BaseModel.Config):
+        #     extra: str = "allow"
+
+        str_var: Optional[str] = Field(
+            None, description="This string does..."
+        )
+        int_var: Optional[int] = Field(
+            None, description="This int does..."
+        )
+        p3_b: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+        val: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+```
+
+Next the template parameters defined in the class need to be made available through a validated parameter within the `TaskParameters` class. We will import a special validator defined in `lute.io.models.validators` in order to perform the necessary options to handle the individual template parameters during validation.
+
+```py
+# Import BaseModel if not present - required for validation!
+from pydantic import BaseModel
+
+# Import custom validators for template parameters!
+from lute.io.models.validators import template_parameter_validator
+
+class RunJsonUserParameters:
+
+    class RunJsonTemplateParameters:
+        # If you want to allow extra, un-validated parameters include this
+        # Config as well.
+        # class Config(BaseModel.Config):
+        #     extra: str = "allow"
+
+        str_var: Optional[str] = Field(
+            None, description="This string does..."
+        )
+        int_var: Optional[int] = Field(
+            None, description="This int does..."
+        )
+        p3_b: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+        val: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+    # Define the validator - the argument must match the parameter name!
+    _set_template_parameters = template_parameter_validator("json_parameters")
+
+    # executable...
+    # input_json...
+    json_parameters: Optional[RunJsonTemplateParameters] = Field(
+        None, description="Optional template parameters..."
+    )
+```
+
+The rest of the model remains unchanged. However, we **do** need to make a change to how we pass the template parameters to LUTE through the configuration YAML. Previously, we provided each template parameter (`str_var`, `int_var`, ...) as an individual parameter in the YAML file. Now, they must be passed as a dictionary under the key `json_parameters`, as this is the parameter we have defined to hold template parameters in the model.
+
+```yaml
+RunJsonUser:
+    input_json: "/my/chosen/path.json" # We'll come back to this...
+    json_parameters:
+        str_var: "arg1" # Will substitute for "param1": "arg1"
+        int_var: 4 # Will substitute for "param2": 4
+        p3_b: 2  # Will substitute for "param3: { "b": 2 }
+        val: 2 # Will substitute for "param4": [2, 2, 3] in the JSON
+```
+
+Now, the individual parameters will be validated according to the model definition (`RunJsonTemplateParameters`). As previously, if we do not want to use any template parameters, we simply remove them from the YAML, although in this case, we must remove the full section beginning with `json_parameters`. As we've used the same parameter names as previously, our Jinja template does not need to change
 
 #### Additional Jinja Syntax
 There are many other syntactical constructions we can use with Jinja. Some of the useful ones are:
