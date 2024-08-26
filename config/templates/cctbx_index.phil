@@ -1,17 +1,17 @@
-{%- if input_reference_geometry is defined -%}
+{%- if input_reference_geometry is defined and input_reference_geometry -%}
 input {
-  reference_geometry = ""
+  reference_geometry = {{ input_reference_geometry }}
 }
-{%- endif -%}
-{%- if geometry_detector_panel_origin is defined -%}
+{% endif %}
+{%- if geometry_detector_panel_origin is defined and geometry_detector_panel_origin -%}
 geometry {
   detector {
     panel {
-      origin =
+      origin = {{ geometry_detector_panel_origin }}
     }
   }
 }
-{%- endif -%}
+{% endif -%}
 output {
   output_dir = {{ output_output_dir }}
   composite_output = {{ output_composite_output }}
