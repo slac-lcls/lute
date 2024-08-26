@@ -1,3 +1,17 @@
+{%- if input_reference_geometry is defined -%}
+input {
+  reference_geometry = ""
+}
+{%- endif -%}
+{%- if geometry_detector_panel_origin is defined -%}
+geometry {
+  detector {
+    panel {
+      origin =
+    }
+  }
+}
+{%- endif -%}
 output {
   output_dir = {{ output_output_dir }}
   composite_output = {{ output_composite_output }}
@@ -10,15 +24,18 @@ dispatch {
   integrate = {{ dispatch_integrate }}
 }
 mp {
-  method = {{ mp_mpi_method }}
+  method = {{ mp_method }}
 }
 spotfinder {
+  lookup {
+    mask = {{ spotfinder_lookup_mask }}
+  }
   threshold {
     dispersion {
       gain = {{ spotfinder_threshold_dispersion_gain }}
       sigma_background = {{ spotfinder_threshold_dispersion_sigma_bkgnd }}
       sigma_strong = {{ spotfinder_threshold_dispersion_sigma_strong}}
-      global_threshold = {{ spotfinder_threshold_dispersion_global_thresh }}
+      global_threshold = {{ spotfinder_threshold_dispersion_global_threshold }}
       kernel_size = {{ spotfinder_threshold_dispersion_kernel_size }}
     }
   }

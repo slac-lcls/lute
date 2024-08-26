@@ -416,6 +416,4 @@ class ThirdPartyTask(Task):
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
-        if new_env != {}:
-            # Is empty if using current environment
-            os.environ = new_env
+        os.environ.update(new_env)

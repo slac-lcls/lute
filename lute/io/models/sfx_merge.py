@@ -336,6 +336,11 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     _set_phil_template_parameters = template_parameter_validator("phil_parameters")
 
     executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        description="MPI executable.",
+        flag_type="",
+    )
+    cctbx_executable: str = Field(
         "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
         description="CCTBX merge program.",
         flag_type="",

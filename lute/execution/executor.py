@@ -241,8 +241,6 @@ class BaseExecutor(ABC):
         new_environment: Dict[str, str] = {}
         for key, value in tmp_environment.items():
             new_environment[f"LUTE_TENV_{key}"] = value
-            if key == "PATH":
-                new_environment[key] = value
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
@@ -462,9 +460,16 @@ class BaseExecutor(ABC):
                             ]
                             break
                     else:
-                        param_attrs = self._analysis_desc.task_parameters._unknown_template_params[
-                            param
-                        ]
+                        if isinstance(
+                            self._analysis_desc.task_parameters, ThirdPartyParameters
+                        ):
+                            param_attrs = self._analysis_desc.task_parameters._unknown_template_params[
+                                param
+                            ]
+                        else:
+                            raise ValueError(
+                                f"No parameter schema for {param}. Check model!"
+                            )
                 else:
                     param_attrs = schema["properties"][param]
                 if "is_result" in param_attrs:
