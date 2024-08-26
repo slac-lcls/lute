@@ -141,6 +141,7 @@ class BaseExecutor(ABC):
             poll_interval=poll_interval,
             communicator_desc=communicator_desc,
         )
+        self._shell_source_script: Optional[str] = None
 
     def add_hook(self, event: str, hook: Callable[[Self, Message], None]) -> None:
         """Add a new hook.
@@ -224,23 +225,37 @@ class BaseExecutor(ABC):
         Args:
             env (str): Path to the script to source.
         """
-        if not os.path.exists(env):
-            logger.info(f"Cannot source environment from {env}!")
+        self._shell_source_script = env
+
+    def _shell_source(self) -> None:
+        """Actually shell source step.
+
+        This is run prior to Task execution.
+        """
+        if self._shell_source_script is None:
+            logger.error("Called _shell_source without defining source script!")
+            return
+        if not os.path.exists(self._shell_source_script):
+            logger.error(f"Cannot source environment from {self._shell_source_script}!")
             return
 
         script: str = (
             f"set -a\n"
-            f'source "{env}" >/dev/null\n'
+            f'source "{self._shell_source_script}" >/dev/null\n'
             f'{sys.executable} -c "import os; print(dict(os.environ))"\n'
         )
-        logger.info(f"Sourcing file {env}")
+        logger.info(f"Sourcing file {self._shell_source_script}")
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE
         ).communicate()
         tmp_environment: Dict[str, str] = eval(o)
         new_environment: Dict[str, str] = {}
         for key, value in tmp_environment.items():
-            new_environment[f"LUTE_TENV_{key}"] = value
+            # Make sure LUTE vars are available
+            if "LUTE_" in key:
+                new_environment[key] = value
+            else:
+                new_environment[f"LUTE_TENV_{key}"] = value
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
@@ -329,6 +344,8 @@ class BaseExecutor(ABC):
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
 
+        if self._shell_source_script is not None:
+            self._shell_source()
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
 
