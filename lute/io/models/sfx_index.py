@@ -5,14 +5,19 @@ Classes:
         CrystFEL's `indexamajig`.
 """
 
-__all__ = ["IndexCrystFELParameters", "ConcatenateStreamFilesParameters"]
+__all__ = [
+    "IndexCrystFELParameters",
+    "ConcatenateStreamFilesParameters",
+    "IndexCCTBXXFELParameters",
+]
 __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, Tuple
 
 from pydantic import (
+    BaseModel,
     AnyUrl,
     Field,
     NonNegativeInt,
@@ -22,8 +27,9 @@ from pydantic import (
     validator,
 )
 
-from ..db import read_latest_db_entry
-from .base import ThirdPartyParameters, TaskParameters
+from lute.io.db import read_latest_db_entry
+from lute.io.models.base import ThirdPartyParameters, TaskParameters, TemplateConfig
+from lute.io.models.validators import template_parameter_validator
 
 
 class IndexCrystFELParameters(ThirdPartyParameters):
@@ -482,3 +488,283 @@ class ConcatenateStreamFilesParameters(TaskParameters):
             )
             return stream_out_file
         return tag
+
+
+class IndexCCTBXXFELParameters(ThirdPartyParameters):
+    """Parameters for indexing with cctbx.xfel."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class PhilParameters(BaseModel):
+        """Template parameters for CCTBX phil file."""
+
+        class Config(BaseModel.Config):
+            extra: str = "allow"
+
+        # Generic input settings: input_
+        input_reference_geometry: Optional[str] = Field(
+            None,
+            description=(
+                "Provide an models.expt file with exactly one detector model. Data "
+                "processing will use that geometry instead of the geometry found "
+                "in the image headers."
+            ),
+        )
+
+        # Generic geometry: geometry_
+        geometry_detector_panel_origin: Optional[Tuple[float, float, float]] = Field(
+            None,
+            description="Override the panel origin. Requires fast_axis and slow_axis.",
+        )
+
+        # Generic output settings: output_
+        output_output_dir: str = Field(
+            "",
+            description="Directory output files will be placed",
+        )
+        output_composite_output: bool = Field(
+            True,
+            description=(
+                "If True, save one set of experiment/reflection files per process, "
+                "where each is a concatenated list of all the successful events "
+                "examined by that process. If False, output a separate "
+                "experiment/reflection file per image (generates a lot of files)."
+            ),
+        )
+        output_logging_dir: str = Field(
+            "", description="Directory output log files will be placed"
+        )
+
+        # Dispatch settings: dispatch_
+        dispatch_index: bool = Field(
+            True,
+            description=(
+                "Attempt to index images. find_spots also needs to be True for "
+                "this to work"
+            ),
+        )
+        dispatch_refine: bool = Field(
+            False, description="If True, after indexing, refine the experimental models"
+        )
+        dispatch_integrate: bool = Field(
+            True,
+            description=(
+                "Integrate indexed images. Ignored if index=False or "
+                "find_spots=False"
+            ),
+        )
+
+        # Parallel processing parameters: mp_
+        mp_method: str = Field(
+            "mpi",  # *multiprocessing sge lsf pbs mpi
+            description="The multiprocessing method to use",
+        )
+
+        # Spotfinding parameters: spotfinder_
+        spotfinder_lookup_mask: Optional[str] = Field(
+            None, description="The path to the mask file."
+        )
+        spotfinder_threshold_dispersion_gain: Optional[float] = Field(
+            None,
+            description=(
+                "Use a flat gain map for the entire detector to act as a "
+                "multiplier for the gain set by the format. Cannot be used in "
+                "conjunction with lookup.gain_map parameter."
+            ),
+        )
+        spotfinder_threshold_dispersion_sigma_bkgnd: float = Field(
+            6,
+            description=(
+                "The number of standard deviations of the index of dispersion "
+                "(variance / mean) in the local area below which the pixel "
+                "will be classified as background."
+            ),
+        )
+        spotfinder_threshold_dispersion_sigma_strong: float = Field(
+            3,
+            description=(
+                "The number of standard deviations above the mean in the local "
+                "area above which the pixel will be classified as strong."
+            ),
+        )
+        spotfinder_threshold_dispersion_global_threshold: float = Field(
+            0,
+            description=(
+                "The global threshold value. Consider all pixels less than "
+                "this value to be part of the background."
+            ),
+        )
+        spotfinder_threshold_dispersion_kernel_size: Tuple[int, int] = Field(
+            (6, 6),
+            description=(
+                "The size of the local area around the spot in which to "
+                "calculate the mean and variance. The kernel is given as a box "
+                "of size (2 * nx + 1, 2 * ny + 1) centred at the pixel."
+            ),
+        )
+        spotfinder_filter_min_spot_size: Optional[int] = Field(
+            3,
+            description=(
+                "The minimum number of contiguous pixels for a spot to be "
+                "accepted by the filtering algorithm."
+            ),
+        )
+        spotfinder_filter_d_min: Optional[float] = Field(
+            None,
+            description=(
+                "The high resolution limit in Angstrom for a pixel to be "
+                "accepted by the filtering algorithm."
+            ),
+        )
+
+        # Indexing parameters: indexing_
+        indexing_stills_refine_candidates_with_known_symmetry: bool = Field(
+            False,
+            description=(
+                "If False, when choosing the best set of candidate basis "
+                "solutions, refine the candidates in the P1 setting. If True, "
+                "after indexing in P1, convert the candidates to the known "
+                "symmetry and apply the corresponding change of basis to the "
+                "indexed reflections."
+            ),
+        )
+        indexing_stills_refine_all_candidates: bool = Field(
+            True,
+            description=(
+                "If False, no attempt is made to refine the model from initial "
+                "basis vector selection. The indexing solution with the best "
+                "RMSD is chosen."
+            ),
+        )
+        indexing_known_symmetry_space_group: Optional[str] = Field(
+            None, description="Target space group for indexing."
+        )
+        indexing_known_symmetry_unit_cell: Optional[str] = Field(
+            None, description="Target unit cell for indexing."
+        )
+
+        # Integration parameters: integration_
+        integration_background_simple_outlier_plane_n_sigma: int = Field(
+            10,
+            description=(
+                "The number of standard deviations above the threshold "
+                "plane to use in rejecting outliers from background "
+                "calculation."
+            ),
+        )
+        integration_summation_detector_gain: float = Field(
+            1.0,
+            description=(
+                "Multiplier for variances after integration of still images. See "
+                "Leslie 1999."
+            ),
+        )
+
+        # Profiling parameters: profile_
+        profile_gaussian_rs_centroid_definition: str = Field(
+            "com",
+            description="The centroid to use as beam divergence (centre of mass or s1)",
+        )
+
+        # Refinement options: refinement_
+        refinement_reflections_outlier_algorithm: Optional[str] = Field(
+            None,
+            description=(
+                "Outlier rejection algorithm. If auto is selected, the "
+                "algorithm is chosen automatically."
+            ),
+        )
+
+        @validator("output_output_dir", always=True)
+        def set_output_dir(cls, output: str, values: Dict[str, Any]) -> str:
+            if output == "":
+                return os.getenv("LUTE_WORK_DIR", ".")
+            return output
+
+        @validator("output_logging_dir", always=True)
+        def set_output_log_dir(cls, output: str, values: Dict[str, Any]) -> str:
+            if output == "":
+                return values["output_output_dir"]
+            return output
+
+    _set_phil_template_parameters = template_parameter_validator("phil_parameters")
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        description="MPI executable.",
+        flag_type="",
+    )
+    cctbx_executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
+        description="CCTBX indexing program (DIALS).",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description=(
+            "The location of a data specification for LCLS. "
+            "This file will be written for you based on the data_spec parameter. "
+            "If not running at LCLS, this can be an input file, or a glob."
+        ),
+        flag_type="",
+    )
+    data_spec: Optional[Dict[str, Union[str, float, int]]] = Field(
+        None,
+        description="Provide a CCTBX specification for data access.",
+        flag_type="",
+    )
+    phil_file: str = Field(
+        "",
+        description="Location of the input settings ('phil') file.",
+        flag_type="",
+    )
+    phil_parameters: Optional[PhilParameters] = Field(
+        None,
+        description="Optional template parameters to fill in a CCTBX phil file.",
+        flag_type="",  # Does nothing since always None by time it's seen by Task
+    )
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="cctbx_index.phil",
+            output_path="",
+        ),
+        description="Template information for the cctbx_index file.",
+    )
+
+    @validator("phil_file", always=True)
+    def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
+        if phil_file == "":
+            return f"{values['lute_config'].work_dir}/cctbx_index.phil"
+        return phil_file
+
+    @validator("lute_template_cfg", always=True)
+    def set_phil_template_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -> TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["phil_file"]
+        return lute_template_cfg
+
+    @validator("in_file", always=True)
+    def set_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            exp: str = values["lute_config"].experiment
+            run: str = str(values["lute_config"].run)
+            work_dir: str = values["lute_config"].work_dir
+            return f"{work_dir}/data_{exp}_{run}.loc"
+        return in_file
+
+    @validator("data_spec", always=True)
+    def write_data_spec_file(
+        cls,
+        data_spec: Optional[Dict[str, Union[str, float, int]]],
+        values: Dict[str, Any],
+    ) -> None:
+        if data_spec is not None:
+            with open(values["in_file"], "w") as f:
+                for key, value in data_spec.items():
+                    spec_line: str = f"{key}={value}\n"
+                    f.write(spec_line)
+        return None

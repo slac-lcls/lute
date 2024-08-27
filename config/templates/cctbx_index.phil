@@ -1,0 +1,82 @@
+{%- if input_reference_geometry is defined and input_reference_geometry -%}
+input {
+  reference_geometry = {{ input_reference_geometry }}
+}
+{% endif %}
+{%- if geometry_detector_panel_origin is defined and geometry_detector_panel_origin -%}
+geometry {
+  detector {
+    panel {
+      origin = {{ geometry_detector_panel_origin }}
+    }
+  }
+}
+{% endif -%}
+output {
+  output_dir = {{ output_output_dir }}
+  composite_output = {{ output_composite_output }}
+  logging_dir = {{ output_logging_dir }}
+  logging_option = normal *suppressed disabled
+}
+dispatch {
+  index = {{ dispatch_index }}
+  refine = {{ dispatch_refine }}
+  integrate = {{ dispatch_integrate }}
+}
+mp {
+  method = {{ mp_method }}
+}
+spotfinder {
+  lookup {
+    mask = {{ spotfinder_lookup_mask }}
+  }
+  threshold {
+    dispersion {
+      gain = {{ spotfinder_threshold_dispersion_gain }}
+      sigma_background = {{ spotfinder_threshold_dispersion_sigma_bkgnd }}
+      sigma_strong = {{ spotfinder_threshold_dispersion_sigma_strong}}
+      global_threshold = {{ spotfinder_threshold_dispersion_global_threshold }}
+      kernel_size = {{ spotfinder_threshold_dispersion_kernel_size }}
+    }
+  }
+  filter {
+    min_spot_size = {{ spotfinder_filter_min_spot_size }}
+    d_min = {{ spotfinder_filter_d_min }}
+  }
+}
+indexing {
+  stills {
+    refine_candidates_with_known_symmetry = {{ indexing_stills_refine_candidates_with_known_symmetry }}
+    refine_all_candidates = {{ indexing_stills_refine_all_candidates }}
+  }
+  known_symmetry {
+    space_group = {{ indexing_known_symmetry_space_group if indexing_known_symmetry_space_group else "None" }}
+    unit_cell = {{ indexing_known_symmetry_unit_cell if indexing_known_symmetry_unit_cell else "None" }}
+  }
+}
+integration {
+  background {
+    simple {
+      outlier {
+        plane {
+            n_sigma = {{ integration_background_simple_outlier_plane_n_sigma }}
+        }
+      }
+    }
+  }
+  summation {
+    detector_gain = {{ integration_summation_detector_gain }}
+  }
+}
+profile {
+  gaussian_rs {
+    centroid_definition = {{ profile_gaussian_rs_centroid_definition }}
+  }
+}
+refinement {
+  reflections {
+    outlier {
+      algorithm = {{ refinement_reflections_outlier_algorithm if refinement_reflections_outlier_algorithm else "None" }}
+    }
+  }
+}
