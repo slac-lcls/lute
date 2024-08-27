@@ -396,6 +396,7 @@ class ThirdPartyTask(Task):
             msg: Message = Message(contents=self._formatted_command())
             self._report_to_executor(msg)
         LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
+        self._setup_env()
         os.execvp(file=self._cmd, args=self._args_list)
 
     def _formatted_command(self) -> str:
@@ -410,3 +411,12 @@ class ThirdPartyTask(Task):
         signal: str = "NO_PICKLE_MODE"
         msg: Message = Message(signal=signal)
         self._report_to_executor(msg)
+
+    def _setup_env(self) -> None:
+        new_env: Dict[str, str] = {}
+        for key, value in os.environ.items():
+            if "LUTE_TENV_" in key:
+                # Set if using a custom environment
+                new_key: str = key[10:]
+                new_env[new_key] = value
+        os.environ.update(new_env)

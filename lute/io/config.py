@@ -134,6 +134,10 @@ def substitute_variables(
                 if key_to_sub[0] == "$":
                     sub = os.getenv(key_to_sub[1:], None)
                     if sub is None:
+                        # Check if we use a different env - substitution happens
+                        # before environment reset
+                        sub = os.getenv(f"LUTE_TENV_{key_to_sub[1:]}")
+                    if sub is None:
                         print(
                             f"Environment variable {key_to_sub[1:]} not found! Cannot substitute in YAML config!",
                             flush=True,

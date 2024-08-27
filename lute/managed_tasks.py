@@ -37,6 +37,10 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 
 # SFX
 #####
+CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
+"""Runs crystallographic indexing using cctbx.xfel."""
+CCTBXIndexer.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
+
 CrystFELIndexer: Executor = Executor("IndexCrystFEL")
 """Runs crystallographic indexing using CrystFEL."""
 CrystFELIndexer.update_environment(
@@ -48,6 +52,11 @@ CrystFELIndexer.update_environment(
         )
     }
 )
+
+CCTBXMerger: Executor = Executor("MergeCCTBXXFEL")
+"""Runs crystallographic merging using cctbx.xfel."""
+CCTBXMerger.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
+
 PartialatorMerger: Executor = Executor("MergePartialator")
 """Runs crystallographic merging using CrystFEL's partialator."""
 
@@ -59,15 +68,15 @@ HKLManipulator: Executor = Executor("ManipulateHKL")  # For hkl->mtz, but can do
 
 DimpleSolver: Executor = Executor("DimpleSolve")
 """Solves a crystallographic structure using molecular replacement."""
-
 DimpleSolver.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+
 PeakFinderPyAlgos: MPIExecutor = MPIExecutor("FindPeaksPyAlgos")
 """Performs Bragg peak finding using the PyAlgos algorithm."""
 
 SHELXCRunner: Executor = Executor("RunSHELXC")
 """Runs CCP4 SHELXC - needed for crystallographic phasing."""
-
 SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
 

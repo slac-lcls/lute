@@ -22,7 +22,7 @@ lute
 
 In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.
 
-### A note on utilties
+## A note on utilties
 In the `utilities` directory there are two useful programs to provide assistance with using the software:
 
 - `utilities/dbview`: LUTE stores all parameters for every analysis routine it runs (as well as results) in a database. This database is stored in the `work_dir` defined in the YAML file (see below). The `dbview` utility is a TUI application (Text-based user interface) which runs in the terminal. It allows you to navigate a LUTE database using the arrow keys, etc. Usage is: `utilities/dbview -p <path/to/lute.db>`.
@@ -202,6 +202,8 @@ The submission process is slightly more complicated in this case. A more in-dept
 - `-r` is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.
 
 The `$SLURM_ARGS` must be provided in the same manner as when submitting an individual **managed** `Task` by hand to be run as batch job with the script above. **Note** that these parameters will be used as the starting point for the SLURM arguments of **every managed** `Task` in the DAG; however, individual steps in the DAG may have overrides built-in where appropriate to make sure that step is not submitted with potentially incompatible arguments. For example, a single threaded analysis `Task` may be capped to running on one core, even if in general everything should be running on 100 cores, per the SLURM argument provided. These caps are added during development and cannot be disabled through configuration changes in the YAML.
+
+**Note for LCLS Staff**: LCLS staff should refer to the Advanced Usaged section for information on accessing Airflow with greater privileges.
 
 **DAG List**
 
@@ -456,15 +458,17 @@ MYENVVAR=1 python -B run_task.py -t Tester -c config/test.yaml
 - `LUTE_DEBUG_BEFORE_TPP_EXEC`: Exits the program after a ThirdPartyTask has prepared its submission command, but before `exec` is used to run it.
 
 ## Airflow Launch and DAG Execution Steps
-The Airflow launch process actually involves a number of steps, and is rather complicated. There are two wrapper steps prior to getting to the actual Airflow API communication.
+The Airflow launch process actually involves two steps. There is a wrapper prior to getting to the actual Airflow API communication.
 
 1. `launch_scripts/submit_launch_airflow.sh` is run.
-2. This script calls `/sdf/group/lcls/ds/tools/lute_launcher` with all the same parameters that it was called with.
-3. `lute_launcher` runs the `launch_scripts/launch_airflow.py` script which was provided as the first argument. This is the **true** launch script
-4. `launch_airflow.py` communicates with the Airflow API, requesting that a specific DAG be launched. It then continues to run, and gathers the individual logs and the exit status of each step of the DAG.
-5. Airflow will then enter a loop of communication where it asks the JID to submit each step of the requested DAG as batch job using `launch_scripts/submit_slurm.sh`.
+2. This script runs the `launch_scripts/launch_airflow.py` script which was provided as the first argument. This is the **true** launch script
+3. `launch_airflow.py` communicates with the Airflow API, requesting that a specific DAG be launched. It then continues to run, and gathers the individual logs and the exit status of each step of the DAG.
+4. Airflow will then enter a loop of communication where it asks the JID to submit each step of the requested DAG as batch job using `launch_scripts/submit_slurm.sh`.
 
 There are some specific reasons for this complexity:
 
-- The use of `submit_launch_airflow.sh` as a thin-wrapper around `lute_launcher` is to allow the true Airflow launch script to be a long-lived job. This is for compatibility with the eLog and the ARP. When run from the eLog as a workflow, the job submission process must occur within 30 seconds due to a timeout built-in to the system. This is fine when submitting jobs to run on the batch-nodes, as the submission to the queue takes very little time. So here, `submit_launch_airflow.sh` serves as a thin script to have `lute_launcher` run as a batch job. It can then run as a long-lived job (for the duration of the entire DAG) collecting log files all in one place. This allows the log for each stage of the Airflow DAG to be inspected in a single file, and through the eLog browser interface.
-- The use `lute_launcher` as a wrapper around `launch_airflow.py` is to manage authentication and credentials. The `launch_airflow.py` script requires loading credentials in order to authenticate against the Airflow API. For the average user this is not possible, unless the script is run from within the `lute_launcher` process.
+- The use of `submit_launch_airflow.sh` is to allow the true Airflow launch script to be a long-lived job. This is for compatibility with the eLog and the ARP. When run from the eLog as a workflow, the job submission process must occur within 30 seconds due to a timeout built-in to the system. This is fine when submitting jobs to run on the batch-nodes, as the submission to the queue takes very little time. So here, `submit_launch_airflow.sh` serves as a thin script to have `launch_airflow.py` run as a batch job. It can then run as a long-lived job (for the duration of the entire DAG) collecting log files all in one place. This allows the log for each stage of the Airflow DAG to be inspected in a single file, and through the eLog browser interface.
+
+
+### Elevated Privileges
+The `launch_airflow.py` script (and by proxy the `submit_launch_airflow.sh` script) can be run as a user with greater privileges. This involves passing an additional flag `--admin` to the script. You need sufficient permissions to access the credentials to use this account which currently means membership of the `ps-data` Unix group.
