@@ -2954,7 +2954,17 @@ multiple schemas. Multiple schemas are separated by ';', e.g.
 <span class="normal">406</span>
 <span class="normal">407</span>
 <span class="normal">408</span>
-<span class="normal">409</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ThirdPartyTask</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ThirdPartyTask</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A `Task` interface to analysis with binary executables.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">TaskParameters</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -3149,6 +3159,7 @@ multiple schemas. Multiple schemas are separated by ';', e.g.
             <span class="n">msg</span><span class="p">:</span> <span class="n">Message</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">contents</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_formatted_command</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_report_to_executor</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="n">LUTE_DEBUG_EXIT</span><span class="p">(</span><span class="s2">&quot;LUTE_DEBUG_BEFORE_TPP_EXEC&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup_env</span><span class="p">()</span>
         <span class="n">os</span><span class="o">.</span><span class="n">execvp</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cmd</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_args_list</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_formatted_command</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -3163,6 +3174,15 @@ multiple schemas. Multiple schemas are separated by ';', e.g.
         <span class="n">signal</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;NO_PICKLE_MODE&quot;</span>
         <span class="n">msg</span><span class="p">:</span> <span class="n">Message</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="n">signal</span><span class="o">=</span><span class="n">signal</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_report_to_executor</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_setup_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">new_env</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;LUTE_TENV_&quot;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+                <span class="c1"># Set if using a custom environment</span>
+                <span class="n">new_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">key</span><span class="p">[</span><span class="mi">10</span><span class="p">:]</span>
+                <span class="n">new_env</span><span class="p">[</span><span class="n">new_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">new_env</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
