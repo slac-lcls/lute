@@ -35,10 +35,17 @@ else:
     logger.setLevel(logging.INFO)
 
 
-def _retrieve_pw(instance: str = "prod") -> str:
-    path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}.txt"
+def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
+    user_type: str
+    if is_admin:
+        logger.debug("Running as operator.")
+        user_type = "admin"
+    else:
+        logger.debug("Running as user.")
+        user_type = "user"
+    path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}_{user_type}.txt"
     if instance == "prod" or instance == "test":
-        path = path.format(instance=instance)
+        path = path.format(instance=instance, user_type=user_type)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
 
@@ -90,6 +97,9 @@ if __name__ == "__main__":
         prog="trigger_airflow_lute_dag",
         description="Trigger Airflow to begin executing a LUTE DAG.",
         epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument(
+        "-a", "--admin", help="Run as admin. Requires permissions.", action="store_true"
     )
     parser.add_argument("-c", "--config", type=str, help="Path to config YAML file.")
     parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
@@ -179,8 +189,9 @@ if __name__ == "__main__":
         ),
     }
 
-    pw: str = _retrieve_pw(instance_str)
-    auth: HTTPBasicAuth = HTTPBasicAuth("btx", pw)
+    pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
+    user_name: str = "btx" if args.admin else "lcls_user"
+    auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
     resp: requests.models.Response = requests.get(
         f"{airflow_instance}/{airflow_api_endpoints['health']}",
         auth=auth,
