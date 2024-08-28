@@ -188,7 +188,8 @@ if __name__ == "__main__":
         ),
         # Only for User-Specified workflows
         "mod_dag": f"api/v1/dags/lute_{wf_name}",  # Delete, pause/unpause, etc.
-        "update_defn": f"api/v1/variables/user_workflow",
+        "create_defn": "api/v1/variables",
+        "update_defn": "api/v1/variables/user_workflow",
         "parse_file": "api/v1/parseDagFile/{file_token}",
     }
 
@@ -227,8 +228,32 @@ if __name__ == "__main__":
             json=new_workflow,
             auth=auth,
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 404:
+                # Workflow definition not found so previous DAG completed properly
+                resp = requests.post(
+                    f"{airflow_instance}/{airflow_api_endpoints['create_defn']}",
+                    json=new_workflow,
+                    auth=auth,
+                )
+                resp.raise_for_status()
+            else:
+                raise
         logger.debug("Sent new workflow definition.")
+        resp = requests.get(
+            f"{airflow_instance}/{airflow_api_endpoints['mod_dag']}",
+            auth=auth,
+        )
+        resp.raise_for_status()
+        file_token: str = resp.json()["file_token"]
+        f_endpoint: str = airflow_api_endpoints["parse_file"].format(
+            file_token=file_token
+        )
+        resp = requests.put(f"{airflow_instance}/{f_endpoint}", auth=auth)
+        resp.raise_for_status()
+        logger.debug("Re-parsed DAG for setup with new workflow.")
 
     # Experiment, run #, and ARP env variables come from ARP submission only
     dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {

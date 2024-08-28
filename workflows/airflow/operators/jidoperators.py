@@ -408,7 +408,6 @@ class JIDSlurmOperator(BaseOperator):
         logger.info(f"JobID {msg['tool_id']} successfully submitted!")
 
         jobs: List[Dict[str, Any]] = [msg]
-        time.sleep(10)  # Wait for job to queue.... FIXME
         logger.info("Checking for job completion.")
         while jobs[0].get("status") in ("RUNNING", "SUBMITTED"):
             jobs = self.rpc(
