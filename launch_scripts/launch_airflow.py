@@ -48,7 +48,6 @@ def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
         path = path.format(instance=instance, user_type=user_type)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
-
     with open(path, "r") as f:
         pw: str = f.readline().strip()
     return pw
@@ -173,10 +172,10 @@ if __name__ == "__main__":
     airflow_instance: str
     instance_str: str
     if args.test:
-        airflow_instance = "http://172.24.5.190:8080/"
+        airflow_instance = "http://172.24.5.190:8080"
         instance_str = "test"
     else:
-        airflow_instance = "http://172.24.5.247:8080/"
+        airflow_instance = "http://172.24.5.247:8080"
         instance_str = "prod"
 
     airflow_api_endpoints: Dict[str, str] = {
@@ -187,6 +186,10 @@ if __name__ == "__main__":
             f"api/v1/dags/lute_{wf_name}/dagRuns/{{dag_run_id}}/taskInstances"
             f"/{{task_id}}/xcomEntries/{{xcom_key}}"
         ),
+        # Only for User-Specified workflows
+        "mod_dag": f"api/v1/dags/lute_{wf_name}",  # Delete, pause/unpause, etc.
+        "update_defn": f"api/v1/variables/user_workflow",
+        "parse_file": "api/v1/parseDagFile/{file_token}",
     }
 
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
@@ -206,12 +209,26 @@ if __name__ == "__main__":
     wf_defn: Dict[str, Any] = {}
     if use_custom_defn:
         import yaml
+        import json
 
         if not os.path.exists(args.workflow_defn):
             logger.error("Workflow definition path does not exist! Exiting!")
             sys.exit(-1)
         with open(args.workflow_defn, "r") as f:
             wf_defn = yaml.load(f, yaml.FullLoader)
+
+        # Update user workflow definition in Airflow
+        new_workflow: Dict[str, str] = {
+            "key": "user_workflow",
+            "value": json.dumps(wf_defn),
+        }
+        resp = requests.patch(
+            f"{airflow_instance}/{airflow_api_endpoints['update_defn']}",
+            json=new_workflow,
+            auth=auth,
+        )
+        resp.raise_for_status()
+        logger.debug("Sent new workflow definition.")
 
     # Experiment, run #, and ARP env variables come from ARP submission only
     dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
@@ -243,12 +260,25 @@ if __name__ == "__main__":
     logger.info(f"DAG is {dag_state}")
 
     # Get Task information
-    resp = requests.get(
-        f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
-        auth=auth,
-    )
-    resp.raise_for_status()
-    task_ids: List[str] = [task["task_id"] for task in resp.json()["tasks"]]
+    task_ids: List[str]
+    if not use_custom_defn:
+        resp = requests.get(
+            f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
+            auth=auth,
+        )
+        resp.raise_for_status()
+        task_ids = [task["task_id"] for task in resp.json()["tasks"]]
+    else:
+        # Airflow shouldn't have list of Tasks yet so we parse manually
+        task_ids = ["retrieve_workflow"]
+
+        def get_names(wf_defn: Dict[str, Any], names: List[str]) -> None:
+            names.append(f"user_workflow.{wf_defn['task_name']}")
+            for wf_new in wf_defn["next"]:
+                get_names(wf_new, names)
+
+        get_names(wf_defn, task_ids)
+        task_ids = sorted(task_ids)
     task_id_str: str = ",\n\t- ".join(tid for tid in task_ids)
     logger.info(
         f"Contains Managed Tasks (alphabetical, not execution order):\n\t- {task_id_str}"

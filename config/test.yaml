@@ -1,7 +1,8 @@
 %YAML 1.3
 ---
 title: "LUTE Task Configuration" # Include experiment description if desired
-experiment: "EXPL10000"
+experiment: "{{ $EXPERIMENT }}"
+run: "{{ $RUN }}"
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
