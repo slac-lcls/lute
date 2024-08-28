@@ -82,7 +82,7 @@ def git_clone(repo: str, location: str, permissions: str) -> None:
 
         permissions (str): Permissions to set on the repository.
     """
-    repo_only: str = repo.split("/")[0]
+    repo_only: str = repo.split("/")[1]
     if os.path.exists(f"location/{repo_only}"):
         logger.debug(
             f"Repository {repo} already exists at {location}. Will not overwrite."
