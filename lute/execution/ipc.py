@@ -65,6 +65,7 @@ LUTE_SIGNALS: Set[str] = {
     "TASK_DONE",
     "TASK_CANCELLED",
     "TASK_RESULT",
+    "TASK_LOG",
 }
 
 if __debug__:

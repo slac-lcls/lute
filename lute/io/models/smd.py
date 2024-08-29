@@ -218,11 +218,12 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     thresholds: Thresholds = Field(Thresholds())
     # analysis_flags: AnalysisFlags
 
+
 class AnalyzeSmallDataXASParameters(TaskParameters):
     """TaskParameter model for AnalyzeSmallDataXAS Task.
 
-    This Task does basic analysis of XSS data based on a SmallData HDF5 output
-    file. It calculates difference scattering and signal binned by various
+    This Task does basic analysis of XAS data based on a SmallData HDF5 output
+    file. It calculates difference absorption and signal binned by various
     scanned motors.
     """
 
@@ -241,7 +242,8 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         None, description="Name of the detector with absorption data."
     )
     xss_detname: Optional[str] = Field(
-        None, description="Name of the detector with scattering data, for normalization."
+        None,
+        description="Name of the detector with scattering data, for normalization.",
     )
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
@@ -250,12 +252,9 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         None,
         description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
     )
-    ccm: str = Field(
-        description="Name of the PV for CCM position readback."
-    )
+    ccm: str = Field(description="Name of the PV for CCM position readback.")
     ccm_set: Optional[str] = Field(
-        None,
-        description="Name of the PV for the setpoint of the CCM."
+        None, description="Name of the PV for the setpoint of the CCM."
     )
     thresholds: Thresholds = Field(Thresholds())
     # analysis_flags: AnalysisFlags

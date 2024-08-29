@@ -102,6 +102,8 @@ class BaseExecutor(ABC):
 
         def task_result(self: Self, msg: Message): ...
 
+        def task_log(self: Self, msg: Message): ...
+
     def __init__(
         self,
         task_name: str,
@@ -651,6 +653,13 @@ class Executor(BaseExecutor):
             post_elog_run_status(elog_data)
 
         self.add_hook("task_result", task_result)
+
+        def task_log(self: Executor, msg: Message):
+            if isinstance(msg.contents, str):
+                # This should be log formatted already
+                print(msg.contents)
+
+        self.add_hook("task_log", task_log)
 
     def _task_loop(self, proc: subprocess.Popen) -> None:
         """Actions to perform while the Task is running.

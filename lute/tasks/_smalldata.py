@@ -25,12 +25,18 @@ from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
 from lute.execution.ipc import Message
+from lute.execution.logging import PipeCommunicatorHandler, STD_PYTHON_LOG_FORMAT
 from lute.io.models.base import TaskParameters
 from lute.tasks.task import *
 from lute.tasks.dataclasses import ElogSummaryPlots
 from lute.tasks.math import gaussian, sigma_to_fwhm
 
 logger: logging.Logger = logging.getLogger(__name__)
+handler: PipeCommunicatorHandler = PipeCommunicatorHandler()
+formatter: logging.Formatter = logging.Formatter(STD_PYTHON_LOG_FORMAT)
+handler.setFormatter(formatter)
+logger.handlers.clear()
+logger.addHandler(handler)
 
 if __debug__:
     logger.setLevel(logging.DEBUG)
