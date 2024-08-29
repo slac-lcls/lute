@@ -9,7 +9,7 @@ Classes:
         XSS difference signal.
 """
 
-__all__ = ["SubmitSMDParameters", "FindOverlapXSSParameters"]
+__all__ = ["SubmitSMDParameters", "AnalyzeSmallDataXSSParameters"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -182,7 +182,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
     # getAutocorrParams: TemplateParameters = TemplateParameters({})
 
 
-class FindOverlapXSSParameters(TaskParameters):
+class AnalyzeSmallDataXSSParameters(TaskParameters):
     """TaskParameter model for FindOverlapXSS Task.
 
     This Task determines spatial or temporal overlap between an optical pulse
@@ -190,19 +190,30 @@ class FindOverlapXSSParameters(TaskParameters):
     uses SmallData HDF5 files as a source.
     """
 
-    class ExpConfig(BaseModel):
-        det_name: str
-        ipm_var: str
-        scan_var: Union[str, List[str]]
-
     class Thresholds(BaseModel):
-        min_Iscat: Union[int, float]
-        min_ipm: Union[int, float]
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
 
     class AnalysisFlags(BaseModel):
         use_pyfai: bool = True
         use_asymls: bool = False
 
-    exp_config: ExpConfig
-    thresholds: Thresholds
-    analysis_flags: AnalysisFlags
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xss_detname: Optional[str] = Field(
+        None, description="Name of the detector with scattering data."
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    # analysis_flags: AnalysisFlags

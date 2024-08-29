@@ -98,14 +98,15 @@ SubmitSMD:
   #    save_lineout: True
 
 
-
-# FindOverlapXSS Configuration
-FindOverlapXSS:
+AnalyzeSmallDataXSS:
   # Detector selection - if left as "", will attempt to find a default
-  exp_config:
-    det_name: "Rayonix" # Detector to azimuthally integrate
-    ipm_var: "ipm_dg2" # ipm to use for x-ray intensity filtering
-    scan_var: "lxt"    # Scanned motor to use for overlap finding
+  smd_path: "/sdf/data/lcls/ds/xcs/xcsx1010322/hdf5/smalldata/xcsx1010322_Run0008.h5"
+  xss_detname: "epix10k2M"
+  ipm_var: "ipm5/sum" # ipm to use for x-ray intensity filtering
+  scan_var:
+    - "lxt"
+    - "lens_v"
+    - "lens_h"
   # Thresholds used for data filtering
   thresholds:
     min_Iscat: 10      # Minimum integrated scattering intensity
