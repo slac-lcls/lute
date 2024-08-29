@@ -61,7 +61,7 @@ class AnalyzeSmallData(Task):
             self._smd_h5: h5py.File = h5py.File(self._task_parameters.smd_path, "r")
         except Exception:
             if self._mpi_rank == 0:
-                logger.debug(f"Failed to open file: {self._task_parameters.smd_path}!")
+                logger.error(f"Failed to open file: {self._task_parameters.smd_path}!")
             self._mpi_comm.Barrier()
             sys.exit(-1)
 
@@ -94,6 +94,7 @@ class AnalyzeSmallData(Task):
                     break
             else:
                 logger.error("No XSS detname provided and could not determine detname!")
+                sys.exit(-1)
         else:
             self._xss_detname = self._task_parameters.xss_detname
 
@@ -177,7 +178,7 @@ class AnalyzeSmallData(Task):
                 ]
                 self._scan_var_name = scan_var
             except KeyError as e:
-                logger.debug(f"Scan variable {scan_var} not found!")
+                logger.error(f"Scan variable {scan_var} not found!")
         elif isinstance(self._task_parameters.scan_var, list):
             for scan_var in self._task_parameters.scan_var:
                 try:
@@ -366,12 +367,10 @@ class AnalyzeSmallData(Task):
             total_filter (np.ndarray[np.bool]): A 1D boolean array with a shape
                 of (num_events) which can be used to index and filter a data array.
         """
-        logger.debug("XSS Analysis: aggregate_filters")
         filters: List[str] = [f.strip() for f in filter_vars.split(",")]
         total_filter: np.ndarray = np.ones([self._num_events], dtype=bool)
 
         for data_filter in filters:
-            logger.debug(f"Filter: {data_filter}")
             try:
                 total_filter &= self._filter_dict[data_filter]
             except KeyError as e:
@@ -426,7 +425,6 @@ class AnalyzeSmallData(Task):
             laser_on (np.ndarray[np.float64]): 2D laser on scattering profiles
                 of shape (n_events_las_on, q_bins)
         """
-        logger.debug("XSS Analysis: profiles_1d")
         profiles: np.ndarray[np.float64, np.float64] = np.nansum(self._az_int, axis=1)
         dark_mean: np.ndarray[np.float64] = self._calc_dark_mean(profiles)
         if len(np.unique(dark_mean)) > 1:
@@ -533,7 +531,6 @@ class AnalyzeSmallData(Task):
 
             res (np.ndarray[np.float64]): Covariances.
         """
-        logger.debug("XSS Analysis: fit_overlap")
         Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]
         max_pt: int = self._find_solvent_argmax(laser_on)
         try:
@@ -638,7 +635,6 @@ class AnalyzeSmallData(Task):
         """
         from scipy.signal import fftconvolve
 
-        logger.debug("XSS Analysis: convolution_fit")
         results: List[Tuple] = []
         max_pt: int = self._find_solvent_argmax(laser_on)
         raw_curve: np.ndarray = np.nan_to_num(diff[max_pt + 10])
@@ -736,7 +732,6 @@ class AnalyzeSmallData(Task):
         Returns:
             plot (plt.Figure): Plotted overlap fit.
         """
-        logger.debug("XSS Analysis: plot_overlap_fit")
         fig, ax = plt.subplots(1, 1, figsize=(6, 3), dpi=200)
         if self._scan_var_name is not None and "lxt" in self._scan_var_name:
             raw_curve: np.ndarray[np.float64]
@@ -799,7 +794,6 @@ class AnalyzeSmallData(Task):
         Returns:
             plot (pn.Tabs): All plots in separated tabs in a pn.Tabs object.
         """
-        logger.debug("XSS Analysis: plot_all")
         # avg_fig = self.plot_avg_xss()
         overlap_fig = self.plot_xss_overlap_fit(laser_on, bins, diff)
 
@@ -913,8 +907,8 @@ class AnalyzeSmallData(Task):
 
         Currently handles lxe_opa power titration and t0 (lxt_fast) XAS scans.
         """
-        if self.scan_var_name is None:
-            logger.info("Skipping scan plots - requested scan variables not found.")
+        if self._scan_var_name is None:
+            logger.error("Skipping scan plots - requested scan variables not found.")
             return None
         if "lxe_opa" in self._scan_var_name:
             return self.plot_xas_power_titration_scan()
@@ -1222,7 +1216,6 @@ class AnalyzeSmallData(Task):
                 MPI.DOUBLE,
             ],
         )
-        logger.debug("XSS Analysis: time_bins")
         scan_bins: np.ndarray[np.float64]
         if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
             scan_bins = np.histogram_bin_edges(np.unique(all_scan_values))
