@@ -183,11 +183,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
 
 class AnalyzeSmallDataXSSParameters(TaskParameters):
-    """TaskParameter model for FindOverlapXSS Task.
+    """TaskParameter model for AnalyzeSmallDataXSS Task.
 
-    This Task determines spatial or temporal overlap between an optical pulse
-    and the FEL pulse based on difference scattering (XSS) signal. This Task
-    uses SmallData HDF5 files as a source.
+    This Task does basic analysis of XSS data based on a SmallData HDF5 output
+    file. It calculates difference scattering and signal binned by various
+    scanned motors.
     """
 
     class Thresholds(BaseModel):
@@ -214,6 +214,48 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     scan_var: Optional[Union[List[str], str]] = Field(
         None,
         description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    # analysis_flags: AnalysisFlags
+
+class AnalyzeSmallDataXASParameters(TaskParameters):
+    """TaskParameter model for AnalyzeSmallDataXAS Task.
+
+    This Task does basic analysis of XSS data based on a SmallData HDF5 output
+    file. It calculates difference scattering and signal binned by various
+    scanned motors.
+    """
+
+    class Thresholds(BaseModel):
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
+
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xas_detname: Optional[str] = Field(
+        None, description="Name of the detector with absorption data."
+    )
+    xss_detname: Optional[str] = Field(
+        None, description="Name of the detector with scattering data, for normalization."
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
+    )
+    ccm: str = Field(
+        description="Name of the PV for CCM position readback."
+    )
+    ccm_set: Optional[str] = Field(
+        None,
+        description="Name of the PV for the setpoint of the CCM."
     )
     thresholds: Thresholds = Field(Thresholds())
     # analysis_flags: AnalysisFlags
