@@ -137,6 +137,21 @@ no_image_data (boolean) - Default: False
 [...]
 ```
 
+`lute_help` can also be used to retrieve a list of all currently available `Task`s.
+
+```bash
+> ./lute/utilities/lute_help -l
+INFO:__main__:Fetching Task list.
+Task List
+---------
+
+- CompareHKL
+	Parameters for CrystFEL's `compare_hkl` for calculating figures of merit.
+
+	There are many parameters, and many combinations. For more information on
+	usage, please refer to the CrystFEL documentation, here:
+```
+
 ## Running Managed `Task`s and Workflows (DAGs)
 After a YAML file has been filled in you can run a `Task`. There are multiple ways to submit a `Task`, but there are 3 that are most likely:
 
