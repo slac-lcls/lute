@@ -1451,22 +1451,28 @@
 
 
 <h1 id="integrating-a-new-task">Integrating a New <code>Task</code></h1>
-<p><code>Task</code>s can be broadly categorized into two types:
-- "First-party" - where the analysis or executed code is maintained within this library.
-- "Third-party" - where the analysis, code, or program is maintained elsewhere and is simply called by a wrapping <code>Task</code>.</p>
+<p><code>Task</code>s can be broadly categorized into two types:</p>
+<ul>
+<li>"First-party" - where the analysis or executed code is maintained within this library.</li>
+<li>"Third-party" - where the analysis, code, or program is maintained elsewhere and is simply called by a wrapping <code>Task</code>.</li>
+</ul>
 <p>Creating a new <code>Task</code> of either type generally involves the same steps, although for first-party <code>Task</code>s, the analysis code must of course also be written. Due to this difference, as well as additional considerations for parameter handling when dealing with "third-party" <code>Task</code>s, the "first-party" and "third-party" <code>Task</code> integration cases will be considered separately.</p>
 <h2 id="creating-a-third-party-task">Creating a "Third-party" <code>Task</code></h2>
-<p>There are two required steps for third-party <code>Task</code> integration, and one additional step which is optional, and may not be applicable to all possible third-party <code>Task</code>s. Generally, <code>Task</code> integration requires:
-1. Defining a <code>TaskParameters</code> (pydantic) model which fully parameterizes the <code>Task</code>. This involves specifying a path to a binary, and all the required command-line arguments to run the binary.
-2. Creating a <strong>managed <code>Task</code></strong> by specifying an <code>Executor</code> for the new third-party <code>Task</code>. At this stage, any additional environment variables can be added which are required for the execution environment.
-3. <strong>(Optional/Maybe applicable)</strong> Create a template for a third-party configuration file. If the new <code>Task</code> has its own configuration file, specifying a template will allow that file to be parameterized from the singular LUTE yaml configuration file. A couple of minor additions to the <code>pydantic</code> model specified in 1. are required to support template usage.</p>
+<p>There are two required steps for third-party <code>Task</code> integration, and one additional step which is optional, and may not be applicable to all possible third-party <code>Task</code>s. Generally, <code>Task</code> integration requires:</p>
+<ol>
+<li>Defining a <code>TaskParameters</code> (pydantic) model which fully parameterizes the <code>Task</code>. This involves specifying a path to a binary, and all the required command-line arguments to run the binary.</li>
+<li>Creating a <strong>managed <code>Task</code></strong> by specifying an <code>Executor</code> for the new third-party <code>Task</code>. At this stage, any additional environment variables can be added which are required for the execution environment.</li>
+<li><strong>(Optional/Maybe applicable)</strong> Create a template for a third-party configuration file. If the new <code>Task</code> has its own configuration file, specifying a template will allow that file to be parameterized from the singular LUTE yaml configuration file. A couple of minor additions to the <code>pydantic</code> model specified in 1. are required to support template usage.</li>
+</ol>
 <p>Each of these stages will be discussed in detail below. The vast majority of the work is completed in step 1.</p>
 <h3 id="specifying-a-taskparameters-model-for-your-task">Specifying a <code>TaskParameters</code> Model for your <code>Task</code></h3>
 <p>A brief overview of parameters objects will be provided below. The following information goes into detail only about specifics related to LUTE configuration. An in depth description of pydantic is beyond the scope of this tutorial; please refer to the <a href="https://docs.pydantic.dev/1.10/">official documentation</a> for more information. Please note that due to environment constraints pydantic is currently pinned to version 1.10! Make sure to read the appropriate documentation for this version as many things are different compared to the newer releases. At the end this document there will be an example highlighting some supported behaviour as well as a FAQ to address some common integration considerations.</p>
 <p><strong><code>Task</code>s and <code>TaskParameter</code>s</strong></p>
-<p>All <code>Task</code>s have a corresponding <code>TaskParameters</code> object. These objects are linked <strong>exclusively</strong> by a named relationship. For a <code>Task</code> named <code>MyThirdPartyTask</code>, the parameters object <strong>must</strong> be named <code>MyThirdPartyTaskParameters</code>. For third-party <code>Task</code>s there are a number of additional requirements:
-- The model must inherit from a base class called <code>ThirdPartyParameters</code>.
-- The model must have one field specified called <code>executable</code>. The presence of this field indicates that the <code>Task</code> is a third-party <code>Task</code> and the specified executable must be called. This allows all third-party <code>Task</code>s to be defined exclusively by their parameters model. A single <code>ThirdPartyTask</code> class handles execution of <strong>all</strong> third-party <code>Task</code>s.</p>
+<p>All <code>Task</code>s have a corresponding <code>TaskParameters</code> object. These objects are linked <strong>exclusively</strong> by a named relationship. For a <code>Task</code> named <code>MyThirdPartyTask</code>, the parameters object <strong>must</strong> be named <code>MyThirdPartyTaskParameters</code>. For third-party <code>Task</code>s there are a number of additional requirements:</p>
+<ul>
+<li>The model must inherit from a base class called <code>ThirdPartyParameters</code>.</li>
+<li>The model must have one field specified called <code>executable</code>. The presence of this field indicates that the <code>Task</code> is a third-party <code>Task</code> and the specified executable must be called. This allows all third-party <code>Task</code>s to be defined exclusively by their parameters model. A single <code>ThirdPartyTask</code> class handles execution of <strong>all</strong> third-party <code>Task</code>s.</li>
+</ul>
 <p>All models are stored in <code>lute/io/models</code>. For any given <code>Task</code>, a new model can be added to an existing module contained in this directory or to a new module. If creating a new module, make sure to add an import statement to <code>lute.io.models.__init__</code>.</p>
 <p><strong>Defining <code>TaskParameter</code>s</strong></p>
 <p>When specifying parameters the default behaviour is to provide a one-to-one correspondance between the Python attribute specified in the parameter model, and the parameter specified on the command-line. Single-letter attributes are assumed to be passed using <code>-</code>, e.g. <code>n</code> will be passed as <code>-n</code> when the executable is launched. Longer attributes are passed using <code>--</code>, e.g. by default a model attribute named <code>my_arg</code> will be passed on the command-line as <code>--my_arg</code>. Positional arguments are specified using <code>p_argX</code> where <code>X</code> is a number. All parameters are passed in the order that they are specified in the model.</p>
@@ -1660,19 +1666,21 @@ In addition to the global configuration options there are a couple of ways to sp
         is_result=True,   # This means this parameter points to the result!
     )
 </code></pre>
-<p><strong>Additional Comments</strong>
-1. Model parameters of type <code>bool</code> are not passed with an argument and are only passed when <code>True</code>. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. <code>--debug</code>, <code>--test</code>, <code>--verbose</code>, etc.
-  - If you need to pass the literal words <code>"True"</code> or <code>"False"</code>, use a parameter of type <code>str</code>.
-2. You can use <code>pydantic</code> types to constrain parameters beyond the basic Python types. E.g. <code>conint</code> can be used to define lower and upper bounds for an integer. There are also types for common categories, positive/negative numbers, paths, URLs, IP addresses, etc.
-  - Even more custom behaviour can be achieved with <code>validator</code>s (see below).
-3. All <code>TaskParameters</code> objects and its subclasses have access to a <code>lute_config</code> parameter, which is of type <code>lute.io.models.base.AnalysisHeader</code>. This special parameter is ignored when constructing the call for a binary task, but it provides access to shared/common parameters between tasks. For example, the following parameters are available through the <code>lute_config</code> object, and may be of use when constructing validators. All fields can be accessed with <code>.</code> notation. E.g. <code>lute_config.experiment</code>.
-  - <code>title</code>: A user provided title/description of the analysis.
-  - <code>experiment</code>: The current experiment name
-  - <code>run</code>: The current acquisition run number
-  - <code>date</code>: The date of the experiment or the analysis.
-  - <code>lute_version</code>: The version of the software you are running.
-  - <code>task_timeout</code>: How long a <code>Task</code> can run before it is killed.
-  - <code>work_dir</code>: The main working directory for LUTE. Files and the database are created relative to this directory. This is separate from the <code>run_directory</code> config option. LUTE will write files to the work directory by default; however, the <code>Task</code> itself is run from <code>run_directory</code> if it is specified.</p>
+<p><strong>Additional Comments</strong></p>
+<ol>
+<li>Model parameters of type <code>bool</code> are not passed with an argument and are only passed when <code>True</code>. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. <code>--debug</code>, <code>--test</code>, <code>--verbose</code>, etc.</li>
+<li>If you need to pass the literal words <code>"True"</code> or <code>"False"</code>, use a parameter of type <code>str</code>.</li>
+<li>You can use <code>pydantic</code> types to constrain parameters beyond the basic Python types. E.g. <code>conint</code> can be used to define lower and upper bounds for an integer. There are also types for common categories, positive/negative numbers, paths, URLs, IP addresses, etc.</li>
+<li>Even more custom behaviour can be achieved with <code>validator</code>s (see below).</li>
+<li>All <code>TaskParameters</code> objects and its subclasses have access to a <code>lute_config</code> parameter, which is of type <code>lute.io.models.base.AnalysisHeader</code>. This special parameter is ignored when constructing the call for a binary task, but it provides access to shared/common parameters between tasks. For example, the following parameters are available through the <code>lute_config</code> object, and may be of use when constructing validators. All fields can be accessed with <code>.</code> notation. E.g. <code>lute_config.experiment</code>.</li>
+<li><code>title</code>: A user provided title/description of the analysis.</li>
+<li><code>experiment</code>: The current experiment name</li>
+<li><code>run</code>: The current acquisition run number</li>
+<li><code>date</code>: The date of the experiment or the analysis.</li>
+<li><code>lute_version</code>: The version of the software you are running.</li>
+<li><code>task_timeout</code>: How long a <code>Task</code> can run before it is killed.</li>
+<li><code>work_dir</code>: The main working directory for LUTE. Files and the database are created relative to this directory. This is separate from the <code>run_directory</code> config option. LUTE will write files to the work directory by default; however, the <code>Task</code> itself is run from <code>run_directory</code> if it is specified.</li>
+</ol>
 <p><strong>Validators</strong>
 Pydantic uses <code>validators</code> to determine whether a value for a specific field is appropriate. There are default validators for all the standard library types and the types specified within the pydantic package; however, it is straightforward to define custom ones as well. In the template code-snippet above we imported the <code>validator</code> decorator. To create our own validator we define a method (with any name) with the following prototype, and decorate it with the <code>validator</code> decorator:</p>
 <pre><code class="language-py">@validator(&quot;name_of_field_to_decorate&quot;)
@@ -1811,8 +1819,12 @@ class RunTask2Parameters(ThirdPartyParameters):
 <p>After a pydantic model has been created, the next required step is to define a <strong>managed <code>Task</code></strong>. In the context of this library, a <strong>managed <code>Task</code></strong> refers to the combination of an <code>Executor</code> and a <code>Task</code> to run. The <code>Executor</code> manages the process of <code>Task</code> submission and the execution environment, as well as performing any logging, eLog communication, etc. There are currently two types of <code>Executor</code> to choose from, <strong>but only one is applicable to third-party code.</strong> The second <code>Executor</code> is listed below for completeness only. If you need MPI see the note below.</p>
 <ol>
 <li><code>Executor</code>: This is the standard <code>Executor</code>. It should be used for third-party uses cases.</li>
-<li><code>MPIExecutor</code>: This performs all the same types of operations as the option above; however, it will submit your <code>Task</code> using MPI.</li>
-<li>The <code>MPIExecutor</code> will submit the <code>Task</code> using the number of available cores - 1. The number of cores is determined from the physical core/thread count on your local machine, or the number of cores allocated by SLURM when submitting on the batch nodes.</li>
+<li>
+<p><code>MPIExecutor</code>: This performs all the same types of operations as the option above; however, it will submit your <code>Task</code> using MPI.</p>
+</li>
+<li>
+<p>The <code>MPIExecutor</code> will submit the <code>Task</code> using the number of available cores - 1. The number of cores is determined from the physical core/thread count on your local machine, or the number of cores allocated by SLURM when submitting on the batch nodes.</p>
+</li>
 </ol>
 <p><strong>Using MPI with third-party <code>Task</code>s</strong></p>
 <p>As mentioned, you should setup a third-party <code>Task</code> to use the first type of <code>Executor</code>. If, however, your third-party <code>Task</code> uses MPI this may seem non-intuitive. When using the <code>MPIExecutor</code> LUTE code is submitted with MPI. This includes the code that performs signalling to the <code>Executor</code> and <code>exec</code>s the third-party code you are interested in running. While it is possible to set this code up to run with MPI, it is more challenging in the case of third-party <code>Task</code>s because there is no <code>Task</code> code to modify directly! The <code>MPIExecutor</code> is provided mostly for first-party code. This is not an issue, however, since the standard <code>Executor</code> is easily configured to run with MPI in the case of third-party code.</p>
@@ -1858,9 +1870,11 @@ Task2Runner.shell_source(&quot;/sdf/group/lcls/ds/tools/new_task_setup.sh&quot;)
 <p>Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the <code>Task</code>'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the <code>Task</code> implementer refer to the <a href="https://jinja.palletsprojects.com/en/3.1.x/">official Jinja documentation</a> for more information.</p>
 <p><strong>Note:</strong> By default templated parameters are <strong>NOT</strong> validated, i.e., type-checked. This default case is handled first below. If knowledgeable about appropriate typing for the template variables, further modification of the <code>TaskParameters</code> model is possible to include validation. This advanced use-case is described second.</p>
 <h4 id="non-validated-template-parameters">Non-validated template parameters</h4>
-<p>LUTE provides two additional base models which are used for template parsing in conjunction with the primary <code>Task</code> model. These are:
-- <code>TemplateParameters</code> objects which hold parameters which will be used to render a portion of a template.
-- <code>TemplateConfig</code> objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.</p>
+<p>LUTE provides two additional base models which are used for template parsing in conjunction with the primary <code>Task</code> model. These are:</p>
+<ul>
+<li><code>TemplateParameters</code> objects which hold parameters which will be used to render a portion of a template.</li>
+<li><code>TemplateConfig</code> objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.</li>
+</ul>
 <p><code>Task</code> models which inherit from the <code>ThirdPartyParameters</code> model, as all third-party <code>Task</code>s should, allow for extra arguments. LUTE will parse any extra arguments provided in the configuration YAML as <code>TemplateParameters</code> objects automatically, which means that they do not need to be explicitly added to the pydantic model (although they can be). As such the <strong>only</strong> requirement on the Python-side when adding template rendering functionality to the <code>Task</code> is the addition of one parameter - an instance of <code>TemplateConfig</code>. The instance <strong>MUST</strong> be called <code>lute_template_cfg</code>.</p>
 <pre><code class="language-py">from pydantic import Field, validator
 
@@ -2073,18 +2087,32 @@ class RunJsonUserParameters:
 4. Specify an <code>Executor</code></p>
 <h3 id="specifying-a-taskparameters-model-for-your-task_1">Specifying a <code>TaskParameters</code> Model for your <code>Task</code></h3>
 <p>Parameter models have a format that must be followed for "Third-Party" <code>Task</code>s, but "First-Party" <code>Task</code>s have a little more liberty in how parameters are dealt with, since the <code>Task</code> will do all the parsing itself.</p>
-<p>To create a model, the basic steps are:
-1. If necessary, create a new module (e.g. <code>new_task_category.py</code>) under <code>lute.io.models</code>, or find an appropriate pre-existing module in that directory.
-  - An <code>import</code> statement must be added to <code>lute.io.models._init_</code> if a new module is created, so it can be found.
-  - If defining the model in a pre-existing module, make sure to modify the <code>__all__</code> statement to include it.
-2. Create a new model that inherits from <code>TaskParameters</code>. You can look at <code>lute.models.io.tests.TestReadOutputParameters</code> for an example. <strong>The model must be named</strong> <code>&lt;YourTaskName&gt;Parameters</code>
-  - You should include <strong>all</strong> relevant parameters here, including input file, output file, and any potentially adjustable parameters. These parameters <strong>must</strong> be included even if there are some implicit dependencies between <code>Task</code>s and it would make sense for the parameter to be auto-populated based on some other output. Creating this dependency is done with validators (see step 3.). All parameters should be overridable, and all <code>Task</code>s should be fully-independently configurable, based solely on their model and the configuration YAML.
-  - To follow the preferred format, parameters should be defined as: <code>param_name: type = Field([default value], description="This parameter does X.")</code>
-3. Use validators to do more complex things for your parameters, including populating default values dynamically:
-  - E.g. create default values that depend on other parameters in the model - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/smd.py#L139">SubmitSMDParameters</a>.
-  - E.g. create default values that depend on other <code>Task</code>s by reading from the database - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75">TestReadOutputParameters</a>.
-4. The model will have access to some general configuration values by inheriting from <code>TaskParameters</code>. These parameters are all stored in <code>lute_config</code> which is an instance of <code>AnalysisHeader</code> (<a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42">defined here</a>).
-  - For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the <code>Task</code>.</p>
+<p>To create a model, the basic steps are:</p>
+<ol>
+<li>If necessary, create a new module (e.g. <code>new_task_category.py</code>) under <code>lute.io.models</code>, or find an appropriate pre-existing module in that directory.</li>
+<li>An <code>import</code> statement must be added to <code>lute.io.models._init_</code> if a new module is created, so it can be found.</li>
+<li>If defining the model in a pre-existing module, make sure to modify the <code>__all__</code> statement to include it.</li>
+<li>
+<p>Create a new model that inherits from <code>TaskParameters</code>. You can look at <code>lute.models.io.tests.TestReadOutputParameters</code> for an example. <strong>The model must be named</strong> <code>&lt;YourTaskName&gt;Parameters</code></p>
+</li>
+<li>
+<p>You should include <strong>all</strong> relevant parameters here, including input file, output file, and any potentially adjustable parameters. These parameters <strong>must</strong> be included even if there are some implicit dependencies between <code>Task</code>s and it would make sense for the parameter to be auto-populated based on some other output. Creating this dependency is done with validators (see step 3.). All parameters should be overridable, and all <code>Task</code>s should be fully-independently configurable, based solely on their model and the configuration YAML.</p>
+</li>
+<li>To follow the preferred format, parameters should be defined as: <code>param_name: type = Field([default value], description="This parameter does X.")</code></li>
+<li>
+<p>Use validators to do more complex things for your parameters, including populating default values dynamically:</p>
+</li>
+<li>
+<p>E.g. create default values that depend on other parameters in the model - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/smd.py#L139">SubmitSMDParameters</a>.</p>
+</li>
+<li>E.g. create default values that depend on other <code>Task</code>s by reading from the database - see for example: <a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75">TestReadOutputParameters</a>.</li>
+<li>
+<p>The model will have access to some general configuration values by inheriting from <code>TaskParameters</code>. These parameters are all stored in <code>lute_config</code> which is an instance of <code>AnalysisHeader</code> (<a href="https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42">defined here</a>).</p>
+</li>
+<li>
+<p>For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the <code>Task</code>.</p>
+</li>
+</ol>
 <p>A number of configuration options and <strong>Field</strong> attributes are also available for "First-Party" <code>Task</code> models. These are identical to those used for the <code>ThirdPartyTask</code>s, although there is a smaller selection. These options are reproduced below for convenience.</p>
 <p><strong>Config settings and options</strong>
 Under the class definition for <code>Config</code> in the model, we can modify global options for all the parameters. In addition, there are a number of configuration options related to specifying what the outputs/results from the associated <code>Task</code> are, and a number of options to modify runtime behaviour. Currently, the available configuration options are:</p>
