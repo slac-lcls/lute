@@ -714,26 +714,51 @@ class Executor(BaseExecutor):
         if self._analysis_desc.task_parameters is None:
             logger.debug("Please run Task before using this method!")
             return
+        new_payload: Optional[str]
         if isinstance(payload, ElogSummaryPlots):
-            # ElogSummaryPlots has figures and a display name
-            # display name also serves as a path.
-            expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
-            base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
-            full_path: str = f"{base_path}/{payload.display_name}"
-            if not os.path.isdir(full_path):
-                os.makedirs(full_path)
-
-            # Preferred plots are pn.Tabs objects which save directly as html
-            # Only supported plot type that has "save" method - do not want to
-            # import plot modules here to do type checks.
-            if hasattr(payload.figures, "save"):
-                payload.figures.save(f"{full_path}/report.html")
-            else:
-                ...
+            new_payload = self._process_elog_plot(payload)
+            if new_payload is not None:
+                self._analysis_desc.task_result.payload = new_payload
+        elif isinstance(payload, list) or isinstance(payload, tuple):
+            new_payload = ""
+            for item in payload:
+                if isinstance(item, ElogSummaryPlots):
+                    ret: Optional[str] = self._process_elog_plot(item)
+                    if ret is not None:
+                        new_payload = ";".join(filter(None, (new_payload, ret)))
+            if new_payload != "":
+                self._analysis_desc.task_result.payload = new_payload
         elif isinstance(payload, str):
             # May be a path to a file...
             schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
             # Should also check `impl_schemas` to determine what to do with path
+
+    def _process_elog_plot(self, plots: ElogSummaryPlots) -> Optional[str]:
+        """Process an ElogSummaryPlots
+
+        Args:
+            plots
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.debug("Please run Task before using this method!")
+            return
+        # ElogSummaryPlots has figures and a display name
+        # display name also serves as a path.
+        expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
+        base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
+        full_path: str = f"{base_path}/{plots.display_name}"
+        if not os.path.isdir(full_path):
+            os.makedirs(full_path)
+
+            # Preferred plots are pn.Tabs objects which save directly as html
+            # Only supported plot type that has "save" method - do not want to
+            # import plot modules here to do type checks.
+            if hasattr(plots.figures, "save"):
+                path: str = f"{full_path}/report.html"
+                plots.figures.save(path)
+                return path
+            else:
+                ...
 
     def _process_result_summary(self, summary: str) -> None: ...
 
