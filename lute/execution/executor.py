@@ -88,21 +88,21 @@ class BaseExecutor(ABC):
         signal.
         """
 
-        def no_pickle_mode(self: Self, msg: Message): ...
+        def no_pickle_mode(self: Self, msg: Message) -> None: ...
 
-        def task_started(self: Self, msg: Message): ...
+        def task_started(self: Self, msg: Message) -> None: ...
 
-        def task_failed(self: Self, msg: Message): ...
+        def task_failed(self: Self, msg: Message) -> None: ...
 
-        def task_stopped(self: Self, msg: Message): ...
+        def task_stopped(self: Self, msg: Message) -> None: ...
 
-        def task_done(self: Self, msg: Message): ...
+        def task_done(self: Self, msg: Message) -> None: ...
 
-        def task_cancelled(self: Self, msg: Message): ...
+        def task_cancelled(self: Self, msg: Message) -> None: ...
 
-        def task_result(self: Self, msg: Message): ...
+        def task_result(self: Self, msg: Message) -> None: ...
 
-        def task_log(self: Self, msg: Message): ...
+        def task_log(self: Self, msg: Message) -> bool: ...
 
     def __init__(
         self,
@@ -145,7 +145,9 @@ class BaseExecutor(ABC):
         )
         self._shell_source_script: Optional[str] = None
 
-    def add_hook(self, event: str, hook: Callable[[Self, Message], None]) -> None:
+    def add_hook(
+        self, event: str, hook: Callable[[Self, Message], Optional[bool]]
+    ) -> None:
         """Add a new hook.
 
         Each hook is a function called any time the Executor receives a signal
@@ -580,7 +582,7 @@ class Executor(BaseExecutor):
     def add_default_hooks(self) -> None:
         """Populate the set of default event hooks."""
 
-        def no_pickle_mode(self: Executor, msg: Message):
+        def no_pickle_mode(self: Executor, msg: Message) -> None:
             for idx, communicator in enumerate(self._communicators):
                 if isinstance(communicator, PipeCommunicator):
                     self._communicators[idx] = PipeCommunicator(
@@ -589,7 +591,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message):
+        def task_started(self: Executor, msg: Message) -> None:
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
                 # Maybe just run this no matter what? Rely on the other guards?
@@ -610,7 +612,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message):
+        def task_failed(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "FAILED",
             }
@@ -618,7 +620,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message):
+        def task_stopped(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
             }
@@ -626,7 +628,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message):
+        def task_done(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
@@ -634,7 +636,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message):
+        def task_cancelled(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
@@ -642,7 +644,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_cancelled", task_cancelled)
 
-        def task_result(self: Executor, msg: Message):
+        def task_result(self: Executor, msg: Message) -> None:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
@@ -654,10 +656,12 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_result", task_result)
 
-        def task_log(self: Executor, msg: Message):
+        def task_log(self: Executor, msg: Message) -> bool:
             if isinstance(msg.contents, str):
                 # This should be log formatted already
                 print(msg.contents)
+                return True
+            return False
 
         self.add_hook("task_log", task_log)
 
@@ -667,6 +671,8 @@ class Executor(BaseExecutor):
         This function is run in the body of a loop until the Task signals
         that its finished.
         """
+        # Some hooks may ask that the rest of the task loop be skipped (continued)
+        should_continue: Optional[bool]
         for communicator in self._communicators:
             while True:
                 msg: Message = communicator.read(proc)
@@ -674,7 +680,9 @@ class Executor(BaseExecutor):
                     hook: Callable[[Executor, Message], None] = getattr(
                         self.Hooks, msg.signal.lower()
                     )
-                    hook(self, msg)
+                    should_continue = hook(self, msg)
+                    if should_continue:
+                        continue
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)

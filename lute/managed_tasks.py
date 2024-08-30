@@ -38,6 +38,9 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process XSS results from a Small Data HDF5 file."""
 
+SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
+"""Process XSS results from a Small Data HDF5 file."""
+
 # SFX
 #####
 CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")

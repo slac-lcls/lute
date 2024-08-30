@@ -25,23 +25,14 @@ from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
 from lute.execution.ipc import Message
-from lute.execution.logging import PipeCommunicatorHandler, STD_PYTHON_LOG_FORMAT
+from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
 from lute.tasks.task import *
 from lute.tasks.dataclasses import ElogSummaryPlots
 from lute.tasks.math import gaussian, sigma_to_fwhm
 
-logger: logging.Logger = logging.getLogger(__name__)
-handler: PipeCommunicatorHandler = PipeCommunicatorHandler()
-formatter: logging.Formatter = logging.Formatter(STD_PYTHON_LOG_FORMAT)
-handler.setFormatter(formatter)
-logger.handlers.clear()
-logger.addHandler(handler)
 
-if __debug__:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
+logger: logging.Logger = get_logger(__name__)
 
 
 class AnalyzeSmallData(Task):
@@ -65,8 +56,8 @@ class AnalyzeSmallData(Task):
             self._mpi_comm.Barrier()
             sys.exit(-1)
 
-        self._events_per_rank: np.ndarray[np.int]
-        self._start_indices_per_rank: np.ndarray[np.int]
+        self._events_per_rank: np.ndarray[np.int64]
+        self._start_indices_per_rank: np.ndarray[np.int64]
         if self._mpi_rank == 0:
             self._total_num_events: int = len(self._smd_h5["event_time"][()])
             quotient: int
@@ -78,11 +69,11 @@ class AnalyzeSmallData(Task):
                     for rank in range(self._mpi_size)
                 ]
             )
-            self._start_indices_per_rank = np.zeros(self._mpi_size, dtype=np.int)
+            self._start_indices_per_rank = np.zeros(self._mpi_size, dtype=np.int64)
             self._start_indices_per_rank[1:] = np.cumsum(self._events_per_rank[:-1])
         else:
-            self._events_per_rank = np.zeros(self._mpi_size, dtype=np.int)
-            self._start_indices_per_rank = np.zeros(self._mpi_size, dtype=np.int)
+            self._events_per_rank = np.zeros(self._mpi_size, dtype=np.int64)
+            self._start_indices_per_rank = np.zeros(self._mpi_size, dtype=np.int64)
         self._mpi_comm.Bcast(self._events_per_rank, root=0)
         self._mpi_comm.Bcast(self._start_indices_per_rank, root=0)
         self._xss_detname: str
@@ -407,73 +398,6 @@ class AnalyzeSmallData(Task):
             dark_mean = np.zeros([self._num_events])
         return dark_mean
 
-    def _calc_binned_difference_xss(
-        self,
-    ) -> Tuple[np.ndarray[np.float], np.ndarray[np.float64], np.ndarray[np.float64]]:
-        """Calculate the binned difference.
-
-        Calculates the 1D difference scattering for each bin of a scan variable.
-        Final difference shape is 2D: (q_bins, scan_bins). Also returns bins and
-        the laser on profiles.
-
-        Returns:
-            bins (np.ndarray[np.float64]): 1D array of scan bins used.
-
-            diff (np.ndarray[np.float64]): 2D binned difference scattering of shape
-                (q_bins, scan_bins)
-
-            laser_on (np.ndarray[np.float64]): 2D laser on scattering profiles
-                of shape (n_events_las_on, q_bins)
-        """
-        profiles: np.ndarray[np.float64, np.float64] = np.nansum(self._az_int, axis=1)
-        dark_mean: np.ndarray[np.float64] = self._calc_dark_mean(profiles)
-        if len(np.unique(dark_mean)) > 1:
-            # Can be len == 1 if all nan
-            profiles -= dark_mean
-        norm: np.ndarray[np.float64] = self._calc_norm_by_qrange()
-        profiles = (profiles.T / np.nanmean(norm, axis=-1).T).T
-        del dark_mean
-        del norm
-
-        filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
-        filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
-            filter_vars="xray on, laser off, ipm, total scattering"
-        )
-
-        bins: np.ndarray[np.float64] = self._calc_scan_bins()
-        binned_on: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
-        binned_off: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
-        scanvals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
-        scanvals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
-
-        idx: int
-        scan_bin: float
-        for idx, scan_bin in enumerate(bins):
-            if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
-                if idx == len(bins) - 1:
-                    continue
-                mask_on: np.ndarray[np.bool_] = (scanvals_las_on >= scan_bin) * (
-                    scanvals_las_on < bins[idx + 1]
-                )
-                mask_off: np.ndarray[np.bool_] = (scanvals_las_off >= scan_bin) * (
-                    scanvals_las_off < bins[idx + 1]
-                )
-                binned_on[:, idx] = np.nanmean(profiles[filter_las_on][mask_on], axis=0)
-                binned_off[:, idx] = np.nanmean(
-                    profiles[filter_las_off][mask_off], axis=0
-                )
-            else:
-                binned_on[:, idx] = np.nanmean(
-                    profiles[filter_las_on][(scanvals_las_on == scan_bin)], axis=0
-                )
-                binned_off[:, idx] = np.nanmean(
-                    profiles[filter_las_off][(scanvals_las_off == scan_bin)], axis=0
-                )
-        diff: np.ndarray[np.float64] = np.nan_to_num(binned_on) - np.nan_to_num(
-            binned_off
-        )
-        return bins, diff, profiles[filter_las_on]
-
     def _find_solvent_argmax(self, corrected_profile: np.ndarray) -> int:
         """Find the index of the solvent ring maximum.
 
@@ -486,7 +410,9 @@ class AnalyzeSmallData(Task):
         Returns:
             peak_idx (int): The index where the solvent maximum is located.
         """
-        res: Tuple[np.ndarray, Dict[str, np.ndarray]] = find_peaks(corrected_profile, 1)
+        res: Tuple[np.ndarray[np.int64], Dict[str, np.ndarray[np.float64]]] = (
+            find_peaks(corrected_profile, 1)
+        )
         try:
             peak_indices: np.ndarray = res[0]
             peak_heights: np.ndarray = res[1]["peak_heights"]
@@ -565,7 +491,7 @@ class AnalyzeSmallData(Task):
         return raw_curve, opt, res
 
     def _fit_convolution_fwhm(
-        self, trace: np.ndarray, bins: np.ndarray[np.float_]
+        self, trace: np.ndarray, bins: np.ndarray[np.float64]
     ) -> float:
         """Calculate the FWHM of a convolution signal.
 
@@ -610,7 +536,7 @@ class AnalyzeSmallData(Task):
         laser_on: np.ndarray[np.float64],
         bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
-    ) -> Tuple[np.ndarray, np.ndarray, int, float]:
+    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], int, float]:
         """Fits a time scan through convolution with Heaviside kernel.
 
         Args:
@@ -645,6 +571,308 @@ class AnalyzeSmallData(Task):
         center: int = trace.argmax()
         fwhm: float = self._fit_convolution_fwhm(trace, bins)
         return raw_curve, trace, center, fwhm
+
+    # XAS - Extraction and TR difference
+    ############################################################################
+    def _extract_xas(self, detname: str) -> None:
+        """Extract XAS specific data."""
+        self._xas_raw = self._smd_h5[f"{detname}/ROI_0_sum"][
+            self._start_idx : self._stop_idx
+        ]
+        self._ccm_E = self._smd_h5[self._task_parameters.ccm][
+            self._start_idx : self._stop_idx
+        ]
+        if self._task_parameters.ccm_set is not None:
+            try:
+                self._ccm_E_set_pt = self._smd_h5[self._task_parameters.ccm_set][
+                    self._start_idx : self._stop_idx
+                ]
+            except KeyError:
+                logger.error("No ccm_E_setpoint data. Will use fallback binning.")
+        self._element: Optional[str] = self._task_parameters.element
+
+    def _calc_binned_difference_xas(
+        self,
+    ) -> Tuple[
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+    ]:
+        filter_las_on: np.ndarray = self._aggregate_filters()
+        filter_las_off: np.ndarray = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+        norm: np.ndarray[np.float64] = self._calc_1d_water_norm()
+        if (norm < 0).any():
+            norm = self._xray_intensity
+        xas_norm: np.ndarray[np.float64] = self._xas_raw / norm
+
+        nbins: int
+        b_edges: np.ndarray[np.float64]
+        if self._ccm_E_set_pt is not None:
+            # nbins = len(self.ccm_E_set_pt)
+            nbins, b_edges = self._calc_ccm_bins_by_set_pt()
+        else:
+            nbins, b_edges = self._calc_ccm_bins_by_unique()
+
+        xas_laser_on: np.ndarray = np.zeros(nbins)
+        xas_laser_off: np.ndarray = np.zeros(nbins)
+        # bins are [lower, upper) except for last which is [lower, upper]
+        # _, b_edges = np.histogram(self.ccm_E_unique, bins=nbins)
+        bins: np.ndarray = np.zeros([nbins])
+        i: int = 0
+        while i < nbins:  # - win_size + 1
+            win = b_edges[i : i + 2]
+            bins[i] = win.mean()
+            i += 1
+
+        for i in range(nbins):
+            lower: int = b_edges[i]
+            upper: int = b_edges[i + 1]
+            # Prepare CCM_E bin
+            energy_filt: np.ndarray
+            if i == nbins - 1:
+                # upper edge inclusive bin
+                energy_filt = self._ccm_E <= upper
+            else:
+                energy_filt = self._ccm_E < upper
+            energy_filt &= self._ccm_E >= lower
+            full_filt_on = filter_las_on & energy_filt
+            full_filt_off = filter_las_off & energy_filt
+            xas_laser_on[i] = np.nanmean(xas_norm[full_filt_on])
+            xas_laser_off[i] = np.nanmean(xas_norm[full_filt_off])
+
+        return (
+            bins,
+            np.nan_to_num(xas_laser_on - xas_laser_off),
+            np.nan_to_num(xas_laser_on),
+            np.nan_to_num(xas_laser_off),
+        )
+
+    # Binning
+    ############################################################################
+    def _calc_ccm_bins_by_set_pt(self) -> np.ndarray[np.float64]:
+        """Caculate bin edges based on the provided CCM_E set points."""
+        if self._ccm_E_set_pt is not None:
+            all_set_pts: np.ndarray[np.float64] = np.zeros(
+                np.sum(self._events_per_rank), dtype=np.float64
+            )
+            self._mpi_comm.Allgatherv(
+                self._ccm_E_set_pt,
+                [
+                    all_set_pts,
+                    self._events_per_rank,
+                    self._start_indices_per_rank,
+                    MPI.DOUBLE,
+                ],
+            )
+            bin_centers: np.ndarray[np.float64] = np.sort(np.unique(all_set_pts))
+            nbins: int = len(bin_centers)
+        else:
+            raise RuntimeError("Set points not provided/not found!")
+
+        edges: np.ndarray[np.float64] = np.empty(nbins + 1)
+        edges[1:-1] = (bin_centers[1:] + bin_centers[:-1]) / 2
+        # How to handle the ends?
+        # Lower bin inclusive, upper not (except last)
+        edges[0] = np.min(bin_centers)
+        edges[-1] = np.max(bin_centers)
+
+        return nbins, edges
+
+    def _calc_ccm_bins_by_unique(self, nbins: int = 50) -> np.ndarray[np.float64]:
+        """Calculate bin edges based on unique CCM_E recorded values.
+
+        Args:
+            nbins (int): Number of bins to create. 50-100 is empirically useful.
+
+        Returns:
+            nbins (int): Number of bins.
+
+            b_edges (np.ndarray[np.float64]): Bin edges.
+        """
+        all_ccm_values: np.ndarray[np.float64] = np.zeros(
+            np.sum(self._events_per_rank), dtype=np.float64
+        )
+        self._mpi_comm.Allgatherv(
+            self._ccm_E,
+            [
+                all_ccm_values,
+                self._events_per_rank,
+                self._start_indices_per_rank,
+                MPI.DOUBLE,
+            ],
+        )
+        unique: np.ndarray[np.float64] = np.unique(all_ccm_values)
+        del all_ccm_values
+        nbins = np.min([nbins, len(unique)])
+        b_edges = np.histogram_bin_edges(unique, bins=nbins)
+        return nbins, b_edges
+
+    def _calc_scan_bins(self, nbins: int = 51) -> np.ndarray[np.float64]:
+        """Calculate a set of scan bins.
+
+        Returns:
+            scan_bins (np.ndarray[np.float64]): 1D set of scan bins.
+        """
+        # Create a full set of scan values
+        all_scan_values: np.ndarray[np.float64] = np.zeros(
+            np.sum(self._events_per_rank), dtype=np.float64
+        )
+        self._mpi_comm.Allgatherv(
+            self._scan_values,
+            [
+                all_scan_values,
+                self._events_per_rank,
+                self._start_indices_per_rank,
+                MPI.DOUBLE,
+            ],
+        )
+        scan_bins: np.ndarray[np.float64]
+        if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
+            scan_bins = np.histogram_bin_edges(np.unique(all_scan_values))
+        else:
+            scan_bins = np.unique(all_scan_values)
+        return scan_bins
+
+    # Differences by scan
+    ############################################################################
+
+    def _calc_scan_binned_difference_xss(
+        self,
+    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]:
+        """Calculate the binned difference.
+
+        Calculates the 1D difference scattering for each bin of a scan variable.
+        Final difference shape is 2D: (q_bins, scan_bins). Also returns bins and
+        the laser on profiles.
+
+        Returns:
+            bins (np.ndarray[np.float64]): 1D array of scan bins used.
+
+            diff (np.ndarray[np.float64]): 2D binned difference scattering of shape
+                (q_bins, scan_bins)
+
+            laser_on (np.ndarray[np.float64]): 2D laser on scattering profiles
+                of shape (n_events_las_on, q_bins)
+        """
+        profiles: np.ndarray[np.float64, np.float64] = np.nansum(self._az_int, axis=1)
+        dark_mean: np.ndarray[np.float64] = self._calc_dark_mean(profiles)
+        if len(np.unique(dark_mean)) > 1:
+            # Can be len == 1 if all nan
+            profiles -= dark_mean
+        norm: np.ndarray[np.float64] = self._calc_norm_by_qrange()
+        profiles = (profiles.T / np.nanmean(norm, axis=-1).T).T
+        del dark_mean
+        del norm
+
+        filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
+        filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+
+        bins: np.ndarray[np.float64] = self._calc_scan_bins()
+        binned_on: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
+        binned_off: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
+        scanvals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
+        scanvals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
+
+        idx: int
+        scan_bin: float
+        for idx, scan_bin in enumerate(bins):
+            if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
+                if idx == len(bins) - 1:
+                    continue
+                mask_on: np.ndarray[np.bool_] = (scanvals_las_on >= scan_bin) * (
+                    scanvals_las_on < bins[idx + 1]
+                )
+                mask_off: np.ndarray[np.bool_] = (scanvals_las_off >= scan_bin) * (
+                    scanvals_las_off < bins[idx + 1]
+                )
+                binned_on[:, idx] = np.nanmean(profiles[filter_las_on][mask_on], axis=0)
+                binned_off[:, idx] = np.nanmean(
+                    profiles[filter_las_off][mask_off], axis=0
+                )
+            else:
+                binned_on[:, idx] = np.nanmean(
+                    profiles[filter_las_on][(scanvals_las_on == scan_bin)], axis=0
+                )
+                binned_off[:, idx] = np.nanmean(
+                    profiles[filter_las_off][(scanvals_las_off == scan_bin)], axis=0
+                )
+        diff: np.ndarray[np.float64] = np.nan_to_num(binned_on) - np.nan_to_num(
+            binned_off
+        )
+        return bins, diff, profiles[filter_las_on]
+
+    def _calc_scan_binned_difference_xas(
+        self,
+    ) -> Tuple[
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+    ]:
+        """Calculate the binned difference.
+
+        Calculates the difference absorption for each bin of a scan variable.
+        Final difference shape is 1D: (scan_bins)
+
+        Returns:
+            bins (np.ndarray[np.float64]): 1D array of scan bins used.
+
+            diff (np.ndarray[np.float64]): 1D difference absorption.
+
+            laser_off (np.ndarray[np.float64]): 1D laser on absorption.
+
+            laser_off (np.ndarray[np.float64]): 1D laser off absorption.
+        """
+        filter_las_on: np.ndarray = self._aggregate_filters()
+        filter_las_off: np.ndarray = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+        norm: np.ndarray[np.float64] = self._xray_intensity
+        normed_xas: np.ndarray[np.float64] = self._xas_raw / norm
+        normed_xas_las_on: np.ndarray[np.float64] = normed_xas[filter_las_on]
+        normed_xas_las_off: np.ndarray[np.float64] = normed_xas[filter_las_off]
+
+        scan_vals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
+        scan_vals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
+        bins: np.ndarray[np.float64] = self._calc_scan_bins()
+
+        lxt_fast_scan: bool = (
+            self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
+        )
+        if lxt_fast_scan:
+            binned_xas_las_on: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
+            binned_xas_las_off: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
+        else:
+            binned_xas_las_on: np.ndarray[np.float64] = np.zeros(len(bins))
+            binned_xas_las_off: np.ndarray[np.float64] = np.zeros(len(bins))
+
+        for idx, bin_or_bin_edge in enumerate(bins):
+            if lxt_fast_scan:
+                if idx == len(bins) - 1:
+                    continue
+                mask_on: np.ndarray[np.float64] = (
+                    scan_vals_las_on >= bin_or_bin_edge
+                ) * (scan_vals_las_on < bins[idx + 1])
+                mask_off: np.ndarray[np.float64] = (
+                    scan_vals_las_off >= bin_or_bin_edge
+                ) * (scan_vals_las_off < bins[idx + 1])
+                binned_xas_las_on[idx] = np.mean(normed_xas_las_on[mask_on])
+                binned_xas_las_off[idx] = np.mean(normed_xas_las_off[mask_off])
+            else:
+                binned_xas_las_on[idx] = np.mean(
+                    normed_xas_las_on[scan_vals_las_on == bin_or_bin_edge]
+                )
+                binned_xas_las_off[idx] = np.mean(
+                    normed_xas_las_off[scan_vals_las_off == bin_or_bin_edge]
+                )
+
+        diff: np.ndarray[np.float64] = binned_xas_las_on - binned_xas_las_off
+        return bins, diff, binned_xas_las_on, binned_xas_las_off
 
     # Plots
     ############################################################################
@@ -902,7 +1130,13 @@ class AnalyzeSmallData(Task):
         grid[2:4, :2] = diff_plot
         return grid
 
-    def plot_xas_scan_hv(self) -> Optional[pn.Tabs]:
+    def plot_xas_scan_hv(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> Optional[pn.Tabs]:
         """Plot scan data.
 
         Currently handles lxe_opa power titration and t0 (lxt_fast) XAS scans.
@@ -911,33 +1145,39 @@ class AnalyzeSmallData(Task):
             logger.error("Skipping scan plots - requested scan variables not found.")
             return None
         if "lxe_opa" in self._scan_var_name:
-            return self.plot_xas_power_titration_scan()
+            return self.plot_xas_power_titration_scan(
+                laser_on, laser_off, scan_bins, diff
+            )
         elif "lxt_fast" in self._scan_var_name:
-            return self.plot_xas_lxt_fast_scan()
+            return self.plot_xas_lxt_fast_scan(laser_on, laser_off, scan_bins, diff)
 
-    def plot_xas_lxt_fast_scan(self) -> pn.Tabs:
+    def plot_xas_lxt_fast_scan(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> pn.Tabs:
         """Produce a plot of an lxt_fast scan for time zero."""
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt_fast", "lxt_fast"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
             ("Normalized A", "Normalized A")
         )
 
-        bin_centers: np.ndarray[np.float_] = (
-            self.lxt_fast_bin_edges[:-1] + self.lxt_fast_bin_edges[1:]
-        ) / 2
+        bin_centers: np.ndarray[np.float64] = (scan_bins[:-1] + scan_bins[1:]) / 2
 
         on_pts: hv.Points = hv.Points(
-            (bin_centers, on), kdims=[xdim, ydim], label="Laser on"
+            (bin_centers, laser_on), kdims=[xdim, ydim], label="Laser on"
         ).opts(size=5, color="blue")
-        on_curve: hv.Curve = hv.Curve((bin_centers, on), kdims=[xdim, ydim]).opts(
+        on_curve: hv.Curve = hv.Curve((bin_centers, laser_on), kdims=[xdim, ydim]).opts(
             color="blue"
         )
         off_pts: hv.Points = hv.Points(
-            (bin_centers, off), kdims=[xdim, ydim], label="Laser off"
+            (bin_centers, laser_off), kdims=[xdim, ydim], label="Laser off"
         ).opts(size=5, color="orange")
-        off_curve: hv.Curve = hv.Curve((bin_centers, off), kdims=[xdim, ydim]).opts(
-            color="orange"
-        )
+        off_curve: hv.Curve = hv.Curve(
+            (bin_centers, laser_off), kdims=[xdim, ydim]
+        ).opts(color="orange")
         xas_plots: hv.Overlay = on_pts * on_curve * off_pts * off_curve
 
         ydim = hv.Dimension(("diff A", "diff A"))
@@ -957,40 +1197,42 @@ class AnalyzeSmallData(Task):
         tabs: pn.Tabs = pn.Tabs(grid)
         return tabs
 
-    def plot_xas_power_titration_scan(self) -> pn.Tabs:
+    def plot_xas_power_titration_scan(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> pn.Tabs:
         """Produce a plot of the lxe_opa power titration."""
-        on: np.ndarray[np.float_]
-        off: np.ndarray[np.float_]
-        diff: np.ndarray[np.float_]
-        on, off, diff = self.power_titration_binned_xas
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxe_opa", "lxe_opa"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
             ("Normalized A", "Normalized A")
         )
 
         on_pts: hv.Points = hv.Points(
-            (self.power_titration_bins, on), kdims=[xdim, ydim], label="Laser on"
+            (scan_bins, laser_on), kdims=[xdim, ydim], label="Laser on"
         ).opts(size=5, color="blue")
-        on_curve: hv.Curve = hv.Curve(
-            (self.power_titration_bins, on), kdims=[xdim, ydim]
-        ).opts(color="blue")
+        on_curve: hv.Curve = hv.Curve((scan_bins, laser_on), kdims=[xdim, ydim]).opts(
+            color="blue"
+        )
         off_pts: hv.Points = hv.Points(
-            (self.power_titration_bins, off), kdims=[xdim, ydim], label="Laser off"
+            (scan_bins, laser_off), kdims=[xdim, ydim], label="Laser off"
         ).opts(size=5, color="orange")
-        off_curve: hv.Curve = hv.Curve(
-            (self.power_titration_bins, off), kdims=[xdim, ydim]
-        ).opts(color="orange")
+        off_curve: hv.Curve = hv.Curve((scan_bins, laser_off), kdims=[xdim, ydim]).opts(
+            color="orange"
+        )
         xas_plots: hv.Overlay = on_pts * on_curve * off_pts * off_curve
 
         ydim = hv.Dimension(("diff A", "diff A"))
         diff_pts: hv.Points = hv.Points(
-            (self.power_titration_bins, diff),
+            (scan_bins, diff),
             kdims=[xdim, ydim],
             label="Laser on - Laser off",
         ).opts(size=5, color="green")
-        diff_curve: hv.Curve = hv.Curve(
-            (self.power_titration_bins, diff), kdims=[xdim, ydim]
-        ).opts(color="green")
+        diff_curve: hv.Curve = hv.Curve((scan_bins, diff), kdims=[xdim, ydim]).opts(
+            color="green"
+        )
         diff_plot: hv.Overlay = diff_pts * diff_curve
 
         grid: pn.GridSpec = pn.GridSpec(name="Power Titration")
@@ -998,227 +1240,3 @@ class AnalyzeSmallData(Task):
         grid[:2, 2:4] = diff_plot.opts(axiswise=True, shared_axes=False)
         tabs: pn.Tabs = pn.Tabs(grid)
         return tabs
-
-    # XAS
-    ############################################################################
-    def _extract_xas(self, detname: str) -> None:
-        """Extract XAS specific data."""
-        self._xas_raw = self._smd_h5[f"{detname}/ROI_0_sum"][
-            self._start_idx : self._stop_idx
-        ]
-        self._ccm_E = self._smd_h5[self._task_parameters.ccm][
-            self._start_idx : self._stop_idx
-        ]
-        if self._task_parameters.ccm_set is not None:
-            try:
-                self._ccm_E_set_pt = self._smd_h5[self._task_parameters.ccm_set][
-                    self._start_idx : self._stop_idx
-                ]
-            except KeyError:
-                logger.error("No ccm_E_setpoint data. Will use fallback binning.")
-        self._element: Optional[str] = self._task_parameters.element
-
-    def _calc_binned_difference_xas(
-        self,
-    ) -> Tuple[np.ndarray[np.float], np.ndarray[np.float64], np.ndarray[np.float64]]:
-        filter_las_on: np.ndarray = self._aggregate_filters()
-        filter_las_off: np.ndarray = self._aggregate_filters(
-            filter_vars="xray on, laser off, ipm, total scattering"
-        )
-        norm: np.ndarray[np.float_] = self._calc_1d_water_norm()
-        if (norm < 0).any():
-            norm = self._xray_intensity
-        xas_norm: np.ndarray[np.float_] = self._xas_raw / norm
-
-        nbins: int
-        b_edges: np.ndarray[np.float_]
-        if self._ccm_E_set_pt is not None:
-            # nbins = len(self.ccm_E_set_pt)
-            nbins, b_edges = self._calc_ccm_bins_by_set_pt()
-        else:
-            nbins, b_edges = self._calc_ccm_bins_by_unique()
-
-        xas_laser_on: np.ndarray = np.zeros(nbins)
-        xas_laser_off: np.ndarray = np.zeros(nbins)
-        # bins are [lower, upper) except for last which is [lower, upper]
-        # _, b_edges = np.histogram(self.ccm_E_unique, bins=nbins)
-        bins: np.ndarray = np.zeros([nbins])
-        i: int = 0
-        while i < nbins:  # - win_size + 1
-            win = b_edges[i : i + 2]
-            bins[i] = win.mean()
-            i += 1
-
-        for i in range(nbins):
-            lower: int = b_edges[i]
-            upper: int = b_edges[i + 1]
-            # Prepare CCM_E bin
-            energy_filt: np.ndarray
-            if i == nbins - 1:
-                # upper edge inclusive bin
-                energy_filt = self._ccm_E <= upper
-            else:
-                energy_filt = self._ccm_E < upper
-            energy_filt &= self._ccm_E >= lower
-            full_filt_on = filter_las_on & energy_filt
-            full_filt_off = filter_las_off & energy_filt
-            xas_laser_on[i] = np.nanmean(xas_norm[full_filt_on])
-            xas_laser_off[i] = np.nanmean(xas_norm[full_filt_off])
-
-        return (
-            bins,
-            np.nan_to_num(xas_laser_on),
-            np.nan_to_num(xas_laser_off),
-            np.nan_to_num(xas_laser_on - xas_laser_off),
-        )
-
-    def _calc_power_titration_binned_xas(
-        self,
-    ) -> Tuple[np.ndarray[np.float_], np.ndarray[np.float_], np.ndarray[np.float_]]:
-        filter_las_on: np.ndarray = self._aggregate_filters()
-        filter_las_off: np.ndarray = self._aggregate_filters(
-            filter_vars="xray on, laser off, ipm, total scattering"
-        )
-        norm: np.ndarray[np.float_] = self._xray_intensity
-        normed_xas: np.ndarray[np.float_] = self._xas_raw / norm
-        normed_xas_las_on: np.ndarray[np.float_] = normed_xas[filter_las_on]
-        normed_xas_las_off: np.ndarray[np.float_] = normed_xas[filter_las_off]
-
-        scan_vals_las_on: np.ndarray[np.float_] = self._scan_values[filter_las_on]
-        scan_vals_las_off: np.ndarray[np.float_] = self._scan_values[filter_las_off]
-        bins: np.ndarray[np.float64] = self._calc_power_titration_bins()
-        binned_xas_las_on: np.ndarray[np.float_] = np.zeros(len(bins))
-        binned_xas_las_off: np.ndarray[np.float_] = np.zeros(len(bins))
-
-        for idx, scan_bin in enumerate(bins):
-            binned_xas_las_on[idx] = np.mean(
-                normed_xas_las_on[scan_vals_las_on == scan_bin]
-            )
-            binned_xas_las_off[idx] = np.mean(
-                normed_xas_las_off[scan_vals_las_off == scan_bin]
-            )
-
-        diff: np.ndarray[np.float_] = binned_xas_las_on - binned_xas_las_off
-        return (binned_xas_las_on, binned_xas_las_off, diff)
-
-    def _calc_t0_binned_xas(
-        self,
-    ) -> Tuple[np.ndarray[np.float_], np.ndarray[np.float_], np.ndarray[np.float_]]:
-        filter_las_on: np.ndarray = self.aggregate_filters()
-        filter_las_off: np.ndarray = self.aggregate_filters(
-            filter_vars="xray on, laser off, ipm, total scattering"
-        )
-        norm: np.ndarray[np.float_] = self.xray_intensity
-        normed_xas: np.ndarray[np.float_] = self.xas_raw / norm
-        normed_xas_las_on: np.ndarray[np.float_] = normed_xas[filter_las_on]
-        normed_xas_las_off: np.ndarray[np.float_] = normed_xas[filter_las_off]
-
-        scan_vals_las_on: np.ndarray[np.float_] = self.scan_values[filter_las_on]
-        scan_vals_las_off: np.ndarray[np.float_] = self.scan_values[filter_las_off]
-        binned_xas_las_on: np.ndarray[np.float_] = np.zeros(
-            len(self.lxt_fast_bin_edges) - 1
-        )
-        binned_xas_las_off: np.ndarray[np.float_] = np.zeros(
-            len(self.lxt_fast_bin_edges) - 1
-        )
-
-        for idx, scan_bin_edge in enumerate(self.lxt_fast_bin_edges):
-            if idx == len(self.lxt_fast_bin_edges) - 1:
-                continue
-            mask_on: np.ndarray[np.float_] = (scan_vals_las_on >= scan_bin_edge) * (
-                scan_vals_las_on < self.lxt_fast_bin_edges[idx + 1]
-            )
-            mask_off: np.ndarray[np.float_] = (scan_vals_las_off >= scan_bin_edge) * (
-                scan_vals_las_off < self.lxt_fast_bin_edges[idx + 1]
-            )
-            binned_xas_las_on[idx] = np.mean(normed_xas_las_on[mask_on])
-            binned_xas_las_off[idx] = np.mean(normed_xas_las_off[mask_off])
-
-        diff: np.ndarray[np.float_] = binned_xas_las_on - binned_xas_las_off
-        return (binned_xas_las_on, binned_xas_las_off, diff)
-
-    # Binning
-    ############################################################################
-    def _calc_ccm_bins_by_set_pt(self) -> np.ndarray[np.float64]:
-        """Caculate bin edges based on the provided CCM_E set points."""
-        if self._ccm_E_set_pt is not None:
-            all_set_pts: np.ndarray[np.float64] = np.zeros(
-                np.sum(self._events_per_rank), dtype=np.float64
-            )
-            self._mpi_comm.Allgatherv(
-                self._ccm_E_set_pt,
-                [
-                    all_set_pts,
-                    self._events_per_rank,
-                    self._start_indices_per_rank,
-                    MPI.DOUBLE,
-                ],
-            )
-            bin_centers: np.ndarray[np.float64] = np.sort(np.unique(all_set_pts))
-            nbins: int = len(bin_centers)
-        else:
-            raise RuntimeError("Set points not provided/not found!")
-
-        edges: np.ndarray[np.float_] = np.empty(nbins + 1)
-        edges[1:-1] = (bin_centers[1:] + bin_centers[:-1]) / 2
-        # How to handle the ends?
-        # Lower bin inclusive, upper not (except last)
-        edges[0] = np.min(bin_centers)
-        edges[-1] = np.max(bin_centers)
-
-        return nbins, edges
-
-    def _calc_ccm_bins_by_unique(self, nbins: int = 50) -> np.ndarray[np.float64]:
-        """Calculate bin edges based on unique CCM_E recorded values.
-
-        Args:
-            nbins (int): Number of bins to create. 50-100 is empirically useful.
-
-        Returns:
-            nbins (int): Number of bins.
-
-            b_edges (np.ndarray[np.float64]): Bin edges.
-        """
-        all_ccm_values: np.ndarray[np.float64] = np.zeros(
-            np.sum(self._events_per_rank), dtype=np.float64
-        )
-        self._mpi_comm.Allgatherv(
-            self._ccm_E,
-            [
-                all_ccm_values,
-                self._events_per_rank,
-                self._start_indices_per_rank,
-                MPI.DOUBLE,
-            ],
-        )
-        unique: np.ndarray[np.float64] = np.unique(all_ccm_values)
-        del all_ccm_values
-        nbins = np.min([nbins, len(unique)])
-        b_edges = np.histogram_bin_edges(unique, bins=nbins)
-        return nbins, b_edges
-
-    def _calc_scan_bins(self, nbins: int = 51) -> np.ndarray[np.float64]:
-        """Calculate a set of scan bins.
-
-        Returns:
-            scan_bins (np.ndarray[np.float64]): 1D set of scan bins.
-        """
-        # Create a full set of scan values
-        all_scan_values: np.ndarray[np.float64] = np.zeros(
-            np.sum(self._events_per_rank), dtype=np.float64
-        )
-        self._mpi_comm.Allgatherv(
-            self._scan_values,
-            [
-                all_scan_values,
-                self._events_per_rank,
-                self._start_indices_per_rank,
-                MPI.DOUBLE,
-            ],
-        )
-        scan_bins: np.ndarray[np.float64]
-        if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
-            scan_bins = np.histogram_bin_edges(np.unique(all_scan_values))
-        else:
-            scan_bins = np.unique(all_scan_values)
-        return scan_bins

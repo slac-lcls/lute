@@ -9,7 +9,11 @@ Classes:
         XSS difference signal.
 """
 
-__all__ = ["SubmitSMDParameters", "AnalyzeSmallDataXSSParameters"]
+__all__ = [
+    "SubmitSMDParameters",
+    "AnalyzeSmallDataXSSParameters",
+    "AnalyzeSmallDataXASParameters",
+]
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -257,4 +261,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         None, description="Name of the PV for the setpoint of the CCM."
     )
     thresholds: Thresholds = Field(Thresholds())
-    # analysis_flags: AnalysisFlags
+    element: Optional[bool] = Field(
+        None,
+        description="Element under investigation. Currently unused. For future EXAFS.",
+    )
