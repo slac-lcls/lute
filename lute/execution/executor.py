@@ -254,7 +254,7 @@ class BaseExecutor(ABC):
         new_environment: Dict[str, str] = {}
         for key, value in tmp_environment.items():
             # Make sure LUTE vars are available
-            if "LUTE_" in key:
+            if "LUTE_" in key or key in ("RUN", "EXPERIMENT"):
                 new_environment[key] = value
             else:
                 new_environment[f"LUTE_TENV_{key}"] = value
