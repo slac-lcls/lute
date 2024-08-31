@@ -1,0 +1,65 @@
+%YAML 1.3
+---
+title: "LUTE Task Configuration" # Include experiment description if desired
+#experiment: ""
+#run: "{{ $RUN }}"
+date: "2023/10/25"
+lute_version: 0.1      # Do not be change unless need to force older version
+task_timeout: 600
+work_dir: "/sdf/scratch/users/d/dorlhiac"
+...
+---
+AnalyzeSmallDataXSS:
+  #smd_path: ""             # Include to analyze ONE specified smalldata file
+  # Detector selection
+  xss_detname: "epix10k2M"  # Name of detector with scattering signal
+  ipm_var: "ipm5/sum"       # ipm PV to use for x-ray intensity filtering
+  # Motor scans to search for
+  scan_var:
+    - "lxt"
+    - "lens_v"
+    - "lens_h"
+  # Thresholds used for data filtering
+  thresholds:
+    min_Iscat: 10           # Minimum integrated scattering intensity
+    min_ipm: 500            # Minimum x-ray intensity at selected ipm
+
+AnalyzeSmallDataXAS:
+  #smd_path: ""
+  # Detector selection - scattering det used for normalization.
+  xas_detname: "epix_2"     # Name of detector with XAS signal
+  xss_detname: "epix10k2M"  # Name of detector with scattering signal
+  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  # Motor scans to search for
+  scan_var:
+    - "lxt"
+    - "lxe_opa"
+    - "lxt_fast"
+  ccm: "epics/ccm_E"
+  ccm_set: "epicsUser/ccm_E_setpoint"
+  # Thresholds used for data filtering
+  thresholds:
+    min_Iscat: 10           # Minimum integrated scattering intensity
+    min_ipm: 500            # Minimum x-ray intensity at selected ipm
+  #element: null       # For EXAFS -- currently unused
+
+AnalyzeSmallDataXES:
+  #smd_path: ""             # Include to analyze ONE specified smalldata file
+  # Detector selection - scattering det used for normalization.
+  xes_detname: "epix_2"     # Name of detector with XAS signal
+  xss_detname: "epix10k2M"  # Name of detector with scattering signal
+  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  # Motor scans to search for
+  scan_var:
+    - "lxt"
+    - "lxe_opa"
+    - "lxt_fast"
+  # Thresholds used for data filtering
+  thresholds:
+    min_Iscat: 10           # Minimum integrated scattering intensity
+    min_ipm: 1000           # Minimum x-ray intensity at selected ipm
+  # Optional settings.
+  #invert_xes_axes: false   # Switch projection axis for spectrum. Default projects along 1
+  #rot_angle: null          # If not null, rotate images by N degrees before projection
+  #batch_size: 0            # If not 0, load images in batches of N. Helps OOM.
+...
