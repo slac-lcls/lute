@@ -15,11 +15,12 @@ from __future__ import annotations
 __all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis", "ElogSummaryPlots"]
 __author__ = "Gabriel Dorlhiac"
 
+import io
 from typing import Any, List, Dict, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
 
-from ..io.models.base import TaskParameters
+from lute.io.models.base import TaskParameters
 
 
 class TaskStatus(Enum):
@@ -86,16 +87,38 @@ class TaskResult:
 class ElogSummaryPlots:
     """Holds a graphical summary intended for display in the eLog.
 
+    Converts figures to a byte stream of HTML data to be written out, so the
+    eLog can properly display them.
+
     Attributes:
         display_name (str): This represents both a path and how the result will be
             displayed in the eLog. Can include "/" characters. E.g.
             `display_name = "scans/my_motor_scan"` will have plots shown
             on a "my_motor_scan" page, under a "scans" tab. This format mirrors
             how the file is stored on disk as well.
+
+        figures (pn.Tabs, hv.Image, plt.Figure, bytes): The figures to be
+            displayed. Except panel/holoviews (bokeh backend) and matplotlib
+            plots as well as a raw series of bytes for the HTML file. Figures from
+            the plotting libraries will be converted to an HTML byte stream
+            automatically.
     """
 
     display_name: str
-    figures: Union[pn.Tabs, hv.Image, plt.Figure]
+    figures: Union[pn.Tabs, hv.Image, plt.Figure, bytes]
+
+    def __post_init__(self) -> None:
+        self._setup_figures()
+
+    def _setup_figures(self) -> None:
+        """Convert figures to an HTML file in a byte stream."""
+
+        if hasattr(self.figures, "save"):
+            f: io.BytesIO = io.BytesIO()
+            self.figures.save(f)
+            f.seek(0)
+            self.figures = f.read()
+            print(self.figures, flush=True)
 
 
 @dataclass

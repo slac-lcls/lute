@@ -373,6 +373,7 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
             self.Hooks.task_done(self, msg=Message())
+        self.process_results()
         self._store_configuration()
         for comm in self._communicators:
             comm.clear_communicator()
@@ -380,8 +381,6 @@ class BaseExecutor(ABC):
         if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
             logger.info("Exiting after Task failure. Result recorded.")
             sys.exit(-1)
-
-        self.process_results()
 
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
@@ -750,15 +749,11 @@ class Executor(BaseExecutor):
         if not os.path.isdir(full_path):
             os.makedirs(full_path)
 
-            # Preferred plots are pn.Tabs objects which save directly as html
-            # Only supported plot type that has "save" method - do not want to
-            # import plot modules here to do type checks.
-            if hasattr(plots.figures, "save"):
-                path: str = f"{full_path}/report.html"
-                plots.figures.save(path)
-                return path
-            else:
-                ...
+            path: str = f"{full_path}/report.html"
+            with open(f"{full_path}/report.html", "wb") as f:
+                f.write(plots.figures)
+
+            return path
 
     def _process_result_summary(self, summary: str) -> None: ...
 

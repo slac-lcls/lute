@@ -27,20 +27,21 @@ from mpi4py import MPI
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
-from lute.execution.ipc import Message
 from lute.io.models.base import TaskParameters
-from lute.tasks.task import *
 from lute.tasks.dataclasses import ElogSummaryPlots
-from lute.tasks.math import gaussian, sigma_to_fwhm
 from lute.tasks._smalldata import AnalyzeSmallData
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+def sum_diff(
+    diff0: np.ndarray[np.float64], diff1: np.ndarray[np.float64]
+) -> np.ndarray[np.float64]:
+    return diff0 + diff1
 
-if __debug__:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
+
+def laser_on_mean(
+    laser_on0: np.ndarray[np.float64], laser_on1: np.ndarray[np.float64]
+) -> np.ndarray[np.float64]:
+    return laser_on0.sum(axis=0) + laser_on1.sum(axis=0)
 
 
 class AnalyzeSmallDataXSS(AnalyzeSmallData):
@@ -59,16 +60,6 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
         bins: np.ndarray[np.float64]
         laser_on: np.ndarray[np.float64]
         bins, diff, laser_on = self._calc_scan_binned_difference_xss()
-
-        def sum_diff(
-            diff0: np.ndarray[np.float64], diff1: np.ndarray[np.float64]
-        ) -> np.ndarray[np.float64]:
-            return diff0 + diff1
-
-        def laser_on_mean(
-            laser_on0: np.ndarray[np.float64], laser_on1: np.ndarray[np.float64]
-        ) -> np.ndarray[np.float64]:
-            return laser_on0.sum(axis=0) + laser_on1.sum(axis=0)
 
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=sum_diff)
@@ -117,11 +108,6 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
         laser_off: np.ndarray[np.float64]
         ccm_bins, diff, laser_on, laser_off = self._calc_binned_difference_xas()
 
-        def sum_diff(
-            diff0: np.ndarray[np.float64], diff1: np.ndarray[np.float64]
-        ) -> np.ndarray[np.float64]:
-            return diff0 + diff1
-
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=MPI.SUM)
             laser_on = self._mpi_comm.reduce(laser_on, op=MPI.SUM)
@@ -141,7 +127,7 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             laser_off /= self._mpi_size
             plots: pn.Tabs = self.plot_all_xas(laser_on, laser_off, ccm_bins, diff)
             exp_run = f"{run:04d}_XAS"
-            plot_display_name = f"XAS_{exp_run}"
+            plot_display_name = f"XAS/{exp_run}"
             all_plots.append(ElogSummaryPlots(plot_display_name, plots))
 
         scan_bins: np.ndarray[np.float64]
