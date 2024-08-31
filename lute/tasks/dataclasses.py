@@ -118,7 +118,6 @@ class ElogSummaryPlots:
             self.figures.save(f)
             f.seek(0)
             self.figures = f.read()
-            print(self.figures, flush=True)
 
 
 @dataclass
