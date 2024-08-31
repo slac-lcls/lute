@@ -11,7 +11,7 @@ Classes:
         a SmallData file.
 """
 
-__all__ = ["AnalyzeSmallDataXSS", "AnalyzeSmallDataXAS"]
+__all__ = ["AnalyzeSmallDataXSS", "AnalyzeSmallDataXAS", "AnalyzeSmallDataXES"]
 __author__ = "Gabriel Dorlhiac"
 
 import sys
@@ -145,6 +145,74 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             plots: pn.Tabs = self.plot_xas_scan_hv(laser_on, laser_off, scan_bins, diff)
             name: str = self._scan_var_name if self._scan_var_name else "By_Event"
             exp_run = f"{run:04d}_{name}_XAS"
+            if "lens" in name:
+                plot_display_name = f"lens_scans/{exp_run}"
+            elif "lxe_opa" in name:
+                plot_display_name = f"power_scans/{exp_run}"
+            else:
+                plot_display_name = f"time_scans/{exp_run}"
+
+            all_plots.append(ElogSummaryPlots(plot_display_name, plots))
+        self._result.payload = all_plots
+
+    def _post_run(self) -> None: ...
+
+
+class AnalyzeSmallDataXES(AnalyzeSmallData):
+    """Task to analyze XES data stored in a SmallData HDF5 file."""
+
+    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+        super().__init__(params=params, use_mpi=use_mpi)
+
+    def _pre_run(self) -> None:
+        # Currently scattering data is extracted as standard since its used
+        # for all analysis types (XSS, XAS, XES,...)
+        self._extract_standard_data()
+        self._extract_xes(self._task_parameters.xes_detname)
+
+    def _run(self) -> None:
+        # XAS returns two sets of binned data
+        # Bins raw TR-XAS first, then bins by scan
+        diff: np.ndarray[np.float64]
+        laser_on: np.ndarray[np.float64]
+        laser_off: np.ndarray[np.float64]
+        diff, laser_on, laser_off = self._calc_avg_difference_xes()
+
+        if self._mpi_size > 1:
+            diff = self._mpi_comm.reduce(diff, op=MPI.SUM)
+            laser_on = self._mpi_comm.reduce(laser_on, op=MPI.SUM)
+            laser_off = self._mpi_comm.reduce(laser_off, op=MPI.SUM)
+
+        all_plots: List[ElogSummaryPlots] = []
+        run: int
+        try:
+            run = int(self._task_parameters.lute_config.run)
+        except ValueError:
+            run = 0
+        plot_display_name: str
+        exp_run: str
+        if self._mpi_rank == 0:
+            # Check None again
+            diff /= self._mpi_size
+            laser_on /= self._mpi_size
+            laser_off /= self._mpi_size
+            energy_bins: Optional[np.ndarray[np.float64]] = None
+            plots: pn.Tabs = self.plot_xes_hv(laser_on, laser_off, energy_bins, diff)
+            exp_run = f"{run:04d}_XES"
+            plot_display_name = f"XES/{exp_run}"
+            all_plots.append(ElogSummaryPlots(plot_display_name, plots))
+
+        scan_bins: np.ndarray[np.float64]
+        scan_bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xes()
+        if self._mpi_size > 1:
+            diff = self._mpi_comm.reduce(diff, op=MPI.SUM)
+            laser_on = self._mpi_comm.reduce(laser_on, op=MPI.SUM)
+            laser_off = self._mpi_comm.reduce(laser_off, op=MPI.SUM)
+
+        if self._mpi_rank == 0:
+            plots: pn.Tabs = self.plot_xes_scan_hv(laser_on, laser_off, scan_bins, diff)
+            name: str = self._scan_var_name if self._scan_var_name else "By_Event"
+            exp_run = f"{run:04d}_{name}_XES"
             if "lens" in name:
                 plot_display_name = f"lens_scans/{exp_run}"
             elif "lxe_opa" in name:

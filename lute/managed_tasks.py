@@ -36,10 +36,13 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a smalldata HDF5 file."""
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
-"""Process XSS results from a Small Data HDF5 file."""
+"""Process scattering results from a Small Data HDF5 file."""
 
 SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
-"""Process XSS results from a Small Data HDF5 file."""
+"""Process XAS results from a Small Data HDF5 file."""
+
+SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
+"""Process XES results from a Small Data HDF5 file."""
 
 # SFX
 #####

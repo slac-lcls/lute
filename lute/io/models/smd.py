@@ -13,6 +13,7 @@ __all__ = [
     "SubmitSMDParameters",
     "AnalyzeSmallDataXSSParameters",
     "AnalyzeSmallDataXASParameters",
+    "AnalyzeSmallDataXESParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -225,7 +226,10 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     )
     scan_var: Optional[Union[List[str], str]] = Field(
         None,
-        description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
     )
     thresholds: Thresholds = Field(Thresholds())
     # analysis_flags: AnalysisFlags
@@ -284,7 +288,10 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     )
     scan_var: Optional[Union[List[str], str]] = Field(
         None,
-        description="Name of a scan variable or a list of scan variables to analyze. E.g. lxt, lens_h, etc.",
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
     )
     ccm: str = Field(description="Name of the PV for CCM position readback.")
     ccm_set: Optional[str] = Field(
@@ -294,6 +301,82 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     element: Optional[bool] = Field(
         None,
         description="Element under investigation. Currently unused. For future EXAFS.",
+    )
+
+    @validator("smd_path", always=True)
+    def validate_producer_path(cls, smd_path: str, values: Dict[str, Any]) -> str:
+        if smd_path == "":
+            # Try from database first
+            hdf5_path: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "SubmitSMD", "result.payload"
+            )
+            if hdf5_path is not None:
+                return hdf5_path
+            else:
+                exp: str = values["lute_config"].experiment
+                run: str = str(values["lute_config"].run)
+                hutch: str = exp[:3]
+                hdf5_path: str = (
+                    f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata/{exp}_Run{run:04d}.h5"
+                )
+                if os.path.exists(hdf5_path):
+                    return hdf5_path
+                raise ValueError("No path provided for hdf5 and cannot auto-determine!")
+
+        return smd_path
+
+
+class AnalyzeSmallDataXESParameters(TaskParameters):
+    """TaskParameter model for AnalyzeSmallDataXES Task.
+
+    This Task does basic analysis of XES data based on a SmallData HDF5 output
+    file. It calculates difference emission and signal binned by various
+    scanned motors.
+    """
+
+    class Thresholds(BaseModel):
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
+
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xes_detname: Optional[str] = Field(
+        None, description="Name of the detector with absorption data."
+    )
+    xss_detname: Optional[str] = Field(
+        None,
+        description="Name of the detector with scattering data, for normalization.",
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    invert_xes_axes: bool = Field(
+        False,
+        description=(
+            "Flip the projection axes depending on detector orientation. "
+            "Default is that projection along axis 1 is spectrum."
+        ),
+    )
+    rot_angle: Optional[float] = Field(
+        None,
+        description="Optionally rotate the ROIs by a small amount before projection.",
+    )
+    batch_size: int = Field(
+        0,
+        description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
     )
 
     @validator("smd_path", always=True)

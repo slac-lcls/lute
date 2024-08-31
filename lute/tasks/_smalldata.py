@@ -110,41 +110,7 @@ class AnalyzeSmallData(Task):
 
     def _pre_run(self) -> None: ...
 
-    def _run(self) -> None:
-        diff: np.ndarray[np.float64]
-        bins: np.ndarray[np.float64]
-        bins, diff, laser_on = self._calc_binned_difference()
-
-        def sum_diff(
-            diff0: np.ndarray[np.float64], diff1: np.ndarray[np.float64]
-        ) -> np.ndarray[np.float64]:
-            return diff0 + diff1
-
-        def laser_on_mean(
-            laser_on0: np.ndarray[np.float64], laser_on1: np.ndarray[np.float64]
-        ) -> np.ndarray[np.float64]:
-            return laser_on0.sum(axis=0) + laser_on1.sum(axis=0)
-
-        if self._mpi_size > 1:
-            diff = self._mpi_comm.reduce(diff, op=sum_diff)
-            laser_on = self._mpi_comm.reduce(laser_on, op=laser_on_mean)
-        else:
-            laser_on = np.nansum(laser_on, axis=0)
-
-        if self._mpi_rank == 0:
-            diff /= self._mpi_size
-            laser_on /= self._total_num_events
-            name: str = self._scan_var_name if self._scan_var_name else "By_Event"
-            plots: pn.Tabs = self.plot_all(laser_on, bins, diff, name)
-            plot_display_name: str
-            run: int = int(self._task_parameters.lute_config.run)
-            exp_run: str = f"{run:04d}_{name}_XSS"
-            if "lens" in name:
-                plot_display_name = f"lens_scans/{exp_run}"
-            else:
-                plot_display_name = f"time_scans/{exp_run}"
-
-            self._result.payload = ElogSummaryPlots(plot_display_name, plots)
+    def _run(self) -> None: ...
 
     def _post_run(self) -> None: ...
 
@@ -653,6 +619,65 @@ class AnalyzeSmallData(Task):
             np.nan_to_num(xas_laser_off),
         )
 
+    # XES - Extraction and TR difference
+    ############################################################################
+    def _extract_xes(self, detname: str) -> None:
+        """Extract XAS specific data."""
+
+        # Lets assume they set up the ROI nicley?
+        # By xcsl1004821
+        # proj0 should be spatial distribution
+        # proj1 should be XES (unless invert == True)
+        spatial_axis: int
+        spectral_axis: int
+        if not self._task_parameters.invert_xes_axes:
+            spatial_axis = 0
+            spectral_axis = 1
+        else:
+            spatial_axis = 1
+            spectral_axis = 0
+
+        if self._task_parameters.batch_size:
+            # Read data in batches for OOM issues
+            ...
+        else:
+            xes_roi = self._smd_h5[f"{detname}/ROI_0_area"][
+                self._start_idx : self._stop_idx
+            ]
+            if self._task_parameters.rot_angle is not None:
+                from scipy.ndimage import rotate
+
+                xes_roi = rotate(
+                    xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)
+                )
+
+            spatial_dist: np.ndarray[np.float64] = np.nansum(xes_roi, axis=spatial_axis)
+            guess_idx: int = np.argmax(spatial_dist)
+            self._xes: np.ndarray[np.float64] = np.nansum(
+                xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis
+            )
+
+    def _calc_avg_difference_xes(
+        self,
+    ) -> Tuple[
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+    ]:
+        """Calculate the average difference XES."""
+
+        filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
+        filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+
+        xes_on: np.ndarray[np.float64] = self._xes[filter_las_on]
+        xes_off: np.ndarray[np.float64] = self._xes[filter_las_off]
+
+        diff: np.ndarray[np.float64] = xes_on - xes_off
+
+        return diff, xes_on, xes_off
+
     # Binning
     ############################################################################
     def _calc_ccm_bins_by_set_pt(self) -> np.ndarray[np.float64]:
@@ -684,7 +709,9 @@ class AnalyzeSmallData(Task):
 
         return nbins, edges
 
-    def _calc_ccm_bins_by_unique(self, nbins: int = 50) -> np.ndarray[np.float64]:
+    def _calc_ccm_bins_by_unique(
+        self, nbins: int = 50
+    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
         """Calculate bin edges based on unique CCM_E recorded values.
 
         Args:
@@ -745,7 +772,7 @@ class AnalyzeSmallData(Task):
     def _calc_scan_binned_difference_xss(
         self,
     ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]:
-        """Calculate the binned difference.
+        """Calculate the binned difference scattering.
 
         Calculates the 1D difference scattering for each bin of a scan variable.
         Final difference shape is 2D: (q_bins, scan_bins). Also returns bins and
@@ -817,7 +844,7 @@ class AnalyzeSmallData(Task):
         np.ndarray[np.float64],
         np.ndarray[np.float64],
     ]:
-        """Calculate the binned difference.
+        """Calculate the binned difference absorption.
 
         Calculates the difference absorption for each bin of a scan variable.
         Final difference shape is 1D: (scan_bins)
@@ -877,9 +904,83 @@ class AnalyzeSmallData(Task):
         diff: np.ndarray[np.float64] = binned_xas_las_on - binned_xas_las_off
         return bins, diff, binned_xas_las_on, binned_xas_las_off
 
+    def _calc_scan_binned_difference_xes(
+        self,
+    ) -> Tuple[
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+        np.ndarray[np.float64],
+    ]:
+        """Calculate the binned difference emission.
+
+        Calculates the difference emission for each bin of a scan variable.
+        Final difference shape is 2D: (pixels, scan_bins) where the pixel
+        axis is energy.
+
+        Returns:
+            bins (np.ndarray[np.float64]): 1D array of scan bins used.
+
+            diff (np.ndarray[np.float64]): 2D difference emission.
+
+            laser_off (np.ndarray[np.float64]): 2D laser on emission.
+
+            laser_off (np.ndarray[np.float64]): 2D laser off emission.
+        """
+        filter_las_on: np.ndarray = self._aggregate_filters()
+        filter_las_off: np.ndarray = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+        norm: np.ndarray[np.float64] = self._xray_intensity
+        normed_xes: np.ndarray[np.float64] = self._xes / norm
+        normed_xes_las_on: np.ndarray[np.float64] = normed_xes[filter_las_on]
+        normed_xes_las_off: np.ndarray[np.float64] = normed_xes[filter_las_off]
+
+        scan_vals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
+        scan_vals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
+        bins: np.ndarray[np.float64] = self._calc_scan_bins()
+
+        lxt_fast_scan: bool = (
+            self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
+        )
+        if lxt_fast_scan:
+            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
+            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
+        else:
+            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(
+                normed_xes_las_on.shape[0], len(bins)
+            )
+            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(
+                normed_xes_las_off.shape[0], len(bins)
+            )
+
+        for idx, bin_or_bin_edge in enumerate(bins):
+            if lxt_fast_scan:
+                if idx == len(bins) - 1:
+                    continue
+                mask_on: np.ndarray[np.float64] = (
+                    scan_vals_las_on >= bin_or_bin_edge
+                ) * (scan_vals_las_on < bins[idx + 1])
+                mask_off: np.ndarray[np.float64] = (
+                    scan_vals_las_off >= bin_or_bin_edge
+                ) * (scan_vals_las_off < bins[idx + 1])
+                binned_xes_las_on[idx] = np.mean(normed_xes_las_on[mask_on])
+                binned_xes_las_off[idx] = np.mean(normed_xes_las_off[mask_off])
+            else:
+                binned_xes_las_on[idx] = np.mean(
+                    normed_xes_las_on[scan_vals_las_on == bin_or_bin_edge]
+                )
+                binned_xes_las_off[idx] = np.mean(
+                    normed_xes_las_off[scan_vals_las_off == bin_or_bin_edge]
+                )
+
+        diff: np.ndarray[np.float64] = binned_xes_las_on - binned_xes_las_off
+        return bins, diff, binned_xes_las_on, binned_xes_las_off
+
     # Plots
     ############################################################################
 
+    # XSS
     def plot_avg_xss(
         self,
         laser_on: np.ndarray[np.float64],
@@ -1041,6 +1142,7 @@ class AnalyzeSmallData(Task):
 
         return tabbed_display
 
+    # XAS
     def plot_all_xas(
         self,
         laser_on: np.ndarray[np.float64],
@@ -1243,3 +1345,166 @@ class AnalyzeSmallData(Task):
         grid[:2, 2:4] = diff_plot.opts(axiswise=True, shared_axes=False)
         tabs: pn.Tabs = pn.Tabs(grid)
         return tabs
+
+    # XES
+    def plot_xes_hv(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        energy_bins: Optional[np.ndarray[np.float64]],
+        diff: np.ndarray[np.float64],
+    ) -> pn.Tabs:
+        """Plot XES and optionally additional tabs."""
+        std_xes_grid: pn.GridSpec = self.plot_std_xes_hv(
+            laser_on, laser_off, energy_bins, diff
+        )
+        tabs: pn.Tabs = pn.Tabs(std_xes_grid)
+
+        return tabs
+
+    def plot_std_xes_hv(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        energy_bins: Optional[np.ndarray[np.float64]],
+        diff: np.ndarray[np.float64],
+    ) -> pn.GridSpec:
+        """Plot XES and difference XES"""
+        xdim: hv.core.dimension.Dimension = hv.Dimension(("Energy", "Energy"))
+        ydim: hv.core.dimension.Dimension = hv.Dimension(("I", "I"))
+
+        bins: np.ndarray[Union[np.int64, np.float64]]
+        if energy_bins is None:
+            bins = np.arange(len(laser_on))
+        else:
+            # May be float, above is int
+            bins = energy_bins
+
+        on_pts: hv.Points = hv.Points(
+            (bins, laser_on), kdims=[xdim, ydim], label="Laser on"
+        ).opts(size=5, color="green")
+        on_curve: hv.Curve = hv.Curve((bins, laser_on), kdims=[xdim, ydim]).opts(
+            color="green"
+        )
+        off_pts: hv.Points = hv.Points(
+            (bins, laser_off), kdims=[xdim, ydim], label="Laser off"
+        ).opts(size=5, color="orange")
+        off_curve: hv.Curve = hv.Curve((bins, laser_off), kdims=[xdim, ydim]).opts(
+            color="orange"
+        )
+        xes_plots = on_pts * on_curve * off_pts * off_curve
+
+        ydim = hv.Dimension(("diff I", "dI"))
+
+        diff_pts: hv.Points = hv.Points((bins, diff), kdims=[xdim, ydim]).opts(size=5)
+        diff_curve: hv.Curve = hv.Curve((bins, diff), kdims=[xdim, ydim])
+        diff_plot: hv.Overlay = hv.Overlay([diff_pts, diff_curve])
+
+        grid: pn.GridSpec = pn.GridSpec(name="XES")
+        grid[:2, :2] = xes_plots
+        grid[2:4, :2] = diff_plot
+        return grid
+
+    def plot_xes_scan_hv(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> Optional[pn.Tabs]:
+        if self._scan_var_name is None:
+            logger.info("Skipping scan plots - requested scan variables not found.")
+            return None
+        if "lxt_fast" in self._scan_var_name:
+            return self.plot_xes_lxt_fast_scan()
+        elif "lxt" in self._scan_var_name:
+            return self.plot_xes_lxt_scan()
+
+    def plot_xes_lxt_fast_scan(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> pn.Tabs:
+        """Produce a plot of an lxt_fast scan for time zero."""
+        grid: pn.GridSpec = pn.GridSpec(name="Difference XES")
+        xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt_fast", "lxt_fast"))
+        ydim: hv.core.dimension.Dimension = hv.Dimension(
+            ("Energy (Pixel)", "Energy (Pixel)")
+        )
+
+        bin_centers: np.ndarray[np.float_] = (scan_bins[:1] + scan_bins[1:]) / 2
+        diff_img: hv.Image = hv.Image(
+            (
+                bin_centers,
+                np.linspace(0, len(laser_on[0]) - 1, len(laser_on[0])),
+                diff.T,
+            ),
+            kdims=[xdim, ydim],
+        ).opts(shared_axes=False)
+        contours: hv.Contours = hv.operation.contours(diff_img, levels=5)
+        contours.opts(
+            hv.opts.Contours(cmap="fire", colorbar=True, tools=["hover"], width=325)
+        )
+        shared: hv.Overlay = diff_img + contours
+        shared.opts(shared_axes=False)
+        grid[:2, :2] = shared
+
+        xdim: hv.core.dimension.Dimension = hv.Dimension(
+            ("Energy (Pixel)", "Energy (Pixel)")
+        )
+        ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
+
+        diff_curves: hv.Curve = hv.Curve((range(len(diff[0])), diff[0]))
+        for idx, _ in enumerate(bin_centers):
+            if idx == 0:
+                continue
+            else:
+                diff_curves *= hv.Curve((range(len(diff[0])), diff[idx])).opts(
+                    xlabel=xdim.label, ylabel=ydim.label
+                )
+        grid[2:4, :] = diff_curves.opts(shared_axes=False)
+        return pn.Tabs(grid)
+
+    def plot_xes_lxt_scan(
+        self,
+        laser_on: np.ndarray[np.float64],
+        laser_off: np.ndarray[np.float64],
+        scan_bins: np.ndarray[np.float64],
+        diff: np.ndarray[np.float64],
+    ) -> pn.Tabs:
+        """Produce a plot of an lxt scan for time zero."""
+        grid: pn.GridSpec = pn.GridSpec(name="Difference XES")
+        xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt", "lxt"))
+        ydim: hv.core.dimension.Dimension = hv.Dimension(
+            ("Energy (Pixel)", "Energy (Pixel)")
+        )
+
+        diff_img: hv.Image = hv.Image(
+            (scan_bins, np.linspace(0, len(laser_on[0]) - 1, len(laser_on[0])), diff.T),
+            kdims=[xdim, ydim],
+        ).opts(shared_axes=False)
+        contours: hv.Contours = hv.operation.contours(diff_img, levels=5)
+        contours.opts(
+            hv.opts.Contours(cmap="fire", colorbar=True, tools=["hover"], width=325)
+        )
+        shared: hv.Overlay = diff_img + contours
+        shared.opts(shared_axes=False)
+        grid[:2, :2] = shared
+
+        xdim: hv.core.dimension.Dimension = hv.Dimension(
+            ("Energy (Pixel)", "Energy (Pixel)")
+        )
+        ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
+
+        diff_curves: hv.Curve = hv.Curve((range(len(diff[0])), diff[0]))
+        for idx, _ in enumerate(scan_bins):
+            if idx == 0:
+                continue
+            else:
+                diff_curves *= hv.Curve((range(len(diff[0])), diff[idx])).opts(
+                    xlabel=xdim.label, ylabel=ydim.label
+                )
+        grid[2:4, :] = diff_curves.opts(shared_axes=False)
+        return pn.Tabs(grid)

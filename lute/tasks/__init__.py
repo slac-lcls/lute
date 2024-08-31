@@ -76,6 +76,11 @@ def import_task(task_name: str) -> Type[Task]:
 
         return AnalyzeSmallDataXAS
 
+    if task_name == "AnalyzeSmallDataXES":
+        from .smalldata import AnalyzeSmallDataXES
+
+        return AnalyzeSmallDataXES
+
     if task_name == "TestMultiNodeCommunication":
         from .mpi_test import TestMultiNodeCommunication
 
