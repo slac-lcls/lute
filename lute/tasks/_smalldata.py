@@ -594,11 +594,22 @@ class AnalyzeSmallData(Task):
     def _calc_binned_difference_xas(
         self,
     ) -> Tuple[
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
+        Optional[np.ndarray[np.float64]],
+        Optional[np.ndarray[np.float64]],
+        Optional[np.ndarray[np.float64]],
+        Optional[np.ndarray[np.float64]],
     ]:
+        nbins: int
+        b_edges: np.ndarray[np.float64]
+        if self._ccm_E_set_pt is not None:
+            # nbins = len(self.ccm_E_set_pt)
+            nbins, b_edges = self._calc_ccm_bins_by_set_pt()
+        else:
+            nbins, b_edges = self._calc_ccm_bins_by_unique()
+
+        if nbins <= 2:
+            return None, None, None, None
+
         filter_las_on: np.ndarray = self._aggregate_filters()
         filter_las_off: np.ndarray = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
@@ -607,14 +618,6 @@ class AnalyzeSmallData(Task):
         if (norm < 0).any():
             norm = self._xray_intensity
         xas_norm: np.ndarray[np.float64] = self._xas_raw / norm
-
-        nbins: int
-        b_edges: np.ndarray[np.float64]
-        if self._ccm_E_set_pt is not None:
-            # nbins = len(self.ccm_E_set_pt)
-            nbins, b_edges = self._calc_ccm_bins_by_set_pt()
-        else:
-            nbins, b_edges = self._calc_ccm_bins_by_unique()
 
         xas_laser_on: np.ndarray = np.zeros(nbins)
         xas_laser_off: np.ndarray = np.zeros(nbins)

@@ -108,7 +108,10 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
         laser_off: np.ndarray[np.float64]
         ccm_bins, diff, laser_on, laser_off = self._calc_binned_difference_xas()
 
-        if self._mpi_size > 1:
+        # We check None on ccm_bins because the monochromator is not always
+        # scanned -> We return None if there aren't enough bins to be worth
+        # plotting
+        if self._mpi_size > 1 and ccm_bins is not None:
             diff = self._mpi_comm.reduce(diff, op=MPI.SUM)
             laser_on = self._mpi_comm.reduce(laser_on, op=MPI.SUM)
             laser_off = self._mpi_comm.reduce(laser_off, op=MPI.SUM)
@@ -121,7 +124,8 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             run = 0
         plot_display_name: str
         exp_run: str
-        if self._mpi_rank == 0:
+        if self._mpi_rank == 0 and ccm_bins is not None:
+            # Check None again
             diff /= self._mpi_size
             laser_on /= self._mpi_size
             laser_off /= self._mpi_size
