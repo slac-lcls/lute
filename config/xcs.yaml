@@ -52,7 +52,6 @@ AnalyzeSmallDataXES:
   # Motor scans to search for
   scan_var:
     - "lxt"
-    - "lxe_opa"
     - "lxt_fast"
   # Thresholds used for data filtering
   thresholds:

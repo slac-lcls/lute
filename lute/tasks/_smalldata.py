@@ -172,7 +172,8 @@ class AnalyzeSmallData(Task):
         provided as the scattering detector. If not, it will attempt to guess
         which detector to use. It will attempt to extract both the internal
         integration data and PyFAI integrated data (which have different
-        interfaces). If both are present, it will only extract PyFAI data.
+        interfaces). If both are present, it will only extract the internal
+        algorithm data.
         """
         detname: str = self._xss_detname
         try:
@@ -283,6 +284,7 @@ class AnalyzeSmallData(Task):
 
     def _calc_1d_water_norm(self) -> np.ndarray[np.float64]:
         """Calculate normalization factors by integrating the water ring.
+
         https://www.osti.gov/servlets/purl/1760438 says to use 1.5-3.5 A-1
         """
         # _ = self.find_solvent_argmax(self.scattering_laser_on_mean)
@@ -339,7 +341,7 @@ class AnalyzeSmallData(Task):
 
         return total_filter
 
-    def _calc_dark_mean(
+    def _calc_xss_dark_mean(
         self, profiles: np.ndarray[np.float64]
     ) -> np.ndarray[np.float64]:
         """Calculate the dark (X-ray off) mean of a set of XSS profiles.
@@ -541,7 +543,15 @@ class AnalyzeSmallData(Task):
     # XAS - Extraction and TR difference
     ############################################################################
     def _extract_xas(self, detname: str) -> None:
-        """Extract XAS specific data."""
+        """Extract XAS specific data.
+
+        Extracts the integrated sum of an ROI as well as an CCM position data.
+        Will search for both the readback value PV and, if present, the setpoint
+        PV.
+
+        Args:
+            detname (str): The detector name to extract data for.
+        """
         self._xas_raw = self._smd_h5[f"{detname}/ROI_0_sum"][
             self._start_idx : self._stop_idx
         ]
@@ -565,6 +575,24 @@ class AnalyzeSmallData(Task):
         Optional[np.ndarray[np.float64]],
         Optional[np.ndarray[np.float64]],
     ]:
+        """Calculate the binned difference absorption.
+
+        Calculates the 1D difference absorption for a set of CCM bins.
+        Final difference shape is 1D: (ccm_bins). Also returns bins and
+        the laser on/off profiles.
+
+        Returns:
+            bins (np.ndarray[np.float64]): 1D array of ccm bins used.
+
+            diff (np.ndarray[np.float64]): 1D binned difference absorption of shape
+                (ccm_bins)
+
+            laser_on (np.ndarray[np.float64]): 1D laser on absorption profiles
+                of shape (ccm_bins)
+
+            laser_off (np.ndarray[np.float64]): 1D laser off absorption profiles
+                of shape (ccm_bins)
+        """
         nbins: int
         b_edges: np.ndarray[np.float64]
         if self._ccm_E_set_pt is not None:
@@ -622,8 +650,21 @@ class AnalyzeSmallData(Task):
     # XES - Extraction and TR difference
     ############################################################################
     def _extract_xes(self, detname: str) -> None:
-        """Extract XAS specific data."""
+        """Extract XAS specific data.
 
+        Extracts individual ROIs and applys projections to extract the XES
+        spectra. Depending on input TaskParameters, it will optionally rotate
+        each ROI by some degrees prior to projection.
+
+        By default, this method will read all ROIs into memory simultaneously
+        and then project them. Alternatively, e.g. if encountering memory issues,
+        input parameters can be changed to switch to reading in batches. Set the
+        `batch_size` parameter to indicate the number of events to read into memory
+        at once.
+
+        Args:
+            detname (str): The detector name to extract data for.
+        """
         # Lets assume they set up the ROI nicley?
         # By xcsl1004821
         # proj0 should be spatial distribution
@@ -664,7 +705,23 @@ class AnalyzeSmallData(Task):
         np.ndarray[np.float64],
         np.ndarray[np.float64],
     ]:
-        """Calculate the average difference XES."""
+        """Calculate the average difference XES.
+
+        Calculates the 1D difference emission spectra in pixels.
+        Final difference shape is 1D: (pixels). Also returns the laser on/off
+        profiles. The number of pixels is determined by the projection axis after
+        image rotation if that is requested (see _extract_xes).
+
+        Returns:
+            diff (np.ndarray[np.float64]): 1D binned difference emission of shape
+                (pixels)
+
+            laser_on (np.ndarray[np.float64]): 1D laser on emission profiles
+                of shape (pixels)
+
+            laser_off (np.ndarray[np.float64]): 1D laser off emission profiles
+                of shape (pixels)
+        """
 
         filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
         filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
@@ -681,7 +738,11 @@ class AnalyzeSmallData(Task):
     # Binning
     ############################################################################
     def _calc_ccm_bins_by_set_pt(self) -> np.ndarray[np.float64]:
-        """Caculate bin edges based on the provided CCM_E set points."""
+        """Caculate bin edges based on the provided CCM_E set points.
+
+        Returns:
+            bins (np.ndarray[np.float64]): 1D array of ccm bins used.
+        """
         if self._ccm_E_set_pt is not None:
             all_set_pts: np.ndarray[np.float64] = np.zeros(
                 np.sum(self._events_per_rank), dtype=np.float64
@@ -743,6 +804,9 @@ class AnalyzeSmallData(Task):
     def _calc_scan_bins(self, nbins: int = 51) -> np.ndarray[np.float64]:
         """Calculate a set of scan bins.
 
+        Args:
+            nbins (int): Number of bins to create.
+
         Returns:
             scan_bins (np.ndarray[np.float64]): 1D set of scan bins.
         """
@@ -788,7 +852,7 @@ class AnalyzeSmallData(Task):
                 of shape (n_events_las_on, q_bins)
         """
         profiles: np.ndarray[np.float64, np.float64] = np.nansum(self._az_int, axis=1)
-        dark_mean: np.ndarray[np.float64] = self._calc_dark_mean(profiles)
+        dark_mean: np.ndarray[np.float64] = self._calc_xss_dark_mean(profiles)
         if len(np.unique(dark_mean)) > 1:
             # Can be len == 1 if all nan
             profiles -= dark_mean
@@ -1242,9 +1306,24 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> Optional[pn.Tabs]:
-        """Plot scan data.
+        """Plot scan binned XAS data.
 
         Currently handles lxe_opa power titration and t0 (lxt_fast) XAS scans.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                absorption spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                absorption spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference absorption.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
         """
         if self._scan_var_name is None:
             logger.error("Skipping scan plots - requested scan variables not found.")
@@ -1263,7 +1342,23 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> pn.Tabs:
-        """Produce a plot of an lxt_fast scan for time zero."""
+        """Produce a plot of an lxt_fast scan for time zero (or real signal).
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                absorption spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                absorption spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference absorption.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt_fast", "lxt_fast"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
             ("Normalized A", "Normalized A")
@@ -1309,7 +1404,23 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> pn.Tabs:
-        """Produce a plot of the lxe_opa power titration."""
+        """Produce a plot of the lxe_opa power titration.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                absorption spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                absorption spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference absorption.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxe_opa", "lxe_opa"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
             ("Normalized A", "Normalized A")
@@ -1354,7 +1465,24 @@ class AnalyzeSmallData(Task):
         energy_bins: Optional[np.ndarray[np.float64]],
         diff: np.ndarray[np.float64],
     ) -> pn.Tabs:
-        """Plot XES and optionally additional tabs."""
+        """Plot XES and difference XES. In the future will provide other plots.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                emission spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                emission spectrum.
+
+            energy_bins (Optional[np.ndarray[np.float64]]): 1D set of bins used
+                for the energy axis. If None, will just use pixels for that axis.
+
+            diff (np.ndarray[np.float64]): 1D difference emission.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
+
         std_xes_grid: pn.GridSpec = self.plot_std_xes_hv(
             laser_on, laser_off, energy_bins, diff
         )
@@ -1369,7 +1497,23 @@ class AnalyzeSmallData(Task):
         energy_bins: Optional[np.ndarray[np.float64]],
         diff: np.ndarray[np.float64],
     ) -> pn.GridSpec:
-        """Plot XES and difference XES"""
+        """Plot XES and difference XES.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                emission spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                emission spectrum.
+
+            energy_bins (Optional[np.ndarray[np.float64]]): 1D set of bins used
+                for the energy axis. If None, will just use pixels for that axis.
+
+            diff (np.ndarray[np.float64]): 1D difference emission.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
         xdim: hv.core.dimension.Dimension = hv.Dimension(("Energy", "Energy"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(("I", "I"))
 
@@ -1412,6 +1556,26 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> Optional[pn.Tabs]:
+        """Plot scan binned XES data.
+
+        Currently handles lxt and lxt_fast XES scans.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                emission spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                emission spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference emission.
+
+        Returns:
+            plot (Optional[pn.Tabs]): Plotted binned difference. Returns None if
+                the scan variable is unknown/unrecognized.
+        """
         if self._scan_var_name is None:
             logger.info("Skipping scan plots - requested scan variables not found.")
             return None
@@ -1427,7 +1591,23 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> pn.Tabs:
-        """Produce a plot of an lxt_fast scan for time zero."""
+        """Plot lxt_fast scan binned XES data.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                emission spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                emission spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference emission.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
         grid: pn.GridSpec = pn.GridSpec(name="Difference XES")
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt_fast", "lxt_fast"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
@@ -1474,7 +1654,23 @@ class AnalyzeSmallData(Task):
         scan_bins: np.ndarray[np.float64],
         diff: np.ndarray[np.float64],
     ) -> pn.Tabs:
-        """Produce a plot of an lxt scan for time zero."""
+        """Plot lxt scan binned XES data.
+
+        Args:
+            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+                emission spectrum.
+
+            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+                emission spectrum.
+
+            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (np.ndarray[np.float64]): 1D difference emission.
+
+        Returns:
+            plot (pn.Tabs): Plotted binned difference.
+        """
         grid: pn.GridSpec = pn.GridSpec(name="Difference XES")
         xdim: hv.core.dimension.Dimension = hv.Dimension(("lxt", "lxt"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(
