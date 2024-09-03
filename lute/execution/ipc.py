@@ -53,7 +53,7 @@ import _io
 from typing_extensions import Self
 
 
-USE_ZMQ: bool = False
+USE_ZMQ: bool = True
 if USE_ZMQ:
     import zmq
 

@@ -40,9 +40,7 @@ xas: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=2, task_id="SmallDataXASAnalyzer", dag=dag
 )
 
-xes: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=4, task_id="SmallDataXESAnalyzer", dag=dag
-)
+xes: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataXESAnalyzer", dag=dag)
 
 # Run summaries
 xss

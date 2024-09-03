@@ -680,9 +680,42 @@ class AnalyzeSmallData(Task):
             spatial_axis = 1
             spectral_axis = 0
 
+        self._xes: np.ndarray[np.float64]
         if self._task_parameters.batch_size:
             # Read data in batches for OOM issues
-            ...
+            size: int = self._task_parameters.batch_size
+
+            for start in range(self._start_idx, self._stop_idx, size):
+                end: int
+                if start + size > self._stop_idx:
+                    end = self._stop_idx
+                else:
+                    end = start + size
+                xes_roi = self._smd_h5[f"{detname}/ROI_0_area"][start:end]
+                if start == self._start_idx:
+                    self._xes = np.zeros(
+                        (self._num_events, xes_roi.shape[spatial_axis + 1])
+                    )
+                if self._task_parameters.rot_angle is not None:
+                    from scipy.ndimage import rotate
+
+                    xes_roi = rotate(
+                        xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)
+                    )
+                spatial_dist: np.ndarray[np.float64] = np.nansum(
+                    xes_roi, axis=(0, spatial_axis + 1)
+                )
+                guess_idx: int = np.argmax(spatial_dist)
+                if not self._task_parameters.invert_xes_axes:
+                    self._xes[start:end] = np.nansum(
+                        xes_roi[..., guess_idx - 5 : guess_idx + 5],
+                        axis=spectral_axis + 1,
+                    )
+                else:
+                    self._xes[start:end] = np.nansum(
+                        xes_roi[:, guess_idx - 5 : guess_idx + 5, :],
+                        axis=spectral_axis + 1,
+                    )
         else:
             xes_roi = self._smd_h5[f"{detname}/ROI_0_area"][
                 self._start_idx : self._stop_idx
@@ -698,9 +731,14 @@ class AnalyzeSmallData(Task):
                 xes_roi, axis=(0, spatial_axis + 1)
             )
             guess_idx: int = np.argmax(spatial_dist)
-            self._xes: np.ndarray[np.float64] = np.nansum(
-                xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis + 1
-            )
+            if not self._task_parameters.invert_xes_axes:
+                self._xes = np.nansum(
+                    xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis + 1
+                )
+            else:
+                self._xes = np.nansum(
+                    xes_roi[:, guess_idx - 5 : guess_idx + 5, :], axis=spectral_axis + 1
+                )
 
     def _calc_avg_difference_xes(
         self,
@@ -1055,7 +1093,9 @@ class AnalyzeSmallData(Task):
                     normed_xes_las_off[scan_vals_las_off == bin_or_bin_edge], axis=0
                 )
 
-        diff: np.ndarray[np.float64] = binned_xes_las_on - binned_xes_las_off
+        diff: np.ndarray[np.float64] = np.nan_to_num(binned_xes_las_on) - np.nan_to_num(
+            binned_xes_las_off
+        )
         return bins, diff, binned_xes_las_on, binned_xes_las_off
 
     # Plots
