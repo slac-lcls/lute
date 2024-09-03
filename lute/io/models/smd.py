@@ -32,6 +32,7 @@ from pydantic import (
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
 from lute.io.db import read_latest_db_entry
+from lute.io.models.validators import validate_smd_path
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
@@ -215,6 +216,8 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         use_pyfai: bool = True
         use_asymls: bool = False
 
+    _find_smd_path = validate_smd_path("smd_path")
+
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
     )
@@ -234,28 +237,6 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     thresholds: Thresholds = Field(Thresholds())
     # analysis_flags: AnalysisFlags
 
-    @validator("smd_path", always=True)
-    def validate_producer_path(cls, smd_path: str, values: Dict[str, Any]) -> str:
-        if smd_path == "":
-            # Try from database first
-            hdf5_path: Optional[str] = read_latest_db_entry(
-                f"{values['lute_config'].work_dir}", "SubmitSMD", "result.payload"
-            )
-            if hdf5_path is not None:
-                return hdf5_path
-            else:
-                exp: str = values["lute_config"].experiment
-                run: str = str(values["lute_config"].run)
-                hutch: str = exp[:3]
-                hdf5_path: str = (
-                    f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata/{exp}_Run{run:04d}.h5"
-                )
-                if os.path.exists(hdf5_path):
-                    return hdf5_path
-                raise ValueError("No path provided for hdf5 and cannot auto-determine!")
-
-        return smd_path
-
 
 class AnalyzeSmallDataXASParameters(TaskParameters):
     """TaskParameter model for AnalyzeSmallDataXAS Task.
@@ -272,6 +253,8 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         min_ipm: float = Field(
             1000.0, description="Minimum X-ray intensity to use for filtering."
         )
+
+    _find_smd_path = validate_smd_path("smd_path")
 
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
@@ -303,28 +286,6 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         description="Element under investigation. Currently unused. For future EXAFS.",
     )
 
-    @validator("smd_path", always=True)
-    def validate_producer_path(cls, smd_path: str, values: Dict[str, Any]) -> str:
-        if smd_path == "":
-            # Try from database first
-            hdf5_path: Optional[str] = read_latest_db_entry(
-                f"{values['lute_config'].work_dir}", "SubmitSMD", "result.payload"
-            )
-            if hdf5_path is not None:
-                return hdf5_path
-            else:
-                exp: str = values["lute_config"].experiment
-                run: str = str(values["lute_config"].run)
-                hutch: str = exp[:3]
-                hdf5_path: str = (
-                    f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata/{exp}_Run{run:04d}.h5"
-                )
-                if os.path.exists(hdf5_path):
-                    return hdf5_path
-                raise ValueError("No path provided for hdf5 and cannot auto-determine!")
-
-        return smd_path
-
 
 class AnalyzeSmallDataXESParameters(TaskParameters):
     """TaskParameter model for AnalyzeSmallDataXES Task.
@@ -341,6 +302,8 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
         min_ipm: float = Field(
             1000.0, description="Minimum X-ray intensity to use for filtering."
         )
+
+    _find_smd_path = validate_smd_path("smd_path")
 
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
@@ -378,25 +341,3 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
         0,
         description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
     )
-
-    @validator("smd_path", always=True)
-    def validate_producer_path(cls, smd_path: str, values: Dict[str, Any]) -> str:
-        if smd_path == "":
-            # Try from database first
-            hdf5_path: Optional[str] = read_latest_db_entry(
-                f"{values['lute_config'].work_dir}", "SubmitSMD", "result.payload"
-            )
-            if hdf5_path is not None:
-                return hdf5_path
-            else:
-                exp: str = values["lute_config"].experiment
-                run: str = str(values["lute_config"].run)
-                hutch: str = exp[:3]
-                hdf5_path: str = (
-                    f"/sdf/data/lcls/ds/{hutch}/{exp}/hdf5/smalldata/{exp}_Run{run:04d}.h5"
-                )
-                if os.path.exists(hdf5_path):
-                    return hdf5_path
-                raise ValueError("No path provided for hdf5 and cannot auto-determine!")
-
-        return smd_path
