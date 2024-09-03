@@ -643,7 +643,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_cancelled", task_cancelled)
 
-        def task_result(self: Executor, msg: Message) -> None:
+        def task_result(self: Executor, msg: Message) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
@@ -652,6 +652,8 @@ class Executor(BaseExecutor):
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
             post_elog_run_status(elog_data)
+
+            return True
 
         self.add_hook("task_result", task_result)
 
@@ -749,11 +751,11 @@ class Executor(BaseExecutor):
         if not os.path.isdir(full_path):
             os.makedirs(full_path)
 
-            path: str = f"{full_path}/report.html"
-            with open(f"{full_path}/report.html", "wb") as f:
-                f.write(plots.figures)
+        path: str = f"{full_path}/report.html"
+        with open(f"{full_path}/report.html", "wb") as f:
+            f.write(plots.figures)
 
-            return path
+        return path
 
     def _process_result_summary(self, summary: str) -> None: ...
 
