@@ -694,10 +694,12 @@ class AnalyzeSmallData(Task):
                     xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)
                 )
 
-            spatial_dist: np.ndarray[np.float64] = np.nansum(xes_roi, axis=spatial_axis)
+            spatial_dist: np.ndarray[np.float64] = np.nansum(
+                xes_roi, axis=(0, spatial_axis + 1)
+            )
             guess_idx: int = np.argmax(spatial_dist)
             self._xes: np.ndarray[np.float64] = np.nansum(
-                xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis
+                xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis + 1
             )
 
     def _calc_avg_difference_xes(
@@ -730,8 +732,8 @@ class AnalyzeSmallData(Task):
             filter_vars="xray on, laser off, ipm, total scattering"
         )
 
-        xes_on: np.ndarray[np.float64] = self._xes[filter_las_on]
-        xes_off: np.ndarray[np.float64] = self._xes[filter_las_off]
+        xes_on: np.ndarray[np.float64] = np.nanmean(self._xes[filter_las_on], axis=0)
+        xes_off: np.ndarray[np.float64] = np.nanmean(self._xes[filter_las_off], axis=0)
 
         diff: np.ndarray[np.float64] = xes_on - xes_off
 
@@ -1005,7 +1007,7 @@ class AnalyzeSmallData(Task):
             filter_vars="xray on, laser off, ipm, total scattering"
         )
         norm: np.ndarray[np.float64] = self._xray_intensity
-        normed_xes: np.ndarray[np.float64] = self._xes / norm
+        normed_xes: np.ndarray[np.float64] = (self._xes.T / norm).T
         normed_xes_las_on: np.ndarray[np.float64] = normed_xes[filter_las_on]
         normed_xes_las_off: np.ndarray[np.float64] = normed_xes[filter_las_off]
 
@@ -1017,14 +1019,18 @@ class AnalyzeSmallData(Task):
             self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
         )
         if lxt_fast_scan:
-            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
-            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
-        else:
             binned_xes_las_on: np.ndarray[np.float64] = np.zeros(
-                normed_xes_las_on.shape[0], len(bins)
+                (normed_xes_las_on.shape[1], len(bins) - 1)
             )
             binned_xes_las_off: np.ndarray[np.float64] = np.zeros(
-                normed_xes_las_off.shape[0], len(bins)
+                (normed_xes_las_off.shape[1], len(bins) - 1)
+            )
+        else:
+            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(
+                (normed_xes_las_on.shape[1], len(bins))
+            )
+            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(
+                (normed_xes_las_off.shape[1], len(bins))
             )
 
         for idx, bin_or_bin_edge in enumerate(bins):
@@ -1037,14 +1043,16 @@ class AnalyzeSmallData(Task):
                 mask_off: np.ndarray[np.float64] = (
                     scan_vals_las_off >= bin_or_bin_edge
                 ) * (scan_vals_las_off < bins[idx + 1])
-                binned_xes_las_on[idx] = np.mean(normed_xes_las_on[mask_on])
-                binned_xes_las_off[idx] = np.mean(normed_xes_las_off[mask_off])
-            else:
-                binned_xes_las_on[idx] = np.mean(
-                    normed_xes_las_on[scan_vals_las_on == bin_or_bin_edge]
+                binned_xes_las_on[:, idx] = np.mean(normed_xes_las_on[mask_on], axis=0)
+                binned_xes_las_off[:, idx] = np.mean(
+                    normed_xes_las_off[mask_off], axis=0
                 )
-                binned_xes_las_off[idx] = np.mean(
-                    normed_xes_las_off[scan_vals_las_off == bin_or_bin_edge]
+            else:
+                binned_xes_las_on[:, idx] = np.mean(
+                    normed_xes_las_on[scan_vals_las_on == bin_or_bin_edge], axis=0
+                )
+                binned_xes_las_off[:, idx] = np.mean(
+                    normed_xes_las_off[scan_vals_las_off == bin_or_bin_edge], axis=0
                 )
 
         diff: np.ndarray[np.float64] = binned_xes_las_on - binned_xes_las_off
@@ -1589,9 +1597,9 @@ class AnalyzeSmallData(Task):
             logger.info("Skipping scan plots - requested scan variables not found.")
             return None
         if "lxt_fast" in self._scan_var_name:
-            return self.plot_xes_lxt_fast_scan()
+            return self.plot_xes_lxt_fast_scan(laser_on, laser_off, scan_bins, diff)
         elif "lxt" in self._scan_var_name:
-            return self.plot_xes_lxt_scan()
+            return self.plot_xes_lxt_scan(laser_on, laser_off, scan_bins, diff)
 
     def plot_xes_lxt_fast_scan(
         self,
@@ -1627,8 +1635,8 @@ class AnalyzeSmallData(Task):
         diff_img: hv.Image = hv.Image(
             (
                 bin_centers,
-                np.linspace(0, len(laser_on[0]) - 1, len(laser_on[0])),
-                diff.T,
+                np.linspace(0, len(laser_on[:, 0]) - 1, len(laser_on[:, 0])),
+                diff,
             ),
             kdims=[xdim, ydim],
         ).opts(shared_axes=False)
@@ -1645,12 +1653,12 @@ class AnalyzeSmallData(Task):
         )
         ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
 
-        diff_curves: hv.Curve = hv.Curve((range(len(diff[0])), diff[0]))
+        diff_curves: hv.Curve = hv.Curve((range(len(diff[:, 0])), diff[:, 0]))
         for idx, _ in enumerate(bin_centers):
             if idx == 0:
                 continue
             else:
-                diff_curves *= hv.Curve((range(len(diff[0])), diff[idx])).opts(
+                diff_curves *= hv.Curve((range(len(diff[:, 0])), diff[:, idx])).opts(
                     xlabel=xdim.label, ylabel=ydim.label
                 )
         grid[2:4, :] = diff_curves.opts(shared_axes=False)
@@ -1687,7 +1695,11 @@ class AnalyzeSmallData(Task):
         )
 
         diff_img: hv.Image = hv.Image(
-            (scan_bins, np.linspace(0, len(laser_on[0]) - 1, len(laser_on[0])), diff.T),
+            (
+                scan_bins,
+                np.linspace(0, len(laser_on[:, 0]) - 1, len(laser_on[:, 0])),
+                diff,
+            ),
             kdims=[xdim, ydim],
         ).opts(shared_axes=False)
         contours: hv.Contours = hv.operation.contours(diff_img, levels=5)
@@ -1703,12 +1715,12 @@ class AnalyzeSmallData(Task):
         )
         ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
 
-        diff_curves: hv.Curve = hv.Curve((range(len(diff[0])), diff[0]))
+        diff_curves: hv.Curve = hv.Curve((range(len(diff[:, 0])), diff[:, 0]))
         for idx, _ in enumerate(scan_bins):
             if idx == 0:
                 continue
             else:
-                diff_curves *= hv.Curve((range(len(diff[0])), diff[idx])).opts(
+                diff_curves *= hv.Curve((range(len(diff[:, 0])), diff[:, idx])).opts(
                     xlabel=xdim.label, ylabel=ydim.label
                 )
         grid[2:4, :] = diff_curves.opts(shared_axes=False)
