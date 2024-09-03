@@ -102,10 +102,10 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
     def _run(self) -> None:
         # XAS returns two sets of binned data
         # Bins raw TR-XAS first, then bins by scan
-        diff: np.ndarray[np.float64]
-        ccm_bins: np.ndarray[np.float64]
-        laser_on: np.ndarray[np.float64]
-        laser_off: np.ndarray[np.float64]
+        diff: Optional[np.ndarray[np.float64]]
+        ccm_bins: Optional[np.ndarray[np.float64]]
+        laser_on: Optional[np.ndarray[np.float64]]
+        laser_off: Optional[np.ndarray[np.float64]]
         ccm_bins, diff, laser_on, laser_off = self._calc_binned_difference_xas()
 
         # We check None on ccm_bins because the monochromator is not always
@@ -134,14 +134,14 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             plot_display_name = f"XAS/{exp_run}"
             all_plots.append(ElogSummaryPlots(plot_display_name, plots))
 
-        scan_bins: np.ndarray[np.float64]
+        scan_bins: Optional[np.ndarray[np.float64]]
         scan_bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xas()
-        if self._mpi_size > 1:
+        if self._mpi_size > 1 and scan_bins is not None:
             diff = self._mpi_comm.reduce(diff, op=MPI.SUM)
             laser_on = self._mpi_comm.reduce(laser_on, op=MPI.SUM)
             laser_off = self._mpi_comm.reduce(laser_off, op=MPI.SUM)
 
-        if self._mpi_rank == 0:
+        if self._mpi_rank == 0 and scan_bins is not None:
             plots: pn.Tabs = self.plot_xas_scan_hv(laser_on, laser_off, scan_bins, diff)
             name: str = self._scan_var_name if self._scan_var_name else "By_Event"
             exp_run = f"{run:04d}_{name}_XAS"
@@ -171,8 +171,8 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
         self._extract_xes(self._task_parameters.xes_detname)
 
     def _run(self) -> None:
-        # XAS returns two sets of binned data
-        # Bins raw TR-XAS first, then bins by scan
+        # XES returns two sets of data
+        # Average TR-XES first, then bins by scan variable
         diff: np.ndarray[np.float64]
         laser_on: np.ndarray[np.float64]
         laser_off: np.ndarray[np.float64]
@@ -192,7 +192,6 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
         plot_display_name: str
         exp_run: str
         if self._mpi_rank == 0:
-            # Check None again
             diff /= self._mpi_size
             laser_on /= self._mpi_size
             laser_off /= self._mpi_size
