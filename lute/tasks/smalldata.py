@@ -9,6 +9,9 @@ Classes:
 
     AnalyzeSmallDataXAS(Task): Analyze absorption data for a single detector in
         a SmallData file.
+
+    AnalyzeSmallDataXES(Task): Analyze emission data for a single detector in
+        a SmallData file.
 """
 
 __all__ = ["AnalyzeSmallDataXSS", "AnalyzeSmallDataXAS", "AnalyzeSmallDataXES"]
