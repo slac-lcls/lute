@@ -695,7 +695,7 @@ class Executor(BaseExecutor):
 
         def no_pickle_mode(
             self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ):
+        ) -> None:
             for idx, communicator in enumerate(self._communicators):
                 if isinstance(communicator, PipeCommunicator):
                     self._communicators[idx] = PipeCommunicator(
@@ -704,7 +704,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message, proc: subprocess.Popen):
+        def task_started(self: Executor, msg: Message, proc: subprocess.Popen) -> None:
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
                 # Run "before" tasklets
@@ -729,7 +729,7 @@ class Executor(BaseExecutor):
 
         def task_failed(
             self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ):
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "FAILED",
             }
@@ -739,7 +739,7 @@ class Executor(BaseExecutor):
 
         def task_stopped(
             self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ):
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
             }
@@ -749,7 +749,7 @@ class Executor(BaseExecutor):
 
         def task_done(
             self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ):
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
@@ -759,7 +759,7 @@ class Executor(BaseExecutor):
 
         def task_cancelled(
             self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ):
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
