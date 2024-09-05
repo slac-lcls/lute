@@ -12,10 +12,11 @@ definition and how it is parsed and passed along.
 
 from datetime import datetime
 import os
-import uuid
+import time
 from typing import Optional, Any, Dict, List
 
 from airflow.decorators import dag, task, task_group
+from airflow.utils.trigger_rule import TriggerRule
 from airflow.models import Variable
 
 from lute.operators.jidoperators import JIDSlurmOperator
@@ -29,8 +30,6 @@ def create_links(
     op: Optional[JIDSlurmOperator] = None,
     task_list: List[JIDSlurmOperator] = [],
 ) -> JIDSlurmOperator:
-    print(wf_dict)
-    # return JIDSlurmOperator(task_id="BinaryTester", max_cores=5)
     slurm_params: str = wf_dict.get("slurm_params", "")
     new_op: JIDSlurmOperator = JIDSlurmOperator(
         task_id=wf_dict["task_name"], custom_slurm_params=slurm_params
@@ -42,7 +41,6 @@ def create_links(
         child_tasks: List[JIDSlurmOperator] = []
         for task in wf_dict["next"]:
             child_tasks.append(create_links(task, new_op, task_list))
-        # new_op.set_downstream(child_tasks)
         new_op >> child_tasks
         return new_op
 
@@ -52,9 +50,9 @@ def test_dynamic():
     @task
     def retrieve_workflow(**context):
         if "dag_run" in context:
-            print(context["dag_run"].conf["workflow"])
             wf: Dict[str, Any] = context["dag_run"].conf["workflow"]
             Variable.set(key="user_workflow", value=wf, serialize_json=True)
+            time.sleep(3)  # Make sure var gets set
             return wf
         return None
 
@@ -64,13 +62,14 @@ def test_dynamic():
             "user_workflow", default_var=None, deserialize_json=True
         )
         if wf_dict is not None:
-            print(wf_dict)
             task_list: List[JIDSlurmOperator] = []
             first_task: JIDSlurmOperator = create_links(wf_dict, task_list=task_list)
-        else:
-            tester: JIDSlurmOperator = JIDSlurmOperator(max_cores=2, task_id="Tester")
 
-    retrieve_workflow() >> user_workflow()
+    @task(trigger_rule=TriggerRule.ALL_DONE)
+    def delete_workflow(**context):
+        Variable.delete(key="user_workflow")
+
+    retrieve_workflow() >> user_workflow() >> delete_workflow()
 
 
 test_dynamic()

@@ -35,6 +35,15 @@ MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunicat
 SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a smalldata HDF5 file."""
 
+SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
+"""Process scattering results from a Small Data HDF5 file."""
+
+SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
+"""Process XAS results from a Small Data HDF5 file."""
+
+SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
+"""Process XES results from a Small Data HDF5 file."""
+
 # SFX
 #####
 CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
@@ -79,6 +88,3 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
-
-StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
-"""Concatenates results from crystallographic indexing of multiple runs."""

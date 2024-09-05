@@ -9,7 +9,12 @@ Classes:
         XSS difference signal.
 """
 
-__all__ = ["SubmitSMDParameters", "FindOverlapXSSParameters"]
+__all__ = [
+    "SubmitSMDParameters",
+    "AnalyzeSmallDataXSSParameters",
+    "AnalyzeSmallDataXASParameters",
+    "AnalyzeSmallDataXESParameters",
+]
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -25,7 +30,9 @@ from pydantic import (
     validator,
 )
 
-from .base import TaskParameters, ThirdPartyParameters, TemplateConfig
+from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
+from lute.io.db import read_latest_db_entry
+from lute.io.models.validators import validate_smd_path
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
@@ -144,7 +151,14 @@ class SubmitSMDParameters(ThirdPartyParameters):
     lute_template_cfg: TemplateConfig = TemplateConfig(template_name="", output_path="")
 
     @validator("producer", always=True)
-    def validate_producer_path(cls, producer: str) -> str:
+    def validate_producer_path(cls, producer: str, values: Dict[str, Any]) -> str:
+        if producer == "":
+            exp: str = values["lute_config"].experiment
+            hutch: str = exp[:3]
+            path: str = (
+                f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools/producers/smd_producer.py"
+            )
+            return path
         return producer
 
     @validator("lute_template_cfg", always=True)
@@ -182,27 +196,148 @@ class SubmitSMDParameters(ThirdPartyParameters):
     # getAutocorrParams: TemplateParameters = TemplateParameters({})
 
 
-class FindOverlapXSSParameters(TaskParameters):
-    """TaskParameter model for FindOverlapXSS Task.
+class AnalyzeSmallDataXSSParameters(TaskParameters):
+    """TaskParameter model for AnalyzeSmallDataXSS Task.
 
-    This Task determines spatial or temporal overlap between an optical pulse
-    and the FEL pulse based on difference scattering (XSS) signal. This Task
-    uses SmallData HDF5 files as a source.
+    This Task does basic analysis of XSS data based on a SmallData HDF5 output
+    file. It calculates difference scattering and signal binned by various
+    scanned motors.
     """
 
-    class ExpConfig(BaseModel):
-        det_name: str
-        ipm_var: str
-        scan_var: Union[str, List[str]]
-
     class Thresholds(BaseModel):
-        min_Iscat: Union[int, float]
-        min_ipm: Union[int, float]
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
 
     class AnalysisFlags(BaseModel):
         use_pyfai: bool = True
         use_asymls: bool = False
 
-    exp_config: ExpConfig
-    thresholds: Thresholds
-    analysis_flags: AnalysisFlags
+    _find_smd_path = validate_smd_path("smd_path")
+
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xss_detname: Optional[str] = Field(
+        None, description="Name of the detector with scattering data."
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    # analysis_flags: AnalysisFlags
+
+
+class AnalyzeSmallDataXASParameters(TaskParameters):
+    """TaskParameter model for AnalyzeSmallDataXAS Task.
+
+    This Task does basic analysis of XAS data based on a SmallData HDF5 output
+    file. It calculates difference absorption and signal binned by various
+    scanned motors.
+    """
+
+    class Thresholds(BaseModel):
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
+
+    _find_smd_path = validate_smd_path("smd_path")
+
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xas_detname: Optional[str] = Field(
+        None, description="Name of the detector with absorption data."
+    )
+    xss_detname: Optional[str] = Field(
+        None,
+        description="Name of the detector with scattering data, for normalization.",
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
+    )
+    ccm: str = Field(description="Name of the PV for CCM position readback.")
+    ccm_set: Optional[str] = Field(
+        None, description="Name of the PV for the setpoint of the CCM."
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    element: Optional[bool] = Field(
+        None,
+        description="Element under investigation. Currently unused. For future EXAFS.",
+    )
+
+
+class AnalyzeSmallDataXESParameters(TaskParameters):
+    """TaskParameter model for AnalyzeSmallDataXES Task.
+
+    This Task does basic analysis of XES data based on a SmallData HDF5 output
+    file. It calculates difference emission and signal binned by various
+    scanned motors.
+    """
+
+    class Thresholds(BaseModel):
+        min_Iscat: float = Field(
+            10.0, description="Minimum scattering intensity to use for filtering."
+        )
+        min_ipm: float = Field(
+            1000.0, description="Minimum X-ray intensity to use for filtering."
+        )
+
+    _find_smd_path = validate_smd_path("smd_path")
+
+    smd_path: str = Field(
+        "", description="Path to the Small Data HDF5 file to analyze."
+    )
+    xes_detname: Optional[str] = Field(
+        None, description="Name of the detector with absorption data."
+    )
+    xss_detname: Optional[str] = Field(
+        None,
+        description="Name of the detector with scattering data, for normalization.",
+    )
+    ipm_var: str = Field(
+        description="Name of the IPM to use for X-Ray intensity filtering."
+    )
+    scan_var: Optional[Union[List[str], str]] = Field(
+        None,
+        description=(
+            "Name of a scan variable or a list of scan variables to analyze. "
+            "E.g. lxt, lens_h, etc."
+        ),
+    )
+    thresholds: Thresholds = Field(Thresholds())
+    invert_xes_axes: bool = Field(
+        False,
+        description=(
+            "Flip the projection axes depending on detector orientation. "
+            "Default is that projection along axis 1 is spectrum."
+        ),
+    )
+    rot_angle: Optional[float] = Field(
+        None,
+        description="Optionally rotate the ROIs by a small amount before projection.",
+    )
+    batch_size: int = Field(
+        0,
+        description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
+    )

@@ -53,7 +53,7 @@ import _io
 from typing_extensions import Self
 
 
-USE_ZMQ: bool = False
+USE_ZMQ: bool = True
 if USE_ZMQ:
     import zmq
 
@@ -65,6 +65,7 @@ LUTE_SIGNALS: Set[str] = {
     "TASK_DONE",
     "TASK_CANCELLED",
     "TASK_RESULT",
+    "TASK_LOG",
 }
 
 if __debug__:
