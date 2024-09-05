@@ -36,8 +36,10 @@ from pydantic import (
     Field,
     root_validator,
     validator,
+    PrivateAttr,
 )
 from pydantic.dataclasses import dataclass
+from pydantic.schema import model_schema, default_ref_template
 
 
 class AnalysisHeader(BaseModel):
@@ -79,6 +81,7 @@ class AnalysisHeader(BaseModel):
         if not os.access(work_dir, os.W_OK):
             # Need write access for database, files etc.
             raise ValueError(f"Not write access for working directory: {work_dir}!")
+        os.environ["LUTE_WORK_DIR"] = work_dir
         return work_dir
 
     @validator("run", always=True)
@@ -280,15 +283,35 @@ class ThirdPartyParameters(TaskParameters):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
 
+    _unknown_template_params: Dict[str, Any] = PrivateAttr()
     # lute_template_cfg: TemplateConfig
 
     @root_validator(pre=False)
     def extra_fields_to_thirdparty(cls, values: Dict[str, Any]):
+        cls._unknown_template_params = {}
+        my_schema: Dict[str, Any] = model_schema(
+            cls, by_alias=True, ref_template=default_ref_template
+        )
+        param_schema_template: Dict[str, Any] = {
+            "title": "",
+            "description": "Unknown template parameters.",
+            "type": "object",
+            "properties": {
+                "params": "",
+                "type": "object",
+            },
+        }
+        new_values: Dict[str, Any] = {}
         for key in values:
             if key not in cls.__fields__:
-                values[key] = TemplateParameters(values[key])
-
-        return values
+                new_values[key] = TemplateParameters(values[key])
+                param_schema: Dict[str, Any] = param_schema_template.copy()
+                param_schema["title"] = key
+                param_schema["properties"]["params"] = values[key]
+                cls._unknown_template_params[key] = param_schema
+            else:
+                new_values[key] = values[key]
+        return new_values
 
 
 class TemplateConfig(BaseModel):

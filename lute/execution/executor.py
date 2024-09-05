@@ -9,14 +9,11 @@ to an Executor.
 
 
 Classes:
-    AnalysisConfig: Data class for holding a managed Task's configuration.
-
     BaseExecutor: Abstract base class from which all Executors are derived.
 
     Executor: Default Executor implementing all basic functionality and IPC.
 
-    BinaryExecutor: Can execute any arbitrary binary/command as a managed task
-        within the framework provided by LUTE.
+    MPIExecutor: Runs exactly as the Executor but submits the Task using MPI.
 
 Exceptions
 ----------
@@ -39,12 +36,12 @@ from abc import ABC, abstractmethod
 import warnings
 import copy
 
-from .ipc import *
-from ..tasks.task import *
-from ..tasks.dataclasses import *
-from ..io.models.base import TaskParameters
-from ..io.db import record_analysis_db
-from ..io.elog import post_elog_run_status
+from lute.execution.ipc import *
+from lute.tasks.task import *
+from lute.tasks.dataclasses import *
+from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.io.db import record_analysis_db
+from lute.io.elog import post_elog_run_status
 
 if __debug__:
     warnings.simplefilter("default")
@@ -144,6 +141,7 @@ class BaseExecutor(ABC):
             poll_interval=poll_interval,
             communicator_desc=communicator_desc,
         )
+        self._shell_source_script: Optional[str] = None
 
     def add_hook(self, event: str, hook: Callable[[Self, Message], None]) -> None:
         """Add a new hook.
@@ -218,25 +216,46 @@ class BaseExecutor(ABC):
 
         Unlike `update_environment` this method sources a new file.
 
+        We prepend a token to each environment variable. This allows the initial
+        part of the Task to be run using the appropriate environment.
+
+        The environment variables containing the token will be swapped in using
+        their appropriate form prior to the actual execution of Task code.
+
         Args:
             env (str): Path to the script to source.
         """
-        import sys
+        self._shell_source_script = env
 
-        if not os.path.exists(env):
-            logger.info(f"Cannot source environment from {env}!")
+    def _shell_source(self) -> None:
+        """Actually shell source step.
+
+        This is run prior to Task execution.
+        """
+        if self._shell_source_script is None:
+            logger.error("Called _shell_source without defining source script!")
+            return
+        if not os.path.exists(self._shell_source_script):
+            logger.error(f"Cannot source environment from {self._shell_source_script}!")
             return
 
         script: str = (
             f"set -a\n"
-            f'source "{env}" >/dev/null\n'
+            f'source "{self._shell_source_script}" >/dev/null\n'
             f'{sys.executable} -c "import os; print(dict(os.environ))"\n'
         )
-        logger.info(f"Sourcing file {env}")
+        logger.info(f"Sourcing file {self._shell_source_script}")
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE
         ).communicate()
-        new_environment: Dict[str, str] = eval(o)
+        tmp_environment: Dict[str, str] = eval(o)
+        new_environment: Dict[str, str] = {}
+        for key, value in tmp_environment.items():
+            # Make sure LUTE vars are available
+            if "LUTE_" in key or key in ("RUN", "EXPERIMENT"):
+                new_environment[key] = value
+            else:
+                new_environment[f"LUTE_TENV_{key}"] = value
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
@@ -245,7 +264,18 @@ class BaseExecutor(ABC):
         This method may or may not be used by subclasses. It may be useful
         for logging etc.
         """
-        ...
+        # This prevents the Executors in managed_tasks.py from all acquiring
+        # resources like sockets.
+        for communicator in self._communicators:
+            communicator.delayed_setup()
+            # Not great, but experience shows we need a bit of time to setup
+            # network.
+            time.sleep(0.1)
+        # Propagate any env vars setup by Communicators - only update LUTE_ vars
+        tmp: Dict[str, str] = {
+            key: os.environ[key] for key in os.environ if "LUTE_" in key
+        }
+        self._analysis_desc.task_env.update(tmp)
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
@@ -281,6 +311,11 @@ class BaseExecutor(ABC):
 
         May be overridden by subclasses.
 
+        The default submission uses the Executor environment. This ensures that
+        all necessary packages (e.g. Pydantic for validation) are available to
+        the startup scripts. If a Task has a different environment it will be
+        swapped prior to execution.
+
         Args:
             executable_path (str): Path to the LUTE subprocess script.
 
@@ -291,14 +326,15 @@ class BaseExecutor(ABC):
         """
         cmd: str = ""
         if __debug__:
-            cmd = f"python -B {executable_path} {params}"
+            cmd = f"{sys.executable} -B {executable_path} {params}"
         else:
-            cmd = f"python -OB {executable_path} {params}"
+            cmd = f"{sys.executable} -OB {executable_path} {params}"
 
         return cmd
 
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
+        self._pre_task()
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
         if lute_path is None:
             logger.debug("Absolute path to subprocess_task.py not found.")
@@ -308,6 +344,8 @@ class BaseExecutor(ABC):
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
 
+        if self._shell_source_script is not None:
+            self._shell_source()
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
 
@@ -425,7 +463,32 @@ class BaseExecutor(ABC):
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
             for param, value in self._analysis_desc.task_parameters.dict().items():
-                param_attrs: Dict[str, Any] = schema["properties"][param]
+                param_attrs: Dict[str, Any]
+                if isinstance(value, TemplateParameters):
+                    # Extract TemplateParameters if needed
+                    value = value.params
+                    extra_models: List[str] = schema["definitions"].keys()
+                    for model in extra_models:
+                        if model in ("AnalysisHeader", "TemplateConfig"):
+                            continue
+                        if param in schema["definitions"][model]["properties"]:
+                            param_attrs = schema["definitions"][model]["properties"][
+                                param
+                            ]
+                            break
+                    else:
+                        if isinstance(
+                            self._analysis_desc.task_parameters, ThirdPartyParameters
+                        ):
+                            param_attrs = self._analysis_desc.task_parameters._unknown_template_params[
+                                param
+                            ]
+                        else:
+                            raise ValueError(
+                                f"No parameter schema for {param}. Check model!"
+                            )
+                else:
+                    param_attrs = schema["properties"][param]
                 if "is_result" in param_attrs:
                     is_result: bool = param_attrs["is_result"]
                     if isinstance(is_result, bool) and is_result:
@@ -596,17 +659,20 @@ class Executor(BaseExecutor):
         that its finished.
         """
         for communicator in self._communicators:
-            msg: Message = communicator.read(proc)
-            if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                hook: Callable[[Executor, Message], None] = getattr(
-                    self.Hooks, msg.signal.lower()
-                )
-                hook(self, msg)
-            if msg.contents is not None:
-                if isinstance(msg.contents, str) and msg.contents != "":
-                    logger.info(msg.contents)
-                elif not isinstance(msg.contents, str):
-                    logger.info(msg.contents)
+            while True:
+                msg: Message = communicator.read(proc)
+                if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
+                    hook: Callable[[Executor, Message], None] = getattr(
+                        self.Hooks, msg.signal.lower()
+                    )
+                    hook(self, msg)
+                if msg.contents is not None:
+                    if isinstance(msg.contents, str) and msg.contents != "":
+                        logger.info(msg.contents)
+                    elif not isinstance(msg.contents, str):
+                        logger.info(msg.contents)
+                if not communicator.has_messages:
+                    break
 
     def _finalize_task(self, proc: subprocess.Popen) -> None:
         """Any actions to be performed after the Task has ended.

@@ -7,3 +7,4 @@ from .sfx_merge import *
 from .sfx_solve import *
 from .smd import *
 from .tests import *
+from .mpi_tests import *

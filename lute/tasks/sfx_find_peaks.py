@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Literal, TextIO, Tuple
 
 import h5py
 import numpy
-#from libpressio import PressioCompressor
 from mpi4py.MPI import COMM_WORLD, SUM
 from numpy.typing import NDArray
 from psalgos.pypsalgos import PyAlgos
@@ -206,6 +205,21 @@ class CxiWriter:
         """
         ch_rows: NDArray[numpy.float_] = peaks[:, 0] * self._det_shape[1] + peaks[:, 1]
         ch_cols: NDArray[numpy.float_] = peaks[:, 2]
+
+        if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
+            self._outh5["entry_1/data_1/data"].resize(self._index + 1, axis=0)
+            ds_key: str
+            for ds_key in self._outh5["/entry_1/result_1"].keys():
+                self._outh5[f"/entry_1/result_1/{ds_key}"].resize(
+                    self._index + 1, axis=0
+                )
+            for ds_key in (
+                "machineTime",
+                "machineTimeNanoSeconds",
+                "fiducial",
+                "photon_energy_eV",
+            ):
+                self._outh5[f"/LCLS/{ds_key}"].resize(self._index + 1, axis=0)
 
         # Entry_1 entry for processing with CrystFEL
         self._outh5["/entry_1/data_1/data"][self._index, :, :] = img.reshape(
@@ -578,11 +592,10 @@ class FindPeaksPyAlgos(Task):
     writes the peak information to CXI files.
     """
 
-    def __init__(self, *, params: TaskParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+        super().__init__(params=params, use_mpi=use_mpi)
         if self._task_parameters.compression is not None:
             from libpressio import PressioCompressor
-
 
     def _run(self) -> None:
         ds: Any = MPIDataSource(
@@ -759,9 +772,15 @@ class FindPeaksPyAlgos(Task):
             # TODO: Fix bug here
             # generate / update powders
             if peaks.shape[0] >= self._task_parameters.min_peaks:
-                powder_hits = numpy.maximum(powder_hits, img)
+                powder_hits = numpy.maximum(
+                    powder_hits,
+                    img.reshape(-1, img.shape[-1]),
+                )
             else:
-                powder_misses = numpy.maximum(powder_misses, img)
+                powder_misses = numpy.maximum(
+                    powder_misses,
+                    img.reshape(-1, img.shape[-1]),
+                )
 
         if num_empty_images != 0:
             msg: Message = Message(

@@ -1,0 +1,66 @@
+input {
+  path = {{ input_path }}
+  experiments_suffix = {{ input_experiments_suffix }}
+  reflections_suffix = {{ input_reflections_suffix }}
+  parallel_file_load {
+    method = {{ input_parallel_file_load_method }}
+  }
+}
+filter {
+  algorithm = {{ filter_algorithm }}
+  unit_cell {
+    algorithm = {{ filter_unit_cell_algorithm }}
+    cluster {
+      covariance {
+        file = {{ filter_unit_cell_cluster_covariance_file }}
+        component = {{ filter_unit_cell_cluster_covariance_component }}
+        mahalanobis = {{ filter_unit_cell_cluster_covariance_mahalanobis }}
+      }
+    }
+  }
+  outlier {
+    min_corr = {{ filter_outlier_min_corr }}
+  }
+}
+select {
+  algorithm = {{ select_algorithm }}
+  significance_filter {
+    sigma = {{ select_significance_filter_sigma }}
+  }
+}
+scaling {
+  model = {{ scaling_model }}
+  resolution_scalar = {{ scaling_resolution_scalar }}
+}
+postrefinement {
+  enable = {{ postrefinement_enable }}
+  algorithm = {{ postrefinement_algorithm }}
+}
+merging {
+  d_min = {{ merging_d_min }}
+  merge_anomalous = {{ merging_merge_anomalous }}
+  set_average_unit_cell = {{ merging_set_average_unit_cell }}
+  error {
+    model = {{ merging_error_model }}
+  }
+}
+statistics {
+  n_bins = {{ statistics_n_bins }}
+  report_ML = {{ statistics_report_ML }}
+  cciso {
+    mtz_file = {{ statistics_cciso_mtz_file }}
+    mtz_column_F = {{ statistics_cciso_mtz_column_F }}
+  }
+}
+output {
+  prefix = {{ output_prefix }}
+  output_dir = {{ output_output_dir }}
+  tmp_dir = {{ output_tmp_dir }}
+  do_timing = {{ output_do_timing }}
+  log_level = {{ output_log_level }}
+  save_experiments_and_reflections = {{ output_save_experiments_and_reflections }}
+}
+parallel {
+  a2a = {{ parallel_a2a }}
+}
+

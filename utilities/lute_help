@@ -12,6 +12,8 @@ $(basename "$0"):
 
         Task Parameters
         ---------------
+        -l|--list
+          Display a table of all Tasks.
         -T|-t|--Task
           Display a table of parameter descriptions for the provided Task.
         --full_schema
@@ -29,6 +31,10 @@ do
         -h|--help)
           usage
           exit
+          ;;
+        -l|--list)
+          LIST_TASKS=1
+          shift
           ;;
         -T|-t|--Task)
           TASKNAME="$2"
@@ -50,6 +56,11 @@ export PYTHONPATH="${LUTE_BASE}:$PYTHONPATH"
 
 if [[ $HOSTNAME =~ "sdf" ]]; then
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+fi
+
+if [[ $LIST_TASKS ]]; then
+    CMD="python -B ${APP_DIR}/task_parameters.py --list"
+    $CMD
 fi
 
 if [[ $TASKNAME ]]; then

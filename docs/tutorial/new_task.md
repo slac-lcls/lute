@@ -1,6 +1,7 @@
 # Integrating a New `Task`
 
 `Task`s can be broadly categorized into two types:
+
 - "First-party" - where the analysis or executed code is maintained within this library.
 - "Third-party" - where the analysis, code, or program is maintained elsewhere and is simply called by a wrapping `Task`.
 
@@ -9,6 +10,7 @@ Creating a new `Task` of either type generally involves the same steps, although
 ## Creating a "Third-party" `Task`
 
 There are two required steps for third-party `Task` integration, and one additional step which is optional, and may not be applicable to all possible third-party `Task`s. Generally, `Task` integration requires:
+
 1. Defining a `TaskParameters` (pydantic) model which fully parameterizes the `Task`. This involves specifying a path to a binary, and all the required command-line arguments to run the binary.
 2. Creating a **managed `Task`** by specifying an `Executor` for the new third-party `Task`. At this stage, any additional environment variables can be added which are required for the execution environment.
 3. **(Optional/Maybe applicable)** Create a template for a third-party configuration file. If the new `Task` has its own configuration file, specifying a template will allow that file to be parameterized from the singular LUTE yaml configuration file. A couple of minor additions to the `pydantic` model specified in 1. are required to support template usage.
@@ -22,6 +24,7 @@ A brief overview of parameters objects will be provided below. The following inf
 **`Task`s and `TaskParameter`s**
 
 All `Task`s have a corresponding `TaskParameters` object. These objects are linked **exclusively** by a named relationship. For a `Task` named `MyThirdPartyTask`, the parameters object **must** be named `MyThirdPartyTaskParameters`. For third-party `Task`s there are a number of additional requirements:
+
 - The model must inherit from a base class called `ThirdPartyParameters`.
 - The model must have one field specified called `executable`. The presence of this field indicates that the `Task` is a third-party `Task` and the specified executable must be called. This allows all third-party `Task`s to be defined exclusively by their parameters model. A single `ThirdPartyTask` class handles execution of **all** third-party `Task`s.
 
@@ -164,6 +167,7 @@ class RunTask2Parameters(ThirdPartyParameters):
 ```
 
 **Additional Comments**
+
 1. Model parameters of type `bool` are not passed with an argument and are only passed when `True`. This is a common use-case for boolean flags which enable things like test or debug modes, verbosity or reporting features. E.g. `--debug`, `--test`, `--verbose`, etc.
   - If you need to pass the literal words `"True"` or `"False"`, use a parameter of type `str`.
 2. You can use `pydantic` types to constrain parameters beyond the basic Python types. E.g. `conint` can be used to define lower and upper bounds for an integer. There are also types for common categories, positive/negative numbers, paths, URLs, IP addresses, etc.
@@ -324,13 +328,18 @@ There are more examples of this pattern spread throughout the various `Task` mod
 
 **Overview**
 
-After a pydantic model has been created, the next required step is to define a **managed `Task`**. In the context of this library, a **managed `Task`** refers to the combination of an `Executor` and a `Task` to run. The `Executor` manages the process of `Task` submission and the execution environment, as well as performing an logging, eLog communication, etc. There are currently two types of `Executor` to choose from. For most cases you will use the first option for third-party `Task`s.
+After a pydantic model has been created, the next required step is to define a **managed `Task`**. In the context of this library, a **managed `Task`** refers to the combination of an `Executor` and a `Task` to run. The `Executor` manages the process of `Task` submission and the execution environment, as well as performing any logging, eLog communication, etc. There are currently two types of `Executor` to choose from, **but only one is applicable to third-party code.** The second `Executor` is listed below for completeness only. If you need MPI see the note below.
 
-1. `Executor`: This is the standard `Executor` and sufficient for most third-party uses cases.
+1. `Executor`: This is the standard `Executor`. It should be used for third-party uses cases.
 2. `MPIExecutor`: This performs all the same types of operations as the option above; however, it will submit your `Task` using MPI.
+
   - The `MPIExecutor` will submit the `Task` using the number of available cores - 1. The number of cores is determined from the physical core/thread count on your local machine, or the number of cores allocated by SLURM when submitting on the batch nodes.
 
-As mentioned, for most cases you can setup a third-party `Task` to use the first type of `Executor`. If, however, your third-party `Task` uses MPI, you can use either. When using the standard `Executor` for a `Task` requiring MPI, the `executable` in the pydantic model must be set to `mpirun`. For example, a third-party `Task` model, that uses MPI but can be run with the `Executor` may look like the following. We assume this `Task` runs a Python script using MPI.
+**Using MPI with third-party `Task`s**
+
+As mentioned, you should setup a third-party `Task` to use the first type of `Executor`. If, however, your third-party `Task` uses MPI this may seem non-intuitive. When using the `MPIExecutor` LUTE code is submitted with MPI. This includes the code that performs signalling to the `Executor` and `exec`s the third-party code you are interested in running. While it is possible to set this code up to run with MPI, it is more challenging in the case of third-party `Task`s because there is no `Task` code to modify directly! The `MPIExecutor` is provided mostly for first-party code. This is not an issue, however, since the standard `Executor` is easily configured to run with MPI in the case of third-party code.
+
+When using the standard `Executor` for a `Task` requiring MPI, the `executable` in the pydantic model must be set to `mpirun`. For example, a third-party `Task` model, that uses MPI but is intended to be run with the `Executor` may look like the following. We assume this `Task` runs a Python script using MPI.
 
 ```py
 class RunMPITaskParameters(ThirdPartyParameters):
@@ -385,7 +394,12 @@ Task2Runner.shell_source("/sdf/group/lcls/ds/tools/new_task_setup.sh") # Will so
 
 Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the `Task`'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the `Task` implementer refer to the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/) for more information.
 
+**Note:** By default templated parameters are **NOT** validated, i.e., type-checked. This default case is handled first below. If knowledgeable about appropriate typing for the template variables, further modification of the `TaskParameters` model is possible to include validation. This advanced use-case is described second.
+
+#### Non-validated template parameters
+
 LUTE provides two additional base models which are used for template parsing in conjunction with the primary `Task` model. These are:
+
 - `TemplateParameters` objects which hold parameters which will be used to render a portion of a template.
 - `TemplateConfig` objects which hold two strings: the name of the template file to use and the full path (including filename) of where to output the rendered result.
 
@@ -530,6 +544,91 @@ RunJsonUser:
     #...
 ```
 
+#### Validated template parameters
+
+If you are able to provide validation for template parameters this is preferred, although it is not always straightforward to determine appropriate parameter types/validators. LUTE provides a custom validator which can be used in conjunction with a separate pydantic model for the template parameters to provide type-checking.
+
+By way of example, we will re-write the model above for the `RunJsonUser` `Task` in order to validate the template parameters. We begin by creating a new pydantic `BaseModel` to hold all the template parameters. This class can be defined anywhere, but for organizational purposes the class is often defined within the `TaskParameters` class.
+
+```py
+# Import BaseModel if not present - required for validation!
+from pydantic import BaseModel
+
+class RunJsonUserParameters:
+
+    class RunJsonTemplateParameters(BaseModel):
+        # If you want to allow extra, un-validated parameters include this
+        # Config as well.
+        # class Config(BaseModel.Config):
+        #     extra: str = "allow"
+
+        str_var: Optional[str] = Field(
+            None, description="This string does..."
+        )
+        int_var: Optional[int] = Field(
+            None, description="This int does..."
+        )
+        p3_b: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+        val: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+```
+
+Next the template parameters defined in the class need to be made available through a validated parameter within the `TaskParameters` class. We will import a special validator defined in `lute.io.models.validators` in order to perform the necessary options to handle the individual template parameters during validation.
+
+```py
+# Import BaseModel if not present - required for validation!
+from pydantic import BaseModel
+
+# Import custom validators for template parameters!
+from lute.io.models.validators import template_parameter_validator
+
+class RunJsonUserParameters:
+
+    class RunJsonTemplateParameters:
+        # If you want to allow extra, un-validated parameters include this
+        # Config as well.
+        # class Config(BaseModel.Config):
+        #     extra: str = "allow"
+
+        str_var: Optional[str] = Field(
+            None, description="This string does..."
+        )
+        int_var: Optional[int] = Field(
+            None, description="This int does..."
+        )
+        p3_b: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+        val: Optional[int] = Field(
+            None, description="This parameter does..."
+        )
+    # Define the validator - the argument must match the parameter name!
+    _set_template_parameters = template_parameter_validator("json_parameters")
+
+    # executable...
+    # input_json...
+    json_parameters: Optional[RunJsonTemplateParameters] = Field(
+        None, description="Optional template parameters..."
+    )
+```
+
+The rest of the model remains unchanged. However, we **do** need to make a change to how we pass the template parameters to LUTE through the configuration YAML. Previously, we provided each template parameter (`str_var`, `int_var`, ...) as an individual parameter in the YAML file. Now, they must be passed as a dictionary under the key `json_parameters`, as this is the parameter we have defined to hold template parameters in the model.
+
+```yaml
+RunJsonUser:
+    input_json: "/my/chosen/path.json" # We'll come back to this...
+    json_parameters:
+        str_var: "arg1" # Will substitute for "param1": "arg1"
+        int_var: 4 # Will substitute for "param2": 4
+        p3_b: 2  # Will substitute for "param3: { "b": 2 }
+        val: 2 # Will substitute for "param4": [2, 2, 3] in the JSON
+```
+
+Now, the individual parameters will be validated according to the model definition (`RunJsonTemplateParameters`). As previously, if we do not want to use any template parameters, we simply remove them from the YAML, although in this case, we must remove the full section beginning with `json_parameters`. As we've used the same parameter names as previously, our Jinja template does not need to change
+
 #### Additional Jinja Syntax
 There are many other syntactical constructions we can use with Jinja. Some of the useful ones are:
 
@@ -558,16 +657,20 @@ The process for creating a "First-Party" `Task` is very similar to that for a "T
 Parameter models have a format that must be followed for "Third-Party" `Task`s, but "First-Party" `Task`s have a little more liberty in how parameters are dealt with, since the `Task` will do all the parsing itself.
 
 To create a model, the basic steps are:
+
 1. If necessary, create a new module (e.g. `new_task_category.py`) under `lute.io.models`, or find an appropriate pre-existing module in that directory.
   - An `import` statement must be added to `lute.io.models._init_` if a new module is created, so it can be found.
   - If defining the model in a pre-existing module, make sure to modify the `__all__` statement to include it.
 2. Create a new model that inherits from `TaskParameters`. You can look at `lute.models.io.tests.TestReadOutputParameters` for an example. **The model must be named** `<YourTaskName>Parameters`
+
   - You should include **all** relevant parameters here, including input file, output file, and any potentially adjustable parameters. These parameters **must** be included even if there are some implicit dependencies between `Task`s and it would make sense for the parameter to be auto-populated based on some other output. Creating this dependency is done with validators (see step 3.). All parameters should be overridable, and all `Task`s should be fully-independently configurable, based solely on their model and the configuration YAML.
   - To follow the preferred format, parameters should be defined as: `param_name: type = Field([default value], description="This parameter does X.")`
 3. Use validators to do more complex things for your parameters, including populating default values dynamically:
+
   - E.g. create default values that depend on other parameters in the model - see for example: [SubmitSMDParameters](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/smd.py#L139).
   - E.g. create default values that depend on other `Task`s by reading from the database - see for example: [TestReadOutputParameters](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/tests.py#L75).
 4. The model will have access to some general configuration values by inheriting from `TaskParameters`. These parameters are all stored in `lute_config` which is an instance of `AnalysisHeader` ([defined here](https://github.com/slac-lcls/lute/blob/57f2a0889ec9603e3b8642f485c27df7d1f6e96f/lute/io/models/base.py#L42)).
+
   - For example, the experiment and run number can be obtained from this object and a validator could use these values to define the default input file for the `Task`.
 
 A number of configuration options and **Field** attributes are also available for "First-Party" `Task` models. These are identical to those used for the `ThirdPartyTask`s, although there is a smaller selection. These options are reproduced below for convenience.
@@ -603,8 +706,9 @@ In addition to the global configuration options there are a couple of ways to sp
 
 ### Writing the `Task`
 You can write your analysis code (or whatever code to be executed) as long as it adheres to the limited rules below. You can create a new module for your `Task` in `lute.tasks` or add it to any existing module, if it makes sense for it to belong there. The `Task` itself is a single class constructed as:
+
 1. Your analysis `Task` is a class named in a way that matches its Pydantic model. E.g. `RunTask` is the `Task`, and `RunTaskParameters` is the Pydantic model.
-2. The class must inherit from the `Task` class (see template below).
+2. The class must inherit from the `Task` class (see template below). **If you intend to use MPI see the following section.**
 3. You must provide an implementation of a `_run` method. This is the method that will be executed when the `Task` is run. You can in addition write as many methods as you need. For fine-grained execution control you can also provide `_pre_run()` and `_post_run()` methods, but this is optional.
 4. For all communication (including print statements) you should use the `_report_to_executor(msg: Message)` method. Since the `Task` is run as a subprocess this method will pass information to the controlling `Executor`. You can pass **any** type of object using this method, strings, plots, arrays, etc.
 5. If you did not use the `set_result` configuration option in your parameters model, make sure to provide a result when finished. This is done by setting `self._result.payload = ...`. You can set the result to be any object. If you have written the result to a file, for example, please provide a path.
@@ -652,6 +756,34 @@ class RunTask(Task): # Inherit from Task
         self._result.task_status = TaskStatus.COMPLETED
 ```
 
+#### Using MPI for your `Task`
+
+In the case your `Task` is written to use `MPI` a slight modification to the template above is needed. Specifically, an additional keyword argument should be passed to the base class initializer: `use_mpi=True`. This tells the base class to adjust signalling/communication behaviour appropriately for a multi-rank MPI program. Doing this prevents tricky-to-track-down problems due to ranks starting, completing and sending messages at different times. The rest of your code can, as before, be written as you see fit. The use of this keyword argument will also synchronize the start of all ranks and wait until all ranks have finished to exit.
+
+```py
+"""Task which needs to run with MPI"""
+
+__all__ = ["RunTask"]
+__author__ = "" # Please include so we know who the SME is
+
+# Include any imports you need here
+
+from lute.execution.ipc import Message # Message for communication
+from lute.io.models.base import *      # For TaskParameters
+from lute.tasks.task import *          # For Task
+
+# Only the init is shown
+class RunMPITask(Task): # Inherit from Task
+    """Task description goes here, or in __init__"""
+
+    # Signal the use of MPI!
+    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+        super().__init__(params=params, use_mpi=use_mpi) # Sets up Task, parameters, etc.
+        # That's it.
+```
+
+#### Message signals
+
 Signals in `Message` objects are strings and can be one of the following:
 
 ```py
@@ -684,4 +816,4 @@ def import_task(task_name: str) -> Type[Task]:
 ```
 
 ### Defining an `Executor`
-The process of `Executor` definition is identical to the process as described for `ThirdPartyTask`s above.
+The process of `Executor` definition is identical to the process as described for `ThirdPartyTask`s above. The one exception is if you defined the `Task` to use MPI as described in the section above (Using MPI for your `Task`), you will likely consider using the `MPIExecutor`.

@@ -66,13 +66,21 @@ SLURM_ARGS=$@
 # Setup logfile names - $EXPERIMENT and $RUN_NUM will be available if ARP submitted
 # RUN_NUM is actually in format RUN_DATETIME
 RUN_TIME_ARR=(${RUN_NUM//_/ })
-RUN="${RUN_TIME_ARR[0]}"
+export RUN="${RUN_TIME_ARR[0]}"
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"
 SLURM_ARGS+=" --output=${LOG_FILE}.out"
 SLURM_ARGS+=" --error=${LOG_FILE}.out"
 
-export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
+# If LUTE_USE_TCP is unset use TCP
+if [[ -z ${LUTE_USE_TCP} || ${LUTE_USE_TCP} != 0 ]]; then
+    echo "Using TCP"
+    export LUTE_USE_TCP=1
+else
+    echo "Using Unix sockets"
+    unset LUTE_USE_TCP
+    export LUTE_SOCKET="/tmp/lute_${RANDOM}.sock"
+fi
 
 # By default source the psana environment since most Tasks will use it.
 source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh

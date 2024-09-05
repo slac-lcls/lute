@@ -1,7 +1,8 @@
 %YAML 1.3
 ---
 title: "LUTE Task Configuration" # Include experiment description if desired
-experiment: "EXPL10000"
+experiment: "{{ $EXPERIMENT }}"
+run: "{{ $RUN }}"
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
@@ -131,6 +132,10 @@ TestSocket:
   array_size: 8000 # Size of arrays to send. 8000 floats ~ 6.4e4
   num_arrays: 10 # Number of arrays to send.
 
+TestMultiNodeCommunication:
+  send_obj: "plot" # Either "plot" or "array". Type of object to send
+  arr_size: 5      # Size of the array if sending array
+
 FindPeaksPyAlgos:
     outdir: ""
     n_events: 100
@@ -168,6 +173,48 @@ IndexCrystFEL:
   profile: True
   no_revalidate: True
 
+IndexCCTBXXFEL:
+  #phil_file: ...
+  #in_file: ...
+  # Comment out data_spec if providing one
+  # Make sure in_file is appropriately set in that case.
+  data_spec:
+    experiment: "{{ experiment }}"
+    run: "{{ run }}"
+    detector_address: "Rayonix"
+    wavelength_offset: -0.004414643434400234
+    spectrum_eV_per_pixel: 0.07523816551020232
+    spectrum_eV_offset: 9723.778479641995
+    rayonix.bin_size: 4
+
+  # Begin template parameters for .phil file
+  # Comment out to avoid re-writing .phil
+  phil_parameters:
+    #input_reference_geometry: ""
+    #geometry_detector_panel_origin: [0, 0, 0]
+    #output_output_dir: "..."
+    output_composite_output: true
+    #output_logging_dir: "..."
+    dispatch_index: true
+    dispatch_refine: true
+    dispatch_integrate: true
+    mp_mpi_method: "mpi" # "*multiprocessing sge lsf pbs mpi"
+    spotfinder_threshold_dispersion_gain: 1.6
+    spotfinder_threshold_dispersion_sigma_bkgnd: 2
+    spotfinder_threshold_dispersion_sigma_strong: 2
+    spotfinder_threshold_dispersion_global_thresh: 10
+    spotfinder_threshold_dispersion_kernel_size: [6, 6]
+    spotfinder_filter_min_spot_size: 3
+    spotfinder_filter_d_min: 3
+    indexing_stills_refine_candidates_with_known_symmetry: true
+    indexing_stills_refine_all_candidates: false
+    #indexing_known_symmetry_space_group: "P 41 21 2"
+    #indexing_known_symmetry_unit_cell: "140 140 140 90 90 90"
+    integration_background_simple_outlier_plane_n_sigma: 10
+    integration_summation_detector_gain: 1.0
+    profile_gaussian_rs_centroid_definition: "com"
+    #refinement_reflections_outlier_algorithm: "..."
+
 MergePartialator:
   #in_file: ""
   #out_file: ""
@@ -196,6 +243,42 @@ MergeCareless:
   positional_encoding_frequencies: 4
   intensity_key: "I"
   uncertainty_key: "SigI"
+
+MergeCCTBXXFEL:
+  #phil_file: ...
+  # Begin template parameters for .phil file
+  # Comment out to avoid re-writing .phil
+  phil_parameters:
+    input_path: "path/to/input"
+    input_experiments_suffix: "_integrated.expt"
+    input_reflections_suffix: "_integrated.refl"
+    input_parallel_file_load_method: "uniform"
+    filter_algorithm: "unit_cell"
+    filter_unit_cell_algorithm: "cluster"
+    filter_unit_cell_cluster_covariance_file: "..."
+    filter_unit_cell_cluster_covariance_component: 0
+    filter_unit_cell_cluster_covariance_mahalanobis: 5.0
+    filter_outlier_min_corr: -1.0
+    select_algorithm: "significance_filter"
+    select_significance_filter_sigma: 0.1
+    scaling_model: ""
+    scaling_resolution_scalar: 0.993420862158964
+    postrefinement_enable: true
+    postrefinement_algorithm: "rs"
+    merging_d_min: 3
+    merging_merge_anomalous: false
+    merging_set_average_unit_cell: true
+    merging_error_model: "ev11"
+    statistics_n_bins: 20
+    statistics_report_ML: true
+    statistics_cciso_mtz_file: ""
+    statistics_cciso_mtz_column_F: "F" # "fobs"
+    output_prefix: ""
+    output_output_dir: ""
+    output_tmp_dir: ""
+    output_do_timing: true
+    output_log_level: true
+    parallel_a2a: 1
 
 CompareHKL:
   #in_files: ""

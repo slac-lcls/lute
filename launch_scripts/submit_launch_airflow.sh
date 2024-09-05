@@ -32,7 +32,6 @@ fi
 CMD="${@}"
 CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"
 echo $CMD
-CMD="/sdf/group/lcls/ds/tools/lute/lute_launcher ${CMD}"
 SLURM_ARGS="--partition=${PARTITION} --account=${ACCOUNT} --ntasks=1"
 echo "Running ${CMD} with ${SLURM_ARGS}"
 sbatch $SLURM_ARGS --wrap "${CMD}"
