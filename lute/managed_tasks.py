@@ -60,6 +60,10 @@ CCTBXMerger.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 PartialatorMerger: Executor = Executor("MergePartialator")
 """Runs crystallographic merging using CrystFEL's partialator."""
 
+DIALS2CarelessConverter: Execcutor("ConvertDIALS2Careless")
+"""Converts output from DIALSStillsProcesser so it can be input to CarelessMerger."""
+DIALS2CarelessConverter.shell_source("/sdf/group/lcls/ds/tools/careless/cctbx2rs.sh")
+
 CarelessMerger: Executor = Executor("MergeCareless")
 """Runs crystallographic merging using Careless."""
 CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")

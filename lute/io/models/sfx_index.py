@@ -768,3 +768,41 @@ class ProcessStillsDIALSParameters(ThirdPartyParameters):
                     spec_line: str = f"{key}={value}\n"
                     f.write(spec_line)
         return None
+
+
+class ConvertDIALS2CarelessParameters(ThirdPartyParameters):
+    """Converts output from DIALSStillsProcesser so it can be input to CarelessMerger.
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/conda_envs/cctbx2rs/bin/rs.cctbx2rs",
+        description="DIALS to Careless converter.",
+        flag_type="",
+    )
+    # Basic options
+    in_dir: str = Field(
+        "", description="dials.stills_process output folder with integrated.refls.", flag_type="",
+    )
+    out_file: str = Field(
+        "",
+        description="Path to output MTZ file.",
+        flag_type="",
+        rename_param="",
+        is_result=True,
+    )
+    ucell: str = Field(
+        "", description="Unit cell parameters: a b c alpha beta gamma.", flag_type="--",
+    )
+    symbol: str = Field(
+        "", description="Space group. Example: P4.", flag_type="--",
+    )
+    num_of_workers: Optional[str] = Field(
+        "", description="Number of workers! (default: 10).", flag_type="--", rename_param="nj",
+    )
