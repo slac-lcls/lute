@@ -250,10 +250,34 @@ class BaseExecutor(ABC):
             args = self._sub_tasklet_parameters(args)
             logger.debug(f"Running {tasklet} with {args}")
             output: Any = tasklet(*args)  # Many don't return anything
+            # We set result payloads or summaries now, but the processing is done
+            # by process_results method called sometime after the last tasklet
             if set_result and output is not None:
-                self._analysis_desc.task_result.payload = output
+                if isinstance(self._analysis_desc.task_result.payload, list):
+                    # We have multiple payloads to process, append to list
+                    self._analysis_desc.task_result.payload.append(output)
+                elif self._analysis_desc.task_result.payload != "":
+                    # We have one payload already, convert to list and append
+                    tmp: Any = self._analysis_desc.task_result.payload
+                    self._analysis_desc.task_result.payload = []
+                    self._analysis_desc.task_result.payload.append(tmp)
+                    self._analysis_desc.task_result.payload.append(output)
+                else:
+                    # Payload == "" - i.e. hasn't been set
+                    self._analysis_desc.task_result.payload = output
             if set_summary and output is not None:
-                self._process_result_summary(output)
+                if isinstance(self._analysis_desc.task_result.summary, list):
+                    # We have multiple summary objects to process, append to list
+                    self._analysis_desc.task_result.summary.append(output)
+                elif self._analysis_desc.task_result.summary != "":
+                    # We have one summary already, convert to list and append
+                    tmp: Any = self._analysis_desc.task_result.summary
+                    self._analysis_desc.task_result.summary = []
+                    self._analysis_desc.task_result.summary.append(tmp)
+                    self._analysis_desc.task_result.summary.append(output)
+                else:
+                    # Summary == "" - i.e. hasn't been set
+                    self._analysis_desc.task_result.summary = output
 
     def add_hook(
         self,
@@ -485,6 +509,9 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
             self.Hooks.task_done(self, msg=Message())
+        if self._tasklets["after"] is not None:
+            # Tasklets before results processing since they may create result
+            self._run_tasklets(when="after")
         self.process_results()
         self._store_configuration()
         for comm in self._communicators:
@@ -654,12 +681,6 @@ class BaseExecutor(ABC):
 
     @abstractmethod
     def _process_results(self) -> None: ...
-
-    @abstractmethod
-    def _process_result_payload(self, payload: Any) -> None: ...
-
-    @abstractmethod
-    def _process_result_summary(self, summary: Union[str, Dict[str, str]]) -> None: ...
 
 
 class Executor(BaseExecutor):
