@@ -61,7 +61,11 @@ PartialatorMerger: Executor = Executor("MergePartialator")
 """Runs crystallographic merging using CrystFEL's partialator."""
 
 CarelessMerger: Executor = Executor("MergeCareless")
-"""Runs crystallographic mergin using Careless."""
+"""Runs crystallographic merging using Careless."""
+CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
+
+CarelessEvaluater: Executor = Executor("EvaluateCareless")
+"""Evaluates crystallographic merging results from Careless."""
 CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
 
 HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit

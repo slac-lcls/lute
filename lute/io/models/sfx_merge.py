@@ -13,6 +13,8 @@ Classes:
 
 __all__ = [
     "MergePartialatorParameters",
+    "MergeCarelessParameters",
+    "EvaluateCarelessParameters",
     "MergeCCTBXXFELParameters",
     "CompareHKLParameters",
     "ManipulateHKLParameters",
@@ -345,6 +347,59 @@ class MergeCarelessParameters(ThirdPartyParameters):
             )
             if stream_file:
                 return stream_file
+        return in_file
+
+
+class EvaluateCarelessParameters(ThirdPartyParameters):
+    """Parameters for evaluating Careless results."""
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/conda_envs/careless/bin/careless.cchalf",
+        description="Careless.cchalf binary.",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description="Path to input MTZ file containing crossvalidation data from careless.",
+        flag_type=""
+    )
+    image: str = Field(
+        description="Make a plot of the results and save it to this filename. The filetype will be determined from the filename. Any filetype supported by your matplotlib version will be available.",
+        flag_type="--",
+    )
+    output: Optional[str] = Field(
+        description="Optionally save results to this file in csv format instead of printing them to the terminal.",
+        flag_type="--",
+    )
+    method: Optional[str] = Field(
+        description="Method for computing correlation coefficient (spearman or pearson). The Pearson CC uses maximum-likelihood weights. Pearson is the default.",
+        flag_type="--",
+    )
+    bins: Optional[int] = Field(
+        description="Number of resolution bins to use, the default is 10.",
+        flag_type="--",
+    )
+    overall: Optional[bool] = Field(
+        description="Pool all prediction mtz files into a single calculation rather than treating each file individually.",
+        flag_type="--",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            careless_dir: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergeCareless", "out_dir"
+            )
+            if careless_dir:
+                mtz_out: str = f"{careless_dir}_xval_0.mtz"
+                return mtz_out
         return in_file
 
 
