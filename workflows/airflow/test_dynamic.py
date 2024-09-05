@@ -52,7 +52,7 @@ def test_dynamic():
         if "dag_run" in context:
             wf: Dict[str, Any] = context["dag_run"].conf["workflow"]
             Variable.set(key="user_workflow", value=wf, serialize_json=True)
-            time.sleep(3) # Make sure var gets set
+            time.sleep(3)  # Make sure var gets set
             return wf
         return None
 

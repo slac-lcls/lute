@@ -88,19 +88,21 @@ class BaseExecutor(ABC):
         signal.
         """
 
-        def no_pickle_mode(self: Self, msg: Message): ...
+        def no_pickle_mode(self: Self, msg: Message) -> None: ...
 
-        def task_started(self: Self, msg: Message): ...
+        def task_started(self: Self, msg: Message) -> None: ...
 
-        def task_failed(self: Self, msg: Message): ...
+        def task_failed(self: Self, msg: Message) -> None: ...
 
-        def task_stopped(self: Self, msg: Message): ...
+        def task_stopped(self: Self, msg: Message) -> None: ...
 
-        def task_done(self: Self, msg: Message): ...
+        def task_done(self: Self, msg: Message) -> None: ...
 
-        def task_cancelled(self: Self, msg: Message): ...
+        def task_cancelled(self: Self, msg: Message) -> None: ...
 
-        def task_result(self: Self, msg: Message): ...
+        def task_result(self: Self, msg: Message) -> None: ...
+
+        def task_log(self: Self, msg: Message) -> bool: ...
 
     def __init__(
         self,
@@ -143,7 +145,9 @@ class BaseExecutor(ABC):
         )
         self._shell_source_script: Optional[str] = None
 
-    def add_hook(self, event: str, hook: Callable[[Self, Message], None]) -> None:
+    def add_hook(
+        self, event: str, hook: Callable[[Self, Message], Optional[bool]]
+    ) -> None:
         """Add a new hook.
 
         Each hook is a function called any time the Executor receives a signal
@@ -369,6 +373,7 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
             self.Hooks.task_done(self, msg=Message())
+        self.process_results()
         self._store_configuration()
         for comm in self._communicators:
             comm.clear_communicator()
@@ -376,8 +381,6 @@ class BaseExecutor(ABC):
         if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
             logger.info("Exiting after Task failure. Result recorded.")
             sys.exit(-1)
-
-        self.process_results()
 
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
@@ -578,7 +581,7 @@ class Executor(BaseExecutor):
     def add_default_hooks(self) -> None:
         """Populate the set of default event hooks."""
 
-        def no_pickle_mode(self: Executor, msg: Message):
+        def no_pickle_mode(self: Executor, msg: Message) -> None:
             for idx, communicator in enumerate(self._communicators):
                 if isinstance(communicator, PipeCommunicator):
                     self._communicators[idx] = PipeCommunicator(
@@ -587,7 +590,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message):
+        def task_started(self: Executor, msg: Message) -> None:
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
                 # Maybe just run this no matter what? Rely on the other guards?
@@ -608,7 +611,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message):
+        def task_failed(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "FAILED",
             }
@@ -616,7 +619,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message):
+        def task_stopped(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
             }
@@ -624,7 +627,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message):
+        def task_done(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
@@ -632,7 +635,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message):
+        def task_cancelled(self: Executor, msg: Message) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
@@ -640,7 +643,7 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_cancelled", task_cancelled)
 
-        def task_result(self: Executor, msg: Message):
+        def task_result(self: Executor, msg: Message) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
@@ -650,7 +653,18 @@ class Executor(BaseExecutor):
             }
             post_elog_run_status(elog_data)
 
+            return True
+
         self.add_hook("task_result", task_result)
+
+        def task_log(self: Executor, msg: Message) -> bool:
+            if isinstance(msg.contents, str):
+                # This should be log formatted already
+                print(msg.contents)
+                return True
+            return False
+
+        self.add_hook("task_log", task_log)
 
     def _task_loop(self, proc: subprocess.Popen) -> None:
         """Actions to perform while the Task is running.
@@ -658,6 +672,8 @@ class Executor(BaseExecutor):
         This function is run in the body of a loop until the Task signals
         that its finished.
         """
+        # Some hooks may ask that the rest of the task loop be skipped (continued)
+        should_continue: Optional[bool]
         for communicator in self._communicators:
             while True:
                 msg: Message = communicator.read(proc)
@@ -665,7 +681,9 @@ class Executor(BaseExecutor):
                     hook: Callable[[Executor, Message], None] = getattr(
                         self.Hooks, msg.signal.lower()
                     )
-                    hook(self, msg)
+                    should_continue = hook(self, msg)
+                    if should_continue:
+                        continue
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
@@ -697,26 +715,47 @@ class Executor(BaseExecutor):
         if self._analysis_desc.task_parameters is None:
             logger.debug("Please run Task before using this method!")
             return
+        new_payload: Optional[str]
         if isinstance(payload, ElogSummaryPlots):
-            # ElogSummaryPlots has figures and a display name
-            # display name also serves as a path.
-            expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
-            base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
-            full_path: str = f"{base_path}/{payload.display_name}"
-            if not os.path.isdir(full_path):
-                os.makedirs(full_path)
-
-            # Preferred plots are pn.Tabs objects which save directly as html
-            # Only supported plot type that has "save" method - do not want to
-            # import plot modules here to do type checks.
-            if hasattr(payload.figures, "save"):
-                payload.figures.save(f"{full_path}/report.html")
-            else:
-                ...
+            new_payload = self._process_elog_plot(payload)
+            if new_payload is not None:
+                self._analysis_desc.task_result.payload = new_payload
+        elif isinstance(payload, list) or isinstance(payload, tuple):
+            new_payload = ""
+            for item in payload:
+                if isinstance(item, ElogSummaryPlots):
+                    ret: Optional[str] = self._process_elog_plot(item)
+                    if ret is not None:
+                        new_payload = ";".join(filter(None, (new_payload, ret)))
+            if new_payload != "":
+                self._analysis_desc.task_result.payload = new_payload
         elif isinstance(payload, str):
             # May be a path to a file...
             schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
             # Should also check `impl_schemas` to determine what to do with path
+
+    def _process_elog_plot(self, plots: ElogSummaryPlots) -> Optional[str]:
+        """Process an ElogSummaryPlots
+
+        Args:
+            plots
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.debug("Please run Task before using this method!")
+            return
+        # ElogSummaryPlots has figures and a display name
+        # display name also serves as a path.
+        expmt: str = self._analysis_desc.task_parameters.lute_config.experiment
+        base_path: str = f"/sdf/data/lcls/ds/{expmt[:3]}/{expmt}/stats/summary"
+        full_path: str = f"{base_path}/{plots.display_name}"
+        if not os.path.isdir(full_path):
+            os.makedirs(full_path)
+
+        path: str = f"{full_path}/report.html"
+        with open(f"{full_path}/report.html", "wb") as f:
+            f.write(plots.figures)
+
+        return path
 
     def _process_result_summary(self, summary: str) -> None: ...
 
