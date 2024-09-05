@@ -43,7 +43,7 @@ __author__ = "Gabriel Dorlhiac"
 import logging
 import os
 import subprocess
-from typing import Union, List
+from typing import Union, List, Dict
 
 
 if __debug__:
@@ -95,7 +95,7 @@ def git_clone(repo: str, location: str, permissions: str) -> None:
     ).communicate()
 
 
-def grep(match_str: str, in_file: str) -> Union[str, List[str], None]:
+def grep(match_str: str, in_file: str) -> List[str]:
     """Grep for specific lines of text output.
 
     Args:
@@ -104,8 +104,8 @@ def grep(match_str: str, in_file: str) -> Union[str, List[str], None]:
         in_file (str): File to search.
 
     Returns:
-        lines (str | List[str]): The matches. It may be an empty string if
-            nothing is found.
+        lines (List[str]): The matches. It may be a list with just an empty
+            string if nothing is found.
     """
     cmd: List[str] = ["grep", match_str, in_file]
     out: str
@@ -114,4 +114,15 @@ def grep(match_str: str, in_file: str) -> Union[str, List[str], None]:
     ).communicate()
 
     lines: List[str] = out.split("\n")
-    return lines[0] if len(lines) == 1 else lines
+    return lines
+
+
+def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
+    """Return indexing rate from indexamajig output.
+
+    Args:
+        stream_file (str): Input stream file.
+    """
+    res: List[str] = grep("Cell parameters", stream_file)
+    n_indexed: int = len(res[:-1])
+    return {"Number of lattices indexed": str(n_indexed)}
