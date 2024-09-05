@@ -921,31 +921,54 @@ class Executor(BaseExecutor):
 
         return path
 
-    def _process_result_summary(self, summary: Union[str, Dict[str, str]]) -> None:
+    def _process_result_summary(self, summary: Any) -> None:
         """Process an object destined for the results summary.
 
         Args:
-            summary (str | Dict[str, str]): The object to be set as a summary. If
-                a dictionary it is assumed to be a set of key/value pairs to be
-                written out as run parameters in the eLog.
+            summary (Any): The object to be set as a summary. If a dictionary
+                it is assumed to be a set of key/value pairs to be written out
+                as run parameters in the eLog. If a list each item is processed
+                individually.
         """
         if self._analysis_desc.task_parameters is None:
             logger.error("Please run Task before using this method!")
             return
         if isinstance(summary, dict):
             # Assume dict is key: value pairs of eLog run parameters to post
-            exp: str = self._analysis_desc.task_parameters.lute_config.experiment
-            run: int = int(self._analysis_desc.task_parameters.lute_config.run)
-            logger.debug("Posting eLog run parameters.")
-            post_elog_run_table(exp, run, summary)
-            new_summary_str: str = ";".join(
-                f"{key}: {value}" for key, value in summary.items()
+            self._analysis_desc.task_result.summary = self._process_summary_run_params(
+                summary
             )
+        elif isinstance(summary, list):
+            new_summary_str: str = ""
+            for item in summary:
+                if isinstance(item, dict):
+                    ret: str = self._process_summary_run_params(item)
+                    new_summary_str = ";".join(filter(None, (new_summary_str, ret)))
             self._analysis_desc.task_result.summary = new_summary_str
         elif isinstance(summary, str):
             ...
         else:
             ...
+
+    def _process_summary_run_params(self, params: Dict[str, str]) -> str:
+        """Process a dictionary of run parameters to be posted to the eLog.
+
+        Args:
+            params (Dict[str, str]): Key/value pairs to be posted as run parameters.
+
+        Returns:
+            summary_str (str): New string of key/value pairs to be stored in
+                summary field of the database.
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.error("Please run Task before using this method!")
+            return ""
+        exp: str = self._analysis_desc.task_parameters.lute_config.experiment
+        run: int = int(self._analysis_desc.task_parameters.lute_config.run)
+        logger.debug("Posting eLog run parameters.")
+        post_elog_run_table(exp, run, params)
+        summary_str: str = ";".join(f"{key}: {value}" for key, value in params.items())
+        return summary_str
 
 
 class MPIExecutor(Executor):
