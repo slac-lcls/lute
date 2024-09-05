@@ -490,8 +490,8 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         return tag
 
 
-class IndexCCTBXXFELParameters(ThirdPartyParameters):
-    """Parameters for indexing with cctbx.xfel."""
+class ProcessStillsDIALSParameters(ThirdPartyParameters):
+    """Parameters for processing with dials.stills_process."""
 
     class Config(ThirdPartyParameters.Config):
         set_result: bool = False

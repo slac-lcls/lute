@@ -348,7 +348,7 @@ class MergeCarelessParameters(ThirdPartyParameters):
         return in_file
 
 
-class MergeCCTBXXFELParameters(ThirdPartyParameters):
+class MergeCCTBXStillsParameters(ThirdPartyParameters):
     """Parameters for merging with cctbx.xfel."""
 
     class Config(ThirdPartyParameters.Config):

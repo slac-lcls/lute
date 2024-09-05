@@ -37,9 +37,9 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 
 # SFX
 #####
-CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
-"""Runs crystallographic indexing using cctbx.xfel."""
-CCTBXIndexer.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
+DIALSStillsProcesser: Executor = Executor("ProcessStillsDIALS")
+"""Runs crystallographic processing using dials.stills_process (CCTBX)."""
+DIALSStillsProcesser.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 
 CrystFELIndexer: Executor = Executor("IndexCrystFEL")
 """Runs crystallographic indexing using CrystFEL."""
@@ -53,7 +53,7 @@ CrystFELIndexer.update_environment(
     }
 )
 
-CCTBXMerger: Executor = Executor("MergeCCTBXXFEL")
+CCTBXMerger: Executor = Executor("MergeCCTBXStills")
 """Runs crystallographic merging using cctbx.xfel."""
 CCTBXMerger.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 
@@ -62,7 +62,6 @@ PartialatorMerger: Executor = Executor("MergePartialator")
 
 CarelessMerger: Executor = Executor("MergeCareless")
 """Runs crystallographic mergin using Careless."""
-
 CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
 
 HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit
