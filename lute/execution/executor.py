@@ -30,7 +30,7 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Tuple
+from typing import Dict, Callable, List, Optional, Any, Tuple, Union
 from typing_extensions import Self, TypedDict
 from abc import ABC, abstractmethod
 import warnings
@@ -42,7 +42,7 @@ from lute.tasks.task import *
 from lute.tasks.dataclasses import *
 from lute.io.models.base import TaskParameters, TemplateParameters
 from lute.io.db import record_analysis_db
-from lute.io.elog import post_elog_run_status
+from lute.io.elog import post_elog_run_status, post_elog_run_table
 
 if __debug__:
     warnings.simplefilter("default")
@@ -253,7 +253,7 @@ class BaseExecutor(ABC):
             if set_result and output is not None:
                 self._analysis_desc.task_result.payload = output
             if set_summary and output is not None:
-                self._analysis_desc.task_result.summary = output
+                self._process_result_summary(output)
 
     def add_hook(
         self,
@@ -655,6 +655,12 @@ class BaseExecutor(ABC):
     @abstractmethod
     def _process_results(self) -> None: ...
 
+    @abstractmethod
+    def _process_result_payload(self, payload: Any) -> None: ...
+
+    @abstractmethod
+    def _process_result_summary(self, summary: Union[str, Dict[str, str]]) -> None: ...
+
 
 class Executor(BaseExecutor):
     """Basic implementation of an Executor which manages simple IPC with Task.
@@ -840,7 +846,7 @@ class Executor(BaseExecutor):
 
     def _process_result_payload(self, payload: Any) -> None:
         if self._analysis_desc.task_parameters is None:
-            logger.debug("Please run Task before using this method!")
+            logger.error("Please run Task before using this method!")
             return
         new_payload: Optional[str]
         if isinstance(payload, ElogSummaryPlots):
@@ -864,11 +870,21 @@ class Executor(BaseExecutor):
     def _process_elog_plot(self, plots: ElogSummaryPlots) -> Optional[str]:
         """Process an ElogSummaryPlots
 
+        Writes out the eLog summary plot for display and returns the path of
+        where the plots were written out so they can be stored as the result
+        payload.
+
+        ElogSummaryPlots objects already convert the plots to a byte stream
+        which can be directly written to an HTML file.
+
         Args:
-            plots
+            plots (ElogSummaryPlots): The plots dataclass.
+
+        Returns:
+            path (str): Path the plots were written out to.
         """
         if self._analysis_desc.task_parameters is None:
-            logger.debug("Please run Task before using this method!")
+            logger.error("Please run Task before using this method!")
             return
         # ElogSummaryPlots has figures and a display name
         # display name also serves as a path.
@@ -884,7 +900,31 @@ class Executor(BaseExecutor):
 
         return path
 
-    def _process_result_summary(self, summary: str) -> None: ...
+    def _process_result_summary(self, summary: Union[str, Dict[str, str]]) -> None:
+        """Process an object destined for the results summary.
+
+        Args:
+            summary (str | Dict[str, str]): The object to be set as a summary. If
+                a dictionary it is assumed to be a set of key/value pairs to be
+                written out as run parameters in the eLog.
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.error("Please run Task before using this method!")
+            return
+        if isinstance(summary, dict):
+            # Assume dict is key: value pairs of eLog run parameters to post
+            exp: str = self._analysis_desc.task_parameters.lute_config.experiment
+            run: int = int(self._analysis_desc.task_parameters.lute_config.run)
+            logger.debug("Posting eLog run parameters.")
+            post_elog_run_table(exp, run, summary)
+            new_summary_str: str = ";".join(
+                f"{key}: {value}" for key, value in summary.items()
+            )
+            self._analysis_desc.task_result.summary = new_summary_str
+        elif isinstance(summary, str):
+            ...
+        else:
+            ...
 
 
 class MPIExecutor(Executor):
