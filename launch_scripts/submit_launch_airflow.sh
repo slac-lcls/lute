@@ -22,12 +22,10 @@ set -- "${POS[@]}"
 
 # Bodge Kerberos credentials
 # These duplicates are removed later by the workflow process
-if [[ -z $Authorization ]]; then
-    KERB_CACHE_PATH=$(klist -l | awk -F"FILE:" '{printf (NF>1)? $NF : ""}')
-    mkdir $HOME/.tmp_cache
-    cp $KERB_CACHE_PATH $HOME/.tmp_cache/kerbcache
-    export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
-fi
+KERB_CACHE_PATH=$(klist -l | awk -F"FILE:" '{printf (NF>1)? $NF : ""}')
+mkdir $HOME/.tmp_cache
+cp $KERB_CACHE_PATH $HOME/.tmp_cache/kerbcache
+export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
 CMD="${@}"
 CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"

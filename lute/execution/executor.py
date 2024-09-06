@@ -170,7 +170,7 @@ class BaseExecutor(ABC):
 
     def add_tasklet(
         self,
-        tasklet: Callable[[Any], Any],
+        tasklet: Callable,
         args: List[Any],
         when: str = "after",
         set_result: bool = False,
@@ -971,7 +971,10 @@ class Executor(BaseExecutor):
         exp: str = self._analysis_desc.task_parameters.lute_config.experiment
         run: int = int(self._analysis_desc.task_parameters.lute_config.run)
         logger.debug("Posting eLog run parameters.")
-        post_elog_run_table(exp, run, params)
+        try:
+            post_elog_run_table(exp, run, params)
+        except Exception as err:
+            logger.error(f"Unable to post run parameters! Error: {err}")
         summary_str: str = ";".join(f"{key}: {value}" for key, value in params.items())
         return summary_str
 
