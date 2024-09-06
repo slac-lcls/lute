@@ -975,6 +975,7 @@ class Executor(BaseExecutor):
             post_elog_run_table(exp, run, params)
         except Exception as err:
             logger.error(f"Unable to post run parameters! Error: {err}")
+        post_elog_run_status(params)
         summary_str: str = ";".join(f"{key}: {value}" for key, value in params.items())
         return summary_str
 

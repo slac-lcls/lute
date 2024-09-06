@@ -834,6 +834,11 @@ class FindPeaksPyAlgos(Task):
                 )
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
+            self._result.summary = {
+                "Number of events processed": str(num_events_per_rank[-1]),
+                "Number of hits found": str(num_hits_total),
+                "Fractional hit rate": f"{num_hits_total/num_events_per_rank[-1]:.2f}",
+            }
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
 
