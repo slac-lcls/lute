@@ -13,7 +13,7 @@ __author__ = "Valerio Mariani"
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, TextIO, Tuple
+from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional
 
 import h5py
 import numpy
@@ -321,7 +321,6 @@ class CxiWriter:
         self._outh5["/entry_1/data_1/mask"][:] = (1 - mask).reshape(
             -1, mask.shape[-1]
         )  # Crystfel expects inverted values
-
         # Add clen distance
         self._outh5["/LCLS/detector_1/EncoderValue"][:] = clen
 
@@ -434,9 +433,13 @@ def write_master_file(
     f.close()
 
     # Compute cumulative powder hits and misses for all files
+    # Copy mask as well
+    mask: Optional[NDArray[numpy.uint16]] = None
     powder_hits, powder_misses = None, None
     for fn in fnames:
         f = h5py.File(fn, "r")
+        if mask is None:
+            mask = f["entry_1/data_1/mask"][:].copy()
         if powder_hits is None:
             powder_hits = f["entry_1/data_1/powderHits"][:].copy()
             powder_misses = f["entry_1/data_1/powderMisses"][:].copy()
@@ -473,6 +476,7 @@ def write_master_file(
 
         vdf["entry_1/data_1/powderHits"] = powder_hits
         vdf["entry_1/data_1/powderMisses"] = powder_misses
+        vdf["entry_1/data_1/mask"] = mask
 
     return vfname
 
