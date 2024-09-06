@@ -944,6 +944,11 @@ class Executor(BaseExecutor):
                 if isinstance(item, dict):
                     ret: str = self._process_summary_run_params(item)
                     new_summary_str = ";".join(filter(None, (new_summary_str, ret)))
+                elif isinstance(item, ElogSummaryPlots):
+                    plot_path: Optional[str] = self._process_elog_plot(item)
+                    new_summary_str = ";".join(
+                        filter(None, (new_summary_str, plot_path))
+                    )
             self._analysis_desc.task_result.summary = new_summary_str
         elif isinstance(summary, str):
             ...

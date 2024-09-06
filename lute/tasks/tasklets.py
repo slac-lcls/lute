@@ -37,13 +37,20 @@ Usage:
         args=("{{ param_to_sub }}", ...)
 """
 
-__all__ = ["grep", "git_clone"]
+__all__ = [
+    "grep",
+    "git_clone",
+    "indexamajig_summary_indexing_rate",
+    "compare_hkl_fom_summary",
+]
 __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
 import subprocess
-from typing import Union, List, Dict
+from typing import List, Dict, Tuple, Optional
+
+from lute.tasks.dataclasses import ElogSummaryPlots
 
 
 if __debug__:
@@ -126,3 +133,44 @@ def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
     res: List[str] = grep("Cell parameters", stream_file)
     n_indexed: int = len(res[:-1])
     return {"Number of lattices indexed": str(n_indexed)}
+
+
+def compare_hkl_fom_summary(
+    shell_file: str, figure_display_name: str
+) -> Tuple[Dict[str, str], Optional[ElogSummaryPlots]]:
+    """Analyze information produced by CrystFEL's compare_hkl.
+
+    Extracts figures of merit information and produces text summary and plots.
+
+    Args:
+        shell_file (str): Path to output `shell-file` containing FOM information.
+
+        figure_display_name (str): Display name of the figure in the eLog.
+    """
+    import numpy as np
+    import holoviews as hv
+    import panel as pn
+
+    with open(shell_file, "r") as f:
+        lines: List[str] = f.readlines()
+
+    header: str = lines[0]
+    fom: str = header.split()[2]
+    shells_arr: np.ndarray[np.float64] = np.loadtxt(lines[1:])
+    run_params: Dict[str, str] = {fom: str(shells_arr[1])}
+    if shells_arr.ndim == 1:
+        return run_params, None
+
+    hv.extension("bokeh")
+    pn.extension()
+    xdim: hv.core.dimension.Dimension = hv.Dimension(
+        ("Resolution (A)", "Resolution (A)")
+    )
+    ydim: hv.core.dimension.Dimension = hv.Dimension((fom, fom))
+
+    angs_bins: np.ndarray[np.float64] = 10.0 / shells_arr[:, 0]
+    pts: hv.Points = hv.Points((angs_bins, shells_arr[:, 1]), kdims=[xdim, ydim])
+    grid: pn.GridSpec = pn.GridSpec(name="Figures of Merit")
+    grid[:2, :2] = pts
+    tabs = pn.Tabs(grid)
+    return run_params, ElogSummaryPlots(figure_display_name, tabs)
