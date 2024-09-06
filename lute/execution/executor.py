@@ -938,7 +938,7 @@ class Executor(BaseExecutor):
             self._analysis_desc.task_result.summary = self._process_summary_run_params(
                 summary
             )
-        elif isinstance(summary, list):
+        elif isinstance(summary, list) or isinstance(summary, tuple):
             new_summary_str: str = ""
             for item in summary:
                 if isinstance(item, dict):
