@@ -484,7 +484,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_out_file: str = str(
-                Path(values["in_file"]).parent / f"{values['tag'].stream}"
+                Path(values["in_file"]).parent / f"{values['tag']}.stream"
             )
             return stream_out_file
         return tag

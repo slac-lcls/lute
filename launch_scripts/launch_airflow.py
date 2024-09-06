@@ -135,7 +135,9 @@ if __name__ == "__main__":
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
     # Check if was submitted from ARP - look for token
-    use_kerberos: bool = True # Always copy kerberos ticket so non-active experiments can work.
+    use_kerberos: bool = (
+        True  # Always copy kerberos ticket so non-active experiments can work.
+    )
     if os.getenv("Authorization") is None:
         cache_file: Optional[str] = os.getenv("KRB5CCNAME")
         if cache_file is None:
