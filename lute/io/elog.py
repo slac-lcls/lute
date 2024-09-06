@@ -382,7 +382,7 @@ def post_elog_run_status(
     if update_url is None:
         update_url = os.environ.get("JID_UPDATE_COUNTERS")
         if update_url is None:
-            logger.info("eLog Update Failed! JID_UPDATE_COUNTERS is not defined!")
+            logger.error("eLog Update Failed! JID_UPDATE_COUNTERS is not defined!")
             return
     current_status: Dict[str, Union[str, int, float]] = _get_current_run_status(
         update_url
@@ -427,7 +427,7 @@ def post_elog_message(
         try:
             out_files.append(format_file_for_post(in_file=f))
         except ElogFileFormatError as err:
-            logger.debug(f"ElogFileFormatError: {err}")
+            logger.error(f"ElogFileFormatError: {err}")
     post: Dict[str, str] = {}
     post["log_text"] = msg
     if tag:
