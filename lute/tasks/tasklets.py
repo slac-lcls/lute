@@ -72,7 +72,19 @@ def concat_files(location: str, in_files_glob: str, out_file: str) -> None:
 
         out_file (str): Name of the concatenated output.
     """
-    ...
+    import shutil
+    from pathlib import Path
+    from typing import BinaryIO
+
+    in_file_path: Path = Path(f"{location}")
+    in_file_list: List[Path] = list(in_file_path.rglob(f"{in_files_glob}"))
+
+    wf: BinaryIO
+    with open(out_file, "wb") as wf:
+        for in_file in in_file_list:
+            rf: BinaryIO
+            with open(in_file, "rb") as rf:
+                shutil.copyfileobj(rf, wf)
 
 
 def git_clone(repo: str, location: str, permissions: str) -> None:
