@@ -47,7 +47,6 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         description="Tag to add to the output file names",
     )
     pv_camera_length: Union[str, float] = Field(
-        "",
         description="PV associated with camera length "
         "(if a number, camera length directly)",
     )
