@@ -119,7 +119,7 @@ class JIDSlurmOperator(BaseOperator):
     def __init__(
         self,
         user: str = getpass.getuser(),
-        poke_interval: float = 30.0,
+        poke_interval: float = 5.0,
         max_cores: Optional[int] = None,
         max_nodes: Optional[int] = None,
         require_partition: Optional[str] = None,
@@ -315,7 +315,7 @@ class JIDSlurmOperator(BaseOperator):
             AirflowException: Raised to translate multiple errors into object
                 properly handled by the Airflow server.
         """
-        logger.info(f"{resp.status_code}: {resp.content}")
+        logger.debug(f"{resp.status_code}: {resp.content}")
         if not resp.status_code in (200,):
             raise AirflowException(f"Bad response from JID {resp}: {resp.content}")
         try:
@@ -377,12 +377,12 @@ class JIDSlurmOperator(BaseOperator):
         # Endpoints have the string "{experiment}" in them
         uri = uri.format(experiment=experiment)
 
-        logger.info(f"Calling {uri} with {control_doc}...")
+        logger.debug(f"Calling {uri} with {control_doc}...")
 
         resp: requests.models.Response = requests.post(
             uri, json=control_doc, headers={"Authorization": auth}
         )
-        logger.info(f" + {resp.status_code}: {resp.content.decode('utf-8')}")
+        logger.debug(f" + {resp.status_code}: {resp.content.decode('utf-8')}")
 
         value: Dict[str, Any] = self.parse_response(resp, check_for_error)
 
@@ -418,17 +418,22 @@ class JIDSlurmOperator(BaseOperator):
             )
             time.sleep(self.poke_interval)
 
-        print(f"Final status: {jobs[0].get('status')}")
         # Logs out to xcom
         out = self.rpc("job_log_file", jobs[0], context)
         context["task_instance"].xcom_push(key="log", value=out)
+        final_status: str = jobs[0].get("status")
+        logger.info(f"Final status: {final_status}")
+        if final_status == "FAILED":
+            logger.error("`Task` job marked as failed!")
+            sys.exit(-1)
+
         failure_messages: List[str] = [
             "INFO:lute.execution.executor:Task failed with return code:",
             "INFO:lute.execution.executor:Exiting after Task failure.",
         ]
         for msg in failure_messages:
             if msg in out:
-                logger.info("Logs indicate `Task` failed.")
+                logger.error("Logs indicate `Task` failed!")
                 sys.exit(-1)
 
 
