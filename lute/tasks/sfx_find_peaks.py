@@ -182,6 +182,7 @@ class CxiWriter:
         timestamp_nanoseconds: int,
         timestamp_fiducials: int,
         photon_energy: float,
+        clen: float,
     ):
         """
         Write peak finding results for an event into the HDF5 file.
@@ -202,6 +203,8 @@ class CxiWriter:
                 information
 
             photon_energy (float): Photon energy for the event
+
+            clen (float): Camera length/detector distance.
         """
         ch_rows: NDArray[numpy.float_] = peaks[:, 0] * self._det_shape[1] + peaks[:, 1]
         ch_cols: NDArray[numpy.float_] = peaks[:, 2]
@@ -218,6 +221,7 @@ class CxiWriter:
                 "machineTimeNanoSeconds",
                 "fiducial",
                 "photon_energy_eV",
+                "detector_1/EncoderValue",
             ):
                 self._outh5[f"/LCLS/{ds_key}"].resize(self._index + 1, axis=0)
 
@@ -289,6 +293,8 @@ class CxiWriter:
         self._outh5["/LCLS/fiducial"][self._index] = timestamp_fiducials
         self._outh5["/LCLS/photon_energy_eV"][self._index] = photon_energy
 
+        # Add clen distance
+        self._outh5["/LCLS/detector_1/EncoderValue"][self._index] = clen
         self._index += 1
 
     def write_non_event_data(
@@ -296,7 +302,6 @@ class CxiWriter:
         powder_hits: NDArray[numpy.float_],
         powder_misses: NDArray[numpy.float_],
         mask: NDArray[numpy.uint16],
-        clen: float,
     ):
         """
         Write to the file data that is not related to a specific event (masks, powders)
@@ -321,8 +326,6 @@ class CxiWriter:
         self._outh5["/entry_1/data_1/mask"][:] = (1 - mask).reshape(
             -1, mask.shape[-1]
         )  # Crystfel expects inverted values
-        # Add clen distance
-        self._outh5["/LCLS/detector_1/EncoderValue"][:] = clen
 
     def optimize_and_close_file(
         self,
@@ -771,6 +774,7 @@ class FindPeaksPyAlgos(Task):
                     timestamp_nanoseconds=timestamp_nanoseconds,
                     timestamp_fiducials=timestamp_fiducials,
                     photon_energy=photon_energy,
+                    clen=clen,
                 )
                 num_hits += 1
 
@@ -797,7 +801,6 @@ class FindPeaksPyAlgos(Task):
             powder_hits=powder_hits,
             powder_misses=powder_misses,
             mask=mask,
-            clen=clen,
         )
 
         file_writer.optimize_and_close_file(
@@ -808,7 +811,7 @@ class FindPeaksPyAlgos(Task):
 
         num_hits_per_rank: List[int] = COMM_WORLD.gather(num_hits, root=0)
         num_hits_total: int = COMM_WORLD.reduce(num_hits, SUM)
-        num_events_per_rank: List[int] = COMM_WORLD.gather(num_events, root=0)
+        num_events_total: int = COMM_WORLD.reduce(num_events, SUM)
 
         if ds.rank == 0:
             master_fname: Path = write_master_file(
@@ -826,19 +829,18 @@ class FindPeaksPyAlgos(Task):
             with open(
                 Path(self._task_parameters.outdir) / f"peakfinding{tag}.summary", "w"
             ) as f:
-                print(f"Number of events processed: {num_events_per_rank[-1]}", file=f)
+                print(f"Number of events processed: {num_events_total}", file=f)
                 print(f"Number of hits found: {num_hits_total}", file=f)
                 print(
-                    "Fractional hit rate: "
-                    f"{(num_hits_total/num_events_per_rank[-1]):.2f}",
+                    "Fractional hit rate: " f"{(num_hits_total/num_events_total):.2f}",
                     file=f,
                 )
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
             self._result.summary = {
-                "Number of events processed": str(num_events_per_rank[-1]),
+                "Number of events processed": str(num_events_total),
                 "Number of hits found": str(num_hits_total),
-                "Fractional hit rate": f"{num_hits_total/num_events_per_rank[-1]:.2f}",
+                "Fractional hit rate": f"{num_hits_total/num_events_total:.2f}",
             }
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
