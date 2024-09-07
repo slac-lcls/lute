@@ -233,7 +233,7 @@ class BaseExecutor(ABC):
                         new_arg = float(new_arg)
                     except ValueError:
                         pass
-                new_args.append(new_arg)
+            new_args.append(new_arg)
         return new_args
 
     def _run_tasklets(self, *, when: str) -> None:
@@ -249,7 +249,12 @@ class BaseExecutor(ABC):
             tasklet, args, set_result, set_summary = tasklet_spec
             args = self._sub_tasklet_parameters(args)
             logger.debug(f"Running {tasklet} with {args}")
-            output: Any = tasklet(*args)  # Many don't return anything
+            output: Any
+            try:
+                output = tasklet(*args)  # Many don't return anything
+            except Exception as err:
+                logger.error(f"Tasklet failed! Error: {err}")
+                output = None
             # We set result payloads or summaries now, but the processing is done
             # by process_results method called sometime after the last tasklet
             if set_result and output is not None:

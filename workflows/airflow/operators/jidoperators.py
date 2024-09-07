@@ -418,6 +418,7 @@ class JIDSlurmOperator(BaseOperator):
             )
             time.sleep(self.poke_interval)
 
+        print(f"Final status: {jobs[0].get('status')}")
         # Logs out to xcom
         out = self.rpc("job_log_file", jobs[0], context)
         context["task_instance"].xcom_push(key="log", value=out)
