@@ -6,7 +6,10 @@ here.
 
 from lute.execution.executor import *
 from lute.io.config import *
-from lute.tasks.tasklets import compare_hkl_fom_summary
+from lute.tasks.tasklets import (
+    compare_hkl_fom_summary,
+    indexamajig_summary_indexing_rate,
+)
 
 # Tests
 #######
@@ -61,6 +64,13 @@ CrystFELIndexer.update_environment(
             "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin"
         )
     }
+)
+CrystFELIndexer.add_tasklet(
+    indexamajig_summary_indexing_rate,
+    ["{{ out_file }}"],
+    when="after",
+    set_result=False,
+    set_summary=True,
 )
 
 StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")

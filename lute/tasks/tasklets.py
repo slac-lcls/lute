@@ -131,7 +131,11 @@ def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
         stream_file (str): Input stream file.
     """
     res: List[str] = grep("Cell parameters", stream_file)
-    n_indexed: int = len(res[:-1])
+    n_indexed: int
+    if res:
+        n_indexed = len(res[:-1])
+    else:
+        n_indexed = 0
     return {"Number of lattices indexed": str(n_indexed)}
 
 
