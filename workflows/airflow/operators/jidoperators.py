@@ -423,7 +423,8 @@ class JIDSlurmOperator(BaseOperator):
         context["task_instance"].xcom_push(key="log", value=out)
         final_status: str = jobs[0].get("status")
         logger.info(f"Final status: {final_status}")
-        if final_status == "FAILED":
+        if final_status in ("FAILED", "EXITED"):
+            # Only DONE indicates success. EXITED may be cancelled or SLURM err
             logger.error("`Task` job marked as failed!")
             sys.exit(-1)
 
