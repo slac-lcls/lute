@@ -881,3 +881,9 @@ def import_task(task_name: str) -> Type[Task]:
 
 ### Defining an `Executor`
 The process of `Executor` definition is identical to the process as described for `ThirdPartyTask`s above. The one exception is if you defined the `Task` to use MPI as described in the section above (Using MPI for your `Task`), you will likely consider using the `MPIExecutor`.
+
+#### Environment setup
+Currently, first-party `Task`s are expected to use the same environment as the `Executor`, so while you can use the environment update methods to insert environment variables, complete replacement of the environment is not supported. If you have a compelling reason to require this feature, contact the maintainers.
+
+#### `tasklet` usage
+You can also use `tasklet` functions with first-party `Task`s if needed. The preferred method, however, would be to incorporate whatever tasklet code is needed directly into your `Task`.
