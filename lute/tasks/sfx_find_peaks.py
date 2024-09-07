@@ -733,7 +733,7 @@ class FindPeaksPyAlgos(Task):
                 rank=self._task_parameters.peak_rank,
                 r0=self._task_parameters.r0,
                 dr=self._task_parameters.dr,
-                #      nsigm=self._task_parameters.nsigm,
+                nsigm=self._task_parameters.nsigm,
             )
 
             num_events += 1
