@@ -756,12 +756,13 @@ class FindPeaksPyAlgos(Task):
                     photon_energy: float = (
                         Detector("EBeam").get(evt).ebeamPhotonEnergy()
                     )
-                except AttributeError:
+                    if numpy.isinf(photon_energy):
+                        raise ValueError
+                except (AttributeError, ValueError):
                     photon_energy = (
                         1.23984197386209e-06
                         / ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192")
-                        / 1.0e9
-                    )
+                    ) * 1e9
 
                 file_writer.write_event(
                     img=img,
