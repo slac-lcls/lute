@@ -424,12 +424,12 @@ These parameters, in order, are:
 - `tasklet` : Any callable function. A number of tasklets are already defined in the `lute.tasks.tasklets` module as examples. Some of these are already associated with **managed** `Task`s.
 - `args` : This is a list/tuple (or any iterable) of arguments to pass to the `tasklet`. The arguments can be substituted similarly to templates (below) or parameters in the configuration YAML. This is discussed further below.
 - `when`: This is a string literal taking the values of `"before"` or `"after"`, indicating whether the tasklet function should be run before or after the actual `Task`, respectively.
-- `set_result`: Is a bool. If `True`, the **main result payload** will be overwritten with the return values of the tasklet. In general this is not the appropriate option to use.
+- `set_result`: Is a bool. If `True`, the **main result payload** will be overwritten in the database with the return values of the tasklet. This affects only the database archiving - any actual files, etc., will not be overwritten. Regardless, in general this is not the appropriate option to use with a third-party `Task`.
 - `set_summary`: Is a bool. If `True`, the **result summary** is set to the return values of the tasklet. This allows the main result of the `Task` to be recorded in addition to some auxiliary summary information. In general, we will want to use this option.
 
 ##### Substituting parameters for `tasklet` arguments
 
-We often want the input to a tasklet to depend on some of the `TaskParameters` for the main associated `Task`. We can specify this using a Jinja-like substitution syntax. When passing arguments to the `add_tasklet` method, we can enclose the name of parameters from the `TaskParameters` model in a string between doubly curly brackets: `"{{ param_to_sub }}"`. For example if we wanted to use the output file as the input to the tasklet, assuming it had the parameter name `out_file`, we would use `{{ out_file }}`.
+We often want the input to a tasklet to depend on some of the `TaskParameters` for the main associated `Task`. We can specify this using a Jinja-like substitution syntax. When passing arguments to the `add_tasklet` method, we can enclose the name of parameters from the `TaskParameters` model in a string between doubly curly brackets: `"{{ param_to_sub }}"`. For example if we wanted to use the output file as the input to the tasklet, assuming it had the parameter name `out_file`, we would use `"{{ out_file }}"`.
 
 You can substitute multiple parameters in every string if necessary, with each parameter to substitute enclosed in its own set of double curly brackets.
 
