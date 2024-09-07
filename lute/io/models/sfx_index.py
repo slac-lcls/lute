@@ -63,6 +63,14 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         rename_param="o",
         is_result=True,
     )
+    peaks: Optional[str] = Field(
+        None,
+        description=(
+            "Peak finding algorithm, or file type. E.g. peakfinder8 to peak find, "
+            "or use cxi for CXI files."
+        ),
+        flag_type="--",
+    )
     geometry: str = Field(
         "", description="Path to geometry file.", flag_type="-", rename_param="g"
     )
