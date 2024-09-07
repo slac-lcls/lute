@@ -755,10 +755,9 @@ class FindPeaksPyAlgos(Task):
                     decompressed = compressor.decode(compressed_img, decompressed_img)
                     img = decompressed_img
 
+                photon_energy: float
                 try:
-                    photon_energy: float = (
-                        Detector("EBeam").get(evt).ebeamPhotonEnergy()
-                    )
+                    photon_energy = Detector("EBeam").get(evt).ebeamPhotonEnergy()
                     if numpy.isinf(photon_energy):
                         raise ValueError
                 except (AttributeError, ValueError):

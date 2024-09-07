@@ -20,7 +20,7 @@ __all__ = ["record_analysis_db", "read_latest_db_entry"]
 __author__ = "Gabriel Dorlhiac"
 
 import logging
-from typing import List, Dict, Dict, Any, Tuple, Optional
+from typing import List, Dict, Dict, Any, Tuple, Optional, Union
 
 from .models.base import TaskParameters, TemplateParameters
 from ..tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
@@ -292,7 +292,11 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
 
 
 def read_latest_db_entry(
-    db_dir: str, task_name: str, param: str, valid_only: bool = True
+    db_dir: str,
+    task_name: str,
+    param: str,
+    valid_only: bool = True,
+    for_run: Optional[Union[str, int]] = None,
 ) -> Optional[Any]:
     """Read most recent value entered into the database for a Task parameter.
 
@@ -309,6 +313,9 @@ def read_latest_db_entry(
             An input file may be useful even if the Task result is invalid
             (Failed). Default = True.
 
+        for_run (Optional[str | int]): Only consider latest entries from the
+            specific experiment run provided.
+
     Returns:
         val (Any): The most recently entered value for `param` of `task_name`
             that can be found in the database. Returns None if nothing found.
@@ -322,6 +329,8 @@ def read_latest_db_entry(
             cond: Dict[str, str] = {}
             if valid_only:
                 cond = {"valid_flag": "1"}
+            if for_run is not None:
+                ...
             entry: Any = _select_from_db(con, task_name, param, cond)
         except sqlite3.OperationalError as err:
             logger.debug(f"Cannot retrieve value {param} due to: {err}")

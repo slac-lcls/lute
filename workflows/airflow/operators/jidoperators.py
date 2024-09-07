@@ -425,7 +425,7 @@ class JIDSlurmOperator(BaseOperator):
         logger.info(f"Final status: {final_status}")
         if final_status in ("FAILED", "EXITED"):
             # Only DONE indicates success. EXITED may be cancelled or SLURM err
-            logger.error("`Task` job marked as failed!")
+            logger.error(f"`Task` job marked as {final_status}!")
             sys.exit(-1)
 
         failure_messages: List[str] = [
