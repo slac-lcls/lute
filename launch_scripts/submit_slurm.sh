@@ -18,6 +18,15 @@ $(basename "$0"):
           mandatory. All additional arguments are transparently passed to SLURM.
           You will need to provide at least the queue and account using, e.g.:
                   --partition=milano --account=lcls:<experiment>
+
+    Additional options:
+    You can also optionally provide experiment and run number. Do this only when
+    NOT running from the eLog using the ARP. These options set environment
+    variables EXPERIMENT and RUN, which can alternatively be set directly.
+        -e|--experiment
+          Experiment name.
+        -r|--run
+          Run number.
 EOF
 }
 
@@ -29,10 +38,20 @@ do
 
     case $flag in
     -c|--config)
-      CONFIGPATH="$2"
-      shift
-      shift
-      ;;
+        CONFIGPATH="$2"
+        shift
+        shift
+        ;;
+    -e|--experiment)
+        EXP_PARAM="$2"
+        shift
+        shift
+        ;;
+    -r|--run)
+        RUN_PARAM="$2"
+        shift
+        shift
+        ;;
     -h|--help)
         usage
         exit
@@ -63,10 +82,16 @@ fi
 # Assume all other arguments are for SLURM
 SLURM_ARGS=$@
 
+if [[ -v EXP_PARAM ]]; then
+    EXPERIMENT=$EXP_PARAM
+fi
 # Setup logfile names - $EXPERIMENT and $RUN_NUM will be available if ARP submitted
 # RUN_NUM is actually in format RUN_DATETIME
 RUN_TIME_ARR=(${RUN_NUM//_/ })
-export RUN="${RUN_TIME_ARR[0]}"
+RUN="${RUN_TIME_ARR[0]}"
+if [[ -v RUN_PARAM ]]; then
+    RUN=$RUN_PARAM
+fi
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"
 SLURM_ARGS+=" --output=${LOG_FILE}.out"
