@@ -17,6 +17,13 @@ Functions:
     grep(match_str: str, in_file: str) -> str | List[str]: grep for text in a
         specific file. Returns the results.
 
+    indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]: Parse
+        an output stream file to determine indexed patterns/indexing rate.
+
+    compare_hkl_fom_summary(shell_file: str, figure_display_name: str) ->
+        Tuple[Dict[str, str], Optional[ElogSummaryPlots]]: Extract the figure of
+        merit and produce a plot of figure of merit/resolution ring.
+
 Usage:
     As tasklets are just functions they can be imported and used within Task
     code normally if needed.
