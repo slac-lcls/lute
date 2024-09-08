@@ -268,6 +268,7 @@ if __name__ == "__main__":
             "Authorization": os.environ.get("Authorization"),
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
+            "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
             "workflow": wf_defn,  # Only used for custom defined workflows.

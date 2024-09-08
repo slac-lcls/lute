@@ -27,6 +27,8 @@ $(basename "$0"):
           Experiment name.
         -r|--run
           Run number.
+        -K|--KERB
+          Kerberos cache file variable. This should NOT be set manually!
 EOF
 }
 
@@ -49,6 +51,11 @@ do
         ;;
     -r|--run)
         RUN_PARAM="$2"
+        shift
+        shift
+        ;;
+    -K|--KERB)
+        KERB_CACHE="$2"
         shift
         shift
         ;;
@@ -82,15 +89,19 @@ fi
 # Assume all other arguments are for SLURM
 SLURM_ARGS=$@
 
+if [[ -v KERB_CACHE ]]; then
+    export KRB5CCNAME=$KERB_CACHE
+fi
+
 if [[ -v EXP_PARAM ]]; then
-    EXPERIMENT=$EXP_PARAM
+    export EXPERIMENT=$EXP_PARAM
 fi
 # Setup logfile names - $EXPERIMENT and $RUN_NUM will be available if ARP submitted
 # RUN_NUM is actually in format RUN_DATETIME
 RUN_TIME_ARR=(${RUN_NUM//_/ })
 RUN="${RUN_TIME_ARR[0]}"
 if [[ -v RUN_PARAM ]]; then
-    RUN=$RUN_PARAM
+    export RUN=$RUN_PARAM
 fi
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"

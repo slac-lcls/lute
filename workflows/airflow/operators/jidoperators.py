@@ -261,6 +261,10 @@ class JIDSlurmOperator(BaseOperator):
         else:
             lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
+        kerb_file: Optional[str] = dagrun_config.get("kerb_file")
+        if kerb_file is not None:
+            lute_param_str = f"{lute_param_str} -K {kerb_file}"
+
         slurm_param_str: str
         if self.custom_slurm_params:  # SLURM params != ""
             slurm_param_str = self.custom_slurm_params

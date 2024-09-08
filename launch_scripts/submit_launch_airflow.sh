@@ -23,8 +23,11 @@ set -- "${POS[@]}"
 # Bodge Kerberos credentials
 # These duplicates are removed later by the workflow process
 KERB_CACHE_PATH=$(klist -l | awk -F"FILE:" '{printf (NF>1)? $NF : ""}')
-mkdir $HOME/.tmp_cache
+if [[ ! -d $HOME/.tmp_cache ]]; then
+    mkdir $HOME/.tmp_cache
+fi
 cp $KERB_CACHE_PATH $HOME/.tmp_cache/kerbcache
+echo $?
 export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
 CMD="${@}"
