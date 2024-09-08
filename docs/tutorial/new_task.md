@@ -390,6 +390,81 @@ Task2Runner: Executor = Executor("RunTask2")
 Task2Runner.shell_source("/sdf/group/lcls/ds/tools/new_task_setup.sh") # Will source new_task_setup.sh script
 ```
 
+#### Parsing inputs and outputs: `tasklets`
+
+Generally, in addition to the final output from the `Task`, we are also interested in some summary information. This could be a text summary of some key result in the larger output, or a graphical figure that describes the portions of interest.
+
+For a third-party `Task` there isn't an easy way to insert code that provides these summaries into the `Task` itself, so the `tasklet` mechanism is provided. Tasklets are just Python functions. They are executed by the `Executor` either before or after the main `Task` has been run. One major use case of tasklets, is that the `Executor` can use the return values from these functions as the summary information for the main `Task` they are associated with. Tasklets are added to the `Executor` in much the same way that the execution environment is modified: using the `add_tasklet` method. E.g.
+
+```py
+Task3Runner: Executor = Executor("RunTask3")
+Task3Runner.add_tasklet(
+    callable,
+    [arg1, arg2, arg3],
+    when="before",
+    set_result=False,
+    set_summary=True
+)
+```
+
+The `add_tasklet` method has the following signature:
+```py
+def add_tasklet(
+    self,
+    tasklet: Callable,
+    args: Union[List[Any], Tuple[Any,...]],
+    when: str,
+    set_result: bool,
+    set_summary: bool
+)
+```
+
+These parameters, in order, are:
+
+- `tasklet` : Any callable function. A number of tasklets are already defined in the `lute.tasks.tasklets` module as examples. Some of these are already associated with **managed** `Task`s.
+- `args` : This is a list/tuple (or any iterable) of arguments to pass to the `tasklet`. The arguments can be substituted similarly to templates (below) or parameters in the configuration YAML. This is discussed further below.
+- `when`: This is a string literal taking the values of `"before"` or `"after"`, indicating whether the tasklet function should be run before or after the actual `Task`, respectively.
+- `set_result`: Is a bool. If `True`, the **main result payload** will be overwritten in the database with the return values of the tasklet. This affects only the database archiving - any actual files, etc., will not be overwritten. Regardless, in general this is not the appropriate option to use with a third-party `Task`.
+- `set_summary`: Is a bool. If `True`, the **result summary** is set to the return values of the tasklet. This allows the main result of the `Task` to be recorded in addition to some auxiliary summary information. In general, we will want to use this option.
+
+##### Substituting parameters for `tasklet` arguments
+
+We often want the input to a tasklet to depend on some of the `TaskParameters` for the main associated `Task`. We can specify this using a Jinja-like substitution syntax. When passing arguments to the `add_tasklet` method, we can enclose the name of parameters from the `TaskParameters` model in a string between doubly curly brackets: `"{{ param_to_sub }}"`. For example if we wanted to use the output file as the input to the tasklet, assuming it had the parameter name `out_file`, we would use `"{{ out_file }}"`.
+
+You can substitute multiple parameters in every string if necessary, with each parameter to substitute enclosed in its own set of double curly brackets.
+
+**Note:** The parameter substitutions must be passed as strings. Type conversions will be performed to the actual type of the parameter you are substituting.
+
+##### Return types and associated actions
+
+The `Executor` will decide on what to do with a returned value from a tasklet based upon the specific type. Note that these types can also be used in first-party `Task`s to perform the same actions; however, in that case, users should set the `_result.summary` or `_result.payload` directly, rather than using a tasklet (if possible).
+
+The following types and actions are currently defined:
+
+- `Dict[str, str]`: Post key/value pairs under the report section in the control tab of the eLog. These key/values are also posted as run parameters if possible. This return type is best used for short text summaries, e.g. indexing rate, execution time, etc. The key/value pairs are converted to a semi-colon delimited string for storage in the database. E.g. `{"Rate": 0.05, "Total": 10}` will be stored as `Rate: 0.05;Total: 10` in the database.
+- `ElogSummaryPlots`: This special dataclass, defined in `lute.tasks.dataclasses` is used to create an eLog summary plot under the Summaries tab. The path to the created HTML file is stored in the database.
+
+You can return any number of these objects from a tasklet as a tuple. Each item will be processed independently. For datbase archiving, the various entries are stored semi-colon delimited.
+
+##### Examples
+
+Some example `tasklets` are available in `lute.tasks.tasklets`. Some of these are reproduced below.
+
+**Generic Usage**
+
+- `concat_files(location: str, in_files_glob: str, out_file: str)`: Concatenate a set of output files
+- `grep(match_str: str, in_file: str)`: Search for occurences of a string in some output file.
+- `git_clone(repo: str, location: str, permissions: str)`: Clone a git repository. This is generally of more use as a tasklet run **before** the main `Task` is run.
+
+**Specific Examples**
+
+- `indexamajig_summary_indexing_rate`: Calculates indexing rate based on parsing a stream file.
+- `compare_hkl_fom_summary`: Extracts a figure of merit **and** produces a summary plot.
+
+Refer to `managed_tasks` to see how these are specifically called with `CrystFELIndexer` and `HKLComparer` respectively.
+
+
+
 ### Using templates: managing third-party configuration files
 
 Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the `Task`'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the `Task` implementer refer to the [official Jinja documentation](https://jinja.palletsprojects.com/en/3.1.x/) for more information.
@@ -817,3 +892,9 @@ def import_task(task_name: str) -> Type[Task]:
 
 ### Defining an `Executor`
 The process of `Executor` definition is identical to the process as described for `ThirdPartyTask`s above. The one exception is if you defined the `Task` to use MPI as described in the section above (Using MPI for your `Task`), you will likely consider using the `MPIExecutor`.
+
+#### Environment setup
+Currently, first-party `Task`s are expected to use the same environment as the `Executor`, so while you can use the environment update methods to insert environment variables, complete replacement of the environment is not supported. If you have a compelling reason to require this feature, contact the maintainers.
+
+#### `tasklet` usage
+You can also use `tasklet` functions with first-party `Task`s if needed. The preferred method, however, would be to incorporate whatever tasklet code is needed directly into your `Task`.

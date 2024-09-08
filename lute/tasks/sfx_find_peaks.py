@@ -9,11 +9,11 @@ Classes:
 """
 
 __all__ = ["CxiWriter", "FindPeaksPyAlgos"]
-__author__ = "Valerio Mariani"
+__author__ = "Valerio Mariani, Gabriel Dorlhiac"
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, TextIO, Tuple
+from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional
 
 import h5py
 import numpy
@@ -37,6 +37,7 @@ class CxiWriter:
         run: int,
         n_events: int,
         det_shape: Tuple[int, ...],
+        raw_det_shape: Tuple[int, ...],
         min_peaks: int,
         max_peaks: int,
         i_x: Any,  # Not typed becomes it comes from psana
@@ -63,6 +64,9 @@ class CxiWriter:
             det_shape (Tuple[int, int]): Shape of the numpy array storing the detector
                 data. This must be aCheetah-stile 2D array.
 
+            raw_det_shape (Tuple[int, ...]): Shape of the numpy array storing the
+                detector in raw unassembled form. Length = 2, 3, or 4.
+
             min_peaks (int): Minimum number of peaks per image.
 
             max_peaks (int): Maximum number of peaks per image.
@@ -78,6 +82,7 @@ class CxiWriter:
             tag (str): Tag to append to cxi file names.
         """
         self._det_shape: Tuple[int, ...] = det_shape
+        self._raw_det_shape: Tuple[int, ...] = raw_det_shape
         self._i_x: Any = i_x
         self._i_y: Any = i_y
         self._ipx: Any = ipx
@@ -182,6 +187,7 @@ class CxiWriter:
         timestamp_nanoseconds: int,
         timestamp_fiducials: int,
         photon_energy: float,
+        clen: float,
     ):
         """
         Write peak finding results for an event into the HDF5 file.
@@ -202,8 +208,12 @@ class CxiWriter:
                 information
 
             photon_energy (float): Photon energy for the event
+
+            clen (float): Camera length/detector distance.
         """
-        ch_rows: NDArray[numpy.float_] = peaks[:, 0] * self._det_shape[1] + peaks[:, 1]
+        ch_rows: NDArray[numpy.float_] = (
+            peaks[:, 0] * self._raw_det_shape[-2] + peaks[:, 1]
+        )
         ch_cols: NDArray[numpy.float_] = peaks[:, 2]
 
         if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
@@ -218,6 +228,7 @@ class CxiWriter:
                 "machineTimeNanoSeconds",
                 "fiducial",
                 "photon_energy_eV",
+                "detector_1/EncoderValue",
             ):
                 self._outh5[f"/LCLS/{ds_key}"].resize(self._index + 1, axis=0)
 
@@ -289,6 +300,8 @@ class CxiWriter:
         self._outh5["/LCLS/fiducial"][self._index] = timestamp_fiducials
         self._outh5["/LCLS/photon_energy_eV"][self._index] = photon_energy
 
+        # Add clen distance
+        self._outh5["/LCLS/detector_1/EncoderValue"][self._index] = clen
         self._index += 1
 
     def write_non_event_data(
@@ -296,7 +309,6 @@ class CxiWriter:
         powder_hits: NDArray[numpy.float_],
         powder_misses: NDArray[numpy.float_],
         mask: NDArray[numpy.uint16],
-        clen: float,
     ):
         """
         Write to the file data that is not related to a specific event (masks, powders)
@@ -321,9 +333,6 @@ class CxiWriter:
         self._outh5["/entry_1/data_1/mask"][:] = (1 - mask).reshape(
             -1, mask.shape[-1]
         )  # Crystfel expects inverted values
-
-        # Add clen distance
-        self._outh5["/LCLS/detector_1/EncoderValue"][:] = clen
 
     def optimize_and_close_file(
         self,
@@ -434,9 +443,13 @@ def write_master_file(
     f.close()
 
     # Compute cumulative powder hits and misses for all files
+    # Copy mask as well
+    mask: Optional[NDArray[numpy.uint16]] = None
     powder_hits, powder_misses = None, None
     for fn in fnames:
         f = h5py.File(fn, "r")
+        if mask is None:
+            mask = f["entry_1/data_1/mask"][:].copy()
         if powder_hits is None:
             powder_hits = f["entry_1/data_1/powderHits"][:].copy()
             powder_misses = f["entry_1/data_1/powderMisses"][:].copy()
@@ -473,6 +486,7 @@ def write_master_file(
 
         vdf["entry_1/data_1/powderHits"] = powder_hits
         vdf["entry_1/data_1/powderMisses"] = powder_misses
+        vdf["entry_1/data_1/mask"] = mask
 
     return vfname
 
@@ -691,6 +705,7 @@ class FindPeaksPyAlgos(Task):
                     run=self._task_parameters.lute_config.run,
                     n_events=self._task_parameters.n_events,
                     det_shape=det_shape,
+                    raw_det_shape=img.shape,
                     i_x=i_x,
                     i_y=i_y,
                     ipx=ipx,
@@ -726,7 +741,7 @@ class FindPeaksPyAlgos(Task):
                 rank=self._task_parameters.peak_rank,
                 r0=self._task_parameters.r0,
                 dr=self._task_parameters.dr,
-                #      nsigm=self._task_parameters.nsigm,
+                nsigm=self._task_parameters.nsigm,
             )
 
             num_events += 1
@@ -748,16 +763,16 @@ class FindPeaksPyAlgos(Task):
                     decompressed = compressor.decode(compressed_img, decompressed_img)
                     img = decompressed_img
 
+                photon_energy: float
                 try:
-                    photon_energy: float = (
-                        Detector("EBeam").get(evt).ebeamPhotonEnergy()
-                    )
-                except AttributeError:
+                    photon_energy = Detector("EBeam").get(evt).ebeamPhotonEnergy()
+                    if numpy.isinf(photon_energy):
+                        raise ValueError
+                except (AttributeError, ValueError):
                     photon_energy = (
                         1.23984197386209e-06
                         / ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192")
-                        / 1.0e9
-                    )
+                    ) * 1e9
 
                 file_writer.write_event(
                     img=img,
@@ -766,6 +781,7 @@ class FindPeaksPyAlgos(Task):
                     timestamp_nanoseconds=timestamp_nanoseconds,
                     timestamp_fiducials=timestamp_fiducials,
                     photon_energy=photon_energy,
+                    clen=clen,
                 )
                 num_hits += 1
 
@@ -792,7 +808,6 @@ class FindPeaksPyAlgos(Task):
             powder_hits=powder_hits,
             powder_misses=powder_misses,
             mask=mask,
-            clen=clen,
         )
 
         file_writer.optimize_and_close_file(
@@ -803,7 +818,7 @@ class FindPeaksPyAlgos(Task):
 
         num_hits_per_rank: List[int] = COMM_WORLD.gather(num_hits, root=0)
         num_hits_total: int = COMM_WORLD.reduce(num_hits, SUM)
-        num_events_per_rank: List[int] = COMM_WORLD.gather(num_events, root=0)
+        num_events_total: int = COMM_WORLD.reduce(num_events, SUM)
 
         if ds.rank == 0:
             master_fname: Path = write_master_file(
@@ -821,15 +836,19 @@ class FindPeaksPyAlgos(Task):
             with open(
                 Path(self._task_parameters.outdir) / f"peakfinding{tag}.summary", "w"
             ) as f:
-                print(f"Number of events processed: {num_events_per_rank[-1]}", file=f)
+                print(f"Number of events processed: {num_events_total}", file=f)
                 print(f"Number of hits found: {num_hits_total}", file=f)
                 print(
-                    "Fractional hit rate: "
-                    f"{(num_hits_total/num_events_per_rank[-1]):.2f}",
+                    "Fractional hit rate: " f"{(num_hits_total/num_events_total):.2f}",
                     file=f,
                 )
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
+            self._result.summary = {
+                "Number of events processed": str(num_events_total),
+                "Number of hits found": str(num_hits_total),
+                "Fractional hit rate": f"{num_hits_total/num_events_total:.2f}",
+            }
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
 

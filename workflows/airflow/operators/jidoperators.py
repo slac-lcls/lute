@@ -12,7 +12,7 @@ Classes:
 """
 
 __all__ = ["JIDSlurmOperator", "RequestOnlyOperator"]
-__author__ = "Fred Poitevin, Murali Shankar"
+__author__ = "Fred Poitevin, Murali Shankar, Gabriel Dorlhiac"
 
 import sys
 import uuid
@@ -119,7 +119,7 @@ class JIDSlurmOperator(BaseOperator):
     def __init__(
         self,
         user: str = getpass.getuser(),
-        poke_interval: float = 30.0,
+        poke_interval: float = 5.0,
         max_cores: Optional[int] = None,
         max_nodes: Optional[int] = None,
         require_partition: Optional[str] = None,
@@ -261,6 +261,10 @@ class JIDSlurmOperator(BaseOperator):
         else:
             lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
+        kerb_file: Optional[str] = dagrun_config.get("kerb_file")
+        if kerb_file is not None:
+            lute_param_str = f"{lute_param_str} -K {kerb_file}"
+
         slurm_param_str: str
         if self.custom_slurm_params:  # SLURM params != ""
             slurm_param_str = self.custom_slurm_params
@@ -315,7 +319,7 @@ class JIDSlurmOperator(BaseOperator):
             AirflowException: Raised to translate multiple errors into object
                 properly handled by the Airflow server.
         """
-        logger.info(f"{resp.status_code}: {resp.content}")
+        logger.debug(f"{resp.status_code}: {resp.content}")
         if not resp.status_code in (200,):
             raise AirflowException(f"Bad response from JID {resp}: {resp.content}")
         try:
@@ -377,12 +381,12 @@ class JIDSlurmOperator(BaseOperator):
         # Endpoints have the string "{experiment}" in them
         uri = uri.format(experiment=experiment)
 
-        logger.info(f"Calling {uri} with {control_doc}...")
+        logger.debug(f"Calling {uri} with {control_doc}...")
 
         resp: requests.models.Response = requests.post(
             uri, json=control_doc, headers={"Authorization": auth}
         )
-        logger.info(f" + {resp.status_code}: {resp.content.decode('utf-8')}")
+        logger.debug(f" + {resp.status_code}: {resp.content.decode('utf-8')}")
 
         value: Dict[str, Any] = self.parse_response(resp, check_for_error)
 
@@ -421,13 +425,20 @@ class JIDSlurmOperator(BaseOperator):
         # Logs out to xcom
         out = self.rpc("job_log_file", jobs[0], context)
         context["task_instance"].xcom_push(key="log", value=out)
+        final_status: str = jobs[0].get("status")
+        logger.info(f"Final status: {final_status}")
+        if final_status in ("FAILED", "EXITED"):
+            # Only DONE indicates success. EXITED may be cancelled or SLURM err
+            logger.error(f"`Task` job marked as {final_status}!")
+            sys.exit(-1)
+
         failure_messages: List[str] = [
             "INFO:lute.execution.executor:Task failed with return code:",
             "INFO:lute.execution.executor:Exiting after Task failure.",
         ]
         for msg in failure_messages:
             if msg in out:
-                logger.info("Logs indicate `Task` failed.")
+                logger.error("Logs indicate `Task` failed!")
                 sys.exit(-1)
 
 

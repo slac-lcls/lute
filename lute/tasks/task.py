@@ -158,6 +158,12 @@ class Task(ABC):
         else:
             self._report_to_executor(start_msg)
 
+        # We stop process here so Executor can do any tasklet work if needed
+        if os.getenv("LUTE_CONFIGPATH") is not None:
+            # Guard w/ environment variable that is set only by Executor - don't
+            # SIGSTOP if Task is running without Executor
+            os.kill(os.getpid(), signal.SIGSTOP)
+
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
         signal: str = "TASK_RESULT"

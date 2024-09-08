@@ -35,29 +35,33 @@ dag: DAG = DAG(
 peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id="PeakFinderPyAlgos", dag=dag)
 
 indexer: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=120, task_id="CrystFELIndexer", dag=dag
+    max_cores=120, max_nodes=1, task_id="CrystFELIndexer", dag=dag
+)
+
+concatenator: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="StreamFileConcatenator", dag=dag
 )
 
 # Merge
 merger: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=120, task_id="PartialatorMerger", dag=dag
+    max_cores=120, max_nodes=1, task_id="PartialatorMerger", dag=dag
 )
 
 # Figures of merit
 hkl_comparer: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=8, task_id="HKLComparer", dag=dag
+    max_cores=8, max_nodes=1, task_id="HKLComparer", dag=dag
 )
 
 # HKL conversions
 hkl_manipulator: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=8, task_id="HKLManipulator", dag=dag
+    max_cores=8, max_nodes=1, task_id="HKLManipulator", dag=dag
 )
 
-# SHELX Tasks
+# CCP4
 dimple_runner: JIDSlurmOperator = JIDSlurmOperator(task_id="DimpleSolver", dag=dag)
 
 
-peak_finder >> indexer >> merger >> hkl_manipulator >> dimple_runner
+peak_finder >> indexer >> concatenator >> merger >> hkl_manipulator >> dimple_runner
 merger >> hkl_comparer
 
 # Run summaries

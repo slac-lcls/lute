@@ -4,8 +4,12 @@ Executor-managed Tasks with specific environment specifications are defined
 here.
 """
 
-from .execution.executor import *
-from .io.config import *
+from lute.execution.executor import *
+from lute.io.config import *
+from lute.tasks.tasklets import (
+    compare_hkl_fom_summary,
+    indexamajig_summary_indexing_rate,
+)
 
 # Tests
 #######
@@ -61,6 +65,16 @@ CrystFELIndexer.update_environment(
         )
     }
 )
+CrystFELIndexer.add_tasklet(
+    indexamajig_summary_indexing_rate,
+    ["{{ out_file }}"],
+    when="after",
+    set_result=False,
+    set_summary=True,
+)
+
+StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
+"""Concatenate output stream files."""
 
 CCTBXMerger: Executor = Executor("MergeCCTBXXFEL")
 """Runs crystallographic merging using cctbx.xfel."""
@@ -71,6 +85,13 @@ PartialatorMerger: Executor = Executor("MergePartialator")
 
 HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit
 """Runs analysis on merge results for statistics/figures of merit.."""
+HKLComparer.add_tasklet(
+    compare_hkl_fom_summary,
+    ["{{ shell_file }}", "r{{ lute_config.run }}/{{ fom }}"],
+    when="after",
+    set_result=False,
+    set_summary=True,
+)
 
 HKLManipulator: Executor = Executor("ManipulateHKL")  # For hkl->mtz, but can do more
 """Performs format conversions (among other things) of merge results."""

@@ -30,18 +30,19 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any
-from typing_extensions import Self
+from typing import Dict, Callable, List, Optional, Any, Tuple, Union
+from typing_extensions import Self, TypedDict
 from abc import ABC, abstractmethod
 import warnings
 import copy
+import re
 
 from lute.execution.ipc import *
 from lute.tasks.task import *
 from lute.tasks.dataclasses import *
 from lute.io.models.base import TaskParameters, TemplateParameters
 from lute.io.db import record_analysis_db
-from lute.io.elog import post_elog_run_status
+from lute.io.elog import post_elog_run_status, post_elog_run_table
 
 if __debug__:
     warnings.simplefilter("default")
@@ -54,6 +55,11 @@ else:
     os.environ["PYTHONWARNINGS"] = "ignore"
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+class TaskletDict(TypedDict):
+    before: Optional[List[Tuple[Callable[[Any], Any], List[Any], bool, bool]]]
+    after: Optional[List[Tuple[Callable[[Any], Any], List[Any], bool, bool]]]
 
 
 class BaseExecutor(ABC):
@@ -88,21 +94,37 @@ class BaseExecutor(ABC):
         signal.
         """
 
-        def no_pickle_mode(self: Self, msg: Message) -> None: ...
+        def no_pickle_mode(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_started(self: Self, msg: Message) -> None: ...
+        def task_started(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_failed(self: Self, msg: Message) -> None: ...
+        def task_failed(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_stopped(self: Self, msg: Message) -> None: ...
+        def task_stopped(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_done(self: Self, msg: Message) -> None: ...
+        def task_done(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_cancelled(self: Self, msg: Message) -> None: ...
+        def task_cancelled(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None: ...
 
-        def task_result(self: Self, msg: Message) -> None: ...
+        def task_result(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> bool: ...
 
-        def task_log(self: Self, msg: Message) -> bool: ...
+        def task_log(
+            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> bool: ...
 
     def __init__(
         self,
@@ -143,10 +165,140 @@ class BaseExecutor(ABC):
             poll_interval=poll_interval,
             communicator_desc=communicator_desc,
         )
+        self._tasklets: TaskletDict = {"before": None, "after": None}
         self._shell_source_script: Optional[str] = None
 
+    def add_tasklet(
+        self,
+        tasklet: Callable,
+        args: List[Any],
+        when: str = "after",
+        set_result: bool = False,
+        set_summary: bool = False,
+    ) -> None:
+        """Add/register a tasklet to be run by the Executor.
+
+        Adds a tasklet to be run by the Executor in addition to the main Task.
+        The tasklet can be run before or after the main Task has been run.
+
+        Args:
+            tasklet (Callable[[Any], Any]): The tasklet (function) to run.
+
+            args (List[Any]): A list of all the arguments to be passed to the
+                tasklet. Arguments can include substitutions for parameters to
+                be extracted from the TaskParameters object. The same jinja-like
+                syntax used in configuration file substiutions is used to specify
+                a parameter substitution in an argument. E.g. if a Task to be
+                run has a parameter `input_file`, the parameter can be substituted
+                in the tasklet argument using: `"{{ input_file  }}"`. Note that
+                substitutions must be passed as strings. Conversions will be done
+                during substitution if required.
+
+            when (str): When to run the tasklet. Either `before` or `after` the
+                main Task. Default is after.
+
+            set_result (bool): Whether to use the output from the tasklet as the
+                result of the main Task. Default is False.
+
+            set_summary (bool): Whether to use the output from the tasklet as the
+                summary of the main Task. Default is False.
+        """
+        if when not in ("before", "after"):
+            logger.error("Can only run tasklet `before` or `after` Task! Ignoring...")
+            return
+        tasklet_tuple: Tuple[Callable[[Any], Any], List[Any], bool, bool]
+        tasklet_tuple = (tasklet, args, set_result, set_summary)
+        if self._tasklets[when] is None:
+            self._tasklets[when] = [tasklet_tuple]
+        else:
+            self._tasklets[when].append(tasklet_tuple)
+
+    def _sub_tasklet_parameters(self, args: List[Any]) -> List[Any]:
+        """Substitute tasklet arguments using TaskParameters members."""
+        sub_pattern = r"\{\{[^}{]*\}\}"
+        new_args: List[Any] = []
+        for arg in args:
+            new_arg: Any = arg
+            matches: List[str] = re.findall(sub_pattern, arg)
+            for m in matches:
+                param_name: str = m[2:-2].strip()  # Remove {{}}
+                params: Any = self._analysis_desc.task_parameters
+                if "." in param_name:
+                    # Iterate so we can substitute e.g. {{ lute_config.run }}
+                    hier_param_list: List[str] = param_name.split(".")
+                    for idx, param in enumerate(hier_param_list):
+                        if hasattr(params, param):
+                            if idx != len(hier_param_list) - 1:
+                                params = getattr(params, param)
+                            param_name = param
+                        else:
+                            break
+                if hasattr(params, param_name):
+                    pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
+                    sub: Any = getattr(params, param_name)
+                    new_arg = re.sub(pattern, str(sub), new_arg)
+                if new_arg.isnumeric():
+                    new_arg = int(new_arg)
+                else:
+                    try:
+                        new_arg = float(new_arg)
+                    except ValueError:
+                        pass
+            new_args.append(new_arg)
+        return new_args
+
+    def _run_tasklets(self, *, when: str) -> None:
+        """Run all tasklets of the specified kind."""
+        if when not in self._tasklets.keys():
+            logger.error(f"Ignore request to run tasklets of unknown kind: {when}")
+            return
+        for tasklet_spec in self._tasklets[when]:
+            tasklet: Callable[[Any], Any]
+            args: List[Any]
+            set_result: bool
+            set_summary: bool
+            tasklet, args, set_result, set_summary = tasklet_spec
+            args = self._sub_tasklet_parameters(args)
+            logger.debug(f"Running {tasklet} with {args}")
+            output: Any
+            try:
+                output = tasklet(*args)  # Many don't return anything
+            except Exception as err:
+                logger.error(f"Tasklet failed! Error: {err}")
+                output = None
+            # We set result payloads or summaries now, but the processing is done
+            # by process_results method called sometime after the last tasklet
+            if set_result and output is not None:
+                if isinstance(self._analysis_desc.task_result.payload, list):
+                    # We have multiple payloads to process, append to list
+                    self._analysis_desc.task_result.payload.append(output)
+                elif self._analysis_desc.task_result.payload != "":
+                    # We have one payload already, convert to list and append
+                    tmp: Any = self._analysis_desc.task_result.payload
+                    self._analysis_desc.task_result.payload = []
+                    self._analysis_desc.task_result.payload.append(tmp)
+                    self._analysis_desc.task_result.payload.append(output)
+                else:
+                    # Payload == "" - i.e. hasn't been set
+                    self._analysis_desc.task_result.payload = output
+            if set_summary and output is not None:
+                if isinstance(self._analysis_desc.task_result.summary, list):
+                    # We have multiple summary objects to process, append to list
+                    self._analysis_desc.task_result.summary.append(output)
+                elif self._analysis_desc.task_result.summary != "":
+                    # We have one summary already, convert to list and append
+                    tmp: Any = self._analysis_desc.task_result.summary
+                    self._analysis_desc.task_result.summary = []
+                    self._analysis_desc.task_result.summary.append(tmp)
+                    self._analysis_desc.task_result.summary.append(output)
+                else:
+                    # Summary == "" - i.e. hasn't been set
+                    self._analysis_desc.task_result.summary = output
+
     def add_hook(
-        self, event: str, hook: Callable[[Self, Message], Optional[bool]]
+        self,
+        event: str,
+        hook: Callable[[Self, Message, Optional[subprocess.Popen]], None],
     ) -> None:
         """Add a new hook.
 
@@ -373,6 +525,9 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
             logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
             self.Hooks.task_done(self, msg=Message())
+        if self._tasklets["after"] is not None:
+            # Tasklets before results processing since they may create result
+            self._run_tasklets(when="after")
         self.process_results()
         self._store_configuration()
         for comm in self._communicators:
@@ -581,7 +736,9 @@ class Executor(BaseExecutor):
     def add_default_hooks(self) -> None:
         """Populate the set of default event hooks."""
 
-        def no_pickle_mode(self: Executor, msg: Message) -> None:
+        def no_pickle_mode(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None:
             for idx, communicator in enumerate(self._communicators):
                 if isinstance(communicator, PipeCommunicator):
                     self._communicators[idx] = PipeCommunicator(
@@ -590,14 +747,16 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message) -> None:
+        def task_started(self: Executor, msg: Message, proc: subprocess.Popen) -> None:
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
-                # Maybe just run this no matter what? Rely on the other guards?
-                # Perhaps just check if ThirdPartyParameters?
-                # if isinstance(self._analysis_desc.task_parameters, ThirdPartyParameters):
+                # Run "before" tasklets
+                if self._tasklets["before"] is not None:
+                    self._run_tasklets(when="before")
+                # Need to continue since Task._signal_start raises SIGSTOP
+                self._continue(proc)
                 if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
-                    # Third party Tasks may mark a parameter as the result
+                    # Tasks may mark a parameter as the result
                     # If so, setup the result now.
                     self._set_result_from_parameters()
             logger.info(
@@ -611,7 +770,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_started", task_started)
 
-        def task_failed(self: Executor, msg: Message) -> None:
+        def task_failed(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "FAILED",
             }
@@ -619,7 +780,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_failed", task_failed)
 
-        def task_stopped(self: Executor, msg: Message) -> None:
+        def task_stopped(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
             }
@@ -627,7 +790,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_stopped", task_stopped)
 
-        def task_done(self: Executor, msg: Message) -> None:
+        def task_done(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
@@ -635,7 +800,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_done", task_done)
 
-        def task_cancelled(self: Executor, msg: Message) -> None:
+        def task_cancelled(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> None:
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
@@ -643,7 +810,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_cancelled", task_cancelled)
 
-        def task_result(self: Executor, msg: Message) -> bool:
+        def task_result(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
                 logger.info(self._analysis_desc.task_result.summary)
@@ -681,9 +850,10 @@ class Executor(BaseExecutor):
                     hook: Callable[[Executor, Message], None] = getattr(
                         self.Hooks, msg.signal.lower()
                     )
-                    should_continue = hook(self, msg)
+                    should_continue = hook(self, msg, proc)
                     if should_continue:
                         continue
+
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
@@ -713,7 +883,7 @@ class Executor(BaseExecutor):
 
     def _process_result_payload(self, payload: Any) -> None:
         if self._analysis_desc.task_parameters is None:
-            logger.debug("Please run Task before using this method!")
+            logger.error("Please run Task before using this method!")
             return
         new_payload: Optional[str]
         if isinstance(payload, ElogSummaryPlots):
@@ -737,11 +907,21 @@ class Executor(BaseExecutor):
     def _process_elog_plot(self, plots: ElogSummaryPlots) -> Optional[str]:
         """Process an ElogSummaryPlots
 
+        Writes out the eLog summary plot for display and returns the path of
+        where the plots were written out so they can be stored as the result
+        payload.
+
+        ElogSummaryPlots objects already convert the plots to a byte stream
+        which can be directly written to an HTML file.
+
         Args:
-            plots
+            plots (ElogSummaryPlots): The plots dataclass.
+
+        Returns:
+            path (str): Path the plots were written out to.
         """
         if self._analysis_desc.task_parameters is None:
-            logger.debug("Please run Task before using this method!")
+            logger.error("Please run Task before using this method!")
             return
         # ElogSummaryPlots has figures and a display name
         # display name also serves as a path.
@@ -757,7 +937,63 @@ class Executor(BaseExecutor):
 
         return path
 
-    def _process_result_summary(self, summary: str) -> None: ...
+    def _process_result_summary(self, summary: Any) -> None:
+        """Process an object destined for the results summary.
+
+        Args:
+            summary (Any): The object to be set as a summary. If a dictionary
+                it is assumed to be a set of key/value pairs to be written out
+                as run parameters in the eLog. If a list each item is processed
+                individually.
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.error("Please run Task before using this method!")
+            return
+        if isinstance(summary, dict):
+            # Assume dict is key: value pairs of eLog run parameters to post
+            self._analysis_desc.task_result.summary = self._process_summary_run_params(
+                summary
+            )
+        elif isinstance(summary, list) or isinstance(summary, tuple):
+            new_summary_str: str = ""
+            for item in summary:
+                if isinstance(item, dict):
+                    ret: str = self._process_summary_run_params(item)
+                    new_summary_str = ";".join(filter(None, (new_summary_str, ret)))
+                elif isinstance(item, ElogSummaryPlots):
+                    plot_path: Optional[str] = self._process_elog_plot(item)
+                    new_summary_str = ";".join(
+                        filter(None, (new_summary_str, plot_path))
+                    )
+            self._analysis_desc.task_result.summary = new_summary_str
+        elif isinstance(summary, str):
+            ...
+        else:
+            ...
+
+    def _process_summary_run_params(self, params: Dict[str, str]) -> str:
+        """Process a dictionary of run parameters to be posted to the eLog.
+
+        Args:
+            params (Dict[str, str]): Key/value pairs to be posted as run parameters.
+
+        Returns:
+            summary_str (str): New string of key/value pairs to be stored in
+                summary field of the database.
+        """
+        if self._analysis_desc.task_parameters is None:
+            logger.error("Please run Task before using this method!")
+            return ""
+        exp: str = self._analysis_desc.task_parameters.lute_config.experiment
+        run: int = int(self._analysis_desc.task_parameters.lute_config.run)
+        logger.debug("Posting eLog run parameters.")
+        try:
+            post_elog_run_table(exp, run, params)
+        except Exception as err:
+            logger.error(f"Unable to post run parameters! Error: {err}")
+        post_elog_run_status(params)
+        summary_str: str = ";".join(f"{key}: {value}" for key, value in params.items())
+        return summary_str
 
 
 class MPIExecutor(Executor):

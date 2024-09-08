@@ -135,10 +135,11 @@ if __name__ == "__main__":
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
     # Check if was submitted from ARP - look for token
-    use_kerberos: bool = False
+    use_kerberos: bool = (
+        True  # Always copy kerberos ticket so non-active experiments can work.
+    )
+    cache_file: Optional[str] = os.getenv("KRB5CCNAME")
     if os.getenv("Authorization") is None:
-        use_kerberos = True
-        cache_file: Optional[str] = os.getenv("KRB5CCNAME")
         if cache_file is None:
             logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
             sys.exit(-1)
@@ -267,6 +268,7 @@ if __name__ == "__main__":
             "Authorization": os.environ.get("Authorization"),
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
+            "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
             "workflow": wf_defn,  # Only used for custom defined workflows.
@@ -377,8 +379,12 @@ if __name__ == "__main__":
         logger.debug("Removing duplicate Kerberos credentials.")
         # This should be defined if we get here
         # Format is FILE:/.../...
-        os.remove(cache_file[5:])
-        os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
+        if cache_file is not None:
+            try:
+                os.remove(cache_file[5:])
+            except FileNotFoundError:
+                logger.error("No cache file found to remove.")
+            os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
         sys.exit(1)

@@ -63,6 +63,14 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         rename_param="o",
         is_result=True,
     )
+    peaks: Optional[str] = Field(
+        None,
+        description=(
+            "Peak finding algorithm, or file type. E.g. peakfinder8 to peak find, "
+            "or use cxi for CXI files."
+        ),
+        flag_type="--",
+    )
     geometry: str = Field(
         "", description="Path to geometry file.", flag_type="-", rename_param="g"
     )
@@ -484,7 +492,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_out_file: str = str(
-                Path(values["in_file"]).parent / f"{values['tag'].stream}"
+                Path(values["in_file"]).parent / f"{values['tag']}.stream"
             )
             return stream_out_file
         return tag
