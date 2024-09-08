@@ -435,6 +435,17 @@ You can substitute multiple parameters in every string if necessary, with each p
 
 **Note:** The parameter substitutions must be passed as strings. Type conversions will be performed to the actual type of the parameter you are substituting.
 
+##### Return types and associated actions
+
+The `Executor` will decide on what to do with a returned value from a tasklet based upon the specific type. Note that these types can also be used in first-party `Task`s to perform the same actions; however, in that case, users should set the `_result.summary` or `_result.payload` directly, rather than using a tasklet (if possible).
+
+The following types and actions are currently defined:
+
+- `Dict[str, str]`: Post key/value pairs under the report section in the control tab of the eLog. These key/values are also posted as run parameters if possible. This return type is best used for short text summaries, e.g. indexing rate, execution time, etc. The key/value pairs are converted to a semi-colon delimited string for storage in the database. E.g. `{"Rate": 0.05, "Total": 10}` will be stored as `Rate: 0.05;Total: 10` in the database.
+- `ElogSummaryPlots`: This special dataclass, defined in `lute.tasks.dataclasses` is used to create an eLog summary plot under the Summaries tab. The path to the created HTML file is stored in the database.
+
+You can return any number of these objects from a tasklet as a tuple. Each item will be processed independently. For datbase archiving, the various entries are stored semi-colon delimited.
+
 ##### Examples
 
 Some example `tasklets` are available in `lute.tasks.tasklets`. Some of these are reproduced below.
