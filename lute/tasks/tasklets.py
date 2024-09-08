@@ -148,7 +148,19 @@ def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
         n_indexed = len(res[:-1])
     else:
         n_indexed = 0
-    return {"Number of lattices indexed": str(n_indexed)}
+    res = grep("End chunk", stream_file)
+    n_hits: int
+    rate: float
+    if res:
+        n_hits = len(res[:-1])
+        rate = n_indexed / n_hits
+    else:
+        n_hits = 0
+        rate = 0
+    return {
+        "Number of lattices indexed": str(n_indexed),
+        "Indexing rate": f"{rate:.2f}",
+    }
 
 
 def compare_hkl_fom_summary(

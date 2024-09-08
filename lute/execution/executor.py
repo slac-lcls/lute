@@ -222,10 +222,21 @@ class BaseExecutor(ABC):
             matches: List[str] = re.findall(sub_pattern, arg)
             for m in matches:
                 param_name: str = m[2:-2].strip()  # Remove {{}}
-                if hasattr(self._analysis_desc.task_parameters, param_name):
+                params: Any = self._analysis_desc.task_parameters
+                if "." in param_name:
+                    # Iterate so we can substitute e.g. {{ lute_config.run }}
+                    hier_param_list: List[str] = param_name.split(".")
+                    for idx, param in enumerate(hier_param_list):
+                        if hasattr(params, param):
+                            if idx != len(hier_param_list) - 1:
+                                params = getattr(params, param)
+                            param_name = param
+                        else:
+                            break
+                if hasattr(params, param_name):
                     pattern: str = m.replace("{{", r"\{\{").replace("}}", r"\}\}")
-                    sub: Any = getattr(self._analysis_desc.task_parameters, param_name)
-                    new_arg = re.sub(pattern, sub, new_arg)
+                    sub: Any = getattr(params, param_name)
+                    new_arg = re.sub(pattern, str(sub), new_arg)
                 if new_arg.isnumeric():
                     new_arg = int(new_arg)
                 else:

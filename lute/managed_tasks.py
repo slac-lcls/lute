@@ -87,7 +87,7 @@ HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit
 """Runs analysis on merge results for statistics/figures of merit.."""
 HKLComparer.add_tasklet(
     compare_hkl_fom_summary,
-    ["{{ shell_file }}", "test/rsplit"],
+    ["{{ shell_file }}", "r{{ lute_config.run }}/{{ fom }}"],
     when="after",
     set_result=False,
     set_summary=True,
