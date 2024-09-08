@@ -9,7 +9,7 @@ Classes:
 """
 
 __all__ = ["CxiWriter", "FindPeaksPyAlgos"]
-__author__ = "Valerio Mariani"
+__author__ = "Valerio Mariani, Gabriel Dorlhiac"
 
 import sys
 from pathlib import Path
@@ -37,6 +37,7 @@ class CxiWriter:
         run: int,
         n_events: int,
         det_shape: Tuple[int, ...],
+        raw_det_shape: Tuple[int, ...],
         min_peaks: int,
         max_peaks: int,
         i_x: Any,  # Not typed becomes it comes from psana
@@ -63,6 +64,9 @@ class CxiWriter:
             det_shape (Tuple[int, int]): Shape of the numpy array storing the detector
                 data. This must be aCheetah-stile 2D array.
 
+            raw_det_shape (Tuple[int, ...]): Shape of the numpy array storing the
+                detector in raw unassembled form. Length = 2, 3, or 4.
+
             min_peaks (int): Minimum number of peaks per image.
 
             max_peaks (int): Maximum number of peaks per image.
@@ -78,6 +82,7 @@ class CxiWriter:
             tag (str): Tag to append to cxi file names.
         """
         self._det_shape: Tuple[int, ...] = det_shape
+        self._raw_det_shape: Tuple[int, ...] = raw_det_shape
         self._i_x: Any = i_x
         self._i_y: Any = i_y
         self._ipx: Any = ipx
@@ -206,7 +211,9 @@ class CxiWriter:
 
             clen (float): Camera length/detector distance.
         """
-        ch_rows: NDArray[numpy.float_] = peaks[:, 0] * self._det_shape[1] + peaks[:, 1]
+        ch_rows: NDArray[numpy.float_] = (
+            peaks[:, 0] * self._raw_det_shape[-2] + peaks[:, 1]
+        )
         ch_cols: NDArray[numpy.float_] = peaks[:, 2]
 
         if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
@@ -698,6 +705,7 @@ class FindPeaksPyAlgos(Task):
                     run=self._task_parameters.lute_config.run,
                     n_events=self._task_parameters.n_events,
                     det_shape=det_shape,
+                    raw_det_shape=img.shape,
                     i_x=i_x,
                     i_y=i_y,
                     ipx=ipx,

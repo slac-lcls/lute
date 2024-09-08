@@ -12,7 +12,7 @@ Classes:
 """
 
 __all__ = ["JIDSlurmOperator", "RequestOnlyOperator"]
-__author__ = "Fred Poitevin, Murali Shankar"
+__author__ = "Fred Poitevin, Murali Shankar, Gabriel Dorlhiac"
 
 import sys
 import uuid

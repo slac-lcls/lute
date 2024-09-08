@@ -380,7 +380,10 @@ if __name__ == "__main__":
         # This should be defined if we get here
         # Format is FILE:/.../...
         if cache_file is not None:
-            os.remove(cache_file[5:])
+            try:
+                os.remove(cache_file[5:])
+            except FileNotFoundError:
+                logger.error("No cache file found to remove.")
             os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
