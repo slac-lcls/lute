@@ -2707,7 +2707,7 @@ return an error message.</p>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">out_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">format_file_for_post</span><span class="p">(</span><span class="n">in_file</span><span class="o">=</span><span class="n">f</span><span class="p">))</span>
         <span class="k">except</span> <span class="n">ElogFileFormatError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ElogFileFormatError: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ElogFileFormatError: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="n">post</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">post</span><span class="p">[</span><span class="s2">&quot;log_text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msg</span>
     <span class="k">if</span> <span class="n">tag</span><span class="p">:</span>
@@ -2851,7 +2851,7 @@ neither is found, the function aborts</p>
     <span class="k">if</span> <span class="n">update_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">update_url</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;JID_UPDATE_COUNTERS&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">update_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;eLog Update Failed! JID_UPDATE_COUNTERS is not defined!&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;eLog Update Failed! JID_UPDATE_COUNTERS is not defined!&quot;</span><span class="p">)</span>
             <span class="k">return</span>
     <span class="n">current_status</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_get_current_run_status</span><span class="p">(</span>
         <span class="n">update_url</span>

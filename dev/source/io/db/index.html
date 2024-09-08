@@ -1288,10 +1288,10 @@ the most recent entry from a database for a specific Task.</p>
 
               <details class="quote">
                 <summary>Source code in <code>lute/io/db.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
-<span class="normal">37</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
 <span class="normal">38</span>
-<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DatabaseError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="normal">39</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DatabaseError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;General LUTE database error.&quot;&quot;&quot;</span>
 
     <span class="o">...</span>
@@ -1307,7 +1307,7 @@ the most recent entry from a database for a specific Task.</p>
 
 
 <h2 id="io.db.read_latest_db_entry" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">read_latest_db_entry</span><span class="p">(</span><span class="n">db_dir</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">valid_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">read_latest_db_entry</span><span class="p">(</span><span class="n">db_dir</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">valid_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">for_run</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;RUN&#39;</span><span class="p">))</span></code>
 
 </h2>
 
@@ -1387,6 +1387,21 @@ An input file may be useful even if the Task result is invalid
                   <code>True</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code>for_run</code></td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[str | int]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Only consider latest entries from the
+specific experiment run provided.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="os.getenv">getenv</span>(&#39;RUN&#39;)</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1416,8 +1431,7 @@ that can be found in the database. Returns None if nothing found.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/io/db.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">294</span>
-<span class="normal">295</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">295</span>
 <span class="normal">296</span>
 <span class="normal">297</span>
 <span class="normal">298</span>
@@ -1451,8 +1465,31 @@ that can be found in the database. Returns None if nothing found.</p>
 <span class="normal">326</span>
 <span class="normal">327</span>
 <span class="normal">328</span>
-<span class="normal">329</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
-    <span class="n">db_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">valid_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
+    <span class="n">db_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">valid_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">for_run</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;RUN&quot;</span><span class="p">),</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read most recent value entered into the database for a Task parameter.</span>
 
@@ -1469,6 +1506,9 @@ that can be found in the database. Returns None if nothing found.</p>
 <span class="sd">            An input file may be useful even if the Task result is invalid</span>
 <span class="sd">            (Failed). Default = True.</span>
 
+<span class="sd">        for_run (Optional[str | int]): Only consider latest entries from the</span>
+<span class="sd">            specific experiment run provided.</span>
+
 <span class="sd">    Returns:</span>
 <span class="sd">        val (Any): The most recently entered value for `param` of `task_name`</span>
 <span class="sd">            that can be found in the database. Returns None if nothing found.</span>
@@ -1482,11 +1522,22 @@ that can be found in the database. Returns None if nothing found.</p>
             <span class="n">cond</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="n">valid_only</span><span class="p">:</span>
                 <span class="n">cond</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;valid_flag&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
-            <span class="n">entry</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_select_from_db</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">cond</span><span class="p">)</span>
+            <span class="n">entries</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_select_from_db</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gen_cfg_id,</span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cond</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">for_run</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">gen_cfg_entries</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_select_from_db</span><span class="p">(</span>
+                    <span class="n">con</span><span class="p">,</span> <span class="s2">&quot;gen_cfg&quot;</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;run&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">for_run</span><span class="p">)}</span>
+                <span class="p">)</span>
+                <span class="n">task_entries_for_run</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">if</span> <span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">],)</span> <span class="ow">in</span> <span class="n">gen_cfg_entries</span>
+                <span class="p">]</span>
+                <span class="k">if</span> <span class="n">task_entries_for_run</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">task_entries_for_run</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot retrieve value </span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2"> due to: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">entry</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">entry</span>
+            <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1513,8 +1564,7 @@ some of the information can be shared across multiple Tasks. Refer to
 
             <details class="quote">
               <summary>Source code in <code>lute/io/db.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">222</span>
-<span class="normal">223</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">223</span>
 <span class="normal">224</span>
 <span class="normal">225</span>
 <span class="normal">226</span>
@@ -1582,7 +1632,8 @@ some of the information can be shared across multiple Tasks. Refer to
 <span class="normal">288</span>
 <span class="normal">289</span>
 <span class="normal">290</span>
-<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">291</span>
+<span class="normal">292</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write an DescribedAnalysis object to the database.</span>
 
 <span class="sd">    The DescribedAnalysis object is maintained by the Executor and contains all</span>

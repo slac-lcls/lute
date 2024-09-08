@@ -362,6 +362,54 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Specifying an Executor: Creating a runnable, "managed Task"">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parsing-inputs-and-outputs-tasklets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parsing inputs and outputs: tasklets
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parsing inputs and outputs: tasklets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#substituting-parameters-for-tasklet-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Substituting parameters for tasklet arguments
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#return-types-and-associated-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Return types and associated actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -478,6 +526,30 @@
       Defining an Executor
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Defining an Executor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tasklet-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      tasklet usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1308,6 +1380,54 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Specifying an Executor: Creating a runnable, "managed Task"">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parsing-inputs-and-outputs-tasklets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parsing inputs and outputs: tasklets
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parsing inputs and outputs: tasklets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#substituting-parameters-for-tasklet-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Substituting parameters for tasklet arguments
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#return-types-and-associated-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Return types and associated actions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1424,6 +1544,30 @@
       Defining an Executor
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Defining an Executor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tasklet-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      tasklet usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1866,6 +2010,62 @@ TaskRunner.update_environment(
 Task2Runner: Executor = Executor(&quot;RunTask2&quot;)
 Task2Runner.shell_source(&quot;/sdf/group/lcls/ds/tools/new_task_setup.sh&quot;) # Will source new_task_setup.sh script
 </code></pre>
+<h4 id="parsing-inputs-and-outputs-tasklets">Parsing inputs and outputs: <code>tasklets</code></h4>
+<p>Generally, in addition to the final output from the <code>Task</code>, we are also interested in some summary information. This could be a text summary of some key result in the larger output, or a graphical figure that describes the portions of interest.</p>
+<p>For a third-party <code>Task</code> there isn't an easy way to insert code that provides these summaries into the <code>Task</code> itself, so the <code>tasklet</code> mechanism is provided. Tasklets are just Python functions. They are executed by the <code>Executor</code> either before or after the main <code>Task</code> has been run. One major use case of tasklets, is that the <code>Executor</code> can use the return values from these functions as the summary information for the main <code>Task</code> they are associated with. Tasklets are added to the <code>Executor</code> in much the same way that the execution environment is modified: using the <code>add_tasklet</code> method. E.g.</p>
+<pre><code class="language-py">Task3Runner: Executor = Executor(&quot;RunTask3&quot;)
+Task3Runner.add_tasklet(
+    callable,
+    [arg1, arg2, arg3],
+    when=&quot;before&quot;,
+    set_result=False,
+    set_summary=True
+)
+</code></pre>
+<p>The <code>add_tasklet</code> method has the following signature:</p>
+<pre><code class="language-py">def add_tasklet(
+    self,
+    tasklet: Callable,
+    args: Union[List[Any], Tuple[Any,...]],
+    when: str,
+    set_result: bool,
+    set_summary: bool
+)
+</code></pre>
+<p>These parameters, in order, are:</p>
+<ul>
+<li><code>tasklet</code> : Any callable function. A number of tasklets are already defined in the <code>lute.tasks.tasklets</code> module as examples. Some of these are already associated with <strong>managed</strong> <code>Task</code>s.</li>
+<li><code>args</code> : This is a list/tuple (or any iterable) of arguments to pass to the <code>tasklet</code>. The arguments can be substituted similarly to templates (below) or parameters in the configuration YAML. This is discussed further below.</li>
+<li><code>when</code>: This is a string literal taking the values of <code>"before"</code> or <code>"after"</code>, indicating whether the tasklet function should be run before or after the actual <code>Task</code>, respectively.</li>
+<li><code>set_result</code>: Is a bool. If <code>True</code>, the <strong>main result payload</strong> will be overwritten in the database with the return values of the tasklet. This affects only the database archiving - any actual files, etc., will not be overwritten. Regardless, in general this is not the appropriate option to use with a third-party <code>Task</code>.</li>
+<li><code>set_summary</code>: Is a bool. If <code>True</code>, the <strong>result summary</strong> is set to the return values of the tasklet. This allows the main result of the <code>Task</code> to be recorded in addition to some auxiliary summary information. In general, we will want to use this option.</li>
+</ul>
+<h5 id="substituting-parameters-for-tasklet-arguments">Substituting parameters for <code>tasklet</code> arguments</h5>
+<p>We often want the input to a tasklet to depend on some of the <code>TaskParameters</code> for the main associated <code>Task</code>. We can specify this using a Jinja-like substitution syntax. When passing arguments to the <code>add_tasklet</code> method, we can enclose the name of parameters from the <code>TaskParameters</code> model in a string between doubly curly brackets: <code>"{{ param_to_sub }}"</code>. For example if we wanted to use the output file as the input to the tasklet, assuming it had the parameter name <code>out_file</code>, we would use <code>"{{ out_file }}"</code>.</p>
+<p>You can substitute multiple parameters in every string if necessary, with each parameter to substitute enclosed in its own set of double curly brackets.</p>
+<p><strong>Note:</strong> The parameter substitutions must be passed as strings. Type conversions will be performed to the actual type of the parameter you are substituting.</p>
+<h5 id="return-types-and-associated-actions">Return types and associated actions</h5>
+<p>The <code>Executor</code> will decide on what to do with a returned value from a tasklet based upon the specific type. Note that these types can also be used in first-party <code>Task</code>s to perform the same actions; however, in that case, users should set the <code>_result.summary</code> or <code>_result.payload</code> directly, rather than using a tasklet (if possible).</p>
+<p>The following types and actions are currently defined:</p>
+<ul>
+<li><code>Dict[str, str]</code>: Post key/value pairs under the report section in the control tab of the eLog. These key/values are also posted as run parameters if possible. This return type is best used for short text summaries, e.g. indexing rate, execution time, etc. The key/value pairs are converted to a semi-colon delimited string for storage in the database. E.g. <code>{"Rate": 0.05, "Total": 10}</code> will be stored as <code>Rate: 0.05;Total: 10</code> in the database.</li>
+<li><code>ElogSummaryPlots</code>: This special dataclass, defined in <code>lute.tasks.dataclasses</code> is used to create an eLog summary plot under the Summaries tab. The path to the created HTML file is stored in the database.</li>
+</ul>
+<p>You can return any number of these objects from a tasklet as a tuple. Each item will be processed independently. For datbase archiving, the various entries are stored semi-colon delimited.</p>
+<h5 id="examples">Examples</h5>
+<p>Some example <code>tasklets</code> are available in <code>lute.tasks.tasklets</code>. Some of these are reproduced below.</p>
+<p><strong>Generic Usage</strong></p>
+<ul>
+<li><code>concat_files(location: str, in_files_glob: str, out_file: str)</code>: Concatenate a set of output files</li>
+<li><code>grep(match_str: str, in_file: str)</code>: Search for occurences of a string in some output file.</li>
+<li><code>git_clone(repo: str, location: str, permissions: str)</code>: Clone a git repository. This is generally of more use as a tasklet run <strong>before</strong> the main <code>Task</code> is run.</li>
+</ul>
+<p><strong>Specific Examples</strong></p>
+<ul>
+<li><code>indexamajig_summary_indexing_rate</code>: Calculates indexing rate based on parsing a stream file.</li>
+<li><code>compare_hkl_fom_summary</code>: Extracts a figure of merit <strong>and</strong> produces a summary plot.</li>
+</ul>
+<p>Refer to <code>managed_tasks</code> to see how these are specifically called with <code>CrystFELIndexer</code> and <code>HKLComparer</code> respectively.</p>
 <h3 id="using-templates-managing-third-party-configuration-files">Using templates: managing third-party configuration files</h3>
 <p>Some third-party executables will require their own configuration files. These are often separate JSON or YAML files, although they can also be bash or Python scripts which are intended to be edited. Since LUTE requires its own configuration YAML file, it attempts to handle these cases by using Jinja templates. When wrapping a third-party task a template can also be provided - with small modifications to the <code>Task</code>'s pydantic model, LUTE can process special types of parameters to render them in the template. LUTE offloads all the template rendering to Jinja, making the required additions to the pydantic model small. On the other hand, it does require understanding the Jinja syntax, and the provision of a well-formatted template, to properly parse parameters. Some basic examples of this syntax will be shown below; however, it is recommended that the <code>Task</code> implementer refer to the <a href="https://jinja.palletsprojects.com/en/3.1.x/">official Jinja documentation</a> for more information.</p>
 <p><strong>Note:</strong> By default templated parameters are <strong>NOT</strong> validated, i.e., type-checked. This default case is handled first below. If knowledgeable about appropriate typing for the template variables, further modification of the <code>TaskParameters</code> model is possible to include validation. This advanced use-case is described second.</p>
@@ -2302,6 +2502,10 @@ def import_task(task_name: str) -&gt; Type[Task]:
 </code></pre>
 <h3 id="defining-an-executor">Defining an <code>Executor</code></h3>
 <p>The process of <code>Executor</code> definition is identical to the process as described for <code>ThirdPartyTask</code>s above. The one exception is if you defined the <code>Task</code> to use MPI as described in the section above (Using MPI for your <code>Task</code>), you will likely consider using the <code>MPIExecutor</code>.</p>
+<h4 id="environment-setup">Environment setup</h4>
+<p>Currently, first-party <code>Task</code>s are expected to use the same environment as the <code>Executor</code>, so while you can use the environment update methods to insert environment variables, complete replacement of the environment is not supported. If you have a compelling reason to require this feature, contact the maintainers.</p>
+<h4 id="tasklet-usage"><code>tasklet</code> usage</h4>
+<p>You can also use <code>tasklet</code> functions with first-party <code>Task</code>s if needed. The preferred method, however, would be to incorporate whatever tasklet code is needed directly into your <code>Task</code>.</p>
 
 
 

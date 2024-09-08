@@ -1723,7 +1723,16 @@ compression and decompression with libpressio for data reduction tests.</p>
 <span class="normal">374</span>
 <span class="normal">375</span>
 <span class="normal">376</span>
-<span class="normal">377</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CxiWriter</span><span class="p">:</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CxiWriter</span><span class="p">:</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1733,6 +1742,7 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="n">run</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">n_events</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+        <span class="n">raw_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
         <span class="n">min_peaks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">max_peaks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">i_x</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>  <span class="c1"># Not typed becomes it comes from psana</span>
@@ -1759,6 +1769,9 @@ compression and decompression with libpressio for data reduction tests.</p>
 <span class="sd">            det_shape (Tuple[int, int]): Shape of the numpy array storing the detector</span>
 <span class="sd">                data. This must be aCheetah-stile 2D array.</span>
 
+<span class="sd">            raw_det_shape (Tuple[int, ...]): Shape of the numpy array storing the</span>
+<span class="sd">                detector in raw unassembled form. Length = 2, 3, or 4.</span>
+
 <span class="sd">            min_peaks (int): Minimum number of peaks per image.</span>
 
 <span class="sd">            max_peaks (int): Maximum number of peaks per image.</span>
@@ -1774,6 +1787,7 @@ compression and decompression with libpressio for data reduction tests.</p>
 <span class="sd">            tag (str): Tag to append to cxi file names.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">det_shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_det_shape</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_i_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">i_x</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_i_y</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">i_y</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ipx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">ipx</span>
@@ -1878,6 +1892,7 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="n">timestamp_nanoseconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">timestamp_fiducials</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">photon_energy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">clen</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Write peak finding results for an event into the HDF5 file.</span>
@@ -1898,8 +1913,12 @@ compression and decompression with libpressio for data reduction tests.</p>
 <span class="sd">                information</span>
 
 <span class="sd">            photon_energy (float): Photon energy for the event</span>
+
+<span class="sd">            clen (float): Camera length/detector distance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
         <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">:</span>
@@ -1914,6 +1933,7 @@ compression and decompression with libpressio for data reduction tests.</p>
                 <span class="s2">&quot;machineTimeNanoSeconds&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;fiducial&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;detector_1/EncoderValue&quot;</span><span class="p">,</span>
             <span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;/LCLS/</span><span class="si">{</span><span class="n">ds_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
@@ -1985,6 +2005,8 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/fiducial&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">timestamp_fiducials</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/photon_energy_eV&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">photon_energy</span>
 
+        <span class="c1"># Add clen distance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/detector_1/EncoderValue&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">clen</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="k">def</span> <span class="nf">write_non_event_data</span><span class="p">(</span>
@@ -1992,7 +2014,6 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
         <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
         <span class="n">mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">],</span>
-        <span class="n">clen</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Write to the file data that is not related to a specific event (masks, powders)</span>
@@ -2017,9 +2038,6 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/mask&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
             <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="p">)</span>  <span class="c1"># Crystfel expects inverted values</span>
-
-        <span class="c1"># Add clen distance</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/detector_1/EncoderValue&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">clen</span>
 
     <span class="k">def</span> <span class="nf">optimize_and_close_file</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -2090,7 +2108,7 @@ compression and decompression with libpressio for data reduction tests.</p>
 
 
 <h3 id="tasks.sfx_find_peaks.CxiWriter.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">exp</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">n_events</span><span class="p">,</span> <span class="n">det_shape</span><span class="p">,</span> <span class="n">min_peaks</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">,</span> <span class="n">i_x</span><span class="p">,</span> <span class="n">i_y</span><span class="p">,</span> <span class="n">ipx</span><span class="p">,</span> <span class="n">ipy</span><span class="p">,</span> <span class="n">tag</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">exp</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">n_events</span><span class="p">,</span> <span class="n">det_shape</span><span class="p">,</span> <span class="n">raw_det_shape</span><span class="p">,</span> <span class="n">min_peaks</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">,</span> <span class="n">i_x</span><span class="p">,</span> <span class="n">i_y</span><span class="p">,</span> <span class="n">ipx</span><span class="p">,</span> <span class="n">ipy</span><span class="p">,</span> <span class="n">tag</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2111,6 +2129,9 @@ n_events (int): Number of events to process.
 
 det_shape (Tuple[int, int]): Shape of the numpy array storing the detector
     data. This must be aCheetah-stile 2D array.
+
+raw_det_shape (Tuple[int, ...]): Shape of the numpy array storing the
+    detector in raw unassembled form. Length = 2, 3, or 4.
 
 min_peaks (int): Minimum number of peaks per image.
 
@@ -2272,7 +2293,12 @@ tag (str): Tag to append to cxi file names.
 <span class="normal">172</span>
 <span class="normal">173</span>
 <span class="normal">174</span>
-<span class="normal">175</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -2280,6 +2306,7 @@ tag (str): Tag to append to cxi file names.
     <span class="n">run</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">n_events</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+    <span class="n">raw_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
     <span class="n">min_peaks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">max_peaks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">i_x</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>  <span class="c1"># Not typed becomes it comes from psana</span>
@@ -2306,6 +2333,9 @@ tag (str): Tag to append to cxi file names.
 <span class="sd">        det_shape (Tuple[int, int]): Shape of the numpy array storing the detector</span>
 <span class="sd">            data. This must be aCheetah-stile 2D array.</span>
 
+<span class="sd">        raw_det_shape (Tuple[int, ...]): Shape of the numpy array storing the</span>
+<span class="sd">            detector in raw unassembled form. Length = 2, 3, or 4.</span>
+
 <span class="sd">        min_peaks (int): Minimum number of peaks per image.</span>
 
 <span class="sd">        max_peaks (int): Maximum number of peaks per image.</span>
@@ -2321,6 +2351,7 @@ tag (str): Tag to append to cxi file names.
 <span class="sd">        tag (str): Tag to append to cxi file names.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">det_shape</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_det_shape</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_i_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">i_x</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_i_y</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">i_y</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_ipx</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">ipx</span>
@@ -2444,16 +2475,7 @@ max_peaks (int): Maximum number of peaks (per event) for which information
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">337</span>
 <span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
@@ -2493,7 +2515,16 @@ max_peaks (int): Maximum number of peaks (per event) for which information
 <span class="normal">374</span>
 <span class="normal">375</span>
 <span class="normal">376</span>
-<span class="normal">377</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">optimize_and_close_file</span><span class="p">(</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">optimize_and_close_file</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">num_hits</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">max_peaks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -2553,7 +2584,7 @@ max_peaks (int): Maximum number of peaks (per event) for which information
 
 
 <h3 id="tasks.sfx_find_peaks.CxiWriter.write_event" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">write_event</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">timestamp_seconds</span><span class="p">,</span> <span class="n">timestamp_nanoseconds</span><span class="p">,</span> <span class="n">timestamp_fiducials</span><span class="p">,</span> <span class="n">photon_energy</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">write_event</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">timestamp_seconds</span><span class="p">,</span> <span class="n">timestamp_nanoseconds</span><span class="p">,</span> <span class="n">timestamp_fiducials</span><span class="p">,</span> <span class="n">photon_energy</span><span class="p">,</span> <span class="n">clen</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2576,16 +2607,13 @@ timestamp_fiducials (int): Fiducials part of the event's timestamp
     information
 
 photon_energy (float): Photon energy for the event
+
+clen (float): Camera length/detector distance.
 </code></pre>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">182</span>
 <span class="normal">183</span>
 <span class="normal">184</span>
 <span class="normal">185</span>
@@ -2695,7 +2723,20 @@ photon_energy (float): Photon energy for the event
 <span class="normal">289</span>
 <span class="normal">290</span>
 <span class="normal">291</span>
-<span class="normal">292</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_event</span><span class="p">(</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_event</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
     <span class="n">peaks</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>  <span class="c1"># Not typed becomes it comes from psana</span>
@@ -2703,6 +2744,7 @@ photon_energy (float): Photon energy for the event
     <span class="n">timestamp_nanoseconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">timestamp_fiducials</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">photon_energy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">clen</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write peak finding results for an event into the HDF5 file.</span>
@@ -2723,8 +2765,12 @@ photon_energy (float): Photon energy for the event
 <span class="sd">            information</span>
 
 <span class="sd">        photon_energy (float): Photon energy for the event</span>
+
+<span class="sd">        clen (float): Camera length/detector distance.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_det_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="p">)</span>
     <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">:</span>
@@ -2739,6 +2785,7 @@ photon_energy (float): Photon energy for the event
             <span class="s2">&quot;machineTimeNanoSeconds&quot;</span><span class="p">,</span>
             <span class="s2">&quot;fiducial&quot;</span><span class="p">,</span>
             <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detector_1/EncoderValue&quot;</span><span class="p">,</span>
         <span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;/LCLS/</span><span class="si">{</span><span class="n">ds_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
@@ -2810,6 +2857,8 @@ photon_energy (float): Photon energy for the event
     <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/fiducial&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">timestamp_fiducials</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/photon_energy_eV&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">photon_energy</span>
 
+    <span class="c1"># Add clen distance</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/detector_1/EncoderValue&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">clen</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+=</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2821,7 +2870,7 @@ photon_energy (float): Photon energy for the event
 
 
 <h3 id="tasks.sfx_find_peaks.CxiWriter.write_non_event_data" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">write_non_event_data</span><span class="p">(</span><span class="n">powder_hits</span><span class="p">,</span> <span class="n">powder_misses</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">clen</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">write_non_event_data</span><span class="p">(</span><span class="n">powder_hits</span><span class="p">,</span> <span class="n">powder_misses</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2839,20 +2888,7 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">307</span>
 <span class="normal">308</span>
 <span class="normal">309</span>
 <span class="normal">310</span>
@@ -2871,12 +2907,20 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 <span class="normal">323</span>
 <span class="normal">324</span>
 <span class="normal">325</span>
-<span class="normal">326</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_non_event_data</span><span class="p">(</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_non_event_data</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
     <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">],</span>
-    <span class="n">clen</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Write to the file data that is not related to a specific event (masks, powders)</span>
@@ -2901,9 +2945,6 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
     <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/mask&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">mask</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
         <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="p">)</span>  <span class="c1"># Crystfel expects inverted values</span>
-
-    <span class="c1"># Add clen distance</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/LCLS/detector_1/EncoderValue&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">clen</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2939,21 +2980,7 @@ writes the peak information to CXI files.</p>
 
               <details class="quote">
                 <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">589</span>
-<span class="normal">590</span>
-<span class="normal">591</span>
-<span class="normal">592</span>
-<span class="normal">593</span>
-<span class="normal">594</span>
-<span class="normal">595</span>
-<span class="normal">596</span>
-<span class="normal">597</span>
-<span class="normal">598</span>
-<span class="normal">599</span>
-<span class="normal">600</span>
-<span class="normal">601</span>
-<span class="normal">602</span>
-<span class="normal">603</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">603</span>
 <span class="normal">604</span>
 <span class="normal">605</span>
 <span class="normal">606</span>
@@ -3190,7 +3217,26 @@ writes the peak information to CXI files.</p>
 <span class="normal">837</span>
 <span class="normal">838</span>
 <span class="normal">839</span>
-<span class="normal">840</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FindPeaksPyAlgos</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
+<span class="normal">840</span>
+<span class="normal">841</span>
+<span class="normal">842</span>
+<span class="normal">843</span>
+<span class="normal">844</span>
+<span class="normal">845</span>
+<span class="normal">846</span>
+<span class="normal">847</span>
+<span class="normal">848</span>
+<span class="normal">849</span>
+<span class="normal">850</span>
+<span class="normal">851</span>
+<span class="normal">852</span>
+<span class="normal">853</span>
+<span class="normal">854</span>
+<span class="normal">855</span>
+<span class="normal">856</span>
+<span class="normal">857</span>
+<span class="normal">858</span>
+<span class="normal">859</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FindPeaksPyAlgos</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Task that performs peak finding using the PyAlgos peak finding algorithms and</span>
 <span class="sd">    writes the peak information to CXI files.</span>
@@ -3295,6 +3341,7 @@ writes the peak information to CXI files.</p>
                     <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
                     <span class="n">n_events</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">n_events</span><span class="p">,</span>
                     <span class="n">det_shape</span><span class="o">=</span><span class="n">det_shape</span><span class="p">,</span>
+                    <span class="n">raw_det_shape</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
                     <span class="n">i_x</span><span class="o">=</span><span class="n">i_x</span><span class="p">,</span>
                     <span class="n">i_y</span><span class="o">=</span><span class="n">i_y</span><span class="p">,</span>
                     <span class="n">ipx</span><span class="o">=</span><span class="n">ipx</span><span class="p">,</span>
@@ -3330,7 +3377,7 @@ writes the peak information to CXI files.</p>
                 <span class="n">rank</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">peak_rank</span><span class="p">,</span>
                 <span class="n">r0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">r0</span><span class="p">,</span>
                 <span class="n">dr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">dr</span><span class="p">,</span>
-                <span class="c1">#      nsigm=self._task_parameters.nsigm,</span>
+                <span class="n">nsigm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">nsigm</span><span class="p">,</span>
             <span class="p">)</span>
 
             <span class="n">num_events</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -3352,16 +3399,16 @@ writes the peak information to CXI files.</p>
                     <span class="n">decompressed</span> <span class="o">=</span> <span class="n">compressor</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">compressed_img</span><span class="p">,</span> <span class="n">decompressed_img</span><span class="p">)</span>
                     <span class="n">img</span> <span class="o">=</span> <span class="n">decompressed_img</span>
 
+                <span class="n">photon_energy</span><span class="p">:</span> <span class="nb">float</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">photon_energy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="n">Detector</span><span class="p">(</span><span class="s2">&quot;EBeam&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span><span class="o">.</span><span class="n">ebeamPhotonEnergy</span><span class="p">()</span>
-                    <span class="p">)</span>
-                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="n">photon_energy</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">(</span><span class="s2">&quot;EBeam&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span><span class="o">.</span><span class="n">ebeamPhotonEnergy</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">photon_energy</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
                     <span class="n">photon_energy</span> <span class="o">=</span> <span class="p">(</span>
                         <span class="mf">1.23984197386209e-06</span>
                         <span class="o">/</span> <span class="n">ds</span><span class="o">.</span><span class="n">env</span><span class="p">()</span><span class="o">.</span><span class="n">epicsStore</span><span class="p">()</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;SIOC:SYS0:ML00:AO192&quot;</span><span class="p">)</span>
-                        <span class="o">/</span> <span class="mf">1.0e9</span>
-                    <span class="p">)</span>
+                    <span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span>
 
                 <span class="n">file_writer</span><span class="o">.</span><span class="n">write_event</span><span class="p">(</span>
                     <span class="n">img</span><span class="o">=</span><span class="n">img</span><span class="p">,</span>
@@ -3370,6 +3417,7 @@ writes the peak information to CXI files.</p>
                     <span class="n">timestamp_nanoseconds</span><span class="o">=</span><span class="n">timestamp_nanoseconds</span><span class="p">,</span>
                     <span class="n">timestamp_fiducials</span><span class="o">=</span><span class="n">timestamp_fiducials</span><span class="p">,</span>
                     <span class="n">photon_energy</span><span class="o">=</span><span class="n">photon_energy</span><span class="p">,</span>
+                    <span class="n">clen</span><span class="o">=</span><span class="n">clen</span><span class="p">,</span>
                 <span class="p">)</span>
                 <span class="n">num_hits</span> <span class="o">+=</span> <span class="mi">1</span>
 
@@ -3396,7 +3444,6 @@ writes the peak information to CXI files.</p>
             <span class="n">powder_hits</span><span class="o">=</span><span class="n">powder_hits</span><span class="p">,</span>
             <span class="n">powder_misses</span><span class="o">=</span><span class="n">powder_misses</span><span class="p">,</span>
             <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
-            <span class="n">clen</span><span class="o">=</span><span class="n">clen</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">file_writer</span><span class="o">.</span><span class="n">optimize_and_close_file</span><span class="p">(</span>
@@ -3407,7 +3454,7 @@ writes the peak information to CXI files.</p>
 
         <span class="n">num_hits_per_rank</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">num_hits_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">SUM</span><span class="p">)</span>
-        <span class="n">num_events_per_rank</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">num_events</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">num_events_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_events</span><span class="p">,</span> <span class="n">SUM</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">master_fname</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">write_master_file</span><span class="p">(</span>
@@ -3425,15 +3472,19 @@ writes the peak information to CXI files.</p>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
                 <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;peakfinding</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">.summary&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of events processed: </span><span class="si">{</span><span class="n">num_events_per_rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of events processed: </span><span class="si">{</span><span class="n">num_events_total</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of hits found: </span><span class="si">{</span><span class="n">num_hits_total</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
                 <span class="nb">print</span><span class="p">(</span>
-                    <span class="s2">&quot;Fractional hit rate: &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">num_hits_total</span><span class="o">/</span><span class="n">num_events_per_rank</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Fractional hit rate: &quot;</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">num_hits_total</span><span class="o">/</span><span class="n">num_events_total</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                     <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
                 <span class="p">)</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No. hits per rank: </span><span class="si">{</span><span class="n">num_hits_per_rank</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_result</span><span class="o">.</span><span class="n">summary</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Number of events processed&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_events_total</span><span class="p">),</span>
+                <span class="s2">&quot;Number of hits found&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_hits_total</span><span class="p">),</span>
+                <span class="s2">&quot;Fractional hit rate&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">num_hits_total</span><span class="o">/</span><span class="n">num_events_total</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">out_file</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">master_fname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
 
@@ -3490,25 +3541,25 @@ peaks (Any): Peak information as returned by psana.
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">568</span>
-<span class="normal">569</span>
-<span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span>
-<span class="normal">573</span>
-<span class="normal">574</span>
-<span class="normal">575</span>
-<span class="normal">576</span>
-<span class="normal">577</span>
-<span class="normal">578</span>
-<span class="normal">579</span>
-<span class="normal">580</span>
-<span class="normal">581</span>
-<span class="normal">582</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">582</span>
 <span class="normal">583</span>
 <span class="normal">584</span>
 <span class="normal">585</span>
-<span class="normal">586</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add_peaks_to_libpressio_configuration</span><span class="p">(</span><span class="n">lp_json</span><span class="p">,</span> <span class="n">peaks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add_peaks_to_libpressio_configuration</span><span class="p">(</span><span class="n">lp_json</span><span class="p">,</span> <span class="n">peaks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add peak infromation to libpressio configuration</span>
 
@@ -3564,21 +3615,7 @@ for the libpressio library
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">480</span>
-<span class="normal">481</span>
-<span class="normal">482</span>
-<span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span>
-<span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span>
-<span class="normal">489</span>
-<span class="normal">490</span>
-<span class="normal">491</span>
-<span class="normal">492</span>
-<span class="normal">493</span>
-<span class="normal">494</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">494</span>
 <span class="normal">495</span>
 <span class="normal">496</span>
 <span class="normal">497</span>
@@ -3649,7 +3686,21 @@ for the libpressio library
 <span class="normal">562</span>
 <span class="normal">563</span>
 <span class="normal">564</span>
-<span class="normal">565</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_libpressio_configuration</span><span class="p">(</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_libpressio_configuration</span><span class="p">(</span>
     <span class="n">compressor</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;sz3&quot;</span><span class="p">,</span> <span class="s2">&quot;qoz&quot;</span><span class="p">],</span>
     <span class="n">roi_window_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">bin_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -3775,16 +3826,7 @@ n_hits_total (int): Total number of hits found across all nodes.
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">380</span>
-<span class="normal">381</span>
-<span class="normal">382</span>
-<span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span>
-<span class="normal">389</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
 <span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
@@ -3872,7 +3914,21 @@ n_hits_total (int): Total number of hits found across all nodes.
 <span class="normal">474</span>
 <span class="normal">475</span>
 <span class="normal">476</span>
-<span class="normal">477</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_master_file</span><span class="p">(</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span>
+<span class="normal">480</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_master_file</span><span class="p">(</span>
     <span class="n">mpi_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">exp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -3929,9 +3985,13 @@ n_hits_total (int): Total number of hits found across all nodes.
     <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="c1"># Compute cumulative powder hits and misses for all files</span>
+    <span class="c1"># Copy mask as well</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">powder_hits</span><span class="p">,</span> <span class="n">powder_misses</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
     <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">fnames</span><span class="p">:</span>
         <span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/mask&quot;</span><span class="p">][:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">powder_hits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">powder_hits</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/powderHits&quot;</span><span class="p">][:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="n">powder_misses</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/powderMisses&quot;</span><span class="p">][:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -3968,6 +4028,7 @@ n_hits_total (int): Total number of hits found across all nodes.
 
         <span class="n">vdf</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/powderHits&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">powder_hits</span>
         <span class="n">vdf</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/powderMisses&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">powder_misses</span>
+        <span class="n">vdf</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/mask&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask</span>
 
     <span class="k">return</span> <span class="n">vfname</span>
 </code></pre></div></td></tr></table></div>

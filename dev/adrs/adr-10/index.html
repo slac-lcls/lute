@@ -13,16 +13,16 @@
       
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.34">
     
     
       
-        <title>Architecture Decision Records - LUTE</title>
+        <title>[ADR-10] Tasklet functions provide supplemental/auxiliary analysis for ThirdPartyTasks - LUTE</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.35f28582.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.35f28582.min.css">
       
       
 
@@ -41,9 +41,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture-decision-records" class="md-skip">
+        <a href="#adr-10-tasklet-functions-provide-supplementalauxiliary-analysis-for-thirdpartytasks" class="md-skip">
           Skip to content
         </a>
       
@@ -78,7 +78,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="LUTE" class="md-header__button md-logo" aria-label="LUTE" data-md-component="logo">
+    <a href="../.." title="LUTE" class="md-header__button md-logo" aria-label="LUTE" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture Decision Records
+              [ADR-10] Tasklet functions provide supplemental/auxiliary analysis for ThirdPartyTasks
             
           </span>
         </div>
@@ -185,7 +185,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="LUTE" class="md-nav__button md-logo" aria-label="LUTE" data-md-component="logo">
+    <a href="../.." title="LUTE" class="md-nav__button md-logo" aria-label="LUTE" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -215,7 +215,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../usage/" class="md-nav__link">
+      <a href="../../usage/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -270,7 +270,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tutorial/new_task/" class="md-nav__link">
+      <a href="../../tutorial/new_task/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -291,7 +291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tutorial/creating_workflows/" class="md-nav__link">
+      <a href="../../tutorial/creating_workflows/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -354,7 +354,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/managed_tasks/" class="md-nav__link">
+      <a href="../../source/managed_tasks/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -410,7 +410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/execution/executor/" class="md-nav__link">
+      <a href="../../source/execution/executor/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -431,7 +431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/execution/ipc/" class="md-nav__link">
+      <a href="../../source/execution/ipc/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -452,7 +452,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/execution/debug_utils/" class="md-nav__link">
+      <a href="../../source/execution/debug_utils/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/tasks/task/" class="md-nav__link">
+      <a href="../../source/tasks/task/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -537,7 +537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/tasks/dataclasses/" class="md-nav__link">
+      <a href="../../source/tasks/dataclasses/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -558,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/tasks/sfx_find_peaks/" class="md-nav__link">
+      <a href="../../source/tasks/sfx_find_peaks/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -579,7 +579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/tasks/sfx_index/" class="md-nav__link">
+      <a href="../../source/tasks/sfx_index/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/tasks/test/" class="md-nav__link">
+      <a href="../../source/tasks/test/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -699,7 +699,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/base/" class="md-nav__link">
+      <a href="../../source/io/models/base/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -720,7 +720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/sfx_find_peaks/" class="md-nav__link">
+      <a href="../../source/io/models/sfx_find_peaks/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -741,7 +741,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/sfx_index/" class="md-nav__link">
+      <a href="../../source/io/models/sfx_index/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -762,7 +762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/sfx_merge/" class="md-nav__link">
+      <a href="../../source/io/models/sfx_merge/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -783,7 +783,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/sfx_solve/" class="md-nav__link">
+      <a href="../../source/io/models/sfx_solve/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -804,7 +804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/smd/" class="md-nav__link">
+      <a href="../../source/io/models/smd/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -825,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/models/tests/" class="md-nav__link">
+      <a href="../../source/io/models/tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -854,7 +854,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/config/" class="md-nav__link">
+      <a href="../../source/io/config/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -875,7 +875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/db/" class="md-nav__link">
+      <a href="../../source/io/db/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -896,7 +896,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/_sqlite/" class="md-nav__link">
+      <a href="../../source/io/_sqlite/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -917,7 +917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/elog/" class="md-nav__link">
+      <a href="../../source/io/elog/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -938,7 +938,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/io/exceptions/" class="md-nav__link">
+      <a href="../../source/io/exceptions/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1009,7 +1009,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/database/" class="md-nav__link">
+      <a href="../../design/database/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1050,6 +1050,92 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Status
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context-and-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context and Problem Statement
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decision Drivers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#considered-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Considered Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      Consequences
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compliance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metadata
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1066,90 +1152,45 @@
   
 
 
-<h1 id="architecture-decision-records">Architecture Decision Records</h1>
+<h1 id="adr-10-tasklet-functions-provide-supplementalauxiliary-analysis-for-thirdpartytasks">[ADR-10] Tasklet functions provide supplemental/auxiliary analysis for <code>ThirdPartyTask</code>s</h1>
+<p><strong>Date:</strong> 2024-04-15</p>
+<h2 id="status">Status</h2>
+<p><strong>Proposed</strong></p>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
 <ul>
-<li>This directory contains a list of architecture and major feature decisions.</li>
-<li>Please refer to the <code>madr_template.md</code> for creating new ADRs. This template was adapted from the <a href="https://adr.github.io/madr/">MADR template</a> (MIT License).</li>
-<li>A table of ADRs is provided below.</li>
+<li>Often need to extract some information for presentation after running some third-party analysis code.</li>
+<li>There is non-zero over-head associated with running a <code>Task</code>.</li>
+<li>Complexity of a <code>Task</code> is often overkill for simple operations such as parsing a text file, concatenating files or sending some small amoumnt of information to the eLog.</li>
 </ul>
-<table>
-<thead>
-<tr>
-<th style="text-align: center;">ADR No.</th>
-<th style="text-align: center;">Record Date</th>
-<th style="text-align: left;">Title</th>
-<th style="text-align: center;">Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: center;">1</td>
-<td style="text-align: center;">2023-11-06</td>
-<td style="text-align: left;">All analysis <code>Task</code>s inherit from a base class</td>
-<td style="text-align: center;"><strong>Accepted</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">2</td>
-<td style="text-align: center;">2023-11-06</td>
-<td style="text-align: left;">Analysis <code>Task</code> submission and communication is performed via <code>Executor</code>s</td>
-<td style="text-align: center;"><strong>Accepted</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">3</td>
-<td style="text-align: center;">2023-11-06</td>
-<td style="text-align: left;"><code>Executor</code>s will run all <code>Task</code>s via subprocess</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">4</td>
-<td style="text-align: center;">2023-11-06</td>
-<td style="text-align: left;">Airflow <code>Operator</code>s and LUTE <code>Executor</code>s are separate entities.</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">5</td>
-<td style="text-align: center;">2023-12-06</td>
-<td style="text-align: left;">Task-Executor IPC is Managed by Communicator Objects</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">6</td>
-<td style="text-align: center;">2024-02-12</td>
-<td style="text-align: left;">Third-party Config Files Managed by Templates Rendered by <code>ThirdPartyTask</code>s</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">7</td>
-<td style="text-align: center;">2024-02-12</td>
-<td style="text-align: left;"><code>Task</code> Configuration is Stored in a Database Managed by <code>Executor</code>s</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">8</td>
-<td style="text-align: center;">2024-03-18</td>
-<td style="text-align: left;">Airflow credentials/authorization requires special launch program.</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">9</td>
-<td style="text-align: center;">2024-04-15</td>
-<td style="text-align: left;">Airflow launch script will run as long lived batch job.</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;">10</td>
-<td style="text-align: center;">2024-09-08</td>
-<td style="text-align: left;">Tasklet functions provide supplemental/auxiliary analysis for <code>ThirdPartyTask</code>s.</td>
-<td style="text-align: center;"><strong>Proposed</strong></td>
-</tr>
-<tr>
-<td style="text-align: center;"></td>
-<td style="text-align: center;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: center;"></td>
-</tr>
-</tbody>
-</table>
+<h2 id="decision">Decision</h2>
+<p>The <code>Executor</code> will provide a mechanism to run some small functions either before or after the main <code>Task</code> has executed. These "tasklets" are Python functions which perform an action and optionally return a value to the <code>Executor</code>. Depending on the type of the returned value (if any), the <code>Executor</code> may take a number of actions, e.g. posting a message, creating a plot, moving files.</p>
+<h3 id="decision-drivers">Decision Drivers</h3>
+<ul>
+<li>Need to provide a mechanism to summarize information as <code>Task</code>s complete. Just running the <code>Task</code> provides no feedback to the user on its own.</li>
+<li>Want to present information to the eLog as an option.</li>
+<li>Some functions need to be run before the <code>Task</code> starts, and others after it has finished.</li>
+<li>Want a mechanism to change which functions are run.</li>
+</ul>
+<h3 id="considered-options">Considered Options</h3>
+<ul>
+<li>Any operation at all must be a fully-implemented <code>Task</code>.</li>
+<li>There is overhead to launching a new batch job just to run a single function.</li>
+<li>Additional options in the configuration of the pydantic model for a third-party <code>Task</code> to include auxiliary functions to run.</li>
+<li>This doesn't easily allow the function to be run after the <code>Task</code> has completed.</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<ul>
+<li>Additional complexity for configuring <code>Executor</code>.</li>
+<li>This adds additional knobs to turn, points of failure, and makes on boarding new developers more challenging.</li>
+<li>Adding new tasklets is straightforward.</li>
+<li>Tasklets can be used in first-party <code>Task</code> code as they are just Python functions.</li>
+</ul>
+<h2 id="compliance">Compliance</h2>
+<h2 id="metadata">Metadata</h2>
+<ul>
+<li>This ADR WILL be revisited during the post-mortem of the first prototype.</li>
+<li>Compliance section will be updated as prototype evolves.</li>
+</ul>
 
 
 
@@ -1200,10 +1241,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.07f07601.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.07f07601.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.56dfad97.min.js"></script>
+      <script src="../../assets/javascripts/bundle.56dfad97.min.js"></script>
       
     
   </body>
