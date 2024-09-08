@@ -94,15 +94,18 @@ if [[ -v KERB_CACHE ]]; then
 fi
 
 if [[ -v EXP_PARAM ]]; then
-    export EXPERIMENT=$EXP_PARAM
+    EXPERIMENT=$EXP_PARAM
 fi
+export EXPERIMENT
 # Setup logfile names - $EXPERIMENT and $RUN_NUM will be available if ARP submitted
 # RUN_NUM is actually in format RUN_DATETIME
 RUN_TIME_ARR=(${RUN_NUM//_/ })
 RUN="${RUN_TIME_ARR[0]}"
 if [[ -v RUN_PARAM ]]; then
-    export RUN=$RUN_PARAM
+    RUN_NUM=$RUN_PARAM
+    RUN=$RUN_NUM
 fi
+export RUN_NUM
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"
 SLURM_ARGS+=" --output=${LOG_FILE}.out"

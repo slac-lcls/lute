@@ -20,6 +20,7 @@ __all__ = ["record_analysis_db", "read_latest_db_entry"]
 __author__ = "Gabriel Dorlhiac"
 
 import logging
+import os
 from typing import List, Dict, Dict, Any, Tuple, Optional, Union
 
 from .models.base import TaskParameters, TemplateParameters
@@ -296,7 +297,7 @@ def read_latest_db_entry(
     task_name: str,
     param: str,
     valid_only: bool = True,
-    for_run: Optional[Union[str, int]] = None,
+    for_run: Optional[Union[str, int]] = os.getenv("RUN"),
 ) -> Optional[Any]:
     """Read most recent value entered into the database for a Task parameter.
 
@@ -329,10 +330,19 @@ def read_latest_db_entry(
             cond: Dict[str, str] = {}
             if valid_only:
                 cond = {"valid_flag": "1"}
+            entries: Any = _select_from_db(con, task_name, f"gen_cfg_id,{param}", cond)
             if for_run is not None:
-                ...
-            entry: Any = _select_from_db(con, task_name, param, cond)
+                gen_cfg_entries: Any = _select_from_db(
+                    con, "gen_cfg", "id", {"run": str(for_run)}
+                )
+                task_entries_for_run: List[Any] = [
+                    entry[1] for entry in entries if (entry[0],) in gen_cfg_entries
+                ]
+                if task_entries_for_run:
+                    return task_entries_for_run[-1]
+                return None
+            else:
+                return entries[-1][1]
         except sqlite3.OperationalError as err:
             logger.debug(f"Cannot retrieve value {param} due to: {err}")
-            entry = None
-    return entry
+            return None

@@ -3,7 +3,7 @@
 Functions should be used only by the higher-level database module.
 """
 
-__all__ = ["write_cfg_to_db", "read_latest_db_entry"]
+__all__ = []
 __author__ = "Gabriel Dorlhiac"
 
 import sqlite3
@@ -296,4 +296,4 @@ def _select_from_db(
     with con:
         res: sqlite3.Cursor = con.execute(sql)
         entries: List[Any] = res.fetchall()
-    return entries[-1][0] if entries else None
+    return entries if entries else None
