@@ -1,8 +1,11 @@
-"""SFX Processing DAG (W/ Experimental Phasing)
+"""SFX Processing DAG (W/ Molecular Replacement)
 
 Runs SFX processing, beginning with the PyAlgos peak finding algorithm.
-This workflow is used for data requiring experimental phasing. Do NOT use this
-DAG if you are using molecular replacement.
+This workflow is used for data which will use molecular replacement.
+
+Smalldata_tools is also run to provide auxiliary run information. If no
+additional reduction algorithms are specified, it will just provide default
+detector information.
 
 Note:
     The task_id MUST match the managed task name when defining DAGs - it is used

@@ -97,7 +97,7 @@ def concat_files(location: str, in_files_glob: str, out_file: str) -> None:
                 shutil.copyfileobj(rf, wf)
 
 
-def modify_permissions(path: str, permissions: int):
+def modify_permissions(path: str, permissions: int) -> None:
     """Recursively set permissions for a path."""
     os.chmod(path, permissions)
     for root, dirs, files in os.walk(path):
