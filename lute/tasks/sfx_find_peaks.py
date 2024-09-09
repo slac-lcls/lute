@@ -28,6 +28,7 @@ from PSCalib import GeometryAccess
 from lute.execution.ipc import Message
 from lute.io.models.base import *
 from lute.tasks.task import *
+from lute.tasks.dataclasses import ElogSummaryPlots
 
 hv.extension("bokeh")
 pn.extension()
@@ -867,7 +868,12 @@ class FindPeaksPyAlgos(Task):
                 "Number of hits found": str(num_hits_total),
                 "Fractional hit rate": f"{num_hits_total/num_events_total:.2f}",
             }
-            self._result.summary = (text_summary, powder_plots)
+            self._result.summary = (
+                text_summary,
+                ElogSummaryPlots(
+                    f"r{self._task_parameters.lute_config.run}/powders", powder_plots
+                ),
+            )
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
 
