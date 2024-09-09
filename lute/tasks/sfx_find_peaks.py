@@ -16,15 +16,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional
 
 import h5py
+import holoviews as hv
 import numpy
+import panel as pn
 from mpi4py.MPI import COMM_WORLD, SUM
 from numpy.typing import NDArray
 from psalgos.pypsalgos import PyAlgos
 from psana import Detector, EventId, MPIDataSource
+from PSCalib import GeometryAccess
 
 from lute.execution.ipc import Message
 from lute.io.models.base import *
 from lute.tasks.task import *
+
+hv.extension("bokeh")
+pn.extension()
 
 
 class CxiWriter:
@@ -844,11 +850,24 @@ class FindPeaksPyAlgos(Task):
                 )
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
-            self._result.summary = {
+            with h5py.File(master_fname, "r") as f:
+                final_powder_hits: numpy.ndarray[numpy.float64] = f[
+                    "entry_1/data_1/powderHits"
+                ][:]
+                final_powder_misses: numpy.ndarray[numpy.float64] = f[
+                    "entry_1/data_1/powderMisses"
+                ][:]
+                f.close()
+
+            powder_plots: pn.Tabs = self._create_powder_plots(
+                det, final_powder_hits, final_powder_misses
+            )
+            text_summary: Dict[str, str] = {
                 "Number of events processed": str(num_events_total),
                 "Number of hits found": str(num_hits_total),
                 "Fractional hit rate": f"{num_hits_total/num_events_total:.2f}",
             }
+            self._result.summary = (text_summary, powder_plots)
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
 
@@ -857,3 +876,83 @@ class FindPeaksPyAlgos(Task):
     def _post_run(self) -> None:
         super()._post_run()
         self._result.task_status = TaskStatus.COMPLETED
+
+    def _assemble_image(
+        self, det: Detector, img: numpy.ndarray[numpy.float64]
+    ) -> numpy.ndarray[numpy.float64]:
+        """Assemble an image based on psana geometry.
+
+        Args:
+            det (psana.Detector): The detector object for the associated image.
+                Used to access the geometry.
+
+            img (numpy.ndarray[np.float64]): The image to assemble. Should
+                generally be of shape (n_panels, ss, fs)
+
+        Returns:
+            assembled_img(numpy.ndarray[np.float64]): Assembled 2D image.
+        """
+        geom: GeometryAccess = det.geometry(self._task_parameters.lute_config.run)
+        tmp: Tuple[numpy.ndarray[numpy.uint64], ...] = geom.get_pixel_coord_indexes()
+        pixel_map: numpy.ndarray[numpy.unit64] = numpy.zeros(
+            tmp[0].shape[1:] + (2,), dtype=numpy.uint64
+        )
+        pixel_map[..., 0] = tmp[0][0]
+        pixel_map[..., 1] = tmp[1][0]
+        unflattened_img: numpy.ndarray[numpy.float64] = img.reshape(
+            pixel_map.shape[:-1]
+        )
+        idx_max_y: int = int(numpy.max(pixel_map[..., 0]) + 1)  # Adding one
+        idx_max_x: int = int(numpy.max(pixel_map[..., 1]) + 1)  # casts to float
+        assembled_img: numpy.ndarray[numpy.float64] = numpy.zeros(
+            (idx_max_y, idx_max_x)
+        )
+        assembled_img[pixel_map[..., 0], pixel_map[..., 1]] = unflattened_img
+
+        return assembled_img
+
+    def _create_powder_plots(
+        self,
+        det: Detector,
+        powder_hits: numpy.ndarray[numpy.float64],
+        powder_misses: numpy.ndarray[numpy.float64],
+    ) -> pn.Tabs:
+        """Create a tabbed display of hits and misses 'powder' plots.
+
+        Args:
+            det (psana.Detector): The detector object for the associated image.
+                Used to access the geometry.
+
+            powder_hits (numpy.ndarray[np.float64]): Total max/sum projection of
+                hits across the run.
+
+            powder_misses (numpy.ndarray[np.float64]): Total max/sum projection of
+                misses across the run.
+
+        Returns:
+            tabs (pn.Tabs): Tabbed display of the image plots.
+        """
+        assembled_powder_hits: numpy.ndarray[numpy.float64] = self._assemble_image(
+            det, powder_hits
+        )
+        assembled_powder_misses: numpy.ndarray[numpy.float64] = self._assemble_image(
+            det, powder_misses
+        )
+
+        grid_hits: pn.GridSpec = pn.GridSpec(
+            sizing_mode="stretch_both",
+            max_width=700,
+            name=f"{self._task_parameters.det_name} - Hits",
+        )
+        grid_hits[0, 0] = assembled_powder_hits
+
+        grid_misses: pn.GridSpec = pn.GridSpec(
+            sizing_mode="stretch_both",
+            max_width=700,
+            name=f"{self._task_parameters.det_name} - Misses",
+        )
+        grid_misses[0, 0] = assembled_powder_misses
+
+        tabs: pn.Tabs = pn.Tabs(grid_hits)
+        tabs.append(grid_misses)
+        return tabs
