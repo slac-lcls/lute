@@ -4,9 +4,17 @@ Classes:
     SubmitSMDParameters(ThirdPartyParameters): Parameters to run smalldata_tools
         to produce a smalldata HDF5 file.
 
-    FindOverlapXSSParameters(TaskParameters): Parameter model for the
-        FindOverlapXSS Task. Used to determine spatial/temporal overlap based on
-        XSS difference signal.
+    AnalyzeSmallDataXSSParameters(TaskParameters): Parameter model for the
+        AnalyzeSmallDataXSS. Used to determine spatial/temporal overlap based on
+        XSS difference signal and provide basic XSS feedback.
+
+    AnalyzeSmallDataXASParameters(TaskParameters): Parameter model for the
+        AnalyzeSmallDataXES. Used to determine spatial/temporal overlap based on
+        XAS difference signal and provide basic XAS feedback.
+
+    AnalyzeSmallDataXESParameters(TaskParameters): Parameter model for the
+        AnalyzeSmallDataXES. Used to determine spatial/temporal overlap based on
+        XES difference signal and provide basic XES feedback.
 """
 
 __all__ = [

@@ -11,6 +11,9 @@ the Executor mechanism is provided.
 Functions:
     git_clone(repo: str, location: str, permissions: str): Clone a git repo.
 
+    clone_smalldata(producer_location: str): Clone smalldata_tools based on the
+        location of the producer file.
+
     concat_files(location: str, in_files_glob: str, out_file: str): Concatenate
         a group of files into a single output file.
 
@@ -94,7 +97,18 @@ def concat_files(location: str, in_files_glob: str, out_file: str) -> None:
                 shutil.copyfileobj(rf, wf)
 
 
-def git_clone(repo: str, location: str, permissions: str) -> None:
+def modify_permissions(path: str, permissions: int):
+    """Recursively set permissions for a path."""
+    os.chmod(path, permissions)
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            os.chmod(os.path.join(root, d), permissions)
+
+        for f in files:
+            os.chmod(os.path.join(root, f), permissions)
+
+
+def git_clone(repo: str, location: str, permissions: int) -> None:
     """Clone a git repository.
 
     Will not overwrite a directory of there is already a folder at the specified
@@ -119,6 +133,20 @@ def git_clone(repo: str, location: str, permissions: str) -> None:
     out, _ = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
     ).communicate()
+    modify_permissions(location, permissions)
+
+
+def clone_smalldata(producer_location: str) -> None:
+    """Clone smalldata_tools based on producer location.
+
+    Args:
+        producer_location (str): Full path to the producer to be used.
+    """
+    from pathlib import Path
+
+    repo: str = "slac-lcls/smalldata_tools"
+    location: str = str(Path(producer_location).parent.parent)
+    git_clone(repo, location, 0o777)
 
 
 def grep(match_str: str, in_file: str) -> List[str]:

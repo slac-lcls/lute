@@ -60,8 +60,12 @@ hkl_manipulator: JIDSlurmOperator = JIDSlurmOperator(
 # CCP4
 dimple_runner: JIDSlurmOperator = JIDSlurmOperator(task_id="DimpleSolver", dag=dag)
 
+# Smalldata
+smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
+
 
 peak_finder >> indexer >> concatenator >> merger >> hkl_manipulator >> dimple_runner
 merger >> hkl_comparer
 
 # Run summaries
+smd_producer
