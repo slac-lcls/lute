@@ -950,14 +950,36 @@ class FindPeaksPyAlgos(Task):
             max_width=700,
             name=f"{self._task_parameters.det_name} - Hits",
         )
-        grid_hits[0, 0] = assembled_powder_hits
+        dim: hv.Dimension = hv.Dimension(
+            ("image", "Hits"),
+            range=(
+                numpy.nanpercentile(assembled_powder_hits, 1),
+                numpy.nanpercentile(assembled_powder_hits, 99),
+            ),
+        )
+        grid_hits[0, 0] = pn.Row(
+            hv.Image(assembled_powder_hits, vdims=[dim], name=dim.label).options(
+                colorbar=True, cmap="rainbow"
+            )
+        )
 
         grid_misses: pn.GridSpec = pn.GridSpec(
             sizing_mode="stretch_both",
             max_width=700,
             name=f"{self._task_parameters.det_name} - Misses",
         )
-        grid_misses[0, 0] = assembled_powder_misses
+        dim = hv.Dimension(
+            ("image", "Misses"),
+            range=(
+                numpy.nanpercentile(assembled_powder_misses, 1),
+                numpy.nanpercentile(assembled_powder_misses, 99),
+            ),
+        )
+        grid_misses[0, 0] = pn.Row(
+            hv.Image(assembled_powder_misses, vdims=[dim], name=dim.label).options(
+                colorbar=True, cmap="rainbow"
+            )
+        )
 
         tabs: pn.Tabs = pn.Tabs(grid_hits)
         tabs.append(grid_misses)
