@@ -5,16 +5,16 @@ Classes:
         to produce a smalldata HDF5 file.
 
     AnalyzeSmallDataXSSParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXSS. Used to determine spatial/temporal overlap based on
-        XSS difference signal and provide basic XSS feedback.
+        AnalyzeSmallDataXSS Task. Used to determine spatial/temporal overlap
+        based on XSS difference signal and provide basic XSS feedback.
 
     AnalyzeSmallDataXASParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXES. Used to determine spatial/temporal overlap based on
-        XAS difference signal and provide basic XAS feedback.
+        AnalyzeSmallDataXAS Task. Used to determine spatial/temporal overlap
+        based on XAS difference signal and provide basic XAS feedback.
 
     AnalyzeSmallDataXESParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXES. Used to determine spatial/temporal overlap based on
-        XES difference signal and provide basic XES feedback.
+        AnalyzeSmallDataXES Task. Used to determine spatial/temporal overlap
+        based on XES difference signal and provide basic XES feedback.
 """
 
 __all__ = [
