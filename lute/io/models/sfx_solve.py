@@ -127,7 +127,9 @@ class DimpleSolveParameters(ThirdPartyParameters):
         rename_param="no-blob-search",
     )
     anode: bool = Field(
-        False, description="Use SHELX/AnoDe to find peaks in the anomalous map."
+        False,
+        description="Use SHELX/AnoDe to find peaks in the anomalous map.",
+        flag_type="--",
     )
     # Run customization
     no_hetatm: bool = Field(
