@@ -105,7 +105,7 @@ if [[ -v RUN_PARAM ]]; then
     RUN_NUM=$RUN_PARAM
     RUN=$RUN_NUM
 fi
-export RUN_NUM
+export RUN_NUM=$RUN
 FORMAT_RUN=$(printf "%04d" ${RUN:-0})
 LOG_FILE="${TASK}_${EXPERIMENT:-$EXP}_r${FORMAT_RUN}_$(date +'%Y-%m-%d_%H-%M-%S')"
 SLURM_ARGS+=" --output=${LOG_FILE}.out"
