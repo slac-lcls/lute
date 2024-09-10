@@ -80,9 +80,14 @@ class Task(ABC):
             payload="",
         )
         self._task_parameters: TaskParameters = params
-        if hasattr(self._task_parameters.Config, "result_from_params"):
-            self._task_parameters._result_from_params = (
-                self._task_parameters.Config.result_from_params
+        if (
+            hasattr(self._task_parameters.Config, "result_from_params")
+            and self._task_parameters.Config.result_from_params is not None
+        ):
+            object.__setattr__(
+                self._task_parameters,
+                "_result_from_params",
+                self._task_parameters.Config.result_from_params,
             )
         timeout: int = self._task_parameters.lute_config.task_timeout
         signal.setitimer(signal.ITIMER_REAL, timeout)
