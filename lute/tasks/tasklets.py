@@ -280,23 +280,27 @@ def setup_dimple_uglymol(
     display_name: str
     if "." in density_display_name:
         display_name = density_display_name.split(".")[0]
+        if "/" in display_name:
+            # If it's a path we only want to keep last part of /path/to/filename
+            display_name = display_name.split("/")[-1]
         if len(display_name.split("_")) > 1:
             # The standard workflow uses <exp/run...>_<tag> to name files
             # Extract tag if present
             display_name = display_name.split("_")[1]
         else:
             display_name = "density"
+    else:
+        display_name = density_display_name
 
     output_path: str = (
-        f"/sdf/data/lcls/ds/{experiment[:3]}/experiment/stats/summary/{density_display_name}"
+        f"/sdf/data/lcls/ds/{experiment[:3]}/{experiment}/stats/summary/{display_name}"
     )
     wasm_path: str = f"{output_path}/wasm"
-
+    logger.debug(f"Electron density path: {output_path}")
     if not os.path.exists(output_path):
         os.makedirs(wasm_path)
 
     final_pdb: str = f"{final_mtz.split('.')[0]}.pdb"
-
     uglymol_js_url: str = (
         "https://raw.githubusercontent.com/uglymol/uglymol/master/uglymol.js"
     )
