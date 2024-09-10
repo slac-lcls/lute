@@ -493,7 +493,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 f"{values['lute_config'].work_dir}", "IndexCrystFEL", "out_file"
             )
             if stream_file:
-                stream_tag: str = Path(stream_file).name.split("_")[0]
+                stream_tag: str = Path(stream_file).name.split("_")[-1].split(".")[0]
                 return stream_tag
         return tag
 

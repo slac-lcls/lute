@@ -617,6 +617,7 @@ class BaseExecutor(ABC):
             )
             logger.info(f"TaskResult specified as {result_from_params}.")
             self._analysis_desc.task_result.payload = result_from_params
+            del self._analysis_desc.task_parameters._result_from_params
         else:
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
