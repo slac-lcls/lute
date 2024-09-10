@@ -1,0 +1,121 @@
+# Quick Start
+`lute`, or `LUTE`, is the LCLS Unified Task Executor - an automated workflow package for running analysis pipelines at SLAC's LCLS. This project is the next iteration of `btx`.
+
+This package is used to run arbitrary analysis code (first-party or third-party) in the form of individual analysis `Task`s. `Task`s can be linked together to form complete end-to-end analysis pipelines or workflows. For workflow management, the package interfaces with Airflow running on S3DF.
+
+## Setup
+### Getting LUTE
+#### On S3DF for experiment analysis
+You, or your analysis point-of-contact should run the provided `setup_lute` script located at `/sdf/group/lcls/ds/tools/lute/dev/lute/utilities/setup_lute`
+
+Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-f] [--test] [-v VERSION] [-w WORKFLOW]`
+
+Parameters:
+
+- `-e EXPERIMENT, --experiment EXPERIMENT`: The experiment to perform setup for.
+- `-f, --fresh_install`: Install a new version of LUTE in the experiment folder. This allows for local modifications of code. Otherwise, the central installation will be used (which cannot be modified).
+- `--test`: Use test Airflow instance. Only needed for bleeding-edge workflows.
+- `-v VERSION, --version VERSION`: Version of LUTE to use. Corresponds to release tag or `dev`. Defaults to `dev`.
+- `-w WORKFLOW, --workflow WORKFLOW`: Which analysis workflow to run. Defaults to `smd_summaries`.
+- `-d, --debug`: Turn on verbose logging.
+
+The only required argument is `-e <EXPERIMENT>`. This should be the experiment you are setting up for. You will likely also want to provide the `-w <WORKFLOW>` argument. This determines what default job to setup (i.e., the workflow to run). The current list of workflows is:
+
+- `find_peaks_index` : Perform peak finding and indexing.
+- `psocake_sfx_phasing` : Perform end-to-end SFX analysis with experimental phasing. This uses a legacy peak finder and is **not** recommended unless you need experimental phasing.
+- `pyalgos_sfx` : Perform end-to-end SFX analysis with molecular replacement. Also sets up `smalldata_tools`.
+- `smd_summaries` : Perform XAS, XES, and XSS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
+- `smd` : Run managed `smalldata_tools` and downstream analysis/summaries.
+
+The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/<hutch>.yaml`. You will want to modify this configuration prior to running. See `Basic Usage` below for more information.
+
+#### Locally or otherwise
+LUTE is publically available on [GitHub](https://github.com/slac-lcls/lute). In order to run it, the first step is to clone the repository:
+
+```bash
+# Navigate to the directory of your choice.
+git clone@github.com:slac-lcls/lute
+```
+The repository directory structure is as follows:
+
+```
+lute
+  |--- config             # Configuration YAML files (see below) and templates for third party config
+  |--- docs               # Documentation (including this page)
+  |--- launch_scripts     # Entry points for using SLURM and communicating with Airflow
+  |--- lute               # Code
+        |--- run_task.py  # Script to run an individual managed Task
+        |--- ...
+  |--- utilities          # Help utility programs
+  |--- workflows          # This directory contains workflow definitions. It is synced elsewhere and not used directly.
+
+```
+
+In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.
+
+## Basic Usage
+### Overview
+LUTE runs code as `Task`s that are managed by an `Executor`. The `Executor` provides modifications to the environment the `Task` runs in, as well as controls details of inter-process communication, reporting results to the eLog, etc. Combinations of specific `Executor`s and `Task`s are already provided, and are referred to as **managed** `Task`s. **Managed** `Task`s are submitted as a single unit. They can be run individually, or a series of independent steps can be submitted all at once in the form of a workflow, or **directed acyclic graph** (**DAG**). This latter option makes use of Airflow to manage the individual execution steps.
+
+Running analysis with LUTE is the process of submitting one or more **managed** `Task`s. This is generally a two step process.
+
+1. First, a configuration YAML file is prepared. This contains the parameterizations of all the `Task`s which you may run.
+2. Individual **managed** `Task` submission, or workflow (**DAG**) submission.
+
+### Config YAML
+If you ran the `setup_lute` script you will already have a `<hutch>.yaml` file located in your experiment results folder. This YAML file is commented by `Task`. You will **need** to modify a few of these parameters for some of the `Task`s. E.g. a partial example of the config file may look like this:
+
+```yaml
+%YAML 1.3
+---
+title: "LUTE Task Configuration" # Include experiment description if desired
+experiment: "{{ $EXPERIMENT }}"
+#run: "{{ $RUN }}"
+date: "2023/10/25"
+lute_version: 0.1      # Do not be change unless need to force older version
+task_timeout: 6000
+work_dir: ""
+...
+---
+###########
+# SFX
+###########
+
+# You must provide det_name and pv_camera_length
+# pv_camera_length is the detector distance
+# It can be a PV, or alternative a float for a fixed offset
+# Example PVs are commented below, ask beamline staff for relevant PV
+# Change outdir to an appropriate directory for CXI files.
+FindPeaksPyAlgos:
+    outdir: "/path/to/cxi_out"
+    det_name: "epix10k2M"
+    event_receiver: "evr0"
+    tag: "lyso"
+    event_logic: false
+    psana_mask: false
+    mask_file: null
+    min_peaks: 10
+    max_peaks: 2048
+    npix_min: 2
+    npix_max: 30
+    amax_thr: 40
+    atot_thr: 180
+    son_min: 10.0
+    peak_rank: 3
+    r0: 3.0
+    dr: 2.0
+    nsigm: 10.0
+    #pv_camera_length: "MFX:ROB:CONT:POS:Z"  # MFX epix10k2M
+```
+
+If you are running from the eLog you do not need to modify the first section at all, unless you want to provide a title for your experiment. You may want to adjust the `task_timeout` if you believe some of your `Task`s are long running. It is in units of seconds. You can change the `work_dir` parameter if you want to write output to some other location, when running the setup script it will be automatically set to your experiment results folder.
+
+The provided comments and `Task` name should be enough to get you started. If there are any questions, first try running the utilities described below, then refer to the more in depth usage manual on `Task` configuration located in this documentation. Contact the maintainers if anything is still unclear.
+
+If you are attempting to create a configuration file from scratch refer first to the usage manual.
+
+### A note on utilties
+In the `utilities` directory (in the main `lute` directory) there are two useful programs to provide assistance with using the software:
+
+- `utilities/dbview`: LUTE stores all parameters for every analysis routine it runs (as well as results) in a database. This database is stored in the `work_dir` defined in the YAML file. The `dbview` utility is a TUI application (Text-based user interface) which runs in the terminal. It allows you to navigate a LUTE database using the arrow keys, etc. Usage is: `utilities/dbview -p <path/to/lute.db>`. You will only have a database after your first **managed** `Task` completes (whether it succeeds or not).
+- `utilities/lute_help`: This utility provides help and usage information for running LUTE software. It provides access to parameter descriptions to assist in properly filling out a configuration YAML. It's usage is described in slightly more detail in the `Usage Manual`. Briefly you can run `lute_help -t <TaskName>` to retrieve parameters for a single `Task` (to put in your configuration YAML), or `lute_help -l` to list all `Task`s (and their associated **managed** `Task`s).
