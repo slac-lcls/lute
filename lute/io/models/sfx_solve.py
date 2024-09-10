@@ -11,10 +11,10 @@ __author__ = "Gabriel Dorlhiac"
 import os
 from typing import Union, List, Optional, Dict, Any
 
-from pydantic import Field, validator, PositiveFloat, PositiveInt
+from pydantic import Field, validator, PositiveFloat, PositiveInt, root_validator
 
-from .base import ThirdPartyParameters
-from ..db import read_latest_db_entry
+from lute.io.models.base import ThirdPartyParameters
+from lute.io.db import read_latest_db_entry
 
 
 class DimpleSolveParameters(ThirdPartyParameters):
@@ -24,6 +24,15 @@ class DimpleSolveParameters(ThirdPartyParameters):
     usage, please refer to the CCP4 documentation, here:
     https://ccp4.github.io/dimple/
     """
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/dimple",
@@ -195,6 +204,17 @@ class DimpleSolveParameters(ThirdPartyParameters):
             if get_hkl_file:
                 return os.path.dirname(get_hkl_file)
         return out_dir
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        out_dir: str = values["out_dir"]
+        result: str
+        if out_dir != "":
+            result = f"{out_dir}/final.mtz;{out_dir}/final.pdb"
+        else:
+            result = ""
+        cls.Config.result_from_params = result
+        return values
 
 
 class RunSHELXCParameters(ThirdPartyParameters):
