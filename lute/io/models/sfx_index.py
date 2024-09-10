@@ -436,8 +436,17 @@ class IndexCrystFELParameters(ThirdPartyParameters):
             expmt: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             work_dir: str = values["lute_config"].work_dir
-            fname: str = f"{expmt}_r{run:04d}.stream"
-            return f"{work_dir}/{fname}"
+            tag: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "tag"
+            )
+            if tag is None:
+                tag: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "tag"
+                )
+            fname: str = f"{expmt}_r{run:04d}"
+            if tag is not None:
+                fname = f"{fname}_{tag}"
+            return f"{work_dir}/{fname}.stream"
         return out_file
 
 
