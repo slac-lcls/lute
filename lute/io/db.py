@@ -263,33 +263,41 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
     task_entry.update(x)
     task_columns.update(y)
 
-    con: sqlite3.Connection = sqlite3.Connection(f"{work_dir}/lute.db")
+    db_path: str = f"{work_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
     with con:
-        # --- Table Creation ---#
-        if not _make_shared_table(con, "gen_cfg", gen_columns):
-            raise DatabaseError("Could not make general configuration table!")
-        if not _make_shared_table(con, "exec_cfg", exec_columns):
-            raise DatabaseError("Could not make Executor configuration table!")
-        if not _make_task_table(con, task_name, task_columns):
-            raise DatabaseError(f"Could not make Task table for: {task_name}!")
+        try:
+            # --- Table Creation ---#
+            if not _make_shared_table(con, "gen_cfg", gen_columns):
+                raise DatabaseError("Could not make general configuration table!")
+            if not _make_shared_table(con, "exec_cfg", exec_columns):
+                raise DatabaseError("Could not make Executor configuration table!")
+            if not _make_task_table(con, task_name, task_columns):
+                raise DatabaseError(f"Could not make Task table for: {task_name}!")
 
-        # --- Row Addition ---#
-        gen_id: int = _add_row_no_duplicate(con, "gen_cfg", gen_entry)
-        exec_id: int = _add_row_no_duplicate(con, "exec_cfg", exec_entry)
+            # --- Row Addition ---#
+            gen_id: int = _add_row_no_duplicate(con, "gen_cfg", gen_entry)
+            exec_id: int = _add_row_no_duplicate(con, "exec_cfg", exec_entry)
 
-        full_task_entry: Dict[str, Any] = {
-            "gen_cfg_id": gen_id,
-            "exec_cfg_id": exec_id,
-        }
-        full_task_entry.update(task_entry)
-        # Prepare flag to indicate whether the task entry is valid or not
-        # By default we say it is assuming proper completion
-        valid_flag: int = (
-            1 if cfg.task_result.task_status == TaskStatus.COMPLETED else 0
-        )
-        full_task_entry.update({"valid_flag": valid_flag})
+            full_task_entry: Dict[str, Any] = {
+                "gen_cfg_id": gen_id,
+                "exec_cfg_id": exec_id,
+            }
+            full_task_entry.update(task_entry)
+            # Prepare flag to indicate whether the task entry is valid or not
+            # By default we say it is assuming proper completion
+            valid_flag: int = (
+                1 if cfg.task_result.task_status == TaskStatus.COMPLETED else 0
+            )
+            full_task_entry.update({"valid_flag": valid_flag})
 
-        _add_task_entry(con, task_name, full_task_entry)
+            _add_task_entry(con, task_name, full_task_entry)
+        except sqlite3.OperationalError as err:
+            logger.error(f"Database storage error: {err}")
+    try:
+        os.chmod(db_path, 0o666)
+    except:
+        logger.error("Cannot setup permissions on database!")
 
 
 def read_latest_db_entry(
@@ -324,7 +332,8 @@ def read_latest_db_entry(
     import sqlite3
     from ._sqlite import _select_from_db
 
-    con: sqlite3.Connection = sqlite3.Connection(f"{db_dir}/lute.db")
+    db_path: str = f"{db_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
     with con:
         try:
             cond: Dict[str, str] = {}
@@ -344,5 +353,5 @@ def read_latest_db_entry(
             else:
                 return entries[-1][1]
         except sqlite3.OperationalError as err:
-            logger.debug(f"Cannot retrieve value {param} due to: {err}")
+            logger.error(f"Cannot retrieve value {param} due to: {err}")
             return None
