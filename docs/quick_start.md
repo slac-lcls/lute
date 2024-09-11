@@ -8,7 +8,7 @@ This package is used to run arbitrary analysis code (first-party or third-party)
 #### On S3DF for experiment analysis
 You, or your analysis point-of-contact should run the provided `setup_lute` script located at `/sdf/group/lcls/ds/tools/lute/dev/lute/utilities/setup_lute`
 
-Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-f] [--test] [-v VERSION] [-w WORKFLOW]`
+Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-f] [--test] [-v VERSION] [-w WORKFLOW] [SLURM_ARGS ...]`
 
 Parameters:
 
@@ -18,6 +18,7 @@ Parameters:
 - `-v VERSION, --version VERSION`: Version of LUTE to use. Corresponds to release tag or `dev`. Defaults to `dev`.
 - `-w WORKFLOW, --workflow WORKFLOW`: Which analysis workflow to run. Defaults to `smd_summaries`.
 - `-d, --debug`: Turn on verbose logging.
+- `[SLURM ARGS]`: This is any number of SLURM arguments you want to run your workflow with. You will likely want to provide `--ntasks` at a minimum.
 
 The only required argument is `-e <EXPERIMENT>`. This should be the experiment you are setting up for. You will likely also want to provide the `-w <WORKFLOW>` argument. This determines what default job to setup (i.e., the workflow to run). The current list of workflows is:
 
@@ -26,6 +27,8 @@ The only required argument is `-e <EXPERIMENT>`. This should be the experiment y
 - `pyalgos_sfx` : Perform end-to-end SFX analysis with molecular replacement. Also sets up `smalldata_tools`.
 - `smd_summaries` : Perform XAS, XES, and XSS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
 - `smd` : Run managed `smalldata_tools` and downstream analysis/summaries.
+
+Providing SLURM arguments is not required, but **highly recommended**. The setup script will try to set some default values for `--partition`, `--account`, and `--ntasks`, depending on the experiment and workflow you are running. If these three arguments are not provided, it will prompt you for each one and tell you the default it has selected. Press enter (or any key) to accept. Otherwise, press `Ctrl-C` to exit the setup, and pass the arguments manually.
 
 The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/<hutch>.yaml`. You will want to modify this configuration prior to running. See `Basic Usage` below for more information.
 
@@ -51,7 +54,7 @@ lute
 
 ```
 
-In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail below.
+In general, most interactions with the software will be through scripts located in the `launch_scripts` directory. Some users (for certain use-cases) may also choose to run the `run_task.py` script directly - it's location has been highlighted within hierarchy. To begin with you will need a YAML file, templates for which are available in the `config` directory. The structure of the YAML file and how to use the various launch scripts are described in more detail in the Usage and Developer documentation on this site.
 
 ## Basic Usage
 ### Overview
@@ -61,6 +64,8 @@ Running analysis with LUTE is the process of submitting one or more **managed** 
 
 1. First, a configuration YAML file is prepared. This contains the parameterizations of all the `Task`s which you may run.
 2. Individual **managed** `Task` submission, or workflow (**DAG**) submission.
+
+**Note:** You configure `Task`s, but submit **managed** `Task`s. If you run the help utility described below, and in the usage manual, you can find which **managed** `Task`s correspond to which `Task`s. In general, `Task`s are verbs and the `Executor`s that run them (i.e. **managed** `Task`s) are nouns. E.g. the `FindPeaksPyAlgos` `Task`, is run by submitting the `PeakFinderPyAlgos` **managed** `Task`.
 
 ### Config YAML
 If you ran the `setup_lute` script you will already have a `<hutch>.yaml` file located in your experiment results folder. This YAML file is commented by `Task`. You will **need** to modify a few of these parameters for some of the `Task`s. E.g. a partial example of the config file may look like this:

@@ -28,8 +28,8 @@ nav:
           - math: "source/tasks/math.md"
           - test: "source/tasks/test.md"
           - mpi_test: "source/tasks/mpi_test.md"
-          #- util:
-          #    - html: "source/tasks/util/html.md"
+          - util:
+              - html: "source/tasks/util/html.md"
       - io:
           - models:
               - base: "source/io/models/base.md"

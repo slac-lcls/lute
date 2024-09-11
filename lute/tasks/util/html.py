@@ -108,3 +108,4 @@ DIMPLE_HTML: str = """
     </body>
 </html>
 """
+"""HTML Template for UglyMol display of dimple results."""
