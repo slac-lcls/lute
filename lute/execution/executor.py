@@ -611,16 +611,19 @@ class BaseExecutor(ABC):
             return
 
         # First try to set from result_from_params (faster)
-        if self._analysis_desc.task_parameters.Config.result_from_params is not None:
+        if hasattr(self._analysis_desc.task_parameters, "_result_from_params"):
             result_from_params: str = (
-                self._analysis_desc.task_parameters.Config.result_from_params
+                self._analysis_desc.task_parameters._result_from_params
             )
             logger.info(f"TaskResult specified as {result_from_params}.")
             self._analysis_desc.task_result.payload = result_from_params
+            del self._analysis_desc.task_parameters._result_from_params
         else:
             # Iterate parameters to find the one that is the result
             schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
             for param, value in self._analysis_desc.task_parameters.dict().items():
+                if param == "_result_from_params":
+                    continue
                 param_attrs: Dict[str, Any]
                 if isinstance(value, TemplateParameters):
                     # Extract TemplateParameters if needed

@@ -602,7 +602,11 @@ class ManipulateHKLParameters(ThirdPartyParameters):
     )
     # Resolution cutoffs
     cutoff_angstroms: Optional[Union[str, int, float]] = Field(
-        description="Either n, or n1,n2,n3. For n, reflections < n are removed. For n1,n2,n3 anisotropic trunction performed at separate resolution limits for a*, b*, c*.",
+        description=(
+            "Either n, or n1,n2,n3. For n, reflections < n are removed. "
+            "For n1,n2,n3 anisotropic trunction performed at separate resolution "
+            "limits for a*, b*, c*."
+        ),
         flag_type="--",
         rename_param="cutoff-angstroms",
     )
