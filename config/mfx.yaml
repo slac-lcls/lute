@@ -87,6 +87,7 @@ DimpleSolve:
 
 # Producer will be auto-determined. Set only if you have a separate install
 # Set `directory` if you want to write to a different folder
+# For out of memory issues try setting gather_interval
 SubmitSMD:
   # Command line arguments
   #producer: "/path/to/smalldata_tools/producers/smd_producer.py"
@@ -176,11 +177,12 @@ SubmitSMD:
   #    save_range: [70, 50]
   #    save_lineout: True
 
+# TR-Scattering analysis - produces scan plots (t0/spatial overlap, etc.)
 AnalyzeSmallDataXSS:
   #smd_path: ""             # Include to analyze ONE specified smalldata file
   # Detector selection
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm PV to use for x-ray intensity filtering
+  ipm_var: "ipm_dg2/sum"       # ipm PV to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"
@@ -191,31 +193,37 @@ AnalyzeSmallDataXSS:
     min_Iscat: 10           # Minimum integrated scattering intensity
     min_ipm: 500            # Minimum x-ray intensity at selected ipm
 
+# TR-Absorption analysis - produces scan plots (t0/spatial overlap, etc.)
+# Scattering signal is used for normalization, that's why the XSS detector is
+# required
 AnalyzeSmallDataXAS:
   #smd_path: ""
   # Detector selection - scattering det used for normalization.
-  xas_detname: "epix_2"     # Name of detector with XAS signal
+  xas_detname: "epix_1"     # Name of detector with XAS signal
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  ipm_var: "ipm_dg2/sum"       # ipm to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"
     - "lxe_opa"
     - "lxt_fast"
   ccm: "epics/ccm_E"
-  ccm_set: "epicsUser/ccm_E_setpoint"
+  ccm_set: "epicsUser/ccm_E_setpoint" # Requested CCM setpoint PV. Makes binning better but not required.
   # Thresholds used for data filtering
   thresholds:
     min_Iscat: 10           # Minimum integrated scattering intensity
     min_ipm: 500            # Minimum x-ray intensity at selected ipm
   #element: null       # For EXAFS -- currently unused
 
+# TR-Emission analysis - produces scan plots (t0/spatial overlap, etc.)
+# Scattering signal is used for normalization, that's why the XSS detector is
+# required
 AnalyzeSmallDataXES:
   #smd_path: ""             # Include to analyze ONE specified smalldata file
   # Detector selection - scattering det used for normalization.
-  xes_detname: "epix_2"     # Name of detector with XAS signal
+  xes_detname: "epix_1"     # Name of detector with XAS signal
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  ipm_var: "ipm_dg2/sum"    # ipm to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"
