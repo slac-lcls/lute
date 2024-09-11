@@ -2154,7 +2154,11 @@ https://www.desy.de/~twhite/crystfel/manual-partialator.html</p>
 <span class="normal">655</span>
 <span class="normal">656</span>
 <span class="normal">657</span>
-<span class="normal">658</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ManipulateHKLParameters</span><span class="p">(</span><span class="n">ThirdPartyParameters</span><span class="p">):</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ManipulateHKLParameters</span><span class="p">(</span><span class="n">ThirdPartyParameters</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parameters for CrystFEL&#39;s `get_hkl` for manipulating lists of reflections.</span>
 
 <span class="sd">    This Task is predominantly used internally to convert `hkl` to `mtz` files.</span>
@@ -2245,7 +2249,11 @@ https://www.desy.de/~twhite/crystfel/manual-partialator.html</p>
     <span class="p">)</span>
     <span class="c1"># Resolution cutoffs</span>
     <span class="n">cutoff_angstroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Either n, or n1,n2,n3. For n, reflections &lt; n are removed. For n1,n2,n3 anisotropic trunction performed at separate resolution limits for a*, b*, c*.&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Either n, or n1,n2,n3. For n, reflections &lt; n are removed. &quot;</span>
+            <span class="s2">&quot;For n1,n2,n3 anisotropic trunction performed at separate resolution &quot;</span>
+            <span class="s2">&quot;limits for a*, b*, c*.&quot;</span>
+        <span class="p">),</span>
         <span class="n">flag_type</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
         <span class="n">rename_param</span><span class="o">=</span><span class="s2">&quot;cutoff-angstroms&quot;</span><span class="p">,</span>
     <span class="p">)</span>
