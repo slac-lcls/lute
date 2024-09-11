@@ -6,7 +6,7 @@ title: "LUTE Task Configuration" # Include experiment description if desired
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
-work_dir: "/sdf/data/lcls/ds/xcs"
+work_dir: "/sdf/data/lcls/ds/xpp"
 ...
 ---
 ###########
@@ -17,7 +17,7 @@ AnalyzeSmallDataXSS:
   #smd_path: ""             # Include to analyze ONE specified smalldata file
   # Detector selection
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm PV to use for x-ray intensity filtering
+  ipm_var: "ipm2/sum"       # ipm PV to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"
@@ -34,9 +34,9 @@ AnalyzeSmallDataXSS:
 AnalyzeSmallDataXAS:
   #smd_path: ""
   # Detector selection - scattering det used for normalization.
-  xas_detname: "epix_2"     # Name of detector with XAS signal
+  xas_detname: "epix_1"     # Name of detector with XAS signal
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  ipm_var: "ipm2/sum"       # ipm to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"
@@ -56,9 +56,9 @@ AnalyzeSmallDataXAS:
 AnalyzeSmallDataXES:
   #smd_path: ""             # Include to analyze ONE specified smalldata file
   # Detector selection - scattering det used for normalization.
-  xes_detname: "epix_2"     # Name of detector with XAS signal
+  xes_detname: "epix_1"     # Name of detector with XAS signal
   xss_detname: "epix10k2M"  # Name of detector with scattering signal
-  ipm_var: "ipm5/sum"       # ipm to use for x-ray intensity filtering
+  ipm_var: "ipm2/sum"       # ipm to use for x-ray intensity filtering
   # Motor scans to search for
   scan_var:
     - "lxt"

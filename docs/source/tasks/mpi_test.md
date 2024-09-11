@@ -1,0 +1,1 @@
+::: tasks.mpi_test

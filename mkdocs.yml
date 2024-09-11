@@ -3,22 +3,33 @@ repo_url: https://github.com/slac-lcls/lute
 site_author: GFD, VM
 copyright: © 2024 LCLS
 nav:
-  - Quick Start: "usage.md"
-  - Walkthroughs:
-      - Creating a new Task: "tutorial/new_task.md"
-      - Creating a new Workflow: "tutorial/creating_workflows.md"
+  - Quick Start: "quick_start.md"
+  - Usage Manual:
+      - Task Configuration: "usage/configuration.md"
+      - Running LUTE: "usage/running_lute.md"
+  - Developer Documentation:
+      - Creating a new Task: "development/new_task.md"
+      - Creating a new Workflow: "development/creating_workflows.md"
   - Source Code:
       - managed_tasks: "source/managed_tasks.md"
       - execution:
           - executor: "source/execution/executor.md"
           - ipc: "source/execution/ipc.md"
           - debug_utils: "source/execution/debug_utils.md"
+          - logging: "source/execution/logging.md"
       - tasks:
           - task: "source/tasks/task.md"
+          - tasklets: "source/tasks/tasklets.md"
           - dataclasses: "source/tasks/dataclasses.md"
           - sfx_find_peaks: "source/tasks/sfx_find_peaks.md"
           - sfx_index: "source/tasks/sfx_index.md"
+          - smalldata: "source/tasks/smalldata.md"
+          - _smalldata: "source/tasks/_smalldata.md"
+          - math: "source/tasks/math.md"
           - test: "source/tasks/test.md"
+          - mpi_test: "source/tasks/mpi_test.md"
+          - util:
+              - html: "source/tasks/util/html.md"
       - io:
           - models:
               - base: "source/io/models/base.md"
@@ -27,7 +38,9 @@ nav:
               - sfx_merge: "source/io/models/sfx_merge.md"
               - sfx_solve: "source/io/models/sfx_solve.md"
               - smd: "source/io/models/smd.md"
+              - validators: "source/io/models/validators.md"
               - tests: "source/io/models/tests.md"
+              - mpi_tests: "source/io/models/mpi_tests.md"
           - config: "source/io/config.md"
           - db: "source/io/db.md"
           - _sqlite: "source/io/_sqlite.md"
@@ -49,6 +62,9 @@ plugins:
         paths: [lute]
         options:
           show_source: true
+          filters:
+            - "!__author__"
+            - "!__all__"
 - mike:
     # These fields are all optional; the defaults are as below...
     alias_type: symlink
