@@ -49,7 +49,7 @@ def database_setup(full_path: str) -> None:
         full_path (str): The full path to the file to touch.
     """
     touch(full_path)
-    os.chmod(full_path, 0o666)
+    os.chmod(full_path, 0o664)
 
 def git_clone(repo: str, location: str, tag: str) -> None:
     """Clone a git repository.

@@ -295,7 +295,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         except sqlite3.OperationalError as err:
             logger.error(f"Database storage error: {err}")
     try:
-        os.chmod(db_path, 0o666)
+        os.chmod(db_path, 0o664)
     except:
         logger.error("Cannot setup permissions on database!")
 
