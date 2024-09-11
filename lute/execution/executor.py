@@ -829,7 +829,9 @@ class Executor(BaseExecutor):
 
         self.add_hook("task_result", task_result)
 
-        def task_log(self: Executor, msg: Message) -> bool:
+        def task_log(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
+        ) -> bool:
             if isinstance(msg.contents, str):
                 # This should be log formatted already
                 print(msg.contents)
