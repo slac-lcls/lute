@@ -1503,8 +1503,11 @@
 <li><code>find_peaks_index</code> : Perform peak finding and indexing.</li>
 <li><code>psocake_sfx_phasing</code> : Perform end-to-end SFX analysis with experimental phasing. This uses a legacy peak finder and is <strong>not</strong> recommended unless you need experimental phasing.</li>
 <li><code>pyalgos_sfx</code> : Perform end-to-end SFX analysis with molecular replacement. Also sets up <code>smalldata_tools</code>.</li>
-<li><code>smd_summaries</code> : Perform XAS, XES, and XSS analysis of <code>smalldata_tools</code> reduction. Does not setup <code>smalldata_tools</code>.</li>
 <li><code>smd</code> : Run managed <code>smalldata_tools</code> and downstream analysis/summaries.</li>
+<li><code>smd_summaries</code> : Perform XAS, XES, and XSS analysis of <code>smalldata_tools</code> reduction. Does not setup <code>smalldata_tools</code>.</li>
+<li><code>smd_xss</code> : Perform only XSS analysis of <code>smalldata_tools</code> reduction. Does not setup <code>smalldata_tools</code>.</li>
+<li><code>smd_xes</code> : Perform only XES analysis of <code>smalldata_tools</code> reduction. Does not setup <code>smalldata_tools</code>.</li>
+<li><code>smd_xas</code> : Perform only XAS analysis of <code>smalldata_tools</code> reduction. Does not setup <code>smalldata_tools</code>.</li>
 </ul>
 <p>Providing SLURM arguments is not required, but <strong>highly recommended</strong>. The setup script will try to set some default values for <code>--partition</code>, <code>--account</code>, and <code>--ntasks</code>, depending on the experiment and workflow you are running. If these three arguments are not provided, it will prompt you for each one and tell you the default it has selected. Press enter (or any key) to accept. Otherwise, press <code>Ctrl-C</code> to exit the setup, and pass the arguments manually.</p>
 <p>The <code>setup_lute</code> script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at <code>/sdf/data/lcls/ds/&lt;hutch&gt;/&lt;experiment&gt;/results/&lt;hutch&gt;.yaml</code>. You will want to modify this configuration prior to running. See <code>Basic Usage</code> below for more information.</p>
