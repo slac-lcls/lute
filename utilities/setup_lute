@@ -171,17 +171,20 @@ if __name__ == "__main__":
     launch_executable: str = f"{lute_path}/launch_scripts/launch_airflow.py"
 
     std_hutch_config: str = f"{lute_path}/config/{hutch}.yaml"
-    config_path: str = f"{results_dir}/{hutch}_lute.yaml"
+    lute_output_dir: str = f"{results_dir}/lute_output"
+    if not os.path.exists(lute_output_dir):
+        os.makedirs(lute_output_dir, mode=0o777)
+    config_path: str = f"{lute_output_dir}/{hutch}_lute.yaml"
     if not os.path.exists(std_hutch_config):
         shutil.copy(f"{lute_path}/config/test.yaml", config_path)
     else:
         shutil.copy(std_hutch_config, config_path)
     os.chmod(config_path, 0o666)
     # Substitute the work_dir in LUTE's config to the experiment results folder.
-    sed_pattern: str = f"s|work_dir:\(.*\)|work_dir: \\\"{results_dir}\\\"|g"
+    sed_pattern: str = f"s|work_dir:\(.*\)|work_dir: \\\"{lute_output_dir}\\\"|g"
     inplace_sed(config_path, sed_pattern)
 
-    database_setup(f"{results_dir}/lute.db") # Setup permissions on database
+    database_setup(f"{lute_output_dir}/lute.db") # Setup permissions on database
     param_string: str = f"{launch_executable} -c {config_path} -w {args.workflow}"
 
     if args.debug:
