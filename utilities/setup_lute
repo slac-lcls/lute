@@ -33,6 +33,23 @@ def _run_subprocess_log(cmd: List[str]) -> None:
     if err:
         logger.info(err)
 
+def touch(full_path: str) -> None:
+    """Touch a file.
+
+    Args:
+        full_path (str): The full path to the file to touch.
+    """
+    cmd: List[str] = ["touch", full_path]
+    _run_subprocess_log(cmd)
+
+def database_setup(full_path: str) -> None:
+    """Touch a file.
+
+    Args:
+        full_path (str): The full path to the file to touch.
+    """
+    touch(full_path)
+    os.chmod(full_path, 0o666)
 
 def git_clone(repo: str, location: str, tag: str) -> None:
     """Clone a git repository.
@@ -164,6 +181,7 @@ if __name__ == "__main__":
     sed_pattern: str = f"s|work_dir:\(.*\)|work_dir: \\\"{results_dir}\\\"|g"
     inplace_sed(config_path, sed_pattern)
 
+    database_setup(f"{results_dir}/lute.db") # Setup permissions on database
     param_string: str = f"{launch_executable} -c {config_path} -w {args.workflow}"
 
     if args.debug:
