@@ -2550,15 +2550,7 @@ that can be found in the database. Returns None if nothing found.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/io/db.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">303</span>
 <span class="normal">304</span>
 <span class="normal">305</span>
 <span class="normal">306</span>
@@ -2603,7 +2595,16 @@ that can be found in the database. Returns None if nothing found.</p>
 <span class="normal">345</span>
 <span class="normal">346</span>
 <span class="normal">347</span>
-<span class="normal">348</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
     <span class="n">db_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2635,7 +2636,8 @@ that can be found in the database. Returns None if nothing found.</p>
     <span class="kn">import</span> <span class="nn">sqlite3</span>
     <span class="kn">from</span> <span class="nn">._sqlite</span> <span class="kn">import</span> <span class="n">_select_from_db</span>
 
-    <span class="n">con</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">db_dir</span><span class="si">}</span><span class="s2">/lute.db&quot;</span><span class="p">)</span>
+    <span class="n">db_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">db_dir</span><span class="si">}</span><span class="s2">/lute.db&quot;</span>
+    <span class="n">con</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">con</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">cond</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -2655,7 +2657,7 @@ that can be found in the database. Returns None if nothing found.</p>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">entries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot retrieve value </span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2"> due to: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot retrieve value </span><span class="si">{</span><span class="n">param</span><span class="si">}</span><span class="s2"> due to: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2752,7 +2754,15 @@ some of the information can be shared across multiple Tasks. Refer to
 <span class="normal">289</span>
 <span class="normal">290</span>
 <span class="normal">291</span>
-<span class="normal">292</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write an DescribedAnalysis object to the database.</span>
 
 <span class="sd">    The DescribedAnalysis object is maintained by the Executor and contains all</span>
@@ -2795,33 +2805,41 @@ some of the information can be shared across multiple Tasks. Refer to
     <span class="n">task_entry</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">task_columns</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
 
-    <span class="n">con</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">work_dir</span><span class="si">}</span><span class="s2">/lute.db&quot;</span><span class="p">)</span>
+    <span class="n">db_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">work_dir</span><span class="si">}</span><span class="s2">/lute.db&quot;</span>
+    <span class="n">con</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">con</span><span class="p">:</span>
-        <span class="c1"># --- Table Creation ---#</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_shared_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;gen_cfg&quot;</span><span class="p">,</span> <span class="n">gen_columns</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="s2">&quot;Could not make general configuration table!&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_shared_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;exec_cfg&quot;</span><span class="p">,</span> <span class="n">exec_columns</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="s2">&quot;Could not make Executor configuration table!&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_task_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">task_columns</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not make Task table for: </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># --- Table Creation ---#</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_shared_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;gen_cfg&quot;</span><span class="p">,</span> <span class="n">gen_columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="s2">&quot;Could not make general configuration table!&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_shared_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;exec_cfg&quot;</span><span class="p">,</span> <span class="n">exec_columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="s2">&quot;Could not make Executor configuration table!&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_make_task_table</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">task_columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not make Task table for: </span><span class="si">{</span><span class="n">task_name</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">)</span>
 
-        <span class="c1"># --- Row Addition ---#</span>
-        <span class="n">gen_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_add_row_no_duplicate</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;gen_cfg&quot;</span><span class="p">,</span> <span class="n">gen_entry</span><span class="p">)</span>
-        <span class="n">exec_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_add_row_no_duplicate</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;exec_cfg&quot;</span><span class="p">,</span> <span class="n">exec_entry</span><span class="p">)</span>
+            <span class="c1"># --- Row Addition ---#</span>
+            <span class="n">gen_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_add_row_no_duplicate</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;gen_cfg&quot;</span><span class="p">,</span> <span class="n">gen_entry</span><span class="p">)</span>
+            <span class="n">exec_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_add_row_no_duplicate</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="s2">&quot;exec_cfg&quot;</span><span class="p">,</span> <span class="n">exec_entry</span><span class="p">)</span>
 
-        <span class="n">full_task_entry</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;gen_cfg_id&quot;</span><span class="p">:</span> <span class="n">gen_id</span><span class="p">,</span>
-            <span class="s2">&quot;exec_cfg_id&quot;</span><span class="p">:</span> <span class="n">exec_id</span><span class="p">,</span>
-        <span class="p">}</span>
-        <span class="n">full_task_entry</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">task_entry</span><span class="p">)</span>
-        <span class="c1"># Prepare flag to indicate whether the task entry is valid or not</span>
-        <span class="c1"># By default we say it is assuming proper completion</span>
-        <span class="n">valid_flag</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="mi">1</span> <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">task_result</span><span class="o">.</span><span class="n">task_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">COMPLETED</span> <span class="k">else</span> <span class="mi">0</span>
-        <span class="p">)</span>
-        <span class="n">full_task_entry</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;valid_flag&quot;</span><span class="p">:</span> <span class="n">valid_flag</span><span class="p">})</span>
+            <span class="n">full_task_entry</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;gen_cfg_id&quot;</span><span class="p">:</span> <span class="n">gen_id</span><span class="p">,</span>
+                <span class="s2">&quot;exec_cfg_id&quot;</span><span class="p">:</span> <span class="n">exec_id</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">full_task_entry</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">task_entry</span><span class="p">)</span>
+            <span class="c1"># Prepare flag to indicate whether the task entry is valid or not</span>
+            <span class="c1"># By default we say it is assuming proper completion</span>
+            <span class="n">valid_flag</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="mi">1</span> <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">task_result</span><span class="o">.</span><span class="n">task_status</span> <span class="o">==</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">COMPLETED</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="p">)</span>
+            <span class="n">full_task_entry</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;valid_flag&quot;</span><span class="p">:</span> <span class="n">valid_flag</span><span class="p">})</span>
 
-        <span class="n">_add_task_entry</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">full_task_entry</span><span class="p">)</span>
+            <span class="n">_add_task_entry</span><span class="p">(</span><span class="n">con</span><span class="p">,</span> <span class="n">task_name</span><span class="p">,</span> <span class="n">full_task_entry</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database storage error: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">db_path</span><span class="p">,</span> <span class="mo">0o664</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cannot setup permissions on database!&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
