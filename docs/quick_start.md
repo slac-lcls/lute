@@ -25,8 +25,11 @@ The only required argument is `-e <EXPERIMENT>`. This should be the experiment y
 - `find_peaks_index` : Perform peak finding and indexing.
 - `psocake_sfx_phasing` : Perform end-to-end SFX analysis with experimental phasing. This uses a legacy peak finder and is **not** recommended unless you need experimental phasing.
 - `pyalgos_sfx` : Perform end-to-end SFX analysis with molecular replacement. Also sets up `smalldata_tools`.
-- `smd_summaries` : Perform XAS, XES, and XSS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
 - `smd` : Run managed `smalldata_tools` and downstream analysis/summaries.
+- `smd_summaries` : Perform XAS, XES, and XSS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
+- `smd_xss` : Perform only XSS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
+- `smd_xes` : Perform only XES analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
+- `smd_xas` : Perform only XAS analysis of `smalldata_tools` reduction. Does not setup `smalldata_tools`.
 
 Providing SLURM arguments is not required, but **highly recommended**. The setup script will try to set some default values for `--partition`, `--account`, and `--ntasks`, depending on the experiment and workflow you are running. If these three arguments are not provided, it will prompt you for each one and tell you the default it has selected. Press enter (or any key) to accept. Otherwise, press `Ctrl-C` to exit the setup, and pass the arguments manually.
 

@@ -198,7 +198,9 @@ if __name__ == "__main__":
             sys.exit(0)
     if "ntasks" not in extra_args_str:
         ncores: int
-        if args.workflow == "smd_summaries":
+        if args.workflow in ("smd_xas", "smd_xss"):
+            ncores = 2
+        elif args.workflow in ("smd_summaries", "smd_xes"):
             ncores = 5
         else:
             ncores = 120

@@ -1,6 +1,6 @@
-"""Run basic analysis based on smalldata output.
+"""Run basic XES analysis based on smalldata output.
 
-Runs XSS, XAS and XES analysis based on smalldata output. Assumes smalldata_tools
+Runs only XES analysis based on smalldata output. Assumes smalldata_tools
 has been run separately.
 
 Note:
@@ -20,9 +20,7 @@ from airflow import DAG
 from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
-description: str = (
-    "Produce basic analysis for XSS, XAS, and XES from SmallData hdf5 files."
-)
+description: str = "Produce basic analysis for XES from SmallData hdf5 files."
 
 dag: DAG = DAG(
     dag_id=dag_id,
@@ -31,17 +29,7 @@ dag: DAG = DAG(
     description=description,
 )
 
-xss: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="SmallDataXSSAnalyzer", dag=dag
-)
-
-xas: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="SmallDataXASAnalyzer", dag=dag
-)
-
 xes: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataXESAnalyzer", dag=dag)
 
-# Run summaries
-xss
-xas
+# Run summary
 xes

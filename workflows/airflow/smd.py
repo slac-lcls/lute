@@ -1,7 +1,6 @@
-"""Run basic analysis based on smalldata output.
+"""Run smalldata_tools and basic analysis.
 
-Runs XSS, XAS and XES analysis based on smalldata output. Assumes smalldata_tools
-has been run separately.
+Runs smalldata_tools and then basic analysis for XSS, XAS and XES.
 
 Note:
     The task_id MUST match the managed task name when defining DAGs - it is used
@@ -31,6 +30,8 @@ dag: DAG = DAG(
     description=description,
 )
 
+smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
+
 xss: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=2, task_id="SmallDataXSSAnalyzer", dag=dag
 )
@@ -42,6 +43,6 @@ xas: JIDSlurmOperator = JIDSlurmOperator(
 xes: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataXESAnalyzer", dag=dag)
 
 # Run summaries
-xss
-xas
-xes
+smd_producer >> xss
+smd_producer >> xas
+smd_producer >> xes

@@ -25,6 +25,7 @@ LUTE_TASK_LOG_FORMAT: str = f"TASK_LOG -- %(levelname)s:%(name)s: %(message)s"
 
 class SocketCommunicatorHandler(logging.Handler):
     """Logging handler which passes messages via SocketCommunicator objects."""
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._communicator: SocketCommunicator = SocketCommunicator()
