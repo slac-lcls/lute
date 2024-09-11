@@ -27,6 +27,10 @@ Functions:
         Tuple[Dict[str, str], Optional[ElogSummaryPlots]]: Extract the figure of
         merit and produce a plot of figure of merit/resolution ring.
 
+    setup_dimple_uglymol(final_mtz: str, experiment: str, density_display_name: str
+        ) -> None: Set's up the javascript and HTML files needed to display electron
+        density in the eLog using UglyMol and the output from dimple.
+
 Usage:
     As tasklets are just functions they can be imported and used within Task
     code normally if needed.
@@ -52,11 +56,13 @@ __all__ = [
     "git_clone",
     "indexamajig_summary_indexing_rate",
     "compare_hkl_fom_summary",
+    "setup_dimple_uglymol",
 ]
 __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
+import shutil
 import subprocess
 from typing import List, Dict, Tuple, Optional
 
@@ -82,7 +88,6 @@ def concat_files(location: str, in_files_glob: str, out_file: str) -> None:
 
         out_file (str): Name of the concatenated output.
     """
-    import shutil
     from pathlib import Path
     from typing import BinaryIO
 
@@ -171,6 +176,25 @@ def grep(match_str: str, in_file: str) -> List[str]:
     return lines
 
 
+def wget(url: str, out_dir: Optional[str] = None) -> None:
+    """Pull down some resource.
+
+    Args:
+        url (str): URL of the resource.
+
+        out_dir (Optional[str]): Path of a directory to write the resource to.
+            If None, will write to the current working directory, which is
+            likely user scratch if running from the eLog.
+    """
+    cmd: List[str] = ["wget", url]
+    if out_dir is not None:
+        cmd.extend(["-P", out_dir])
+
+    out, _ = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+    ).communicate()
+
+
 def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
     """Return indexing rate from indexamajig output.
 
@@ -237,3 +261,61 @@ def compare_hkl_fom_summary(
     grid[:2, :2] = pts
     tabs = pn.Tabs(grid)
     return run_params, ElogSummaryPlots(figure_display_name, tabs)
+
+
+def setup_dimple_uglymol(
+    final_mtz: str, experiment: str, density_display_name: str
+) -> None:
+    """Setup uglymol so electron density can be explored in eLog.
+
+    Args:
+        final_mtz (str): Path to the output MTZ file after running dimple.
+
+        experiment (str): Experiment name.
+
+        density_display_name (str): Name of the tabbed navigation to find the
+            electron density in the eLog.
+    """
+    # We will allow passing a file name to try and guess the display name to use
+    display_name: str
+    if "." in density_display_name:
+        display_name = density_display_name.split(".")[0]
+        if "/" in display_name:
+            # If it's a path we only want to keep last part of /path/to/filename
+            # The standard workflow will name the stream and downstream files
+            # <tag>.stream, <tag>.hkl, ...
+            display_name = display_name.split("/")[-1]
+        else:
+            display_name = "density"
+    else:
+        display_name = density_display_name
+
+    output_path: str = (
+        f"/sdf/data/lcls/ds/{experiment[:3]}/{experiment}/stats/summary/{display_name}"
+    )
+    wasm_path: str = f"{output_path}/wasm"
+    logger.debug(f"Electron density path: {output_path}")
+    if not os.path.exists(output_path):
+        os.makedirs(wasm_path)
+
+    final_pdb: str = f"{final_mtz.split('.')[0]}.pdb"
+    uglymol_js_url: str = (
+        "https://raw.githubusercontent.com/uglymol/uglymol/master/uglymol.js"
+    )
+    mtz_js_url: str = (
+        "https://raw.githubusercontent.com/uglymol/uglymol.github.io/master/wasm/mtz.js"
+    )
+    mtz_wasm_url: str = (
+        "https://github.com/uglymol/uglymol.github.io/raw/master/wasm/mtz.wasm"
+    )
+
+    wget(uglymol_js_url, output_path)
+    wget(mtz_js_url, wasm_path)
+    wget(mtz_wasm_url, wasm_path)
+    shutil.copyfile(final_mtz, f"{output_path}/final.mtz")
+    shutil.copyfile(final_pdb, f"{output_path}/final.pdb")
+
+    with open(f"{output_path}/report.html", "w") as f:
+        from lute.tasks.util.html import DIMPLE_HTML
+
+        f.write(DIMPLE_HTML)

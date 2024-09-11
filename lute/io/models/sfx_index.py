@@ -436,8 +436,17 @@ class IndexCrystFELParameters(ThirdPartyParameters):
             expmt: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             work_dir: str = values["lute_config"].work_dir
-            fname: str = f"{expmt}_r{run:04d}.stream"
-            return f"{work_dir}/{fname}"
+            tag: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "tag"
+            )
+            if tag is None:
+                tag: Optional[str] = read_latest_db_entry(
+                    f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "tag"
+                )
+            fname: str = f"{expmt}_r{run:04d}"
+            if tag is not None:
+                fname = f"{fname}_{tag}"
+            return f"{work_dir}/{fname}.stream"
         return out_file
 
 
@@ -484,7 +493,7 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 f"{values['lute_config'].work_dir}", "IndexCrystFEL", "out_file"
             )
             if stream_file:
-                stream_tag: str = Path(stream_file).name.split("_")[0]
+                stream_tag: str = Path(stream_file).name.split("_")[-1].split(".")[0]
                 return stream_tag
         return tag
 

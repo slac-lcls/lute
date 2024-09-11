@@ -10,6 +10,7 @@ from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
     indexamajig_summary_indexing_rate,
+    setup_dimple_uglymol,
 )
 
 # Tests
@@ -108,6 +109,13 @@ HKLManipulator: Executor = Executor("ManipulateHKL")  # For hkl->mtz, but can do
 DimpleSolver: Executor = Executor("DimpleSolve")
 """Solves a crystallographic structure using molecular replacement."""
 DimpleSolver.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
+DimpleSolver.add_tasklet(
+    setup_dimple_uglymol,
+    ["{{ out_dir }}/final.mtz", "{{ lute_config.experiment }}", "{{ in_file }}"],
+    when="after",
+    set_result=False,
+    set_summary=True,
+)
 
 PeakFinderPyAlgos: MPIExecutor = MPIExecutor("FindPeaksPyAlgos")
 """Performs Bragg peak finding using the PyAlgos algorithm."""

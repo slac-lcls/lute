@@ -80,6 +80,15 @@ class Task(ABC):
             payload="",
         )
         self._task_parameters: TaskParameters = params
+        if (
+            hasattr(self._task_parameters.Config, "result_from_params")
+            and self._task_parameters.Config.result_from_params is not None
+        ):
+            object.__setattr__(
+                self._task_parameters,
+                "_result_from_params",
+                self._task_parameters.Config.result_from_params,
+            )
         timeout: int = self._task_parameters.lute_config.task_timeout
         signal.setitimer(signal.ITIMER_REAL, timeout)
 
@@ -319,7 +328,7 @@ class ThirdPartyTask(Task):
             # Clunky test with __dict__[param] because compound model-types are
             # converted to `dict`. E.g. type(value) = dict not AnalysisHeader
             if (
-                param == "executable"
+                param in ("executable", "_result_from_params")
                 or value is None  # Cannot have empty values in argument list for execvp
                 or value == ""  # But do want to include, e.g. 0
                 or isinstance(self._task_parameters.__dict__[param], TemplateConfig)
