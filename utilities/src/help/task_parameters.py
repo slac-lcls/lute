@@ -82,6 +82,8 @@ def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
     default: str
     if "default" in param_description:
         default = param_description["default"]
+        if default == "":
+            default = "<Empty String> - May be populated by validator"
         msg = f"{msg} - Default: {default}"
 
     description: str
