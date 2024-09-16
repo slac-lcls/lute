@@ -71,6 +71,9 @@ def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
         typeinfo = param_description["type"]
     elif "anyOf" in param_description:  # anyOf is present instead
         typeinfo = " | ".join(_["type"] for _ in param_description["anyOf"])
+    elif "allOf" in param_description and "$ref" in param_description["allOf"][0]:
+        typeinfo = param_description["allOf"][0]["$ref"].split("/")[-1]
+        typeinfo = f"{typeinfo}"
     else:
         typeinfo = "No type information"
     typeinfo = f"({typeinfo})"
@@ -182,6 +185,7 @@ if __name__ == "__main__":
             if len(definitions) > 0:
                 out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
                 for defn in definitions:
+                    out_msg = f"{out_msg}{defn}:\n"
                     for param in parameter_schema["definitions"][defn]["properties"]:
                         row: str = _format_parameter_row(
                             param,
