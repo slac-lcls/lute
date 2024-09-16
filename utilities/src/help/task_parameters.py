@@ -146,7 +146,6 @@ if __name__ == "__main__":
 
         # For types need to check for key `type` or a list of dicts `anyOf=[{'type': ...}, {'type': ...}]`
         parameter_schema: ModelSchema = parameter_model.schema()
-
         if args.full_schema:
             pprint.pprint(parameter_schema)
             sys.exit(0)
@@ -170,8 +169,23 @@ if __name__ == "__main__":
                 out_msg = f"{out_msg}{_format_parameter_row(param[0], param[1])}"
             out_msg = f"{out_msg}\n\n"
 
-        out_msg = f"{out_msg}All Parameters:\n-------------\n"
+        out_msg = f"{out_msg}All Parameters:\n---------------\n"
         for param in parameter_schema["properties"]:
             out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param])}"
 
+        if "definitions" in parameter_schema and parameter_schema["definitions"]:
+            definitions: List[str] = [
+                defn
+                for defn in parameter_schema["definitions"]
+                if defn not in ("AnalysisHeader", "TemplateConfig")
+            ]
+            if len(definitions) > 0:
+                out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
+                for defn in definitions:
+                    for param in parameter_schema["definitions"][defn]["properties"]:
+                        row: str = _format_parameter_row(
+                            param,
+                            parameter_schema["definitions"][defn]["properties"][param],
+                        )
+                        out_msg = f"{out_msg}{row}"
         print(out_msg)
