@@ -1,7 +1,7 @@
 import sys
 import argparse
 import logging
-from typing import Dict, Optional, List, Set, Tuple, Any
+from typing import Dict, Optional, List, Set, Tuple, Any, Callable
 from typing_extensions import TypedDict
 
 import pprint
@@ -64,7 +64,11 @@ parser.add_argument(
 )
 
 
-def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
+def _format_parameter_row(
+    param: str,
+    param_description: PropertyDict,
+    validators: Optional[List[Callable]] = None,
+) -> str:
     """Take a property dictionary for a parameter and format it for printing."""
     typeinfo: str
     if "type" in param_description:
@@ -73,7 +77,6 @@ def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
         typeinfo = " | ".join(_["type"] for _ in param_description["anyOf"])
     elif "allOf" in param_description and "$ref" in param_description["allOf"][0]:
         typeinfo = param_description["allOf"][0]["$ref"].split("/")[-1]
-        typeinfo = f"{typeinfo}"
     else:
         typeinfo = "No type information"
     typeinfo = f"({typeinfo})"
@@ -92,7 +95,12 @@ def _format_parameter_row(param: str, param_description: PropertyDict) -> str:
     else:
         description = "Unknown description."
 
-    msg = f"{msg}\n\t{description}\n\n"
+    msg = f"{msg}\n\t{description}"
+    if validators is not None:
+        msg = f"{msg}\n\tValidators:"
+        for validator in validators:
+            msg = f"{msg}\n\t\t- {validator.func.__name__}"
+    msg = f"{msg}\n\n"
     return msg
 
 
@@ -166,17 +174,30 @@ if __name__ == "__main__":
                 for param in parameter_schema["required"]
             ]
 
+        validators: Optional[List[Callable]] = None
         out_msg: str = f"{task_name}\n{'-'*len(task_name)}\n"
         out_msg = f"{out_msg}{task_description}\n\n\n"
         if required_parameters is not None:
             out_msg = f"{out_msg}Required Parameters:\n--------------------\n"
             for param in required_parameters:
-                out_msg = f"{out_msg}{_format_parameter_row(param[0], param[1])}"
+                validators = (
+                    parameter_model.__validators__[param[0]]
+                    if param[0] in parameter_model.__validators__
+                    else None
+                )
+                out_msg = (
+                    f"{out_msg}{_format_parameter_row(param[0], param[1], validators)}"
+                )
             out_msg = f"{out_msg}\n\n"
 
         out_msg = f"{out_msg}All Parameters:\n---------------\n"
         for param in parameter_schema["properties"]:
-            out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param])}"
+            validators = (
+                parameter_model.__validators__[param]
+                if param in parameter_model.__validators__
+                else None
+            )
+            out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param], validators)}"
 
         if "definitions" in parameter_schema and parameter_schema["definitions"]:
             definitions: List[str] = [
