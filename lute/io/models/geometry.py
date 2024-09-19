@@ -1,27 +1,14 @@
-fd
-"""Models for smalldata_tools Tasks.
+"""Models for geometry and geometry optimization Tasks.
 
 Classes:
-    SubmitSMDParameters(ThirdPartyParameters): Parameters to run smalldata_tools
-        to produce a smalldata HDF5 file.
-
-    AnalyzeSmallDataXSSParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXSS Task. Used to determine spatial/temporal overlap
-        based on XSS difference signal and provide basic XSS feedback.
-
-    AnalyzeSmallDataXASParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXAS Task. Used to determine spatial/temporal overlap
-        based on XAS difference signal and provide basic XAS feedback.
-
-    AnalyzeSmallDataXESParameters(TaskParameters): Parameter model for the
-        AnalyzeSmallDataXES Task. Used to determine spatial/temporal overlap
-        based on XES difference signal and provide basic XES feedback.
+    OptimizeAgBhGeometryExhaustiveParameters(TaskParameters): Parameter model for
+        the OptimizeAgBhGeometryExhaustive Task. Used to optimize detector distance
+        and beam center after acquiring Ag Behenate data.
 """
 
 __all__ = ["OptimizeAgBhGeometryExhaustiveParameters"]
 __author__ = "Gabriel Dorlhiac"
 
-import os
 from typing import Optional, Tuple
 
 from pydantic import Field
