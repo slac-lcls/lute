@@ -48,7 +48,6 @@ SmallDataProducer.add_tasklet(
     set_summary=False,
 )
 
-
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
 
@@ -57,6 +56,9 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
+
+PyPADFFXSCorrelater: MPIExecutor = MPIExecutor("CorrelatePyPADFFXS")
+"""Process FXS results from a Small Data HDF5 file."""
 
 # SFX
 #####

@@ -349,3 +349,138 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
         0,
         description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
     )
+
+
+class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
+    """Parameters for running pypadf difftocorr."""
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class ConfParameters(BaseModel):
+        """Template parameters for pyPADF config file."""
+
+        class Config(BaseModel.Config):
+            extra: str = "allow"
+
+        input_path: str = Field(
+            "",
+            description="Directory where input files are located.",
+        )
+
+        output_path: str = Field(
+            "",
+            description="Directory output files will be placed.",
+        )
+
+        tag: str = Field(
+            "hex",
+            description="tag prepended to all output files."
+        )
+
+        sample_to_detector_distance: float = Field(
+            0.5,
+            description="Sample to detector distance (in meter)",
+        )
+
+        photon_wavelength_m: float = Field(
+            0.2e-10,
+            description="photon wavelength (in meter)",
+        )
+
+        detector_pixel_width_m
+
+        number_theta_samples: int = Field(
+            90,
+            description="no. of theta samples to use for the correlation function",
+        )
+
+        nthreads: int = Field(
+            10,
+            description="number of CPU threads to use.",
+        )
+
+        i_pattern_start: int = Field(
+            1,
+            description="number of the starting diffraction pattern",
+        )
+
+        n_patterns: int = Field(
+            6,
+            description="number of diffraction patterns to process",
+        )
+
+        bin_factor: int = Field(
+            8,
+            description="Factor to bin diffraction patterns with",
+        )
+
+        mask_flag: bool = Field(
+            False,
+            description="Flag to control mask usage",
+        )
+
+        process_flag: bool = Field(
+            False,
+            desription="Flag to control output processed diffraction patterns",
+        )
+
+        shift_center_flag: bool = Field(
+            False,
+            description="Flag to control center shifting of diffraction patterns",
+        )
+
+        crop_flag: bool = Field(
+            Flase,
+            description="Flag to control cropping of diffraction patterns",
+        )
+
+        x_width_pixels: int = Field(
+            100,
+            description="Width (X) of cropping area (in pixels).",
+        )
+
+        y_width_pixels: int = Field(
+            100,
+            description="Width (Y) of cropping area (in pixels).",
+        )
+
+        x_shift_pixels: float = Field(
+            0,
+            description="X-shift in fractional pixels.",
+        )
+
+        y_shift_pixels: float = Field(
+            0,
+            description="Y-shift in fractional pixels.",
+        )
+
+
+    executable: str = Field(
+        "python",
+        description="python executable.",
+        flag_type="",
+    )
+    pypadf_executable: str = Field(
+        "/sdf/home/c/caw21/cxil1018723/pypadf/difftocorr.py",
+        description="pyPADF diffraction > correlation program.",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description="Location of the input config file.",
+        flag_type="",
+    )
+    in_parameters: Optional[ConfParameters] = Field(
+        None,
+        description="Optional template parameters to fill in the config file.",
+        flag_type="",
+    )
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="pypadf_difftocorr.txt",
+            output_path="",
+        ),
+        description="Template information for the pypadf_difftocorr file.",
+    )
