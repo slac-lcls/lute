@@ -21,7 +21,8 @@ from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
 description: str = (
-    "Produce basic analysis for XSS, XAS, and XES from SmallData hdf5 files."
+    "Run geometry optimization based on Ag Behenate. Produce powder using "
+    "smalldata_tools."
 )
 
 dag: DAG = DAG(
