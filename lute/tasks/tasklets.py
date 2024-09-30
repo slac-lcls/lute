@@ -133,7 +133,12 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
             f"Repository {repo} already exists at {location}. Will not overwrite."
         )
         return
-    cmd: List[str] = ["git", "clone", f"https://github.com/{repo}.git", location]
+    cmd: List[str] = [
+        "git",
+        "clone",
+        f"https://github.com/{repo}.git",
+        f"{location}/{repo_only}",
+    ]
     out: str
     out, _ = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
