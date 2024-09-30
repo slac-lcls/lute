@@ -128,7 +128,7 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
         permissions (str): Permissions to set on the repository.
     """
     repo_only: str = repo.split("/")[1]
-    if os.path.exists(f"location/{repo_only}"):
+    if os.path.exists(f"{location}/{repo_only}"):
         logger.debug(
             f"Repository {repo} already exists at {location}. Will not overwrite."
         )
@@ -150,7 +150,7 @@ def clone_smalldata(producer_location: str) -> None:
     from pathlib import Path
 
     repo: str = "slac-lcls/smalldata_tools"
-    location: str = str(Path(producer_location).parent.parent)
+    location: str = str(Path(producer_location).parent.parent.parent)
     git_clone(repo, location, 0o777)
 
 
