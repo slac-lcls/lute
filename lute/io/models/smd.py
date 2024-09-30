@@ -358,7 +358,7 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
         set_result: bool = False
         """Whether the Executor should mark a specified parameter as a result."""
 
-    class ConfParameters(BaseModel):
+    class PyPADFParameters(BaseModel):
         """Template parameters for pyPADF config file."""
 
         class Config(BaseModel.Config):
@@ -389,7 +389,10 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
             description="photon wavelength (in meter)",
         )
 
-        detector_pixel_width_m
+        detector_pixel_width_m: float = Field(
+            5.0e-5,
+            description="width of a detector pixel (in meter)",
+        )
 
         number_theta_samples: int = Field(
             90,
@@ -432,7 +435,7 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
         )
 
         crop_flag: bool = Field(
-            Flase,
+            False,
             description="Flag to control cropping of diffraction patterns",
         )
 
@@ -456,6 +459,7 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
             description="Y-shift in fractional pixels.",
         )
 
+    _set_pypadf_template_parameters = template_parameter_validator("pypadf_parameters")
 
     executable: str = Field(
         "python",
@@ -467,12 +471,12 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
         description="pyPADF diffraction > correlation program.",
         flag_type="",
     )
-    in_file: str = Field(
+    pypadf_file: str = Field(
         "",
         description="Location of the input config file.",
         flag_type="",
     )
-    in_parameters: Optional[ConfParameters] = Field(
+    pypadf_parameters: Optional[PyPADFParameters] = Field(
         None,
         description="Optional template parameters to fill in the config file.",
         flag_type="",
@@ -484,3 +488,18 @@ class CorrelatePyPADFFXSParameters(ThirdPartyParameters):
         ),
         description="Template information for the pypadf_difftocorr file.",
     )
+
+    @validator("pypadf_file", always=True)
+    def set_default_pypadf_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if pypadf_file == "":
+            return f"{values['lute_config'].work_dir}/pypadf_diftocorr.txt"
+        return in_file
+
+    @validator("lute_template_cfg", always=True)
+    def set_pypadf_template_path(
+            cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -> TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["pypadf_file"]
+        return lute_template_cfg
+
