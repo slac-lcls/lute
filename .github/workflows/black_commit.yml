@@ -4,19 +4,28 @@ on: push
 jobs:
   format:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
-      - name: black-format
-      - uses: actions/checkout@v1
-      - uses: psf/black@stable
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: black-format-check
+        uses: psf/black@stable
         with:
           options: "--verbose --check"
           src: "./lute"
-    - name: apply-black
-      if: "${{ failure() }}"
-      run: |
-        black ./lute
-    - name: commit-black
-      if: "${{ failure() }}"
-      uses: stefanzweifel/git-auto-commit-action@v4
-      with:
-        commit: "Auto-commit black formatting"
+
+      - name: apply-black
+        if: "${{ failure() }}"
+        uses: psf/black@stable
+        with:
+          options: "--verbose"
+          src: "./lute"
+
+      - name: commit-black
+        if: "${{ failure() }}"
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit: "Auto-commit black formatting"
