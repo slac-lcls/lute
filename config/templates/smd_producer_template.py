@@ -5,6 +5,8 @@ import psana
 import time
 from datetime import datetime
 begin_job_time = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
+import time
+start_job = time.time()
 import argparse
 import socket
 import os
@@ -14,6 +16,7 @@ import sys
 from glob import glob
 from PIL import Image
 from requests.auth import HTTPBasicAuth
+from pathlib import Path
 
 ##########################################################
 ##
@@ -182,6 +185,11 @@ def getProjection_ax1(run):
 epicsPV = {{ epicsPV }} #[]
 {% else %}
 epicsPV = []
+{% endif %}
+{% if epicsOncePV is defined %}
+epicsOncePV = {{ epicsOncePV }}
+{% else %}
+epicsOncePV = []
 {% endif %}
 #fix timetool calibration if necessary
 #ttCalib=[0.,2.,0.]
@@ -380,20 +388,16 @@ sys.path.append(fpathup)
 print(f"\n{fpathup}")
 
 from smalldata_tools.utilities import printMsg, checkDet
-from smalldata_tools.SmallDataUtils import setParameter, getUserData, getUserEnvData
-from smalldata_tools.SmallDataUtils import defaultDetectors, detData, detOnceData
-from smalldata_tools.SmallDataDefaultDetector import ttRawDetector
-from smalldata_tools.SmallDataDefaultDetector import epicsDetector, eorbitsDetector
-from smalldata_tools.SmallDataDefaultDetector import bmmonDetector, ipmDetector
-from smalldata_tools.SmallDataDefaultDetector import encoderDetector, adcDetector
-from smalldata_tools.SmallDataDefaultDetector import xtcavDetector
-from smalldata_tools.DetObject import DetObject
-from smalldata_tools.ana_funcs.roi_rebin import (
-    ROIFunc,
-    spectrumFunc,
-    projectionFunc,
-    imageFunc,
-)
+from smalldata_tools.common.detector_base import getUserData, getUserEnvData
+from smalldata_tools.lcls1.default_detectors import detData, detOnceData
+from smalldata_tools.lcls1.default_detectors import ttRawDetector
+from smalldata_tools.lcls1.default_detectors import epicsDetector, eorbitsDetector
+from smalldata_tools.lcls1.default_detectors import bmmonDetector, ipmDetector
+from smalldata_tools.lcls1.default_detectors import encoderDetector, adcDetector
+from smalldata_tools.lcls1.default_detectors import xtcavDetector
+from smalldata_tools.lcls1.hutch_default import defaultDetectors
+from smalldata_tools.lcls1.DetObject import DetObject
+from smalldata_tools.ana_funcs.roi_rebin import ROIFunc, spectrumFunc, projectionFunc, imageFunc
 from smalldata_tools.ana_funcs.sparsifyFunc import sparsifyFunc
 from smalldata_tools.ana_funcs.waveformFunc import getCMPeakFunc, templateFitFunc
 from smalldata_tools.ana_funcs.photons import photonFunc
@@ -401,7 +405,7 @@ from smalldata_tools.ana_funcs.droplet import dropletFunc
 from smalldata_tools.ana_funcs.droplet2Photons import droplet2Photons
 from smalldata_tools.ana_funcs.azimuthalBinning import azimuthalBinning
 from smalldata_tools.ana_funcs.azav_pyfai import azav_pyfai
-from smalldata_tools.ana_funcs.smd_svd import svdFit
+# from smalldata_tools.ana_funcs.smd_svd import svdFit
 from smalldata_tools.ana_funcs.correlations.smd_autocorr import Autocorrelation
 
 # logging.basicConfig(level=logging.DEBUG)

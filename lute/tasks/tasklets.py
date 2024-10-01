@@ -143,7 +143,7 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
     out, _ = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
     ).communicate()
-    modify_permissions(location, permissions)
+    modify_permissions(f"{location}/{repo_only}", permissions)
 
 
 def clone_smalldata(producer_location: str) -> None:

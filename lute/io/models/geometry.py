@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 from pydantic import Field
 
 from lute.io.models.base import TaskParameters
+from lute.io.models.validators import validate_smd_path
 
 
 class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
@@ -22,6 +23,8 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
     This Task does geometry optimization of detector distance and beam center
     based on a powder image produced from acquiring a run of Ag Behenate.
     """
+
+    _find_smd_path = validate_smd_path("powder")
 
     detname: str = Field(description="Name of the detector to optimize geometry for.")
 
@@ -47,7 +50,7 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
         ),
     )
 
-    dx: Tuple[float] = Field(
+    dx: Tuple[float, float, float] = Field(
         (-6, 6, 5),
         description=(
             "Defines the search radius for beam center x position as offsets from "
@@ -55,7 +58,7 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
         ),
     )
 
-    dy: Tuple[float] = Field(
+    dy: Tuple[float, float, float] = Field(
         (-6, 6, 5),
         description=(
             "Defines the search radius for beam center y position as offsets from "

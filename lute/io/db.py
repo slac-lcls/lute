@@ -339,7 +339,9 @@ def read_latest_db_entry(
             cond: Dict[str, str] = {}
             if valid_only:
                 cond = {"valid_flag": "1"}
-            entries: Any = _select_from_db(con, task_name, f"gen_cfg_id,{param}", cond)
+            entries: Any = _select_from_db(
+                con, task_name, f'gen_cfg_id,"{param}"', cond
+            )
             if for_run is not None:
                 gen_cfg_entries: Any = _select_from_db(
                     con, "gen_cfg", "id", {"run": str(for_run)}
