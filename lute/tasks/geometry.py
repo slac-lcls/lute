@@ -9,7 +9,7 @@ __author__ = "Gabriel Dorlhiac"
 import os
 import logging
 import itertools
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Any
 
 import h5py
 import holoviews as hv
@@ -25,6 +25,7 @@ from lute.io.models.base import TaskParameters
 from lute.execution.logging import get_logger
 from lute.tasks._geometry import geometry_optimize_residual
 from lute.tasks.task import Task
+from lute.tasks.dataclasses import TaskStatus
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -100,7 +101,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                     ][()]
                     if unassembled.shape == 2:
                         # E.g. Rayonix
-                        self._powder = unassembled
+                        powder = unassembled
                     else:
                         ix: np.ndarray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/ix"
@@ -113,8 +114,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
                         iy -= np.min(iy)
 
                         if (
-                            unassembled.flatten().shape != ix.flattened().shape
-                            or unassembled.flatten().shape != iy.flattened().shape
+                            unassembled.flatten().shape != ix.flatten().shape
+                            or unassembled.flatten().shape != iy.flatten().shape
                         ):
                             raise RuntimeError(
                                 "Shapes of detector image and pixel coordinates do not match!"
@@ -125,7 +126,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                             int(np.max(iy) + 1),
                         )
 
-                        self._powder = np.asarray(
+                        powder = np.asarray(
                             sparse.coo_matrix(
                                 (unassembled.flatten(), (ix.flatten(), iy.flatten())),
                                 shape=out_shape,
@@ -154,12 +155,16 @@ class OptimizeAgBhGeometryExhaustive(Task):
         det: psana.Detector = psana.Detector(self._task_parameters.detname, ds.env())
         return -1 * np.mean(det.coords_z(run)) / 1e3
 
-    def _initial_image_center(self) -> np.ndarray[np.float64]:
-        return np.array(self._powder.shape) / 2.0
+    def _initial_image_center(
+        self, powder: np.ndarray[np.float64]
+    ) -> np.ndarray[np.float64]:
+        return np.array(powder.shape) / 2.0
 
-    def _center_guesses(self) -> List[Tuple[float, float]]:
+    def _center_guesses(
+        self, powder: np.ndarray[np.float64]
+    ) -> List[Tuple[float, float]]:
         """Return starting beam center points based on dx/dy parameters."""
-        initial_center: np.ndarray[np.float64] = self._initial_image_center()
+        initial_center: np.ndarray[np.float64] = self._initial_image_center(powder)
         dx: Tuple[int, int, int] = self._task_parameters.dx
         dy: Tuple[int, int, int] = self._task_parameters.dy
         x_offsets: np.ndarray[np.float64] = np.linspace(dx[0], dx[1], dx[2])
@@ -386,7 +391,11 @@ class OptimizeAgBhGeometryExhaustive(Task):
             nan_policy="omit",
             args=(powder,),
         )
-        lmfit.report_fit(res)
+        try:
+            lmfit.report_fit(res)
+        except TypeError as err:
+            # This shouldn't happen but don't fail if it does
+            logger.error(f"Unable to report fit! {err}")
         return res
 
     def _opt_geom(
@@ -454,7 +463,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             res: lmfit.minimizer.MinimizerResult = self._opt_center(
                 powder, selected_indices, center_guess
             )
-            center_guess = (res.params["cx"], res.params["cy"])
+            center_guess = (res.params["cx"].value, res.params["cy"].value)
             logger.info(f"New center is: ({center_guess[0]}, {center_guess[1]})")
             radial_profile = self._radial_profile(powder, mask, center_guess)
             indices, peaks, distance, final_score = self._opt_distance(
@@ -485,9 +494,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
         mask: Optional[np.ndarray[np.float64]] = None
         powder[powder > self._task_parameters.threshold] = 0
 
-        starting_centers: List[Tuple[float, float]] = self._center_guesses()
+        starting_centers: List[Tuple[float, float]] = self._center_guesses(powder)
         starting_distance: float = self._estimate_distance()
-        starting_scan_params: List[Tuple[int, Tuple[float, float], float]] = (
+        starting_scan_params: List[Tuple[int, Tuple[float, float], float]] = list(
             itertools.product(
                 (self._task_parameters.n_peaks,),
                 starting_centers,
@@ -543,14 +552,27 @@ class OptimizeAgBhGeometryExhaustive(Task):
         self._mpi_comm.Barrier()
 
         # Gather all results
-        final_scores: List[float] = self._mpi_comm.gather(final_scores_by_rank, root=0)
-        final_distances: List[float] = self._mpi_comm.gather(
+        final_scores: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
+            final_scores_by_rank, root=0
+        )
+        final_distances: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
             final_distances_by_rank, root=0
         )
-        final_centers: List[Tuple[float, float]] = self._mpi_comm.gather(
-            final_centers_by_rank, root=0
-        )
+        final_centers: Union[
+            List[Tuple[float, float], List[List[Tuple[float, float]]]]
+        ] = self._mpi_comm.gather(final_centers_by_rank, root=0)
+
+        # Flatten nested lists
+        def flatten(nested_lists: List[List[Any]]) -> List[Any]:
+            flattened: List[Any] = []
+            for item in nested_lists:
+                flattened.extend(item)
+            return flattened
+
         if self._mpi_rank == 0:
+            final_scores = flatten(final_scores)
+            final_distances = flatten(final_distances)
+            final_centers = flatten(final_centers)
             best_idx: int = np.argmax(final_scores)
             best_distance: float = final_distances[best_idx]
             best_center: Tuple[float, float] = final_centers[best_idx]
@@ -558,13 +580,15 @@ class OptimizeAgBhGeometryExhaustive(Task):
             theta: np.ndarray[np.float64] = np.arctan(
                 np.array((powder.shape[0] / 2)) * pixel_size_mm / best_distance
             )
-            q_profile: np.ndarray[np.float64] = (
-                2.0 * np.sin(theta / 2.0) / wavelength_angs
-            )
-            edge_resolution: float = 1.0 / q_profile[0]
+            q: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength_angs
+            edge_resolution: float = 1.0 / q
 
             self._result.summary = {
                 "Detector distance (mm)": best_distance,
                 "Detector center (pixels)": best_center,
                 "Detector edge resolution (A)": edge_resolution,
             }
+
+    def _post_run(self) -> None:
+        super()._post_run()
+        self._result.task_status = TaskStatus.COMPLETED

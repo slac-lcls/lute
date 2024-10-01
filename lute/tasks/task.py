@@ -6,7 +6,7 @@ Classes:
     ThirdPartyTask: Class to run a third-party executable binary as a `Task`.
 """
 
-__all__ = ["Task", "TaskResult", "TaskStatus", "DescribedAnalysis", "ThirdPartyTask"]
+__all__ = ["Task", "ThirdPartyTask"]
 __author__ = "Gabriel Dorlhiac"
 
 import time
@@ -16,15 +16,15 @@ import os
 import warnings
 import signal
 
-from ..io.models.base import (
+from lute.io.models.base import (
     TaskParameters,
     TemplateParameters,
     TemplateConfig,
     AnalysisHeader,
 )
-from ..execution.ipc import *
-from ..execution.debug_utils import LUTE_DEBUG_EXIT
-from .dataclasses import *
+from lute.execution.ipc import *
+from lute.execution.debug_utils import LUTE_DEBUG_EXIT
+from lute.tasks.dataclasses import *
 
 if __debug__:
     warnings.simplefilter("default")

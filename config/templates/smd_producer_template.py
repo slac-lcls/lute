@@ -27,7 +27,7 @@ from pathlib import Path
 # functions for run dependant parameters
 ##########################################################
 
-{% if getROIs is defined %}
+{%- if getROIs is defined -%}
 # 1) REGIONS OF INTEREST
 def getROIs(run):
     """ Set parameter for ROI analysis. Set writeArea to True to write the full ROI in the h5 file.
@@ -44,7 +44,7 @@ def getROIs(run):
     return ret_dict
 {% endif %}
 
-{% if getAzIntParams is defined %}
+{%- if getAzIntParams is defined -%}
 # 2) AZIMUTHAL INTEGRATION
 def getAzIntParams(run):
     """ Parameters for azimuthal integration
@@ -60,7 +60,7 @@ def getAzIntParams(run):
     return ret_dict
 {% endif %}
 
-{% if getAzIntPyFAIParams is defined %}
+{%- if getAzIntPyFAIParams is defined -%}
 def getAzIntPyFAIParams(run):
     if isinstance(run,str):
         run=int(run)
@@ -72,7 +72,7 @@ def getAzIntPyFAIParams(run):
     return ret_dict
 {% endif %}
 
-{% if getPhotonParams is defined %}
+{%- if getPhotonParams is defined -%}
 # 3) PHOTON COUNTING AND DROPLET
 # Photon
 def getPhotonParams(run):
@@ -89,7 +89,7 @@ def getPhotonParams(run):
     return ret_dict
 {% endif %}
 
-{% if getDropletParams is defined %}
+{%- if getDropletParams is defined -%}
 # Droplet algorithm
 def getDropletParams(run):
     """ Parameters for droplet algorithm
@@ -105,7 +105,7 @@ def getDropletParams(run):
     return ret_dict
 {% endif %}
 
-{% if getDroplet2Photons is defined %}
+{%- if getDroplet2Photons is defined -%}
 # Droplet to photon algorithm (greedy guess)
 def getDroplet2Photons(run):
     """ Set parameter for droplet2photon analysis. The analysis uses two functions, each with their
@@ -123,7 +123,7 @@ def getDroplet2Photons(run):
     return ret_dict
 {% endif %}
 
-{% if getSvdParams is defined %}
+{%- if getSvdParams is defined -%}
 # 4) WAVEFORM ANALYSIS (SVD, peak finding)
 def getSvdParams(run):
     if isinstance(run,str):
@@ -136,7 +136,7 @@ def getSvdParams(run):
     return ret_dict
 {% endif %}
 
-{% if getAutocorrParams is defined %}
+{%- if getAutocorrParams is defined -%}
 # 5) AUTOCORRELATION
 def getAutocorrParams(run):
     if isinstance(run,str):
@@ -149,7 +149,7 @@ def getAutocorrParams(run):
     return ret_dict
 {% endif %}
 
-{% if getProjection_ax0 is defined %}
+{%- if getProjection_ax0 is defined -%}
 # 6) PROJECTIONS (ROI or full detector)
 def getProjection_ax0(run):
     if isinstance(run, str):
@@ -163,7 +163,7 @@ def getProjection_ax0(run):
     return ret_dict
 {% endif %}
 
-{% if getProjection_ax1 is defined %}
+{%- if getProjection_ax1 is defined -%}
 def getProjection_ax1(run):
     if isinstance(run, str):
         run = int(run)
@@ -175,6 +175,11 @@ def getProjection_ax1(run):
 {% endfor %}
     return ret_dict
 {% endif %}
+
+def isDropped(def_data):
+    if def_data["lightStatus"]["xray"] == 0:
+        return True
+    return False
 
 ##########################################################
 # run independent parameters

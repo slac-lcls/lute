@@ -31,9 +31,10 @@ def geometry_optimize_residual(
     params: List[float], powder: np.ndarray[np.float64]
 ) -> np.ndarray[np.float64]:
     # Unpack the parameters
-    center_guess: List[float] = params[:2]
+    params_l: List[float] = [val.value for _, val in params.items()]
+    center_guess: List[float] = params_l[:2]
     # Indices are in radii units since they are for a radial profile
-    indices: List[float] = params[2:]
+    indices: List[float] = params_l[2:]
     coords: np.ndarray[np.float64] = generate_concentric_sample_pts(
         indices, center_guess
     )

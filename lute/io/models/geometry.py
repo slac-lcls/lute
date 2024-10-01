@@ -50,7 +50,7 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
         ),
     )
 
-    dx: Tuple[float, float, float] = Field(
+    dx: Tuple[float, float, int] = Field(
         (-6, 6, 5),
         description=(
             "Defines the search radius for beam center x position as offsets from "
@@ -58,7 +58,7 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
         ),
     )
 
-    dy: Tuple[float, float, float] = Field(
+    dy: Tuple[float, float, int] = Field(
         (-6, 6, 5),
         description=(
             "Defines the search radius for beam center y position as offsets from "
