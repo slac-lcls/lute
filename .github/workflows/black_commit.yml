@@ -1,0 +1,35 @@
+name: Black-format-autocommit
+on: push
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: "${{ github.head_ref }}"
+
+      - name: black-format-check
+        uses: psf/black@stable
+        with:
+          options: "--verbose --check"
+          src: "./lute"
+
+      - name: apply-black
+        if: "${{ failure() }}"
+        uses: psf/black@stable
+        with:
+          options: "--verbose"
+          src: "./lute"
+
+      - name: commit-black
+        if: "${{ failure() }}"
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-commit black formatting"
+          commit_user_name: "Autoformatter"
+          commit_author: "Autoformatter <actions@github.com>"
