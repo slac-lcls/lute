@@ -132,6 +132,31 @@ AnalyzeSmallDataXAS:
     min_Iscat: 10      # Minimum integrated scattering intensity
     min_ipm: 500       # Minimum x-ray intensity at selected ipm
 
+CorrelatePyPADFFXS:
+  #executable: "python"
+  #pypadf_executable: "/sdf/home/c/caw21/cxil1018723/pypadf/difftocorr.py"
+  pypadf_parameters:
+    input_path: "/sdf/data/lcls/ds/cxi/cxil1018723/hdf5/smalldata/"
+    output_path: "/sdf/data/lcls/ds/cxi/cxil1018723/scratch/lute/"
+    tag: "test"
+    #sample_to_detector_distance: 0.5 # in meter
+    #photon_wavelength_m: 0.2e-10 # in meter
+    #detector_pixel_width_m: 5.0e-5 # in meter
+    #number_theta_samples: 90
+    #nthreads: 10
+    #i_pattern_start: 1
+    #n_patterns: 6
+    #bin_factor: 8
+    #mask_flag: False
+    #process_flag: False
+    #shift_center_flag: False
+    #crop_flag: False
+    #x_width_pixels: 100 (in pixels)
+    #y_width_pixels: 100 (in pixels)
+    #x_shift_pixels: 0.0 (in pixels)
+    #y_shift_pixels: 0.0 (in pixels)
+
+
 Test:
   float_var: 0.01
   str_var: "test"

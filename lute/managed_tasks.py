@@ -40,14 +40,6 @@ MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunicat
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a smalldata HDF5 file."""
-SmallDataProducer.add_tasklet(
-    clone_smalldata,
-    ["{{ producer }}"],
-    when="before",
-    set_result=False,
-    set_summary=False,
-)
-
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
@@ -57,6 +49,9 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
+
+PyPADFFXSCorrelater: MPIExecutor = MPIExecutor("CorrelatePyPADFFXS")
+"""Process FXS results from a Small Data HDF5 file."""
 
 # SFX
 #####
