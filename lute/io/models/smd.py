@@ -156,7 +156,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
         False, description="Whether to not use archiver data.", flag_type="--"
     )
 
-    lute_template_cfg: TemplateConfig = TemplateConfig(template_name="", output_path="")
+    lute_template_cfg: TemplateConfig = TemplateConfig(
+        template_name="smd_producer_template.py", output_path=""
+    )
 
     @validator("producer", always=True)
     def validate_producer_path(cls, producer: str, values: Dict[str, Any]) -> str:

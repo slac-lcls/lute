@@ -96,7 +96,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 h5: h5py.File
                 with h5py.File(powder_path) as h5:
                     unassembled: np.ndarray[np.float64] = h5[
-                        f"{self._task_parameters.detname}_calib"
+                        f"Sums/{self._task_parameters.detname}_calib"
                     ][()]
                     if unassembled.shape == 2:
                         # E.g. Rayonix
@@ -108,12 +108,26 @@ class OptimizeAgBhGeometryExhaustive(Task):
                         iy: np.ndarray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/iy"
                         ][()]
-                        out_shape: Tuple[int, int] = (np.max(ix) + 1, np.max(iy) + 1)
+
+                        ix -= np.min(ix)
+                        iy -= np.min(iy)
+
+                        if (
+                            unassembled.flatten().shape != ix.flattened().shape
+                            or unassembled.flatten().shape != iy.flattened().shape
+                        ):
+                            raise RuntimeError(
+                                "Shapes of detector image and pixel coordinates do not match!"
+                            )
+
+                        out_shape: Tuple[int, int] = (
+                            int(np.max(ix) + 1),
+                            int(np.max(iy) + 1),
+                        )
 
                         self._powder = np.asarray(
                             sparse.coo_matrix(
-                                unassembled.flatten(),
-                                (ix.flatten(), iy.flatten()),
+                                (unassembled.flatten(), (ix.flatten(), iy.flatten())),
                                 shape=out_shape,
                             ).todense()
                         )

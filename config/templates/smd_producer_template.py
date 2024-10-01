@@ -408,136 +408,143 @@ from smalldata_tools.ana_funcs.azav_pyfai import azav_pyfai
 # from smalldata_tools.ana_funcs.smd_svd import svdFit
 from smalldata_tools.ana_funcs.correlations.smd_autocorr import Autocorrelation
 
-# logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
-HUTCHES = ["AMO", "SXR", "XPP", "XCS", "MFX", "CXI", "MEC", "DIA"]
+HUTCHES = [
+    'AMO',
+    'SXR',
+    'XPP',
+    'XCS',
+    'MFX',
+    'CXI',
+    'MEC',
+    'DIA'
+]
 
-S3DF_BASE = Path("/sdf/data/lcls/ds/")
-FFB_BASE = Path("/cds/data/drpsrcf/")
-PSANA_BASE = Path("/cds/data/psdm/")
-PSDM_BASE = Path(os.environ.get("SIT_PSDM_DATA", S3DF_BASE))
-SD_EXT = Path("./hdf5/smalldata/")
+S3DF_BASE = Path('/sdf/data/lcls/ds/')
+FFB_BASE = Path('/cds/data/drpsrcf/')
+PSANA_BASE = Path('/cds/data/psdm/')
+PSDM_BASE = Path(os.environ.get('SIT_PSDM_DATA', S3DF_BASE))
+SD_EXT = Path('./hdf5/smalldata/')
 logger.info(f"PSDM_BASE={PSDM_BASE}")
 
 # Define Args
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--run", help="run", type=str, default=os.environ.get("RUN_NUM", "")
-)
-parser.add_argument(
-    "--experiment",
-    help="experiment name",
-    type=str,
-    default=os.environ.get("EXPERIMENT", ""),
-)
-parser.add_argument("--stn", help="hutch station", type=int, default=0)
-parser.add_argument("--nevents", help="number of events", type=int, default=1e9)
-parser.add_argument(
-    "--directory", help="directory for output files (def <exp>/hdf5/smalldata)"
-)
-parser.add_argument("--gather_interval", help="gather interval", type=int, default=25)
-parser.add_argument(
-    "--norecorder", help="ignore recorder streams", action="store_true", default=False
-)
-parser.add_argument("--url", default="https://pswww.slac.stanford.edu/ws-auth/lgbk/")
-parser.add_argument(
-    "--epicsAll", help="store all epics PVs", action="store_true", default=False
-)
-parser.add_argument(
-    "--full",
-    help="store all data (please think before using this)",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--fullSum",
-    help="store sums for all area detectors",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--default", help="store only minimal data", action="store_true", default=False
-)
-parser.add_argument(
-    "--image",
-    help="save everything as image (use with care)",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--tiff",
-    help="save all images as single tiff (use with extreme care)",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--centerpix",
-    help="do not mask center pixels for epix10k detectors.",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--postRuntable",
-    help="postTrigger for seconday jobs",
-    action="store_true",
-    default=False,
-)
-parser.add_argument(
-    "--wait", help="wait for a file to appear", action="store_true", default=False
-)
-parser.add_argument(
-    "--xtcav", help="add xtcav processing", action="store_true", default=False
-)
-parser.add_argument(
-    "--noarch", help="dont use archiver data", action="store_true", default=False
-)
-parser.add_argument("--ttRaw", help="add timetool projections", action="store_true")
+parser.add_argument('--run', 
+                    help='run', 
+                    type=str, 
+                    default=os.environ.get('RUN_NUM', ''))
+parser.add_argument('--experiment', 
+                    help='experiment name', 
+                    type=str, 
+                    default=os.environ.get('EXPERIMENT', ''))
+parser.add_argument('--stn', 
+                    help='hutch station', 
+                    type=int, 
+                    default=0)
+parser.add_argument('--nevents', 
+                    help='number of events', 
+                    type=int, 
+                    default=1e9)
+parser.add_argument('--directory',
+                    help='directory for output files (def <exp>/hdf5/smalldata)')
+parser.add_argument('--gather_interval', 
+                    help='gather interval', 
+                    type=int, 
+                    default=25)
+parser.add_argument('--norecorder', 
+                    help='ignore recorder streams', 
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--url',
+                    default="https://pswww.slac.stanford.edu/ws-auth/lgbk/")
+parser.add_argument('--epicsAll', 
+                    help='store all epics PVs', 
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--full', 
+                    help='store all data (please think before using this)',
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--fullSum', help='store sums for all area detectors', 
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--default', 
+                    help='store only minimal data', 
+                    action='store_true',
+                    default=False)
+parser.add_argument('--image', 
+                    help='save everything as image (use with care)',
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--tiff', 
+                    help='save all images as single tiff (use with extreme care)',
+                    action='store_true', 
+                    default=False)
+parser.add_argument('--centerpix', 
+                    help='do not mask center pixels for epix10k detectors.', 
+                    action='store_true',
+                    default=False)
+parser.add_argument("--postRuntable",
+                    help="postTrigger for seconday jobs", 
+                    action='store_true',
+                    default=False)
+parser.add_argument("--wait", 
+                    help="wait for a file to appear",
+                    action='store_true', 
+                    default=False)
+parser.add_argument("--xtcav",
+                    help="add xtcav processing",
+                    action='store_true', 
+                    default=False)
+parser.add_argument("--noarch", 
+                    help="dont use archiver data", 
+                    action='store_true',
+                    default=False)
+parser.add_argument("--ttRaw",
+                    help="add timetool projections",
+                    action='store_true')
 args = parser.parse_args()
-logger.debug("Args to be used for small data run: {0}".format(args))
+logger.debug('Args to be used for small data run: {0}'.format(args))
 
 ###### Helper Functions ##########
 
-
 def get_xtc_files(base, exp, run):
     """File all xtc files for given experiment and run"""
-    run_format = "".join(["r", run.zfill(4)])
-    data_dir = Path(base) / exp[:3] / exp / "xtc"
-    xtc_files = list(data_dir.glob(f"*{run_format}*"))
-    logger.info(f"xtc file list: {xtc_files}")
+    run_format = ''.join(['r', run.zfill(4)])
+    data_dir = Path(base) / exp[:3] / exp / 'xtc'
+    xtc_files = list(data_dir.glob(f'*{run_format}*'))
+    logger.info(f'xtc file list: {xtc_files}')
     return xtc_files
-
 
 def get_sd_file(write_dir, exp, hutch):
     """Generate directory to write to, create file name"""
     if write_dir is None:
-        if useFFB and not onS3DF:  # when on a drp node
-            write_dir = FFB_BASE / hutch.lower() / exp / "/scratch" / SD_EXT
-        elif onPSANA:  # when on old psana system
+        if useFFB and not onS3DF: # when on a drp node
+            write_dir = FFB_BASE / hutch.lower() / exp / '/scratch' / SD_EXT
+        elif onPSANA: # when on old psana system
             write_dir = PSANA_BASE / hutch.lower() / exp, SD_EXT
-        elif onS3DF:  # S3DF should now be the default
+        elif onS3DF: # S3DF should now be the default
             write_dir = S3DF_BASE / hutch.lower() / exp / SD_EXT
         else:
-            print("get_sd_file problem. Please fix.")
-    logger.debug(f"hdf5 directory: {write_dir}")
+            print('get_sd_file problem. Please fix.')
+    logger.debug(f'hdf5 directory: {write_dir}')
 
     write_dir = Path(write_dir)
-    h5_f_name = write_dir / f"{exp}_Run{run.zfill(4)}.h5"
+    h5_f_name = write_dir / f'{exp}_Run{run.zfill(4)}.h5'
     if not write_dir.exists():
-        logger.info(f"{write_dir} does not exist, creating directory now.")
+        logger.info(f'{write_dir} does not exist, creating directory now.')
         try:
             write_dir.mkdir(parents=True)
         except (PermissionError, FileNotFoundError) as e:
-            logger.info(
-                f"Unable to make directory {write_dir} for output"
-                f"exiting on error: {e}"
-            )
+            logger.info(f'Unable to make directory {write_dir} for output' \
+                        f'exiting on error: {e}')
             sys.exit()
-    logger.info("Will write small data file to {0}".format(h5_f_name))
+    logger.info('Will write small data file to {0}'.format(h5_f_name))
     return h5_f_name
-
 
 ##### START SCRIPT ########
 
@@ -548,14 +555,14 @@ hostname = socket.gethostname()
 exp = args.experiment
 run = args.run
 station = args.stn
-logger.debug("Analyzing data for EXP:{0} - RUN:{1}".format(args.experiment, args.run))
+logger.debug('Analyzing data for EXP:{0} - RUN:{1}'.format(args.experiment, args.run))
 
-begin_prod_time = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+begin_prod_time = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
 
 hutch = exp[:3].upper()
 if hutch not in HUTCHES:
-    logger.debug("Could not find {0} in list of available hutches".format(hutch))
-    sys.exit()
+	logger.debug('Could not find {0} in list of available hutches'.format(hutch))
+	sys.exit()	
 
 # Figure out where we are and where to look for data
 xtc_files = []
@@ -563,124 +570,108 @@ useFFB = False
 onS3DF = False
 onPSANA = False
 
-if hostname.find("sdf") >= 0:
-    logger.debug("On S3DF")
+if hostname.find('sdf')>=0:
+    logger.debug('On S3DF')
     onS3DF = True
-    if "ffb" in PSDM_BASE.as_posix():
+    if 'ffb' in PSDM_BASE.as_posix():
         useFFB = True
         # wait for files to appear
         nFiles = 0
         n_wait = 0
-        max_wait = 20  # 10s wait per cycle.
-        waitFilesStart = datetime.now()
+        max_wait = 20 # 10s wait per cycle.
+        waitFilesStart=datetime.now()
         while nFiles == 0:
             if n_wait > max_wait:
-                print(
-                    f"Waited {str(n_wait*10)}s, still no files available. "
-                    "Giving up, please check dss nodes and data movers. "
-                    "Exiting now."
-                )
-                sys.exit()
+                raise RuntimeError("Waited {str(n_wait*10)}s, still no files available. Giving up.")
             xtc_files = get_xtc_files(PSDM_BASE, exp, run)
             nFiles = len(xtc_files)
             if nFiles == 0:
-                print(
-                    f"We have no xtc files for run {run} in {exp} in the FFB system, "
-                    "we will wait for 10 second and check again."
-                )
-                n_wait += 1
+                print(f"We have no xtc files for run {run} in {exp} in the FFB system, " \
+                      "we will wait for 10 second and check again.")
+                n_wait+=1
                 time.sleep(10)
         waitFilesEnd = datetime.now()
         print(f"Files appeared after {str(waitFilesEnd-waitFilesStart)} seconds")
 
     xtc_files = get_xtc_files(PSDM_BASE, exp, run)
-    if len(xtc_files) == 0:
-        print(
-            f"We have no xtc files for run {run} in {exp} in the offline system. Exit now."
-        )
-        sys.exit()
+    if len(xtc_files)==0:
+        raise RuntimeError(f'We have no xtc files for run {run} in {exp} in the offline system.')
 
-elif hostname.find("drp") >= 0:
-    nFiles = 0
-    logger.debug("On FFB")
-    waitFilesStart = datetime.now()
-    while nFiles == 0:
+elif hostname.find('drp')>=0:
+    nFiles=0
+    logger.debug('On FFB')
+    waitFilesStart=datetime.now()
+    while nFiles==0:
         xtc_files = get_xtc_files(FFB_BASE, hutch, run)
         nFiles = len(xtc_files)
         if nFiles == 0:
             if not args.wait:
-                print(
-                    "We have no xtc files for run %s in %s in the FFB system,"
-                    "Quitting now."
-                )
+                print("We have no xtc files for run %s in %s in the FFB system,"\
+                      "Quitting now.")
                 sys.exit()
             else:
-                print(
-                    "We have no xtc files for run %s in %s in the FFB system,"
-                    "we will wait for 10 second and check again." % (run, exp)
-                )
+                print("We have no xtc files for run %s in %s in the FFB system," \
+                      "we will wait for 10 second and check again."%(run,exp))
                 time.sleep(10)
     waitFilesEnd = datetime.now()
-    print("Files appeared after %s seconds" % (str(waitFilesEnd - waitFilesStart)))
+    print('Files appeared after %s seconds'%(str(waitFilesEnd-waitFilesStart)))
     useFFB = True
 
 # If not a current experiment or files in ffb, look in psdm
 else:
-    logger.debug("Not on FFB or S3DF, use old offline system")
+    logger.debug('Not on FFB or S3DF, use old offline system')
     xtc_files = get_xtc_files(PSDM_BASE, hutch, run)
-    if len(xtc_files) == 0:
-        print(
-            "We have no xtc files for run %s in %s in the offline system" % (run, exp)
-        )
+    if len(xtc_files)==0:
+        print('We have no xtc files for run %s in %s in the offline system'%(run,exp))
         sys.exit()
 
 # Get output file, check if we can write to it
 h5_f_name = get_sd_file(args.directory, exp, hutch)
-# if args.default:
+#if args.default:
 #    if useFFB:
 #        h5_f_name = h5_f_name.replace('hdf5','hdf5_def')
 #    else:
 #        h5_f_name = h5_f_name.replace('hdf5','scratch')
 
 # Define data source name and generate data source object
-ds_name = f"exp={exp}:run={run}:smd"
+ds_name = f'exp={exp}:run={run}:smd'
 if args.norecorder:
-    ds_name += ":stream=0-79"
+        ds_name += ':stream=0-79'
 if useFFB:
-    ds_name += ":live"
-    if not onS3DF:
-        ds_name += f":dir=/cds/data/drpsrcf/{exp[0:3]}/{exp}/xtc"
-    psana.setOption("PSXtcInput.XtcInputModule.liveTimeout", 300)
-    # bigger timeout so that the live mode does not fail
+        ds_name += ':live'
+        if not onS3DF:
+            ds_name += f':dir=/cds/data/drpsrcf/{exp[0:3]}/{exp}/xtc'
+        psana.setOption('PSXtcInput.XtcInputModule.liveTimeout', 300)
+        # bigger timeout so that the live mode does not fail
 
-logger.debug(f"DataSource name: {ds_name}")
+logger.debug(f'DataSource name: {ds_name}')
 try:
     ds = psana.MPIDataSource(ds_name)
 except Exception as e:
-    logger.debug("Could not instantiate MPIDataSource with {0}: {1}".format(ds_name, e))
+    logger.debug('Could not instantiate MPIDataSource with {0}: {1}'.format(ds_name, e))
     sys.exit()
 
 # Generate smalldata object
 small_data = ds.small_data(h5_f_name, gather_interval=args.gather_interval)
 
 
-##########################################################
+########################################################## 
 ##
 ## Setting up the default detectors
 ##
-##########################################################
+########################################################## 
 
 start_setup_dets = time.time()
 
 default_dets = defaultDetectors(hutch.lower(), env=ds.env())
 if args.xtcav and not args.norecorder:
-    # default_dets.append(xtcavDetector('xtcav','xtcav',method='COM'))
-    default_dets.append(xtcavDetector("xtcav", "xtcav"))
-# adding raw timetool traces:
+    #default_dets.append(xtcavDetector('xtcav','xtcav',method='COM'))
+    default_dets.append(xtcavDetector('xtcav','xtcav'))
+#adding raw timetool traces:
 if args.ttRaw:
     try:
         ttRawDet = ttRawDetector(env=ds.env())
-        ttRawDet.setPars({"beamOff": [-137], "refitData": False})
+        ttRawDet.setPars({'beamOff':[-137], 'refitData': False})
         default_dets.append(ttRawDet)
     except:
         pass
@@ -689,22 +680,22 @@ if args.ttRaw:
 # add stuff here to save all EPICS PVs.
 #
 # is someone has provided a list, save in epicsUser
-if len(epicsPV) > 0:
-    default_dets.append(epicsDetector(PVlist=epicsPV, name="epicsUser"))
+if len(epicsPV)>0:
+    default_dets.append(epicsDetector(PVlist=epicsPV, name='epicsUser'))
 # make a list of all PVs in data
-logger.debug("epicsStore names", ds.env().epicsStore().pvNames())
-if args.experiment.find("dia") >= 0:
-    epicsPVlist = ds.env().epicsStore().pvNames()
+logger.debug('epicsStore names', ds.env().epicsStore().pvNames())
+if args.experiment.find('dia')>=0:
+    epicsPVlist=ds.env().epicsStore().pvNames()
 else:
-    epicsPVlist = ds.env().epicsStore().aliases()
-if (args.full or args.epicsAll) and len(epicsPVlist) > 0:
-    logger.debug("adding all epicsPVs....")
-    default_dets.append(epicsDetector(PVlist=epicsPV, name="epicsAll"))
-# save specified list of PVs once/run, not nothing has been passed, save all.
-if len(epicsOncePV) > 0:
-    EODet = epicsDetector(PVlist=epicsOncePV, name="epicsOnce")
-elif len(epicsPVlist) > 0:
-    EODet = epicsDetector(PVlist=epicsPVlist, name="epicsOnce")
+    epicsPVlist=ds.env().epicsStore().aliases()
+if (args.full or args.epicsAll) and len(epicsPVlist)>0:
+    logger.debug('adding all epicsPVs....')
+    default_dets.append(epicsDetector(PVlist=epicsPV, name='epicsAll'))
+#save specified list of PVs once/run, not nothing has been passed, save all.
+if len(epicsOncePV)>0:
+    EODet = epicsDetector(PVlist=epicsOncePV, name='epicsOnce')
+elif len(epicsPVlist)>0:
+    EODet = epicsDetector(PVlist=epicsPVlist, name='epicsOnce')
 else:
     EODet = None
 
@@ -716,99 +707,80 @@ if not args.default:
 else:
     dets = []
 
-det_presence = {}
+det_presence={}
 if args.full or args.fullSum:
     aliases = []
     for dn in psana.DetNames():
-        if dn[1] != "":
+        if dn[1]!='':
             aliases.append(dn[1])
         else:
             aliases.append(dn[0])
 
     for alias in aliases:
-        det_presence[alias] = 1
-        if alias in default_det_aliases:
-            continue
-        if alias == "FEEGasDetEnergy":
-            continue  # done by mpidatasource
-        if alias == "PhaseCavity":
-            continue  # done by mpidatasource
-        if alias == "EBeam":
-            continue  # done by mpidatasource
-        if alias.find("evr") >= 0:
-            continue  # done by mpidatasource
-        if alias == "ControlData":
-            continue  # done by my code
-        # done in standard default detectors.
-        if alias == "HX2-SB1-BMMON" and args.experiment.find("xpp") >= 0:
-            continue
-        if alias == "XPP-SB2-BMMON" and args.experiment.find("xpp") >= 0:
-            continue
-        if alias == "XPP-SB3-BMMON" and args.experiment.find("xpp") >= 0:
-            continue
-        if alias == "XPP-USB-ENCODER-02" and args.experiment.find("xpp") >= 0:
-            continue
-        if alias == "XCS-SB1-BMMON" and args.experiment.find("xcs") >= 0:
-            continue
-        if alias == "XCS-SB2-BMMON" and args.experiment.find("xcs") >= 0:
-            continue
-        if alias == "CXI-DG2-BMMON" and args.experiment.find("cxi") >= 0:
-            continue
-        if alias == "CXI-DG3-BMMON" and args.experiment.find("cxi") >= 0:
-            continue
-        if alias == "MEC-XT2-BMMON-02" and args.experiment.find("mec") >= 0:
-            continue
-        if alias == "MEC-XT2-BMMON-03" and args.experiment.find("mec") >= 0:
-            continue
+        det_presence[alias]=1
+        if alias in default_det_aliases: continue
+        if alias=='FEEGasDetEnergy': continue #done by mpidatasource
+        if alias=='PhaseCavity':     continue #done by mpidatasource
+        if alias=='EBeam':           continue #done by mpidatasource
+        if alias.find('evr')>=0:     continue #done by mpidatasource
+        if alias=='ControlData':     continue #done by my code
+        #done in standard default detectors.
+        if alias=='HX2-SB1-BMMON' and args.experiment.find('xpp')>=0:  continue
+        if alias=='XPP-SB2-BMMON' and args.experiment.find('xpp')>=0:  continue
+        if alias=='XPP-SB3-BMMON' and args.experiment.find('xpp')>=0:  continue
+        if alias=='XPP-USB-ENCODER-02' and args.experiment.find('xpp')>=0:  continue
+        if alias=='XCS-SB1-BMMON' and args.experiment.find('xcs')>=0:  continue
+        if alias=='XCS-SB2-BMMON' and args.experiment.find('xcs')>=0:  continue
+        if alias=='CXI-DG2-BMMON' and args.experiment.find('cxi')>=0:  continue
+        if alias=='CXI-DG3-BMMON' and args.experiment.find('cxi')>=0:  continue
+        if alias=='MEC-XT2-BMMON-02' and args.experiment.find('mec')>=0:  continue
+        if alias=='MEC-XT2-BMMON-03' and args.experiment.find('mec')>=0:  continue
 
         if args.full:
-            if alias.find("BMMON") >= 0:
-                print("append a bmmon", alias)
+            if alias.find('BMMON')>=0:
+                print('append a bmmon',alias)
                 default_dets.append(bmmonDetector(alias))
                 continue
-            elif alias.find("IPM") >= 0 or alias.find("Ipm") > 0:
+            elif alias.find('IPM')>=0 or alias.find('Ipm')>0:
                 default_dets.append(ipmDetector(alias, savePos=True))
                 continue
-            elif alias.find("DIO") >= 0 or alias.find("Imb") > 0:
+            elif alias.find('DIO')>=0 or alias.find('Imb')>0:
                 default_dets.append(ipmDetector(alias, savePos=False))
                 continue
-            elif alias.find("USB") >= 0:
+            elif alias.find('USB')>=0:
                 default_dets.append(encoderDetector(alias))
                 continue
-            elif alias.find("adc") >= 0:
+            elif alias.find('adc')>=0:
                 default_dets.append(adcDetector(alias))
                 continue
 
         try:
-            thisDet = DetObject(
-                alias, ds.env(), int(run), name=alias, maskCentral=(not args.centerpix)
-            )
-            hasGeom = False
-            for keyword in ["cs", "Cs", "epix", "Epix", "jungfrau", "Jungfrau"]:
-                if alias.find(keyword) >= 0 and args.image:
-                    hasGeom = True
+            thisDet = DetObject(alias, ds.env(), int(run), name=alias, maskCentral=(not args.centerpix))
+            hasGeom=False
+            for keyword in ['cs','Cs','epix','Epix','jungfrau','Jungfrau']:
+                if alias.find(keyword)>=0 and args.image: hasGeom=True
             if hasGeom:
-                fullROI = ROIFunc()
-                fullROI.addFunc(imageFunc(coords=["x", "y"]))
-            else:
+                fullROI=ROIFunc()
+                fullROI.addFunc(imageFunc(coords=['x','y']))
+            else:    
                 fullROI = ROIFunc(writeArea=True)
             if args.full:
                 thisDet.addFunc(fullROI)
             if args.fullSum:
-                thisDet.storeSum(sumAlgo="calib_dropped")
-                thisDet.storeSum(sumAlgo="calib_dropped_square")
+                thisDet.storeSum(sumAlgo='calib_dropped')
+                thisDet.storeSum(sumAlgo='calib_dropped_square')
 
             dets.append(thisDet)
         except:
-            pass
+           pass
 
 
 # save detector config data
-userDataCfg = {}
+userDataCfg={}
 for det in default_dets:
-    if det.name == "tt" and len(ttCalib) > 0:
+    if det.name=='tt' and len(ttCalib)>0:
         det.setPars(ttCalib)
-        logger.info(f"Using user-defined tt parameters: {ttCalib}")
+        logger.info(f'Using user-defined tt parameters: {ttCalib}')
     userDataCfg[det.name] = det.params_as_dict()
 for det in dets:
     try:
@@ -818,20 +790,16 @@ for det in dets:
 
 # is EOODet exists, save this later.
 if EODet is None:
-    Config = {"UserDataCfg": userDataCfg}
+    Config={'UserDataCfg':userDataCfg}
     small_data.save(Config)
 
 end_setup_dets = time.time()
 
-if args.tiff:  # this needs to be done for S3DF
+if args.tiff: # this needs to be done for S3DF
     if onS3DF:
         dirname = S3DF_BASE / f"{exp[:3]}/{exp}/scratch/run{int(run)}"
     else:
-        dirname = (
-            PSANA_BASE
-            / "%s/%s/scratch/run%d"
-            % (args.experiment[:3], args.experiment, int(args.run))
-        )
+        dirname = PSANA_BASE / '%s/%s/scratch/run%d'%(args.experiment[:3],args.experiment,int(args.run))
     if not os.path.isdir(dirname):
         os.makedirs(dirname)
 
@@ -842,32 +810,32 @@ for evt_num, evt in enumerate(ds.events()):
         det_data = detOnceData(EODet, evt, args.noarch)
         if det_data[EODet.name] != {}:
             userDataCfg[EODet.name] = EODet.params_as_dict()
-            Config = {"UserDataCfg": userDataCfg}
+            Config={'UserDataCfg':userDataCfg}
             small_data.save(Config)
             small_data.save(det_data)
         else:
-            Config = {"UserDataCfg": userDataCfg}
+            Config={'UserDataCfg':userDataCfg}
             small_data.save(Config)
 
     def_data = detData(default_dets, evt)
     small_data.event(def_data)
 
-    # detector data using DetObject
+    #detector data using DetObject 
     userDict = {}
     for det in dets:
         try:
-            # this should be a plain dict. Really.
+            #this should be a plain dict. Really.
             det.getData(evt)
             det.processFuncs()
-            userDict[det._name] = getUserData(det)
+            userDict[det._name]=getUserData(det)
             try:
-                envData = getUserEnvData(det)
-                if len(envData.keys()) > 0:
-                    userDict[det._name + "_env"] = envData
+                envData=getUserEnvData(det)
+                if len(envData.keys())>0:
+                    userDict[det._name+'_env']=envData
             except:
                 pass
             det.processSums(dropped=isDropped(def_data))
-        #             print(userDict[det._name])
+#             print(userDict[det._name])
         except:
             # handle when sum is bad for all shots on a rank (rare, but happens)
             for key in det._storeSum.keys():
@@ -881,167 +849,115 @@ for evt_num, evt in enumerate(ds.events()):
     if args.tiff:
         for key in userDict:
             for skey in userDict[key]:
-                if skey.find("area") >= 0 or skey.find("img") >= 0:
-                    if len(userDict[key][skey].shape) == 2:
-                        image = userDict[key][skey]
-                        try:
-                            mask_key = [
-                                key
-                                for key in userDataCfg[key].keys()
-                                if key.find("mask_img") >= 0
-                            ]
-                            if len(mask_key) > 0:
-                                maskImg = userDataCfg[key][mask_key[0]]
-                                imageMasked = np.ma.array(image, mask=maskImg)
-                                image = imageMasked.filled(fill_value=0)
-                        except:
-                            pass
-                        im = Image.fromarray(image)
-                        tiff_file = (
-                            dirname / f"Run_{int(run)}_evt_{evt_num+1}_{key}.tiff"
-                        )
-                        im.save(tiff_file)
+                if skey.find('area')>=0 or skey.find('img')>=0:
+                   if len(userDict[key][skey].shape)==2:
+                       image = userDict[key][skey]
+                       try:
+                           mask_key = [ key for key in userDataCfg[key].keys() if key.find('mask_img')>=0 ]
+                           if len(mask_key)>0:
+                               maskImg = userDataCfg[key][mask_key[0]]
+                               imageMasked = np.ma.array(image, mask=maskImg)
+                               image = imageMasked.filled(fill_value=0)
+                       except:
+                           pass
+                       im = Image.fromarray(image)
+                       tiff_file = dirname / f"Run_{int(run)}_evt_{evt_num+1}_{key}.tiff"
+                       im.save(tiff_file)
 
-    # here you can add any data you like: example is a product of the maximumof two area detectors.
-    # try:
+    #here you can add any data you like: example is a product of the maximumof two area detectors.
+    #try:
     #    jungfrau1MMax = jungfrau1M.evt.dat.max()
     #    epix_vonHamosMax = epix_vonHamos.evt.dat.max()
     #    combDict = {'userValue': jungfrau1MMax*epix_vonHamosMax}
     #    small_data.event(combDict)
-    # except:
+    #except:
     #    pass
 
-    # the ARP will pass run & exp via the enviroment, if I see that info, the post updates
-    if (
-        (evt_num < 100 and evt_num % 10 == 0)
-        or (evt_num < 1000 and evt_num % 100 == 0)
-        or (evt_num % 1000 == 0)
-    ):
-        if os.environ.get("ARP_JOB_ID", None) is not None:
+
+    #the ARP will pass run & exp via the enviroment, if I see that info, the post updates
+    if ( (evt_num<100 and evt_num%10==0) or (evt_num<1000 and evt_num%100==0) or (evt_num%1000==0)):
+        if os.environ.get('ARP_JOB_ID', None) is not None:
             if ds.size == 1:
-                requests.post(
-                    os.environ["JID_UPDATE_COUNTERS"],
-                    json=[{"key": "<b>Current Event</b>", "value": evt_num + 1}],
-                )
+                requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Current Event</b>", "value": evt_num+1}])
             elif ds.rank == 0:
-                requests.post(
-                    os.environ["JID_UPDATE_COUNTERS"],
-                    json=[
-                        {"key": "<b>Current Event / rank </b>", "value": evt_num + 1}
-                    ],
-                )
+                requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Current Event / rank </b>", "value": evt_num+1}])
         else:
             if ds.size == 1:
-                print("Current Event:", evt_num + 1)
+                print('Current Event:', evt_num+1)
             elif ds.rank == 0:
-                print("Current Event / rank :", evt_num + 1)
+                print('Current Event / rank :', evt_num+1)
 
 end_evt_loop = time.time()
 
-sumDict = {"Sums": {}}
+sumDict={'Sums': {}}
 for det in dets:
     for key in det.storeSum().keys():
-        sumData = small_data.sum(det.storeSum()[key])
-        sumDict["Sums"]["%s_%s" % (det._name, key)] = sumData
-if len(sumDict["Sums"].keys()) > 0:
-    #     print(sumDict)
+        sumData=small_data.sum(det.storeSum()[key])
+        sumDict['Sums']['%s_%s'%(det._name, key)]=sumData
+if len(sumDict['Sums'].keys())>0:
+#     print(sumDict)
     small_data.save(sumDict)
 
 # Print duration summary
-dets_time_start = (start_setup_dets - start_job) / 60
-dets_time_end = (end_setup_dets - start_job) / 60
-evt_time_start = (start_evt_loop - start_job) / 60
-evt_time_end = (end_evt_loop - start_job) / 60
-logger.debug(f"##### Timing benchmarks core {ds.rank}: ##### ")
-logger.debug(
-    f"Setup dets: \n\tStart: {dets_time_start:.2f} min\n\tEnd: {dets_time_end:.2f} min"
-)
-logger.debug(f"\tDuration:{dets_time_end-dets_time_start:.2f}")
-logger.debug(
-    f"Event loop: \n\tStart: {evt_time_start:.2f} min\n\tEnd: {evt_time_end:.2f} min"
-)
-logger.debug(f"\tDuration:{evt_time_end-evt_time_start:.2f}")
-logger.debug("\n")
+dets_time_start = (start_setup_dets-start_job)/60
+dets_time_end = (end_setup_dets-start_job)/60
+evt_time_start = (start_evt_loop-start_job)/60
+evt_time_end = (end_evt_loop-start_job)/60
+logger.debug(f"##### Timing benchmarks core {ds.rank}: ##### """)
+logger.debug(f'Setup dets: \n\tStart: {dets_time_start:.2f} min\n\tEnd: {dets_time_end:.2f} min')
+logger.debug(f'\tDuration:{dets_time_end-dets_time_start:.2f}')
+logger.debug(f'Event loop: \n\tStart: {evt_time_start:.2f} min\n\tEnd: {evt_time_end:.2f} min')
+logger.debug(f'\tDuration:{evt_time_end-evt_time_start:.2f}')
+logger.debug('\n')
 
-end_prod_time = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+end_prod_time = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
 end_job = time.time()
-if ds.rank == 0:
-    prod_time = (end_job - start_job) / 60
-    print("########## JOB TIME: {:03f} minutes ###########".format(prod_time))
+if ds.rank==0:
+    prod_time = (end_job-start_job)/60
+    print('########## JOB TIME: {:03f} minutes ###########'.format(prod_time))
 
-# finishing up here....
-logger.debug("rank {0} on {1} is finished".format(ds.rank, hostname))
+#finishing up here....
+logger.debug('rank {0} on {1} is finished'.format(ds.rank, hostname))
 small_data.save()
-if os.environ.get("ARP_JOB_ID", None) is not None:
+if os.environ.get('ARP_JOB_ID', None) is not None:
     if ds.size > 1:
         if ds.rank == 0:
-            requests.post(
-                os.environ["JID_UPDATE_COUNTERS"],
-                json=[
-                    {
-                        "key": "<b>Last Event</b>",
-                        "value": "~ %d cores * %d evts" % (ds.size, evt_num),
-                    },
-                    {"key": "<b>Duration</b>", "value": "%f min" % (prod_time)},
-                ],
-            )
+            requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Last Event</b>", "value": "~ %d cores * %d evts"%(ds.size,evt_num)},{"key": "<b>Duration</b>", "value": "%f min"%(prod_time)}])
     else:
-        requests.post(
-            os.environ["JID_UPDATE_COUNTERS"],
-            json=[{"key": "<b>Last Event</b>", "value": evt_num}],
-        )
-logger.debug("Saved all small data")
+        requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Last Event</b>", "value": evt_num}])
+logger.debug('Saved all small data')
 
 
 # This is no broken. How to access the file under /cds/...?
 # Should we put it under /sdf/ as well?
-if args.postRuntable and ds.rank == 0:
-    print("Posting to the run tables.")
-    locStr = ""
-    runtable_data = {
-        "Prod%s_end" % locStr: end_prod_time,
-        "Prod%s_start" % locStr: begin_prod_time,
-        "Prod%s_jobstart" % locStr: begin_job_time,
-        "Prod%s_duration_mins" % locStr: prod_time,
-        "Prod%s_ncores" % locStr: ds.size,
-    }
+if args.postRuntable and ds.rank==0:
+    print('Posting to the run tables.')
+    locStr=''
+    runtable_data = {"Prod%s_end"%locStr:end_prod_time,
+                     "Prod%s_start"%locStr:begin_prod_time,
+                     "Prod%s_jobstart"%locStr:begin_job_time,
+                     "Prod%s_duration_mins"%locStr:prod_time,
+                     "Prod%s_ncores"%locStr:ds.size}
     if args.default:
-        runtable_data["SmallData%s" % locStr] = "default"
+        runtable_data["SmallData%s"%locStr]="default"
     else:
-        runtable_data["SmallData%s" % locStr] = "done"
+        runtable_data["SmallData%s"%locStr]="done"
     time.sleep(5)
     ws_url = args.url + "/run_control/{0}/ws/add_run_params".format(args.experiment)
-    print("URL:", ws_url)
-    # krbheaders = KerberosTicket("HTTP@" + urlparse(ws_url).hostname).getAuthHeaders()
-    # r = requests.post(ws_url, headers=krbheaders, params={"run_num": args.run}, json=runtable_data)
-    user = (args.experiment[:3] + "opr").replace("dia", "mcc")
+    print('URL:',ws_url)
+    #krbheaders = KerberosTicket("HTTP@" + urlparse(ws_url).hostname).getAuthHeaders()
+    #r = requests.post(ws_url, headers=krbheaders, params={"run_num": args.run}, json=runtable_data)
+    user=(args.experiment[:3]+'opr').replace('dia','mcc')
     if os.environ.get("ARP_LOCATION", None) == "S3DF":
-        with open("/sdf/group/lcls/ds/tools/forElogPost.txt") as reader:
+        with open('/sdf/group/lcls/ds/tools/forElogPost.txt') as reader:
             answer = reader.readline()
     else:
-        with open("/cds/home/opr/%s/forElogPost.txt" % user, "r") as reader:
+        with open('/cds/home/opr/%s/forElogPost.txt'%user,'r') as reader:
             answer = reader.readline()
-    r = requests.post(
-        ws_url,
-        params={"run_num": args.run},
-        json=runtable_data,
-        auth=HTTPBasicAuth(args.experiment[:3] + "opr", answer[:-1]),
-    )
+    r = requests.post(ws_url, params={"run_num": args.run}, json=runtable_data, 
+                      auth=HTTPBasicAuth(args.experiment[:3]+'opr', answer[:-1]))
     print(r)
-    if det_presence != {}:
-        rp = requests.post(
-            ws_url,
-            params={"run_num": args.run},
-            json=det_presence,
-            auth=HTTPBasicAuth(args.experiment[:3] + "opr", answer[:-1]),
-        )
+    if det_presence!={}:
+        rp = requests.post(ws_url, params={"run_num": args.run}, json=det_presence,
+                           auth=HTTPBasicAuth(args.experiment[:3]+'opr', answer[:-1]))
         print(rp)
-
-# Debug stuff
-# How to implement barrier from ds?
-# if ds.rank == 0:
-#    time.sleep(60)#ideally should use barrier or so to make sure all cores have fnished.
-#     if 'temp' in h5_f_name: # only for hanging job investigation (to be deleted later)
-#         h5_f_name_2 = get_sd_file(None, exp, hutch)
-#         os.rename(h5_f_name, h5_f_name_2)
-#         logger.debug('Move file from temp directory')
