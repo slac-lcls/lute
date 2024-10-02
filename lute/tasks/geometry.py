@@ -181,7 +181,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _radial_profile(
         self,
         powder: np.ndarray[np.float64],
-        mask: np.ndarray[np.float64],
+        mask: Optional[np.ndarray[np.float64]],
         center: Tuple[float, float],
         threshold: float = 10.0,
         filter_profile: bool = False,
@@ -193,8 +193,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
         Args:
             powder (np.ndarray[np.float64]): 2-D assembled powder image.
 
-            mask (np.ndarray[np.float64]): Corresponding binary mask for the
-                powder image.
+            mask (Optional[np.ndarray[np.float64]]): Corresponding binary mask
+                for the powder image.
 
             center (Tuple[float, float]): Beam center in the image, in pixels.
 
@@ -221,7 +221,6 @@ class OptimizeAgBhGeometryExhaustive(Task):
             (x - center[0]) ** 2 + (y - center[1]) ** 2
         ) ** 0.5
 
-        # r = get_radius_map(data.shape, center=center)
         if mask is not None:
             radius_map = np.where(mask == 1, radius_map, 0)
 
@@ -280,6 +279,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
         )
 
         final_score: float = (np.mean(scores) - np.min(scores)) / np.std(scores)
+        if np.isnan(np.min(scores)):
+            final_score = 0.0
         return rings, final_score
 
     def _opt_distance(
@@ -331,6 +332,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
             peaks_predicted[0]
             * pixel_size
             / np.tan(2.0 * np.arcsin(wavelength * (q0 / (2 * np.pi)) / 2.0))
+        )
+        logger.info(
+            f"Detector distance inferred from powder rings: {np.round(new_distance,2)}"
         )
         return peak_indices, radial_profile[peak_indices], new_distance, final_score
 
