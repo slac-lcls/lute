@@ -237,7 +237,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
             sos = butter(filter_order, filter_threshold, output="sos")
             radial_profile = sosfiltfilt(sos, radial_profile)
-            radial_profile[radial_profile < threshold] = 0
+
+        radial_profile[radial_profile < threshold] = 0
         return radial_profile
 
     def _calc_and_score_ideal_rings(
