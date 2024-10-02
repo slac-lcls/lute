@@ -67,7 +67,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
         else:
             return is_valid_path, powder_type
         try:
-            with h5py.File(string) as h5:
+            with h5py.File(string):
                 powder_type = "smd"
                 is_valid_path = True
 
@@ -149,6 +149,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
         return pixel_size, wavelength
 
     def _estimate_distance(self) -> float:
+        if self._task_parameters.distance_guess is not None:
+            return self._task_parameters.distance_guess
         exp: str = self._task_parameters.lute_config.experiment
         run: Union[int, str] = self._task_parameters.lute_config.run
         ds: psana.DataSource = psana.DataSource(f"exp={exp}:run={run}")
@@ -158,6 +160,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _initial_image_center(
         self, powder: np.ndarray[np.float64]
     ) -> np.ndarray[np.float64]:
+        if self._task_parameters.center_guess is not None:
+            return self._task_parameters.center_guess
         return np.array(powder.shape) / 2.0
 
     def _center_guesses(
@@ -383,7 +387,10 @@ class OptimizeAgBhGeometryExhaustive(Task):
             res (lmfit.minimizer.MinimizerResult): Result from the minimization.
                 res.params["cx"] and res.params["cy"] contain the new beam center.
         """
-        # Perform fitting
+        # Perform fitting - mean center and normalize image first
+        powder_norm: np.ndarray[np.float64] = (powder - np.mean(powder)) / np.std(
+            powder
+        )
         params: lmfit.Parameters = lmfit.Parameters()
         params.add("cx", value=center_guess[0])
         params.add("cy", value=center_guess[1])
@@ -394,7 +401,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             params,
             method="leastsq",
             nan_policy="omit",
-            args=(powder,),
+            args=(powder_norm,),
         )
         try:
             lmfit.report_fit(res)
@@ -587,7 +594,6 @@ class OptimizeAgBhGeometryExhaustive(Task):
             )
             q: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength_angs
             edge_resolution: float = 1.0 / q
-
             self._result.summary = {
                 "Detector distance (mm)": best_distance,
                 "Detector center (pixels)": best_center,

@@ -65,3 +65,12 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
             "the image center. Format: (up, down, num_steps). In units of pixels."
         ),
     )
+
+    center_guess: Optional[Tuple[float, float]] = Field(
+        None, description=("Provide an optional starting guess for the beam center.")
+    )
+
+    distance_guess: Optional[float] = Field(
+        None,
+        description="Provide an optional starting guess for the detector distance (mm).",
+    )
