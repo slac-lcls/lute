@@ -529,7 +529,14 @@ class BaseExecutor(ABC):
             # Tasklets before results processing since they may create result
             self._run_tasklets(when="after")
         self.process_results()
-        self._store_configuration()
+
+        try:
+            self._store_configuration()
+        except Exception as err:
+            logger.critical(
+                f"Unable to store configuration! Downstream tasks may fail! {err}"
+            )
+
         for comm in self._communicators:
             comm.clear_communicator()
 

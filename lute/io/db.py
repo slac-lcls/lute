@@ -163,6 +163,42 @@ def _check_type(value: Any) -> str:
         return "BLOB"
 
 
+def _list_to_flatlists(
+    l: List[Any], curr_key: str = ""
+) -> Tuple[List[Tuple[str, Any]], List[Tuple[str, str]]]:
+    """Flatten lists for database storage.
+
+    Indexes entries in the list using "[idx]" notation.
+    Nested lists are handled with multiple indices [x][y][...]. This
+    function is called recursively to handle nesting.
+
+    Args:
+        l (List[Any]): Dictionary to flatten.
+
+        curr_key (str): Current flattened key. Base key for indexing.
+
+    Returns:
+        flattened_params (List[Tuple[str, Any]]): List of (indexed_key, value) pairs.
+
+        flattened_types (List[Tuple[str, str]]): List of (indexed_key, type) pairs.
+            Types are one of TEXT, INTEGER, REAL
+    """
+    param_list: List[Tuple[str, Any]] = []
+    type_list: List[Tuple[str, str]] = []
+    idx: int
+    indexed_value: Any
+    for idx, indexed_value in enumerate(l):
+        indexed_curr_key: str = f"{curr_key}[{idx}]"
+        if isinstance(indexed_value, tuple) or isinstance(indexed_value, list):
+            x, y = _list_to_flatlists(indexed_value, indexed_curr_key)
+            param_list.extend(x)
+            type_list.extend(y)
+        else:
+            param_list.append((indexed_curr_key, indexed_value))
+            type_list.append((indexed_curr_key, _check_type(indexed_value)))
+    return param_list, type_list
+
+
 def _dict_to_flatdicts(
     d: Dict[str, Any], curr_key: str = ""
 ) -> Tuple[Dict[str, Any], Dict[str, str]]:
@@ -208,11 +244,9 @@ def _dict_to_flatdicts(
             param_list.extend(x.items())
             type_list.extend(y.items())
         elif isinstance(corrected_value, tuple) or isinstance(corrected_value, list):
-            indexed_flat_key: str
-            for idx, indexed_value in enumerate(corrected_value):
-                indexed_flat_key = f"{flat_key}[{idx}]"
-                param_list.append((indexed_flat_key, indexed_value))
-                type_list.append((indexed_flat_key, _check_type(indexed_value)))
+            x, y = _list_to_flatlists(corrected_value, flat_key)
+            param_list.extend(x)
+            type_list.extend(y)
         else:
             param_list.append((flat_key, corrected_value))
             type_list.append((flat_key, _check_type(corrected_value)))
