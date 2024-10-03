@@ -528,13 +528,19 @@ class BaseExecutor(ABC):
         if self._tasklets["after"] is not None:
             # Tasklets before results processing since they may create result
             self._run_tasklets(when="after")
-        self.process_results()
+
+        try:
+            self.process_results()
+        except Exception as err:
+            logger.critical(
+                f"Unable to process results! Downstream Tasks may fail! {err}"
+            )
 
         try:
             self._store_configuration()
         except Exception as err:
             logger.critical(
-                f"Unable to store configuration! Downstream tasks may fail! {err}"
+                f"Unable to store configuration! Downstream Tasks may fail! {err}"
             )
 
         for comm in self._communicators:
@@ -825,7 +831,16 @@ class Executor(BaseExecutor):
         ) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
-                logger.info(self._analysis_desc.task_result.summary)
+                is_printable_type: Callable[[Any], bool] = lambda x: isinstance(
+                    x, dict
+                ) or isinstance(x, str)
+                if is_printable_type(self._analysis_desc.task_result.summary):
+                    logger.info(self._analysis_desc.task_result.summary)
+                elif isinstance(self._analysis_desc.task_result.summary, list):
+                    for item in self._analysis_desc.task_result.summary:
+                        if is_printable_type(item):
+                            logger.info(item)
+
                 logger.info(self._analysis_desc.task_result.task_status)
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",

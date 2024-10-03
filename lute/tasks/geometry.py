@@ -28,7 +28,7 @@ from lute.io.models.base import TaskParameters
 from lute.execution.logging import get_logger
 from lute.tasks._geometry import geometry_optimize_residual
 from lute.tasks.task import Task
-from lute.tasks.dataclasses import TaskStatus
+from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -43,14 +43,6 @@ class OptimizeAgBhGeometryExhaustive(Task):
         self._mpi_comm: MPI.Intracomm = MPI.COMM_WORLD
         self._mpi_rank: int = self._mpi_comm.Get_rank()
         self._mpi_size: int = self._mpi_comm.Get_size()
-
-        self._mask: np.ndarray[bool]
-        if isinstance(self._task_parameters.mask, str):
-            is_valid: bool
-            dtype: Optional[str]
-            is_valid, dtype = self._check_if_path_and_type(self._task_parameters.mask)
-            if is_valid and dtype == "numpy":
-                self._mask = np.load(self._task_parameters.mask)
 
     def _check_if_path_and_type(self, string: str) -> Tuple[bool, Optional[str]]:
         """Check if a string is a valid path and determine the filetype.
@@ -136,6 +128,57 @@ class OptimizeAgBhGeometryExhaustive(Task):
                             ).todense()
                         )
         return powder
+
+    def _extract_mask(
+        self, mask_path: Optional[str]
+    ) -> Optional[np.ndarray[np.float64]]:
+        mask: Optional[np.ndarray[bool]] = None
+        is_valid: bool
+        dtype: Optional[str]
+        if isinstance(self._task_parameters.mask, str):
+            is_valid, dtype = self._check_if_path_and_type(self._task_parameters.mask)
+            if is_valid and dtype == "numpy":
+                mask = np.load(self._task_parameters.mask)
+            elif is_valid and dtype == "smd":
+                h5: h5py.File
+                with h5py.File(powder_path) as h5:
+                    unassembled: np.ndarray[np.float64] = h5[
+                        f"UserDataCfg/{self._task_parameters.detname}/mask"
+                    ][()]
+                    if unassembled.shape == 2:
+                        # E.g. Rayonix
+                        mask = unassembled
+                    else:
+                        ix: np.ndarray[np.uint64] = h5[
+                            f"UserDataCfg/{self._task_parameters.detname}/ix"
+                        ][()]
+                        iy: np.ndarray[np.uint64] = h5[
+                            f"UserDataCfg/{self._task_parameters.detname}/iy"
+                        ][()]
+
+                        ix -= np.min(ix)
+                        iy -= np.min(iy)
+
+                        if (
+                            unassembled.flatten().shape != ix.flatten().shape
+                            or unassembled.flatten().shape != iy.flatten().shape
+                        ):
+                            raise RuntimeError(
+                                "Shapes of detector image and pixel coordinates do not match!"
+                            )
+
+                        out_shape: Tuple[int, int] = (
+                            int(np.max(ix) + 1),
+                            int(np.max(iy) + 1),
+                        )
+
+                        mask = np.asarray(
+                            sparse.coo_matrix(
+                                (unassembled.flatten(), (ix.flatten(), iy.flatten())),
+                                shape=out_shape,
+                            ).todense()
+                        )
+        return mask
 
     def _get_pixel_size_and_wavelength(
         self, ds: psana.DataSource, det: psana.Detector
@@ -505,8 +548,10 @@ class OptimizeAgBhGeometryExhaustive(Task):
         powder: np.ndarray[np.float64] = self._extract_powder(
             self._task_parameters.powder
         )
-        # FIX THIS
-        mask: Optional[np.ndarray[np.float64]] = None
+
+        mask: Optional[np.ndarray[np.float64]] = self._extract_mask(
+            self._task_parameters.mask
+        )
         powder[powder > self._task_parameters.threshold] = 0
 
         starting_centers: List[Tuple[float, float]] = self._center_guesses(powder)
@@ -597,12 +642,124 @@ class OptimizeAgBhGeometryExhaustive(Task):
             )
             q: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength_angs
             edge_resolution: float = 1.0 / q
-            self._result.summary = {
-                "Detector distance (mm)": best_distance,
-                "Detector center (pixels)": best_center,
-                "Detector edge resolution (A)": edge_resolution,
-            }
+
+            self._result.summary = []
+            self._result.summary.append(
+                {
+                    "Detector distance (mm)": best_distance,
+                    "Detector center (pixels)": best_center,
+                    "Detector edge resolution (A)": edge_resolution,
+                }
+            )
+
+            run: int = int(self._task_parameters.lute_config.run)
+
+            plots: pn.Tabs = self.plot_powder_and_summaries(
+                powder, best_center, best_distance, wavelength_angs, pixel_size_mm, mask
+            )
+
+            self._result.summary.append(
+                ElogSummaryPlots(f"Geometry_Fit/r{run:04d}", plots)
+            )
 
     def _post_run(self) -> None:
         super()._post_run()
         self._result.task_status = TaskStatus.COMPLETED
+
+    def plot_powder_and_summaries(
+        self,
+        powder: np.ndarray[np.float64],
+        center: Tuple[float, float],
+        distance: float,
+        wavelength: float,
+        pixel_size: float,
+        mask: Optional[np.ndarray[np.float64]] = None,
+    ) -> pn.Tabs:
+        radial_profile: np.ndarray[np.float64] = self._radial_profile(
+            powder, mask, center
+        )
+        peak_indices, _ = find_peaks(radial_profile, prominence=1, distance=10)
+        theta: np.ndarray[np.float64] = np.arctan(
+            np.arange(radial_profile.shape[0]) * pixel_size / distance
+        )
+        q_profile: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength
+
+        rings: np.ndarray[np.float64]
+        final_score: float
+        rings, final_score = self._calc_and_score_ideal_rings(q_profile[peak_indices])
+        peaks_predicted: np.ndarray[np.float64] = (
+            2 * distance * np.arcsin(rings * wavelength / 2.0) / pixel_size
+        )
+        powder_grid: pn.GridSpec = self._plot_powder_and_rings(
+            powder, center, peak_indices, peaks_predicted
+        )
+        profile_grid: pn.GridSpec = self._plot_radial_profile(
+            radial_profile, q_profile, peak_indices
+        )
+
+        tabs: pn.Tabs = pn.Tabs(powder_grid)
+        tabs.append(profile_grid)
+        return tabs
+
+    def _plot_radial_profile(
+        self,
+        radial_profile: np.ndarray[np.float64],
+        qprofile: np.ndarray[np.float64],
+        peaks_observed: np.ndarray[np.int64],
+    ) -> pn.GridSpec:
+        xdim: hv.core.dimension.Dimension = hv.Dimension(("Q", "Q"))
+        ydim: hv.core.dimension.Dimesnion = hv.Dimension(("I", "I"))
+        profiles: hv.Overlay
+        profiles = hv.Curve((qprofile, radial_profile)).opts(
+            line_width=1, axiswise=True
+        )
+        profiles *= hv.Points(
+            (qprofile[peaks_observed], radial_profile[peaks_observed]),
+            kdims=[xdim, ydim],
+        ).opts(color="red", size=2)
+        grid: pn.GridSpec = pn.GridSpec(name="Radial Profile")
+        grid[:2, :2] = profiles
+
+        return grid
+
+    def _plot_powder_and_rings(
+        self,
+        powder: np.ndarray[np.float64],
+        center: Tuple[float, float],
+        peaks_observed: np.ndarray[np.float64],
+        peaks_predicted: np.ndarray[np.float64],
+    ) -> pn.GridSpec:
+        dim: hv.core.dimension.Dimension = hv.Dimension(
+            ("image", "Powder"),
+            range=(
+                np.nanpercentile(powder, 1),
+                np.nanpercentile(powder, 99),
+            ),
+        )
+        # (left, bottom, right, top)
+        bounds: Tuple[int, int, int, int] = (
+            0,
+            0,
+            powder.shape[1] - 1,
+            powder.shape[0] - 1,
+        )
+        img: hv.Image = hv.Image(
+            powder, bounds=bounds, vdims=[dim], name=dim.label
+        ).options(colorbar=True, cmap="viridis")
+
+        for peak in peaks_observed:
+            img *= hv.Ellipse(center[0], center[1], peak).opts(
+                line_dash="dashed", color="red", line_width=1
+            )
+
+        for peak in peaks_predicted:
+            img *= hv.Ellipse(center[0], center[1], peak).opts(
+                line_dash="dashed", color="black", line_width=1
+            )
+
+        grid: pn.GridSpec = pn.GridSpec(
+            name=f"{self._task_parameters.detname} Powder and Observed Rings",
+        )
+
+        grid[0, 0] = pn.Row(img)
+        return grid
