@@ -26,7 +26,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, List, Optional, Dict, Any, Tuple
 
 from pydantic import (
     BaseModel,
@@ -40,7 +40,7 @@ from pydantic import (
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
 from lute.io.db import read_latest_db_entry
-from lute.io.models.validators import validate_smd_path
+from lute.io.models.validators import validate_smd_path, template_parameter_validator
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
@@ -54,6 +54,249 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
         result_from_params: str = ""
         """Defines a result from the parameters. Use a validator to do so."""
+
+    class ProducerParameters(BaseModel):
+        class ROIParams(BaseModel):
+            ROIs: List[List[List[int]]] = Field(
+                description="Definition of ROIs, can define multiple."
+            )
+
+            writeArea: bool = Field(
+                False, description="Whether to write out the area image of the ROI."
+            )
+
+            thresADU: Optional[float] = Field(
+                None, description="Optional threshold on ADU."
+            )
+
+        class AzIntParams(BaseModel):
+            eBeam: float = Field(description="Beam energy in keV.")
+
+            center: List[float] = Field(description="Beam center in micrometers")
+
+            dis_to_sam: float = Field(description="Detector distance in millimeters.")
+
+            tx: float = Field(0, description="Tilt in x, degrees")
+
+            ty: float = Field(0, description="Tilt in y, degress")
+
+        class AzIntPyFAIParams(BaseModel):
+            class AiKwargs(BaseModel):
+                dist: float = Field(description="Detector distance.")
+                poni1: float = Field(description="First poni.")
+                poni2: float = Field(description="Second poni.")
+
+            poni_file: Optional[str] = Field(
+                None,
+                description="Path to a poni file. Must provide poni_file or ai_kwargs.",
+            )
+
+            ai_kwargs: Optional[AiKwargs] = Field(
+                None, description="Integration paramters if not using a poni file."
+            )
+
+            npts: int = Field(512, description="Number of q points/bins.")
+
+            npts_az: int = Field(13, description="Number of phi bins.")
+
+            int_units: str = Field("2th_deg", description="Integration units")
+
+            return2d: bool = Field(
+                False, description="Whether to return the 2D q/phi integration."
+            )
+
+        class PhotonParams(BaseModel):
+            ADU_per_photon: float = Field(9.5, description="Number of ADU per photon.")
+
+            thresADU: float = Field(
+                0.8, description="Threshold in fraction of ADU_per_photon."
+            )
+
+        class DropletParams(BaseModel):
+            name: str = Field(
+                "droplet", description="HDF5 key name for storing droplet data."
+            )
+
+            # mask: Optional[np.ndarray] = Field(None, description="Optionally pass a separate mask.")
+
+            threshold: float = Field(
+                5,
+                description="Threshold for pixel to be part of a droplet. Sigma or ADU depending on useRms.",
+            )
+
+            thresholdLow: float = Field(
+                5, description="Lower threshold to make spectrum sharper."
+            )
+
+            thresADU: float = Field(
+                60, description="Threshold on droplet ADU. Rejects droplets below this."
+            )
+
+            useRms: bool = Field(
+                True,
+                description="If True, threshold/thresholdLow are RMS of data, otherwise in ADU.",
+            )
+
+            nData: Optional[int] = Field(1e5, description="(float,int or None).")
+
+            relabel: bool = Field(
+                True, description="After initial finding, relabel image."
+            )
+
+        class Droplet2PhotonParams(BaseModel):
+            class DropletParams(BaseModel):
+                threshold: float = Field(
+                    5,
+                    description="Threshold for pixel to be part of a droplet. Sigma or ADU depending on useRms.",
+                )
+
+                thresholdLow: float = Field(
+                    5, description="Lower threshold to make spectrum sharper."
+                )
+
+                thresADU: float = Field(
+                    60,
+                    description="Threshold on droplet ADU. Rejects droplets below this.",
+                )
+
+                useRms: bool = Field(
+                    True,
+                    description="If True, threshold/thresholdLow are RMS of data, otherwise in ADU.",
+                )
+
+            droplet: DropletParams = Field(
+                DropletParams(), description="Droplet finding parameters."
+            )
+
+            aduspphot: int = Field(162, description="")
+
+            cputime: bool = Field(True, description="")
+
+            nData: float = Field(3e4, description="")
+
+        class SvdParams(BaseModel):
+            name: str = Field("svdFit", description="DetObject name.")
+
+            n_components: int = Field(
+                2, description="Number of components to use. Max is 25."
+            )
+
+            basis_file: Optional[str] = Field(None, description="")
+
+            n_pulse: int = Field(1, description="Number of pulses to fit.")
+
+            delay: Optional[List[float]] = Field(
+                [0], description="Delay between pulses."
+            )
+
+            mode: str = Field(
+                "max",
+                description="Method to calculate pulse amplitudes. max, norm, or both.",
+            )
+            return_reconstructed: bool = Field(
+                False, description="Return the reconstructed waveforms."
+            )
+
+        class AutocorrParams(BaseModel):
+            class IlluminationParams(BaseModel):
+                correction: str = Field(
+                    description="Path to correction arrays. One per mask/ROI."
+                )
+
+                kernel: int = Field(
+                    description="Kernel size used in the creation of the correction."
+                )
+
+            name: str = Field("autocorr", description="DetObject name.")
+
+            threshADU: List[float] = Field(
+                [-1e6, 1e6], description="Low and high pixel intensity thresholds."
+            )
+
+            mask: Optional[str] = Field(
+                None, description="Mask to define a non-rectangular ROI."
+            )
+
+            save_lineout: bool = Field(
+                False,
+                description="Save autocorr image or only vertical/horizontal lineouts.",
+            )
+
+            save_range: Tuple[int, int] = Field(
+                (
+                    50,
+                    50,
+                ),
+                description="Size of the autocorr image to save.",
+            )
+
+            illumination_correction: Optional[IlluminationParams] = Field(
+                None, description="Corrections for each mask/ROI."
+            )
+
+        detnames: Optional[List[str]] = Field(
+            None, description="List of detectors to process."
+        )
+
+        epicsPV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
+            None, description="List of PVs to save once per event."
+        )
+
+        epicsOncePV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
+            None, description="List of PVs to save once per run."
+        )
+
+        ttCalib: Optional[List[float]] = Field(
+            None, description="Alternative calibration parameters for the timetool."
+        )
+
+        aioParams: Optional[List[List[Union[str, int, float]]]] = Field(
+            None,
+            description="Save analog inputs and give them nice names. [[inp],['name']]",
+        )
+
+        getROIs: Optional[Dict[str, ROIParams]] = Field(
+            None, description="Dictionary of ROI parameters by detector."
+        )
+
+        getAzIntParams: Optional[Dict[str, AzIntParams]] = Field(
+            None,
+            description="Dictionary of azimuthal integration parameters by detector.",
+        )
+
+        getAzIntPyFAIParams: Optional[Dict[str, AzIntPyFAIParams]] = Field(
+            None,
+            description="Dictionary of azimuthal integration with PyFAI parameters.",
+        )
+
+        getPhotonParams: Optional[Dict[str, PhotonParams]] = Field(
+            None,
+            description="Dictionary of photon counting parameters by detector.",
+        )
+
+        getDropletParams: Optional[Dict[str, DropletParams]] = Field(
+            None,
+            description="Dictionary of droplet finding parameters by detector.",
+        )
+
+        getDroplet2Photons: Optional[Dict[str, Droplet2PhotonParams]] = Field(
+            None,
+            description="Dictionary of droplet2photon parameters by detector.",
+        )
+
+        getSvdParams: Optional[Dict[str, SvdParams]] = Field(
+            None,
+            description="Dictionary of SVD parameters by detector.",
+        )
+
+        getAutocorrParams: Optional[Dict[str, AutocorrParams]] = Field(
+            None,
+            description="Dictionary of auto-correlation parameters by detector.",
+        )
+
+    _set_producer_template_parameters = template_parameter_validator(
+        "producer_parameters"
+    )
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")
     np: PositiveInt = Field(
@@ -160,6 +403,12 @@ class SubmitSMDParameters(ThirdPartyParameters):
         template_name="smd_producer_template.py", output_path=""
     )
 
+    producer_parameters: Optional[ProducerParameters] = Field(
+        None,
+        description="Optional parameters to fill in a producer file.",
+        flag_type="",  # Does nothing since always None by time it's seen by Task
+    )
+
     @validator("producer", always=True)
     def validate_producer_path(cls, producer: str, values: Dict[str, Any]) -> str:
         if producer == "":
@@ -191,19 +440,6 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
         cls.Config.result_from_params = f"{directory}/{fname}"
         return values
-
-    # detnames: TemplateParameters = TemplateParameters({})
-    # epicsPV: TemplateParameters = TemplateParameters({})
-    # ttCalib: TemplateParameters = TemplateParameters({})
-    # aioParams: TemplateParameters = TemplateParameters({})
-    # getROIs: TemplateParameters = TemplateParameters({})
-    # getAzIntParams: TemplateParameters = TemplateParameters({})
-    # getAzIntPyFAIParams: TemplateParameters = TemplateParameters({})
-    # getPhotonsParams: TemplateParameters = TemplateParameters({})
-    # getDropletParams: TemplateParameters = TemplateParameters({})
-    # getDroplet2Photons: TemplateParameters = TemplateParameters({})
-    # getSvdParams: TemplateParameters = TemplateParameters({})
-    # getAutocorrParams: TemplateParameters = TemplateParameters({})
 
 
 class AnalyzeSmallDataXSSParameters(TaskParameters):

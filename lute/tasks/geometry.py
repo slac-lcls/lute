@@ -1,6 +1,9 @@
 """Tasks for working with and optimizing geometry.
 
 Classes:
+    OptimizeAgBhGeometryExhaustive: Task to optimize the beam center and detector
+        distance based on a powder pattern from an Ag Behenate run. Performs an
+        exhaustive grid search.
 """
 
 __all__ = ["OptimizeAgBhGeometryExhaustive"]
