@@ -67,14 +67,14 @@ import subprocess
 from typing import List, Dict, Tuple, Optional
 
 from lute.tasks.dataclasses import ElogSummaryPlots
-
+from lute.execution.logging import get_logger
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 def concat_files(location: str, in_files_glob: str, out_file: str) -> None:

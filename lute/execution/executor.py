@@ -37,10 +37,30 @@ import warnings
 import copy
 import re
 
-from lute.execution.ipc import *
-from lute.tasks.task import *
-from lute.tasks.dataclasses import *
-from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.execution.logging import get_logger
+from lute.execution.ipc import (
+    Party,
+    Message,
+    PipeCommunicator,
+    SocketCommunicator,
+    LUTE_SIGNALS,
+    Communicator,
+)
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import (
+    DescribedAnalysis,
+    TaskResult,
+    TaskStatus,
+    ElogSummaryPlots,
+)
+from lute.io.models.base import (
+    TaskParameters,
+    TemplateParameters,
+    AnalysisHeader,
+    TemplateConfig,
+    TemplateParameters,
+    ThirdPartyParameters,
+)  # NOTE: All imports required for unpickling!
 from lute.io.db import record_analysis_db
 from lute.io.elog import post_elog_run_status, post_elog_run_table
 
@@ -54,7 +74,7 @@ else:
     warnings.simplefilter("ignore")
     os.environ["PYTHONWARNINGS"] = "ignore"
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 class TaskletDict(TypedDict):
@@ -517,7 +537,7 @@ class BaseExecutor(ABC):
         proc.stderr.close()
         proc.wait()
         if ret := proc.returncode:
-            logger.info(f"Task failed with return code: {ret}")
+            logger.warning(f"Task failed with return code: {ret}")
             self._analysis_desc.task_result.task_status = TaskStatus.FAILED
             self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:

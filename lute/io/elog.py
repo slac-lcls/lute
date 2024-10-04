@@ -56,7 +56,8 @@ import logging
 from typing import Any, Dict, Optional, List, Union, Tuple
 from io import BufferedReader
 
-from .exceptions import ElogFileFormatError
+from lute.io.exceptions import ElogFileFormatError
+from lute.execution.logging import get_logger
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -64,7 +65,7 @@ if __debug__:
 else:
     logging.basicConfig(level=logging.INFO)
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 def get_elog_workflows(exp: str) -> Dict[str, str]:

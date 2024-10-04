@@ -52,6 +52,7 @@ from typing import Any, Optional, Set, List, Literal, Union, Tuple, Type
 import _io
 from typing_extensions import Self
 
+from lute.execution.logging import get_logger
 
 USE_ZMQ: bool = True
 if USE_ZMQ:
@@ -78,7 +79,7 @@ else:
     warnings.simplefilter("ignore")
     os.environ["PYTHONWARNINGS"] = "ignore"
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 class Party(Enum):

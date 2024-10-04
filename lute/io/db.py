@@ -23,15 +23,16 @@ import logging
 import os
 from typing import List, Dict, Dict, Any, Tuple, Optional, Union
 
-from .models.base import TaskParameters, TemplateParameters
-from ..tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
+from lute.execution.logging import get_logger
+from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 class DatabaseError(Exception):
@@ -274,7 +275,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
     try:
         work_dir: str = cfg.task_parameters.lute_config.work_dir
     except AttributeError:
-        logger.info(
+        logger.error(
             (
                 "Unable to access TaskParameters object. Likely wasn't created. "
                 "Cannot store result."
