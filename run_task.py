@@ -2,6 +2,7 @@ import sys
 import argparse
 import logging
 import os
+from typing import List
 
 from lute.io.config import *
 from lute.execution.executor import *
@@ -41,7 +42,27 @@ from lute import managed_tasks
 if hasattr(managed_tasks, task_name):
     managed_task: Executor = getattr(managed_tasks, task_name)
 else:
-    logger.debug(f"{task_name} unrecognized!")
+    import difflib
+
+    from lute.execution.executor import BaseExecutor
+
+    logger.error(f"{task_name} unrecognized!")
+    valid_names: List[str] = [
+        name
+        for name in dir(managed_tasks)
+        if isinstance(getattr(managed_tasks, name), BaseExecutor)
+    ]
+    # List below may be empty...
+    possible_options: List[str] = difflib.get_close_matches(
+        task_name, valid_names, n=2, cutoff=0.1
+    )
+    if possible_options:
+        logger.info(f"Perhaps you meant: {possible_options}?")
+        logger.info(f"All possible options are: {valid_names}")
+    else:
+        logger.info(
+            f"Could not infer a close match for the managed Task name. Possible options are: {valid_names}"
+        )
     sys.exit(-1)
 
 managed_task.execute_task()
