@@ -13,6 +13,8 @@ Classes:
 
 __all__ = [
     "MergePartialatorParameters",
+    "MergeCarelessParameters",
+    "EvaluateCarelessParameters",
     "MergeCCTBXXFELParameters",
     "CompareHKLParameters",
     "ManipulateHKLParameters",
@@ -216,7 +218,192 @@ class MergePartialatorParameters(ThirdPartyParameters):
         return out_file
 
 
-class MergeCCTBXXFELParameters(ThirdPartyParameters):
+class MergeCarelessParameters(ThirdPartyParameters):
+    """Parameters for Careless.
+
+    For more information on usage, please refer to the Careless documentation, here:
+    https://github.com/rs-station/careless
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/conda_envs/careless/bin/careless",
+        description="Carelss binary.",
+        flag_type="",
+    )
+    experiment_type: str = Field(
+        "",
+        description="Experiment type. Options: mono, poly, devices",
+        flag_type=""
+    )
+    metadata_keys: str = Field(
+        "",
+        description="Metadata keys for scaling. This is expected to be a comma delimitted string.",
+        flag_type=""
+    )
+    in_file: str = Field(
+        "",
+        description="Path to input file (mtz or stream).",
+        flag_type=""
+    )
+    out_dir: str = Field(
+        "",
+        description="Path to output directory.",
+        is_result=True,
+    )
+
+    mc_samples: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param='mc-samples',
+    )
+    kl_weight: Optional[float] = Field(
+        description="",
+        flag_type="--",
+        rename_param="kl-weight",
+    )
+    mlp_layers: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="mlp-layers",
+    )
+    image_layers: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="image-layers",
+    )
+    dmin: Optional[float] = Field(
+        description="",
+        flag_type="--",
+    )
+    iterations: Optional[int] = Field(
+        description="",
+        flag_type="--",
+    )
+    test_fraction: Optional[float] = Field(
+        description="",
+        flag_type="--",
+        rename_param="test-fraction",
+    )
+    seed: Optional[int] = Field(
+        description="",
+        flag_type="--",
+    )
+    mlp_width: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="mlp-width",
+    )
+    merge_half_datasets: Optional[bool] = Field(
+        description="",
+        flag_type="--",
+        rename_param="merge-half-datasets",
+    )
+    half_dataset_repeats: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="half-dataset-repeats",
+    )
+    studentt_likelihood_dof: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="studentt-likelihood-dof",
+    )
+    positional_encoding_keys: Optional[str] = Field(
+        description="",
+        flag_type="--",
+        rename_param="positional-encoding-keys",
+    )
+    positional_encoding_frequencies: Optional[int] = Field(
+        description="",
+        flag_type="--",
+        rename_param="positional-encoding-frequencies",
+    )
+    intensity_key: Optional[str] = Field(
+        description="",
+        flag_type="--",
+        rename_param="intensity-key",
+    )
+    uncertainty_key: Optional[str] = Field(
+        description="",
+        flag_type="--",
+        rename_param="uncertainty-key",
+    )
+
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            stream_file: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}",
+                "ConcatenateStreamFiles",
+                "out_file",
+            )
+            if stream_file:
+                return stream_file
+        return in_file
+
+
+class EvaluateCarelessParameters(ThirdPartyParameters):
+    """Parameters for evaluating Careless results."""
+
+    class Config(ThirdPartyParameters.Config):
+        long_flags_use_eq: bool = True
+        """Whether long command-line arguments are passed like `--long=arg`."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/conda_envs/careless/bin/careless.cchalf",
+        description="Careless.cchalf binary.",
+        flag_type="",
+    )
+    in_file: str = Field(
+        "",
+        description="Path to input MTZ file containing crossvalidation data from careless.",
+        flag_type=""
+    )
+    image: str = Field(
+        description="Make a plot of the results and save it to this filename. The filetype will be determined from the filename. Any filetype supported by your matplotlib version will be available.",
+        flag_type="--",
+    )
+    output: Optional[str] = Field(
+        description="Optionally save results to this file in csv format instead of printing them to the terminal.",
+        flag_type="--",
+    )
+    method: Optional[str] = Field(
+        description="Method for computing correlation coefficient (spearman or pearson). The Pearson CC uses maximum-likelihood weights. Pearson is the default.",
+        flag_type="--",
+    )
+    bins: Optional[int] = Field(
+        description="Number of resolution bins to use, the default is 10.",
+        flag_type="--",
+    )
+    overall: Optional[bool] = Field(
+        description="Pool all prediction mtz files into a single calculation rather than treating each file individually.",
+        flag_type="--",
+    )
+
+    @validator("in_file", always=True)
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            careless_dir: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "MergeCareless", "out_dir"
+            )
+            if careless_dir:
+                mtz_out: str = f"{careless_dir}_xval_0.mtz"
+                return mtz_out
+        return in_file
+
+
+class MergeCCTBXStillsParameters(ThirdPartyParameters):
     """Parameters for merging with cctbx.xfel."""
 
     class Config(ThirdPartyParameters.Config):
