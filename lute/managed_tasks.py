@@ -58,6 +58,9 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
 
+PyFAIGeomOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeom")
+"""Optimize the geometry using PyFAI."""
+
 # SFX
 #####
 CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
