@@ -37,10 +37,30 @@ import warnings
 import copy
 import re
 
-from lute.execution.ipc import *
-from lute.tasks.task import *
-from lute.tasks.dataclasses import *
-from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.execution.logging import get_logger
+from lute.execution.ipc import (
+    Party,
+    Message,
+    PipeCommunicator,
+    SocketCommunicator,
+    LUTE_SIGNALS,
+    Communicator,
+)
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import (
+    DescribedAnalysis,
+    TaskResult,
+    TaskStatus,
+    ElogSummaryPlots,
+)
+from lute.io.models.base import (
+    TaskParameters,
+    TemplateParameters,
+    AnalysisHeader,
+    TemplateConfig,
+    TemplateParameters,
+    ThirdPartyParameters,
+)  # NOTE: All imports required for unpickling!
 from lute.io.db import record_analysis_db
 from lute.io.elog import post_elog_run_status, post_elog_run_table
 
@@ -54,7 +74,7 @@ else:
     warnings.simplefilter("ignore")
     os.environ["PYTHONWARNINGS"] = "ignore"
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 class TaskletDict(TypedDict):
@@ -517,7 +537,7 @@ class BaseExecutor(ABC):
         proc.stderr.close()
         proc.wait()
         if ret := proc.returncode:
-            logger.info(f"Task failed with return code: {ret}")
+            logger.warning(f"Task failed with return code: {ret}")
             self._analysis_desc.task_result.task_status = TaskStatus.FAILED
             self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
@@ -528,8 +548,21 @@ class BaseExecutor(ABC):
         if self._tasklets["after"] is not None:
             # Tasklets before results processing since they may create result
             self._run_tasklets(when="after")
-        self.process_results()
-        self._store_configuration()
+
+        try:
+            self.process_results()
+        except Exception as err:
+            logger.critical(
+                f"Unable to process results! Downstream Tasks may fail! {err}"
+            )
+
+        try:
+            self._store_configuration()
+        except Exception as err:
+            logger.critical(
+                f"Unable to store configuration! Downstream Tasks may fail! {err}"
+            )
+
         for comm in self._communicators:
             comm.clear_communicator()
 
@@ -818,7 +851,16 @@ class Executor(BaseExecutor):
         ) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
-                logger.info(self._analysis_desc.task_result.summary)
+                is_printable_type: Callable[[Any], bool] = lambda x: isinstance(
+                    x, dict
+                ) or isinstance(x, str)
+                if is_printable_type(self._analysis_desc.task_result.summary):
+                    logger.info(self._analysis_desc.task_result.summary)
+                elif isinstance(self._analysis_desc.task_result.summary, list):
+                    for item in self._analysis_desc.task_result.summary:
+                        if is_printable_type(item):
+                            logger.info(item)
+
                 logger.info(self._analysis_desc.task_result.task_status)
             elog_data: Dict[str, str] = {
                 f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",

@@ -85,4 +85,10 @@ def import_task(task_name: str) -> Type[Task]:
         from .mpi_test import TestMultiNodeCommunication
 
         return TestMultiNodeCommunication
+
+    if task_name == "OptimizeAgBhGeometryExhaustive":
+        from .geometry import OptimizeAgBhGeometryExhaustive
+
+        return OptimizeAgBhGeometryExhaustive
+
     raise TaskNotFoundError

@@ -19,8 +19,9 @@ import time
 
 import numpy as np
 
-from lute.tasks.task import *
-from lute.io.models.base import *
+from lute.tasks.task import Task
+from lute.io.models.base import TaskParameters
+from lute.tasks.dataclasses import TaskStatus
 from lute.execution.ipc import Message
 
 
