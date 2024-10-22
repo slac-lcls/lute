@@ -414,9 +414,12 @@ class SubmitSMDParameters(ThirdPartyParameters):
         if producer == "":
             exp: str = values["lute_config"].experiment
             hutch: str = exp[:3]
-            path: str = (
-                f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools/producers/smd_producer.py"
-            )
+            base_path: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
+            path: str
+            if hutch.lower() in ("cxi", "mec", "mfx", "xcs", "xpp"):
+                path = f"{base_path}/lcls1_producers/smd_producer.py"
+            else:
+                path = f"{base_path}/lcls2_producers/smd_producer.py"
             return path
         return producer
 
