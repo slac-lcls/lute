@@ -81,6 +81,18 @@ class OptimizeAgBhGeometryExhaustive(Task):
         return is_valid_path, powder_type
 
     def _extract_powder(self, powder_path: str) -> Optional[np.ndarray[np.float64]]:
+        """Extract a powder image.
+
+        May take a smalldata file or numpy array.
+
+        Args:
+            powder_path (str): Path to the object containing the powder image.
+
+        Returns:
+            powder (Optional[np.ndarray[np.float64]]): The extracted powder image.
+                Returns None if no powder could be extracted and no specific error
+                was encountered.
+        """
         powder: Optional[np.ndarray[np.float64]] = None
         if isinstance(powder_path, str):
             is_valid: bool
@@ -133,6 +145,18 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _extract_mask(
         self, mask_path: Optional[str]
     ) -> Optional[np.ndarray[np.float64]]:
+        """Extract a mask.
+
+        May take a smalldata file or numpy array.
+
+        Args:
+            mask_path (str): Path to the object containing the mask.
+
+        Returns:
+            mask (Optional[np.ndarray[np.float64]]): The extracted mask.
+                Returns None if no powder could be extracted and no specific error
+                was encountered.
+        """
         mask: Optional[np.ndarray[bool]] = None
         is_valid: bool
         dtype: Optional[str]
@@ -184,7 +208,19 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _get_pixel_size_and_wavelength(
         self, ds: psana.DataSource, det: psana.Detector
     ) -> Tuple[float, float]:
-        """Extract pixel size in mm and wavelength in Angstroms."""
+        """Extract pixel size in mm and wavelength in Angstroms.
+
+        Args:
+            ds (psana.DataSource): psana DataSource object.
+
+            det (psana.Detector): psana Detector object for which the pixel size
+                will be extracted.
+
+        Returns:
+            pixel_size (float): Pixel size of det in mm.
+
+            wavelength (float): X-ray wavelength in Angstroms.
+        """
         pixel_size: float
         if self._task_parameters.detname.lower() == "rayonix":
             pixel_size = ds.env().configStore().get(psana.Rayonix.ConfigV2).pixelWidth()
@@ -196,6 +232,15 @@ class OptimizeAgBhGeometryExhaustive(Task):
         return pixel_size, wavelength
 
     def _estimate_distance(self) -> float:
+        """Estimate a starting distance.
+
+        Will estimate the distance based on current geometry if no guess is
+        provided, otherwise this method returns the provided guess.
+
+        Returns:
+            distance (float): Estimated distance, or user-provided guess if one
+                was present in the TaskParameters.
+        """
         if self._task_parameters.distance_guess is not None:
             return self._task_parameters.distance_guess
         exp: str = self._task_parameters.lute_config.experiment
@@ -207,6 +252,18 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _initial_image_center(
         self, powder: np.ndarray[np.float64]
     ) -> np.ndarray[np.float64]:
+        """Estimate a beam center.
+
+        Will estimate the center as the powder image center if no guess is
+        provided, otherwise this method returns the provided guess.
+
+        Args:
+            powder (np.ndarray[np.float64]): Powder image.
+
+        Returns:
+            center (np.ndarray[np.float64]): Estimated center, or user-provided
+                guess if one was present in the TaskParameters.
+        """
         if self._task_parameters.center_guess is not None:
             return self._task_parameters.center_guess
         return np.array(powder.shape) / 2.0
@@ -214,7 +271,20 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _center_guesses(
         self, powder: np.ndarray[np.float64]
     ) -> List[Tuple[float, float]]:
-        """Return starting beam center points based on dx/dy parameters."""
+        """Return starting beam center points based on dx/dy parameters.
+
+        This method returns a list of starting values for the beam center to be
+        used as initial guesses for the optimization routine. The output of this
+        method is tuned by the dx/dy parameters provided in the TaskParameters
+        model.
+
+        Args:
+            powder (np.ndarray[np.float64]): Powder image.
+
+        Returns:
+            guesses (List[Tuple[float,float]]): Starting guesses for the beam
+                center optimization routine.
+        """
         initial_center: np.ndarray[np.float64] = self._initial_image_center(powder)
         dx: Tuple[int, int, int] = self._task_parameters.dx
         dy: Tuple[int, int, int] = self._task_parameters.dy
@@ -389,29 +459,6 @@ class OptimizeAgBhGeometryExhaustive(Task):
             f"Detector distance inferred from powder rings: {np.round(new_distance,2)}"
         )
         return peak_indices, radial_profile[peak_indices], new_distance, final_score
-
-    def _generate_concentric_sample_pts(
-        self,
-        peak_radii: np.ndarray[np.int64],
-        center: Tuple[float, float],
-        num_pts: int = 200,
-    ) -> np.ndarray[np.float64]:
-        # X,Y labelling seems backwards
-        cx: float = center[0]
-        cy: float = center[1]
-        # Reshape linear radii (peak indices) for broadcasting
-        radii: np.ndarray[np.int64] = np.array([peak_radii]).reshape(-1, 1)
-        theta: np.ndarray[np.float64] = np.linspace(0.0, 2 * np.pi, 200)
-
-        coords_x: np.ndarray[np.float64] = radii * np.cos(theta) + cx
-        coords_y: np.ndarray[np.float64] = radii * np.sin(theta) + cy
-
-        # Reshape for optimization routines
-        coords: np.ndarray[np.float64] = np.zeros((2, num_pts * len(peak_radii)))
-        coords[1] = coords_x.reshape(-1)
-        coords[0] = coords_y.reshape(-1)
-
-        return coords
 
     def _opt_center(
         self,

@@ -13,6 +13,18 @@ def generate_concentric_sample_pts(
     center: List[float],
     num_pts: int = 200,
 ) -> np.ndarray[np.float64]:
+    """Generate sample points along concentric circles.
+
+    Args:
+        peak_radii (np.ndarray[np.int64]): Radii indices.
+
+        center (List[float]): Center_x, Center_y for the concentric circles.
+
+        num_pts (int): Number of sample points.
+
+    Returns:
+        coords (np.ndarray[np.float64]): X/Y coordinates of sample points.
+    """
     # X,Y labelling seems backwards
     cx: float = center[0]
     cy: float = center[1]
@@ -34,6 +46,17 @@ def generate_concentric_sample_pts(
 def geometry_optimize_residual(
     params: lmfit.Parameters, powder: np.ndarray[np.float64]
 ) -> np.ndarray[np.float64]:
+    """Target function for OptimizeAgBhGeometryExhaustive geometry fitting.
+
+    Args:
+        params (lmfit.Parameters): Parameters. [center_x, center_y, peaks...]
+            Center values are floats. Peaks are integers.
+
+        powder (np.ndarray[np.float64]): Powder image.
+
+    Returns:
+        pixel_values (np.ndarray[np.float64]): Residuals for fitting.
+    """
     # Unpack the parameters
     params_l: List[float] = [val.value for _, val in params.items()]
     center_guess: List[float] = params_l[:2]

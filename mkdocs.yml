@@ -21,6 +21,8 @@ nav:
           - task: "source/tasks/task.md"
           - tasklets: "source/tasks/tasklets.md"
           - dataclasses: "source/tasks/dataclasses.md"
+          - geometry: "source/tasks/geometry.md"
+          - _geometry: "source/tasks/_geometry.md"
           - sfx_find_peaks: "source/tasks/sfx_find_peaks.md"
           - sfx_index: "source/tasks/sfx_index.md"
           - smalldata: "source/tasks/smalldata.md"
@@ -33,6 +35,7 @@ nav:
       - io:
           - models:
               - base: "source/io/models/base.md"
+              - geometry: "source/io/models/geometry.md"
               - sfx_find_peaks: "source/io/models/sfx_find_peaks.md"
               - sfx_index: "source/io/models/sfx_index.md"
               - sfx_merge: "source/io/models/sfx_merge.md"
