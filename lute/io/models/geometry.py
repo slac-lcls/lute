@@ -32,6 +32,10 @@ class OptimizeAgBhGeometryExhaustiveParameters(TaskParameters):
         "", description="Path to the powder image, or file containing it."
     )
 
+    geom_out_dir: str = Field(
+        "", description="Directory to write new geometry files to."
+    )
+
     mask: Optional[str] = Field(
         None, description="Path to a detector mask, or file containing it."
     )

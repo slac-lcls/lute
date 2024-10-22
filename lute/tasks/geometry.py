@@ -26,7 +26,7 @@ from scipy.signal import find_peaks
 
 from lute.io.models.base import TaskParameters
 from lute.execution.logging import get_logger
-from lute.tasks._geometry import geometry_optimize_residual
+from lute.tasks._geometry import geometry_optimize_residual, deploy_geometry
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 
@@ -127,6 +127,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                                 shape=out_shape,
                             ).todense()
                         )
+
         return powder
 
     def _extract_mask(
@@ -662,6 +663,17 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 ElogSummaryPlots(f"Geometry_Fit/r{run:04d}", plots)
             )
 
+            deploy_geometry(
+                out_dir=self._task_parameters.geom_out_dir,
+                exp=self._task_parameters.lute_config.experiment,
+                run=run,
+                ds=ds,
+                det=det,
+                pixel_size_mm=pixel_size_mm,
+                center=best_center,
+                distance=best_distance,
+            )
+
     def _post_run(self) -> None:
         super()._post_run()
         self._result.task_status = TaskStatus.COMPLETED
@@ -738,10 +750,10 @@ class OptimizeAgBhGeometryExhaustive(Task):
         )
         # (left, bottom, right, top)
         bounds: Tuple[int, int, int, int] = (
-            0,
-            0,
-            powder.shape[1] - 1,
-            powder.shape[0] - 1,
+            -0.5,
+            -0.5,
+            powder.shape[0] - 0.5,
+            powder.shape[1] - 0.5,
         )
         img: hv.Image = hv.Image(
             powder, bounds=bounds, vdims=[dim], name=dim.label
