@@ -58,6 +58,11 @@ class OptimizePyFAIGeomParameters(TaskParameters):
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration"
     )
 
+    wavelength: float = Field(
+        1e-10,
+        description="Wavelength of the X-ray beam in meters.",
+    )
+
     out_file: str = Field(
         "",
         description="Path to the output .data file containing the optimized detector geometry.",

@@ -47,6 +47,7 @@ class OptimizePyFAIGeom(Task):
             det_type=self.params.det_type,
             detector=detector,
             calibrant=self.params.calibrant,
+            wavelength=self.params.wavelength,
         )
         optimizer.bayes_opt_geom(
             powder=self.params.powder,
@@ -62,7 +63,7 @@ class OptimizePyFAIGeom(Task):
         )
         if optimizer.rank == 0:
             detector = self.update_geometry(optimizer)
-            plot = f'{self.params.work_dir}/figs/bayes_opt/bayes_opt_geom_r{optimizer.run:04}.png'
+            plot = f'{self.params.work_dir}/figs/bayes_opt_geom_r{optimizer.run:04}.png'
             optimizer.visualize_results(
                 powder=optimizer.powder_img,
                 bo_history=optimizer.bo_history,
@@ -107,6 +108,8 @@ class OptimizePyFAIGeom(Task):
             PyFAI detector object
         calibrant : str
             Calibrant name
+        wavelength : float
+            Wavelength of the experiment
         """
 
         def __init__(
@@ -116,6 +119,7 @@ class OptimizePyFAIGeom(Task):
             det_type,
             detector,
             calibrant,
+            wavelength,
         ):
             self.exp = exp
             self.run = run
@@ -125,6 +129,7 @@ class OptimizePyFAIGeom(Task):
             self.size = self.comm.Get_size()
             self.detector = detector
             self.calibrant = calibrant
+            self.wavelength = wavelength
             self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
             self.space = ["poni1", "poni2"]
             self.values = {'dist': 0.1,'poni1':0, 'poni2':0, 'rot1':0, 'rot2':0, 'rot3':0}
@@ -157,7 +162,7 @@ class OptimizePyFAIGeom(Task):
             ci = y_pred - best_y * norm.cdf(z) + y_std * norm.pdf(z)
             return ci
         
-        def build_calibrant(self, wavelength):
+        def build_calibrant(self):
             """
             Define calibrant for optimization
 
@@ -168,9 +173,9 @@ class OptimizePyFAIGeom(Task):
             """
             self.calibrant_name = self.calibrant
             calibrant = CALIBRANT_FACTORY(self.calibrant)
-            photon_energy = 1.23984197386209e-09 / wavelength
+            photon_energy = 1.23984197386209e-09 / self.wavelength
             self.photon_energy = photon_energy
-            calibrant.wavelength = wavelength
+            calibrant.wavelength = self.wavelength
             self.calibrant = calibrant
 
         def min_intensity(self, Imin):
