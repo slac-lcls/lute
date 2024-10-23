@@ -65,9 +65,9 @@ AgBhGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizeAgBhGeometryExhaustive
 
 # SFX
 #####
-CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
-"""Runs crystallographic indexing using cctbx.xfel."""
-CCTBXIndexer.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
+DIALSStillsProcesser: Executor = Executor("ProcessStillsDIALS")
+"""Runs crystallographic processing using dials.stills_process (CCTBX)."""
+DIALSStillsProcesser.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 
 CrystFELIndexer: Executor = Executor("IndexCrystFEL")
 """Runs crystallographic indexing using CrystFEL."""
@@ -91,12 +91,24 @@ CrystFELIndexer.add_tasklet(
 StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
 """Concatenate output stream files."""
 
-CCTBXMerger: Executor = Executor("MergeCCTBXXFEL")
+CCTBXMerger: Executor = Executor("MergeCCTBXStills")
 """Runs crystallographic merging using cctbx.xfel."""
 CCTBXMerger.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 
 PartialatorMerger: Executor = Executor("MergePartialator")
 """Runs crystallographic merging using CrystFEL's partialator."""
+
+DIALS2CarelessConverter: Execcutor("ConvertDIALS2Careless")
+"""Converts output from DIALSStillsProcesser so it can be input to CarelessMerger."""
+DIALS2CarelessConverter.shell_source("/sdf/group/lcls/ds/tools/careless/cctbx2rs.sh")
+
+CarelessMerger: Executor = Executor("MergeCareless")
+"""Runs crystallographic merging using Careless."""
+CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
+
+CarelessEvaluater: Executor = Executor("EvaluateCareless")
+"""Evaluates crystallographic merging results from Careless."""
+CarelessMerger.shell_source("/sdf/group/lcls/ds/tools/careless/setup.sh")
 
 HKLComparer: Executor = Executor("CompareHKL")  # For figures of merit
 """Runs analysis on merge results for statistics/figures of merit.."""
