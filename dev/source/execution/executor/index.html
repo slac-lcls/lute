@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
     
     
       
@@ -26,7 +26,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.8c3ca2c6.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.0253249f.min.css">
       
       
 
@@ -2148,6 +2148,11 @@ to an Executor.</p>
 
 
 
+
+
+
+
+
   <div class="doc doc-children">
 
 
@@ -2227,6 +2232,11 @@ environment that is passed to the Task subprocess.</p>
             </tr>
       </tbody>
     </table>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>lute/execution/executor.py</code></summary>
@@ -3539,6 +3549,11 @@ function takes two parameters - a reference to the Executor (self) and
 a reference to the Message (msg) which includes the corresponding
 signal.</p>
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>lute/execution/executor.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 88</span>
@@ -3670,7 +3685,9 @@ signal.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>task_name</code></td>
+            <td>
+                <code>task_name</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -3686,7 +3703,9 @@ also be in a properly named model to be identified.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>communicators</code></td>
+            <td>
+                <code>communicators</code>
+            </td>
             <td>
                   <code><span title="typing.List">List</span>[Communicator]</code>
             </td>
@@ -3703,7 +3722,9 @@ can be introduced by composing Executors with communicators.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>poll_interval</code></td>
+            <td>
+                <code>poll_interval</code>
+            </td>
             <td>
                   <code>float</code>
             </td>
@@ -4581,7 +4602,9 @@ swapped prior to execution.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>executable_path</code></td>
+            <td>
+                <code>executable_path</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -4595,7 +4618,9 @@ swapped prior to execution.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>params</code></td>
+            <td>
+                <code>params</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -4717,7 +4742,9 @@ swapped prior to execution.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>proc</code></td>
+            <td>
+                <code>proc</code>
+            </td>
             <td>
                   <code><span title="subprocess.Popen">Popen</span></code>
             </td>
@@ -4905,7 +4932,9 @@ events which do not exist is not allowed.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>event</code></td>
+            <td>
+                <code>event</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -4998,7 +5027,9 @@ The tasklet can be run before or after the main Task has been run.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>tasklet</code></td>
+            <td>
+                <code>tasklet</code>
+            </td>
             <td>
                   <code><span title="typing.Callable">Callable</span>[[<span title="typing.Any">Any</span>], <span title="typing.Any">Any</span>]</code>
             </td>
@@ -5012,7 +5043,9 @@ The tasklet can be run before or after the main Task has been run.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>args</code></td>
+            <td>
+                <code>args</code>
+            </td>
             <td>
                   <code><span title="typing.List">List</span>[<span title="typing.Any">Any</span>]</code>
             </td>
@@ -5034,7 +5067,9 @@ during substitution if required.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>when</code></td>
+            <td>
+                <code>when</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -5049,7 +5084,9 @@ main Task. Default is after.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>set_result</code></td>
+            <td>
+                <code>set_result</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -5064,7 +5101,9 @@ result of the main Task. Default is False.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>set_summary</code></td>
+            <td>
+                <code>set_summary</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -5362,7 +5401,9 @@ their appropriate form prior to the actual execution of Task code.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>env</code></td>
+            <td>
+                <code>env</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -5442,7 +5483,9 @@ their appropriate form prior to the actual execution of Task code.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>env</code></td>
+            <td>
+                <code>env</code>
+            </td>
             <td>
                   <code><span title="typing.Dict">Dict</span>[str, str]</code>
             </td>
@@ -5459,7 +5502,9 @@ overwrite them (except PATH, see below).</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>update_path</code></td>
+            <td>
+                <code>update_path</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -5649,6 +5694,11 @@ environment that is passed to the Task subprocess.</p>
             </tr>
       </tbody>
     </table>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>lute/execution/executor.py</code></summary>
@@ -6327,7 +6377,9 @@ which can be directly written to an HTML file.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>plots</code></td>
+            <td>
+                <code>plots</code>
+            </td>
             <td>
                   <code>ElogSummaryPlots</code>
             </td>
@@ -6463,7 +6515,9 @@ which can be directly written to an HTML file.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>summary</code></td>
+            <td>
+                <code>summary</code>
+            </td>
             <td>
                   <code><span title="typing.Any">Any</span></code>
             </td>
@@ -6624,7 +6678,9 @@ individually.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>params</code></td>
+            <td>
+                <code>params</code>
+            </td>
             <td>
                   <code><span title="typing.Dict">Dict</span>[str, str]</code>
             </td>
@@ -7077,6 +7133,11 @@ of ranks is determined from the cores dedicated to Task execution.</p>
       </tbody>
     </table>
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>lute/execution/executor.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1004</span>
@@ -7209,7 +7270,9 @@ of ranks is determined from the cores dedicated to Task execution.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>executable_path</code></td>
+            <td>
+                <code>executable_path</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -7223,7 +7286,9 @@ of ranks is determined from the cores dedicated to Task execution.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>params</code></td>
+            <td>
+                <code>params</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -7384,7 +7449,7 @@ of ranks is determined from the cores dedicated to Task execution.</p>
     <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.525ec568.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.83f73b43.min.js"></script>
       
     
   </body>

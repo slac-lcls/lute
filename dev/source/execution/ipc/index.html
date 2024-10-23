@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
     
     
       
@@ -26,7 +26,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.8c3ca2c6.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.0253249f.min.css">
       
       
 
@@ -2274,6 +2274,11 @@ zmq. Supports both TCP and Unix sockets.</p>
 
 
 
+
+
+
+
+
   <div class="doc doc-children">
 
 
@@ -2297,6 +2302,11 @@ zmq. Supports both TCP and Unix sockets.</p>
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
               Bases: <code><span title="abc.ABC">ABC</span></code></p>
+
+
+
+
+
 
 
               <details class="quote">
@@ -2476,7 +2486,9 @@ will depend on the specific Communicator sub-class.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>party</code></td>
+            <td>
+                <code>party</code>
+            </td>
             <td>
                   <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="#execution.ipc.Party">Party</a></code>
             </td>
@@ -2491,7 +2503,9 @@ managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>use_pickle</code></td>
+            <td>
+                <code>use_pickle</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -2710,6 +2724,11 @@ sending it.</p>
 depending on which side of the communicator you are on. This enum is used
 by the communicator to determine which interface to use.</p>
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>lute/execution/ipc.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">84</span>
@@ -2830,6 +2849,11 @@ by the communicator to determine which interface to use.</p>
 <p>The implementation of this communicator has reading and writing ocurring
 on stderr and stdout. In general the <code>Task</code> will be writing while the
 <code>Executor</code> will be reading. <code>stderr</code> is used for sending signals.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>lute/execution/ipc.py</code></summary>
@@ -3223,7 +3247,9 @@ If pickle is not used</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>party</code></td>
+            <td>
+                <code>party</code>
+            </td>
             <td>
                   <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="#execution.ipc.Party">Party</a></code>
             </td>
@@ -3238,7 +3264,9 @@ managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>use_pickle</code></td>
+            <td>
+                <code>use_pickle</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -3333,7 +3361,9 @@ first in the stream.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>maybe_mixed</code></td>
+            <td>
+                <code>maybe_mixed</code>
+            </td>
             <td>
                   <code>bytes</code>
             </td>
@@ -3531,7 +3561,9 @@ Otherwise, None.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>proc</code></td>
+            <td>
+                <code>proc</code>
+            </td>
             <td>
                   <code><span title="subprocess.Popen">Popen</span></code>
             </td>
@@ -3697,7 +3729,9 @@ Otherwise, None.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>msg</code></td>
+            <td>
+                <code>msg</code>
+            </td>
             <td>
                   <code><span title="execution.ipc.Message">Message</span></code>
             </td>
@@ -3864,6 +3898,11 @@ defined manually if launching the Task process separately. The Task will use
 the local socket <code>&lt;LUTE_SOCKET&gt;.task{##}</code>. Multiple local sockets may be
 created. Currently, it is assumed that the user is identical on both the Task
 machine and Executor machine.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>lute/execution/ipc.py</code></summary>
@@ -5251,7 +5290,9 @@ through the socket.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>party</code></td>
+            <td>
+                <code>party</code>
+            </td>
             <td>
                   <code><a class="autorefs autorefs-internal" title="execution.ipc.Party" href="#execution.ipc.Party">Party</a></code>
             </td>
@@ -5266,7 +5307,9 @@ managing IPC for. I.e., is this the "Task" or "Executor" side.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>use_pickle</code></td>
+            <td>
+                <code>use_pickle</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -5937,7 +5980,9 @@ object instead of returning one.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>data_socket</code></td>
+            <td>
+                <code>data_socket</code>
+            </td>
             <td>
                   <code><span title="zmq.socket.Socket">Socket</span></code>
             </td>
@@ -6197,7 +6242,9 @@ object instead of returning one.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>data_socket</code></td>
+            <td>
+                <code>data_socket</code>
+            </td>
             <td>
                   <code><span title="socket.socket">socket</span></code>
             </td>
@@ -6599,7 +6646,9 @@ message with the next call to this method.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>data</code></td>
+            <td>
+                <code>data</code>
+            </td>
             <td>
                   <code>bytes</code>
             </td>
@@ -6945,7 +6994,9 @@ available.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>proc</code></td>
+            <td>
+                <code>proc</code>
+            </td>
             <td>
                   <code><span title="subprocess.Popen">Popen</span></code>
             </td>
@@ -7060,7 +7111,9 @@ a connection over Unix socket.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>msg</code></td>
+            <td>
+                <code>msg</code>
+            </td>
             <td>
                   <code><span title="execution.ipc.Message">Message</span></code>
             </td>
@@ -7172,7 +7225,7 @@ a connection over Unix socket.</p>
     <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.525ec568.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.83f73b43.min.js"></script>
       
     
   </body>
