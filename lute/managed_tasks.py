@@ -58,6 +58,11 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
 
+# Geometry
+##########
+AgBhGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizeAgBhGeometryExhaustive")
+"""Run an exhaustive grid search for center/distance based on Ag Bh run."""
+
 # SFX
 #####
 CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")

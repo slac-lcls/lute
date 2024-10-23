@@ -47,11 +47,9 @@ import queue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set, List, Literal, Union, Tuple, Type
-
+from typing import Any, Optional, Set, List, Literal, Union, Tuple
 import _io
 from typing_extensions import Self
-
 
 USE_ZMQ: bool = True
 if USE_ZMQ:
