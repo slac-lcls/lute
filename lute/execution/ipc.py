@@ -76,7 +76,7 @@ else:
     warnings.simplefilter("ignore")
     os.environ["PYTHONWARNINGS"] = "ignore"
 
-logger: logging.Logger = logging.Logger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Party(Enum):
