@@ -30,6 +30,7 @@ dag: DAG = DAG(
     start_date=datetime(2024, 9, 3),
     schedule_interval=None,
     description=description,
+    is_paused_upon_creation=False,
 )
 
 smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
