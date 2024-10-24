@@ -1,3 +1,17 @@
+"""Models for optimizing detector geometry using PyFAI and Bayesian optimization.
+
+Classes:
+    - BayesGeomOptParameters(BaseModel): Bayesian optimization hyperparameters.
+    - OptimizePyFAIGeometryParameters(TaskParameters):
+        Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
+"""
+
+__all__ = [
+    "BayesGeomOptParameters",
+    "OptimizePyFAIGeometryParameters",
+]
+__author__ = "Louis Conreux"
+
 import os
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional, Union, Tuple
