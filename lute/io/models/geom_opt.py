@@ -7,7 +7,6 @@ Classes:
 """
 
 __all__ = [
-    "BayesGeomOptParameters",
     "OptimizePyFAIGeometryParameters",
 ]
 __author__ = "Louis Conreux"
