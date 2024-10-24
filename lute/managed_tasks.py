@@ -58,9 +58,6 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
 
-PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
-"""Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
-
 # SFX
 #####
 CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
@@ -129,3 +126,8 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
+
+# PyFAI
+#######
+PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
+"""Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
