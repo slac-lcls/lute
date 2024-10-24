@@ -6,9 +6,7 @@ Classes:
         Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 """
 
-__all__ = [
-    "OptimizePyFAIGeometryParameters",
-]
+__all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
 import os
