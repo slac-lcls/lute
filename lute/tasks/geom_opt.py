@@ -198,17 +198,6 @@ class OptimizePyFAIGeom(Task):
                 Imin = Imin * self.photon_energy
             self.Imin = Imin
 
-        def distribute_scan(self, scan):
-            """
-            Distribute the scan across all ranks.
-            
-            Parameters
-            ----------
-            scan : list of distances
-                parameter dist for initial estimates
-            """
-            return scan[self.rank]
-
         @ignore_warnings(category=ConvergenceWarning)
         def bayes_opt_center(self, powder_img, dist, bounds, res, n_samples=50, num_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
             """
@@ -243,11 +232,15 @@ class OptimizePyFAIGeom(Task):
                 np.random.seed(seed)
 
             self.values['dist'] = dist
+
+            if res is None:
+                res = self.detector.pixel_size
+
             inputs = {}
             norm_inputs = {}
             for p in self.order:
                 if p in self.space:
-                    inputs[p] = np.arange(bounds[p][0], bounds[p][1]+bounds[p][2], bounds[p][2])
+                    inputs[p] = np.arange(bounds[p][0], bounds[p][1]+res, res)
                     norm_inputs[p] = inputs[p]
                 else:
                     inputs[p] = np.array([self.values[p]])
@@ -378,9 +371,9 @@ class OptimizePyFAIGeom(Task):
 
             powder = np.load(powder)
 
-            self.make_calibrant()
+            self.build_calibrant()
 
-            self.minimal_intensity(Imin)
+            self.min_intensity(Imin)
 
             if self.rank == 0:
                 distances = np.linspace(bounds['dist'][0], bounds['dist'][1], self.size)
@@ -390,7 +383,7 @@ class OptimizePyFAIGeom(Task):
             dist = self.comm.scatter(distances, root=0)
             print(f"Rank {self.rank} is working on distance {dist}")
 
-            results = self.bayes_opt_center(powder, dist, bounds, n_samples, num_iterations, af, hyperparam, prior, seed)
+            results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, num_iterations, af, hyperparam, prior, seed)
             self.comm.Barrier()
 
             self.scan = {}
