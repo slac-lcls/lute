@@ -165,7 +165,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     def validate_powder(cls, powder: str, values: Dict[str, Any]) -> str:
         if powder == "":
             powder: str = read_latest_db_entry(
-                f"{values["lute_config"].work_dir}/powder", "ComputePowder", "out_file"
+                f"{values['lute_config'].work_dir}/powder", "ComputePowder", "out_file"
             )
         return powder
     
