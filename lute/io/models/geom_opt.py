@@ -134,7 +134,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     )
 
     bo_params: BayesGeomOptParameters = Field(
-        BayesGeomOptParameters(),
+        None,
         description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
     )
 
