@@ -162,10 +162,10 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         return in_file
 
     @validator("powder", always=True)
-    def validate_powder(cls, powder: str, work_dir: str) -> str:
+    def validate_powder(cls, powder: str, values: Dict[str, Any]) -> str:
         if powder == "":
             powder: str = read_latest_db_entry(
-                f"{work_dir}/powder", "ComputePowder", "out_file"
+                f"{values["lute_config"].work_dir}/powder", "ComputePowder", "out_file"
             )
         return powder
     
