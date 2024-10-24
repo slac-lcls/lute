@@ -86,8 +86,8 @@ def import_task(task_name: str) -> Type[Task]:
 
         return TestMultiNodeCommunication
     
-    if task_name == "OptimizePyFAIGeom":
-        from .geom_opt import OptimizePyFAIGeom
+    if task_name == "OptimizePyFAIGeometry":
+        from .geom_opt import OptimizePyFAIGeometry
 
-        return OptimizePyFAIGeom
+        return OptimizePyFAIGeometry
     raise TaskNotFoundError

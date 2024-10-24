@@ -9,7 +9,57 @@ from ..db import read_latest_db_entry
 
 from PSCalib.CalibFileFinder import CalibFileFinder
 
-class OptimizePyFAIGeomParameters(TaskParameters):
+class BayesGeomOptParameters(BaseModel):
+    """Bayesian optimization hyperparameters."""
+
+    bounds: Dict[str, Tuple[float, float]] = Field(
+        {
+            "dist": (0.0, 0.0),
+            "poni1": (0.0, 0.0),
+            "poni2": (0.0, 0.0),
+        },
+        description="Bounds defining the parameter search space for the Bayesian optimization.",
+    )
+
+    res: float = Field(
+        None,
+        description="Resolution of the grid used to discretize the parameter search space.",
+    )
+
+    n_samples: Optional[int] = Field(
+        50,
+        description="Number of random starts to initialize the Bayesian optimization.",
+    )
+
+    n_iterations: Optional[int] = Field(
+        50,
+        description="Number of iterations to run the Bayesian optimization.",
+    )
+
+    prior: Optional[bool] = Field(
+        True,
+        description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",
+    )
+
+    af: Optional[str] = Field(
+        "ucb",
+        description="Acquisition function to be used by the Bayesian optimization.",
+    )
+
+    hyperparams : Optional[Dict[str, float]] = Field(
+        {
+            "beta": 1.96,
+            "epsilon": 0.01,
+        },
+        description="Hyperparameters for the acquisition function.",
+    )
+
+    seed : Optional[int] = Field(
+        None,
+        description="Seed for the random number generator for potential reproducibility.",
+    )
+
+class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
     
     The Bayesian Optimization has default hyperparameters that can be overriden by the user.
@@ -69,55 +119,10 @@ class OptimizePyFAIGeomParameters(TaskParameters):
         is_result=True,
     )
 
-    class BayesGeomOptParameters(BaseModel):
-        """Bayesian optimization hyperparameters."""
-
-        bounds: Dict[str, Tuple[float, float]] = Field(
-            {
-                "dist": (0.0, 0.0),
-                "poni1": (0.0, 0.0),
-                "poni2": (0.0, 0.0),
-            },
-            description="Bounds defining the parameter search space for the Bayesian optimization.",
-        )
-
-        res: float = Field(
-            None,
-            description="Resolution of the grid used to discretize the parameter search space.",
-        )
-
-        n_samples: Optional[int] = Field(
-            50,
-            description="Number of random starts to initialize the Bayesian optimization.",
-        )
-
-        n_iterations: Optional[int] = Field(
-            50,
-            description="Number of iterations to run the Bayesian optimization.",
-        )
-
-        prior: Optional[bool] = Field(
-            True,
-            description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",
-        )
-
-        af: Optional[str] = Field(
-            "ucb",
-            description="Acquisition function to be used by the Bayesian optimization.",
-        )
-
-        hyperparam : Optional[Dict[str, float]] = Field(
-            {
-                "beta": 1.96,
-                "epsilon": 0.01,
-            },
-            description="Hyperparameters for the acquisition function.",
-        )
-
-        seed : Optional[int] = Field(
-            None,
-            description="Seed for the random number generator for potential reproducibility.",
-        )
+    bo_params: BayesGeomOptParameters = Field(
+        BayesGeomOptParameters(),
+        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
+    )
 
     @validator("exp", always=True)
     def validate_exp(cls, exp: str, values: Dict[str, Any]) -> str:
