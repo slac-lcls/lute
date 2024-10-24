@@ -429,7 +429,7 @@ class BayesGeomOpt:
         bo_history : dict
             Dictionary containing the history of optimization
         detector : PyFAI(Detector)
-            PyFAI detector object
+            Corrected PyFAI detector object
         params : list
             List of parameters for the best fit
         plot : str
@@ -519,8 +519,8 @@ class OptimizePyFAIGeometry(Task):
         """
         Update the geometry and write a new .geom file and .data file
         """
-        PyFAIToCrystFEL(detector=optimizer.detector, params=optimizer.params, psana_file=self._task_parameters.in_file, out_file=self._task_parameters.out_file.replace("0-end.data", f"r{optimizer.run:04}.geom"))
-        CrystFELToPsana(in_file=self._task_parameters.out_file.replace("0-end.data", f"r{optimizer.run:04}.geom"), det_type=optimizer.det_type, out_file=self._task_parameters.out_file)
-        psana_to_pyfai = PsanaToPyFAI(in_file=self.in_file.replace("0-end.data", f"{optimizer.run}-end.data"), det_type=optimizer.det_type)
+        PyFAIToCrystFEL(detector=optimizer.detector, params=optimizer.params, psana_file=self._task_parameters.in_file, out_file=self._task_parameters.in_file.replace("0-end.data", f"r{optimizer.run:04}.geom"))
+        CrystFELToPsana(in_file=self._task_parameters.in_file.replace("0-end.data", f"r{optimizer.run:04}.geom"), det_type=optimizer.det_type, out_file=self._task_parameters.out_file)
+        psana_to_pyfai = PsanaToPyFAI(in_file=self._task_parameters.out_file, det_type=self._task_parameters.det_type)
         detector = psana_to_pyfai.detector
         return detector

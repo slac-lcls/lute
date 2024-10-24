@@ -149,11 +149,10 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         return work_dir
     
     @validator("in_file", always=True)
-    def validate_in_file(cls, in_file: str) -> str:
+    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
-            exp = cls.exp
-            run = cls.run
-            det_type = cls.det_type
+            exp = values["exp"]
+            run = values["run"]
             cdir = f'/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib'
             src = 'MfxEndstation.0:Epix10ka2M.0'
             type = 'geometry'
@@ -164,13 +163,16 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     @validator("powder", always=True)
     def validate_powder(cls, powder: str, values: Dict[str, Any]) -> str:
         if powder == "":
+            work_dir = values["work_dir"]
             powder: str = read_latest_db_entry(
-                f"{values['lute_config'].work_dir}/powder", "ComputePowder", "out_file"
+                f"{work_dir}/powder", "ComputePowder", "out_file"
             )
         return powder
     
     @validator("out_file", always=True)
-    def validate_out_file(cls, out_file: str, run: Union[str, int], in_file: str) -> str:
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
+            in_file = values["in_file"]
+            run = values["run"]
             out_file: str = in_file.replace("0-end.data", f"{run}-end.data")
         return out_file
