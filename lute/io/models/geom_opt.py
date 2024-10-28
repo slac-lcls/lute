@@ -1,7 +1,6 @@
 """Models for optimizing detector geometry using PyFAI and Bayesian optimization.
 
 Classes:
-    - BayesGeomOptParameters(BaseModel): Bayesian optimization hyperparameters.
     - OptimizePyFAIGeometryParameters(TaskParameters):
         Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 """
