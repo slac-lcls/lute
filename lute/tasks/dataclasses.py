@@ -65,7 +65,7 @@ class TaskResult:
 
         task_status (TaskStatus): Status of associated task.
 
-        summary (str): Short message/summary associated with the result.
+        summary (Any): Short (usually text message) summary associated with the result.
 
         payload (Any): Actual result. May be data in any format.
 
@@ -78,7 +78,7 @@ class TaskResult:
 
     task_name: str
     task_status: TaskStatus
-    summary: str
+    summary: Any
     payload: Any
     impl_schemas: Optional[str] = None
 

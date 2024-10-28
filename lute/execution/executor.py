@@ -29,7 +29,7 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Tuple
+from typing import Dict, Callable, List, Optional, Any, Tuple, Literal, Union
 from typing_extensions import Self, TypedDict
 from abc import ABC, abstractmethod
 import warnings
@@ -137,11 +137,13 @@ class BaseExecutor(ABC):
 
         def task_result(
             self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> bool: ...
+        ) -> bool:
+            return False
 
         def task_log(
             self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> bool: ...
+        ) -> bool:
+            return False
 
     def __init__(
         self,
@@ -189,7 +191,7 @@ class BaseExecutor(ABC):
         self,
         tasklet: Callable,
         args: List[Any],
-        when: str = "after",
+        when: Union[Literal["before"], Literal["after"]] = "after",
         set_result: bool = False,
         set_summary: bool = False,
     ) -> None:
@@ -264,10 +266,14 @@ class BaseExecutor(ABC):
             new_args.append(new_arg)
         return new_args
 
-    def _run_tasklets(self, *, when: str) -> None:
+    def _run_tasklets(
+        self, *, when: Union[Literal["before"], Literal["after"]]
+    ) -> None:
         """Run all tasklets of the specified kind."""
         if when not in self._tasklets.keys():
             logger.error(f"Ignore request to run tasklets of unknown kind: {when}")
+            return
+        if self._tasklets[when] is None:
             return
         for tasklet_spec in self._tasklets[when]:
             tasklet: Callable[[Any], Any]
@@ -285,13 +291,14 @@ class BaseExecutor(ABC):
                 output = None
             # We set result payloads or summaries now, but the processing is done
             # by process_results method called sometime after the last tasklet
+            tmp: Any
             if set_result and output is not None:
                 if isinstance(self._analysis_desc.task_result.payload, list):
                     # We have multiple payloads to process, append to list
                     self._analysis_desc.task_result.payload.append(output)
                 elif self._analysis_desc.task_result.payload != "":
                     # We have one payload already, convert to list and append
-                    tmp: Any = self._analysis_desc.task_result.payload
+                    tmp = self._analysis_desc.task_result.payload
                     self._analysis_desc.task_result.payload = []
                     self._analysis_desc.task_result.payload.append(tmp)
                     self._analysis_desc.task_result.payload.append(output)
@@ -304,7 +311,7 @@ class BaseExecutor(ABC):
                     self._analysis_desc.task_result.summary.append(output)
                 elif self._analysis_desc.task_result.summary != "":
                     # We have one summary already, convert to list and append
-                    tmp: Any = self._analysis_desc.task_result.summary
+                    tmp = self._analysis_desc.task_result.summary
                     self._analysis_desc.task_result.summary = []
                     self._analysis_desc.task_result.summary.append(tmp)
                     self._analysis_desc.task_result.summary.append(output)
@@ -315,7 +322,7 @@ class BaseExecutor(ABC):
     def add_hook(
         self,
         event: str,
-        hook: Callable[[Self, Message, Optional[subprocess.Popen]], None],
+        hook: Callable[[Self, Message, Optional[subprocess.Popen]], Optional[bool]],
     ) -> None:
         """Add a new hook.
 
@@ -457,8 +464,10 @@ class BaseExecutor(ABC):
             stderr=subprocess.PIPE,
             env=self._analysis_desc.task_env,
         )
-        os.set_blocking(proc.stdout.fileno(), False)
-        os.set_blocking(proc.stderr.fileno(), False)
+        if proc.stdout is not None:
+            os.set_blocking(proc.stdout.fileno(), False)
+        if proc.stderr is not None:
+            os.set_blocking(proc.stderr.fileno(), False)
         return proc
 
     @abstractmethod
@@ -526,12 +535,16 @@ class BaseExecutor(ABC):
             self._task_loop(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
-        os.set_blocking(proc.stdout.fileno(), True)
-        os.set_blocking(proc.stderr.fileno(), True)
+        if proc.stdout is not None:
+            os.set_blocking(proc.stdout.fileno(), True)
+        if proc.stderr is not None:
+            os.set_blocking(proc.stderr.fileno(), True)
 
         self._finalize_task(proc)
-        proc.stdout.close()
-        proc.stderr.close()
+        if proc.stdout is not None:
+            proc.stdout.close()
+        if proc.stderr is not None:
+            proc.stderr.close()
         proc.wait()
         if ret := proc.returncode:
             logger.warning(f"Task failed with return code: {ret}")
@@ -695,8 +708,9 @@ class BaseExecutor(ABC):
                     break  # We should only have 1 result-like parameter!
 
         # If we get this far and haven't changed the payload we should complain
+        task_name: str
         if self._analysis_desc.task_result.payload == "":
-            task_name: str = self._analysis_desc.task_result.task_name
+            task_name = self._analysis_desc.task_result.task_name
             logger.debug(
                 (
                     f"{task_name} specified result be set from {task_name}Parameters,"
@@ -711,7 +725,7 @@ class BaseExecutor(ABC):
         self._analysis_desc.task_result.impl_schemas = impl_schemas
         # If we set_result but didn't get schema information we should complain
         if self._analysis_desc.task_result.impl_schemas is None:
-            task_name: str = self._analysis_desc.task_result.task_name
+            task_name = self._analysis_desc.task_result.task_name
             logger.debug(
                 (
                     f"{task_name} specified result be set from {task_name}Parameters,"
@@ -780,7 +794,10 @@ class Executor(BaseExecutor):
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
-        def task_started(self: Executor, msg: Message, proc: subprocess.Popen) -> None:
+        def task_started(
+            self: Executor, msg: Message, proc: Optional[subprocess.Popen]
+        ) -> None:
+            assert proc is not None
             if isinstance(msg.contents, TaskParameters):
                 self._analysis_desc.task_parameters = msg.contents
                 # Run "before" tasklets
@@ -892,9 +909,9 @@ class Executor(BaseExecutor):
             while True:
                 msg: Message = communicator.read(proc)
                 if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                    hook: Callable[[Executor, Message], None] = getattr(
-                        self.Hooks, msg.signal.lower()
-                    )
+                    hook: Callable[
+                        [Executor, Message, Optional[subprocess.Popen]], None
+                    ] = getattr(self.Hooks, msg.signal.lower())
                     should_continue = hook(self, msg, proc)
                     if should_continue:
                         continue
@@ -968,7 +985,7 @@ class Executor(BaseExecutor):
         """
         if self._analysis_desc.task_parameters is None:
             logger.error("Please run Task before using this method!")
-            return
+            return None
         # ElogSummaryPlots has figures and a display name
         # display name also serves as a path.
         expmt: str = self._analysis_desc.task_parameters.lute_config.experiment

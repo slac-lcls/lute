@@ -10,10 +10,10 @@ __author__ = "Valerio Mariani"
 
 import shutil
 from pathlib import Path
-from typing import BinaryIO, List
+from typing import BinaryIO, List, cast
 
 from lute.execution.ipc import Message
-from lute.io.models.base import TaskParameters
+from lute.io.models.sfx_index import ConcatenateStreamFilesParameters
 from lute.tasks.task import Task
 
 
@@ -22,11 +22,13 @@ class ConcatenateStreamFiles(Task):
     Task that merges stream files located within a directory tree.
     """
 
-    def __init__(self, *, params: TaskParameters) -> None:
+    def __init__(self, *, params: ConcatenateStreamFilesParameters) -> None:
         super().__init__(params=params)
 
     def _run(self) -> None:
-
+        self._task_parameters = cast(
+            ConcatenateStreamFilesParameters, self._task_parameters
+        )
         stream_file_path: Path = Path(self._task_parameters.in_file)
         stream_file_list: List[Path] = list(
             stream_file_path.rglob(f"*{self._task_parameters.tag}*.stream")

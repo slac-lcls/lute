@@ -53,7 +53,7 @@ from requests.auth import HTTPBasicAuth
 import mimetypes
 import os
 import logging
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union, Tuple, Mapping
 from io import BufferedReader
 
 from lute.io.exceptions import ElogFileFormatError
@@ -363,7 +363,7 @@ def _get_current_run_status(update_url: str) -> Dict[str, Union[str, int, float]
 
 
 def post_elog_run_status(
-    data: Dict[str, Union[str, int, float]], update_url: Optional[str] = None
+    data: Mapping[str, Union[str, int, float]], update_url: Optional[str] = None
 ) -> None:
     """Post a summary to the status/report section of a specific run.
 

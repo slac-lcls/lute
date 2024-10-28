@@ -507,9 +507,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
     )
-    xas_detname: Optional[str] = Field(
-        None, description="Name of the detector with absorption data."
-    )
+    xas_detname: str = Field(description="Name of the detector with absorption data.")
     xss_detname: Optional[str] = Field(
         None,
         description="Name of the detector with scattering data, for normalization.",
@@ -529,7 +527,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
         None, description="Name of the PV for the setpoint of the CCM."
     )
     thresholds: Thresholds = Field(Thresholds())
-    element: Optional[bool] = Field(
+    element: Optional[str] = Field(
         None,
         description="Element under investigation. Currently unused. For future EXAFS.",
     )
@@ -556,9 +554,7 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
     )
-    xes_detname: Optional[str] = Field(
-        None, description="Name of the detector with absorption data."
-    )
+    xes_detname: str = Field(description="Name of the detector with absorption data.")
     xss_detname: Optional[str] = Field(
         None,
         description="Name of the detector with scattering data, for normalization.",
