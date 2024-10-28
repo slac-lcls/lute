@@ -8,7 +8,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import sqlite3
 import logging
-from typing import List, Dict, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -225,7 +225,7 @@ def _add_task_entry(
     with con:
         # ins_str: str = "".join(f':"{x}", ' for x in entry.keys())[:-2]
         logger.debug(f"_add_task_entry: {keys}\n\t\t{values}")
-        res = con.execute(
+        _ = con.execute(
             f"INSERT INTO {task_name} ({','.join(keys)}) VALUES ({placeholder_str})",
             values,
         )

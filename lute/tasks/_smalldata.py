@@ -24,11 +24,9 @@ from mpi4py import MPI
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
-from lute.execution.ipc import Message
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
-from lute.tasks.task import *
-from lute.tasks.dataclasses import ElogSummaryPlots
+from lute.tasks.task import Task
 from lute.tasks.math import gaussian, sigma_to_fwhm
 
 
@@ -122,7 +120,7 @@ class AnalyzeSmallData(Task):
             self._xray_intensity = self._smd_h5[self._task_parameters.ipm_var][
                 self._start_idx : self._stop_idx
             ]
-        except KeyError as e:
+        except KeyError:
             logger.error("ipm data not found! Check config!")
         self._integrated_intensity = np.nansum(self._az_int, axis=(1, 2))
         self._setup_std_filters()
@@ -134,7 +132,7 @@ class AnalyzeSmallData(Task):
                     self._start_idx : self._stop_idx
                 ]
                 self._scan_var_name = scan_var
-            except KeyError as e:
+            except KeyError:
                 logger.error(f"Scan variable {scan_var} not found!")
         elif isinstance(self._task_parameters.scan_var, list):
             for scan_var in self._task_parameters.scan_var:
@@ -144,7 +142,7 @@ class AnalyzeSmallData(Task):
                     ]
                     self._scan_var_name = scan_var
                     break
-                except KeyError as e:
+                except KeyError:
                     logger.debug(f"Scan variable {scan_var} not found!")
                     continue
         if not hasattr(self, "_scan_values"):
@@ -156,7 +154,7 @@ class AnalyzeSmallData(Task):
                 ]
                 self._scan_var_name = "lxt_fast"
                 logger.debug("Using scan variable lxt_fast")
-            except KeyError as e:
+            except KeyError:
                 logger.debug("Scan variable lxt_fast not found!")
                 self._scan_values = np.linspace(
                     self._start_idx, self._stop_idx, self._num_events
@@ -332,7 +330,7 @@ class AnalyzeSmallData(Task):
         for data_filter in filters:
             try:
                 total_filter &= self._filter_dict[data_filter]
-            except KeyError as e:
+            except KeyError:
                 logger.debug(
                     f"Unrecognized filter requested: {data_filter}. "
                     "Ignoring and continuing processing."
@@ -384,7 +382,7 @@ class AnalyzeSmallData(Task):
         try:
             peak_indices: np.ndarray = res[0]
             peak_heights: np.ndarray = res[1]["peak_heights"]
-        except KeyError as e:
+        except KeyError:
             logger.debug("No peaks found")
             return np.argmax(corrected_profile)
 
@@ -529,7 +527,6 @@ class AnalyzeSmallData(Task):
         """
         from scipy.signal import fftconvolve
 
-        results: List[Tuple] = []
         max_pt: int = self._find_solvent_argmax(laser_on)
         raw_curve: np.ndarray = np.nan_to_num(diff[max_pt + 10])
         npts: int = len(raw_curve)
@@ -1146,7 +1143,7 @@ class AnalyzeSmallData(Task):
             hv.opts.Contours(cmap="fire", colorbar=True, tools=["hover"], width=325)
         ).opts(shared_axes=False)
         grid[:2, :2] = contours
-        xdim: hv.core.dimension.Dimension = hv.Dimension(("Q", f"Q"))
+        xdim: hv.core.dimension.Dimension = hv.Dimension(("Q", "Q"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(("dS", "dS"))
         diff_curves: hv.Overlay
         diff_curves = hv.Curve((q_vals, diff[:, 0]))

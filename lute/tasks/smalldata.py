@@ -17,18 +17,11 @@ Classes:
 __all__ = ["AnalyzeSmallDataXSS", "AnalyzeSmallDataXAS", "AnalyzeSmallDataXES"]
 __author__ = "Gabriel Dorlhiac"
 
-import sys
-import logging
-from typing import List, Optional, Dict, Tuple, Union
+from typing import List, Optional
 
-import h5py
-import holoviews as hv
 import numpy as np
 import panel as pn
-import matplotlib.pyplot as plt
 from mpi4py import MPI
-from scipy.signal import find_peaks
-from scipy.optimize import curve_fit
 
 from lute.io.models.base import TaskParameters
 from lute.tasks.dataclasses import ElogSummaryPlots

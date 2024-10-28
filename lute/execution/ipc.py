@@ -48,7 +48,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Set, List, Literal, Union, Tuple
-import _io
 from typing_extensions import Self
 
 USE_ZMQ: bool = True
@@ -205,14 +204,14 @@ class PipeCommunicator(Communicator):
             if self._use_pickle:
                 try:
                     contents = pickle.loads(raw_contents)
-                except (pickle.UnpicklingError, ValueError, EOFError) as err:
+                except (pickle.UnpicklingError, ValueError, EOFError):
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
                     self._use_pickle = False
                     contents = self._safe_unpickle_decode(raw_contents)
             else:
                 try:
                     contents = raw_contents.decode()
-                except UnicodeDecodeError as err:
+                except UnicodeDecodeError:
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
                     self._use_pickle = True
                     contents = self._safe_unpickle_decode(raw_contents)
@@ -278,7 +277,7 @@ class PipeCommunicator(Communicator):
                     logger.debug(
                         f"PipeCommunicator has truncated message. Unable to retrieve {missing_bytes} bytes."
                     )
-        except (pickle.UnpicklingError, ValueError, EOFError) as err:
+        except (pickle.UnpicklingError, ValueError, EOFError):
             # Pickle may also throw a ValueError, e.g. this bytes: b"Found! \n"
             # Pickle may also throw an EOFError, eg. this bytes: b"F0\n"
             try:
@@ -709,7 +708,7 @@ class SocketCommunicator(Communicator):
                 sock.close()
                 del sock
                 return port
-            except:
+            except Exception:
                 continue
         return None
 
@@ -810,7 +809,7 @@ class SocketCommunicator(Communicator):
         socket_path: str
         try:
             socket_path = os.environ["LUTE_SOCKET"]
-        except KeyError as err:
+        except KeyError:
             import uuid
             import tempfile
 

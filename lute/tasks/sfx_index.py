@@ -9,16 +9,12 @@ __all__ = ["ConcatenateStreamFiles"]
 __author__ = "Valerio Mariani"
 
 import shutil
-import sys
 from pathlib import Path
 from typing import BinaryIO, List
 
-import numpy
-from mpi4py import MPI
-
 from lute.execution.ipc import Message
-from lute.io.models.base import *
-from lute.tasks.task import *
+from lute.io.models.base import TaskParameters
+from lute.tasks.task import Task
 
 
 class ConcatenateStreamFiles(Task):

@@ -26,9 +26,9 @@ from psana import Detector, EventId, MPIDataSource
 from PSCalib import GeometryAccess
 
 from lute.execution.ipc import Message
-from lute.io.models.base import *
-from lute.tasks.task import *
-from lute.tasks.dataclasses import ElogSummaryPlots
+from lute.io.models.base import TaskParameters
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 
 hv.extension("bokeh")
 pn.extension()
@@ -363,7 +363,7 @@ class CxiWriter:
         self._outh5["/entry_1/data_1/data"].resize(
             (num_hits, data_shape[1], data_shape[2])
         )
-        self._outh5[f"/entry_1/result_1/nPeaks"].resize((num_hits,))
+        self._outh5["/entry_1/result_1/nPeaks"].resize((num_hits,))
         key: str
         for key in [
             "peakXPosRaw",
@@ -615,8 +615,6 @@ class FindPeaksPyAlgos(Task):
 
     def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
-        if self._task_parameters.compression is not None:
-            from libpressio import PressioCompressor
 
     def _run(self) -> None:
         ds: Any = MPIDataSource(
@@ -668,7 +666,7 @@ class FindPeaksPyAlgos(Task):
                 )
 
             if self._task_parameters.event_logic:
-                if not self._task_parameters.event_code in event_codes:
+                if self._task_parameters.event_code not in event_codes:
                     continue
 
             img: Any = det.calib(evt)
@@ -758,6 +756,7 @@ class FindPeaksPyAlgos(Task):
             ):
 
                 if self._task_parameters.compression is not None:
+                    from libpressio import PressioCompressor
 
                     libpressio_config_with_peaks = (
                         add_peaks_to_libpressio_configuration(libpressio_config, peaks)
@@ -767,7 +766,7 @@ class FindPeaksPyAlgos(Task):
                     )
                     compressed_img = compressor.encode(img)
                     decompressed_img = numpy.zeros_like(img)
-                    decompressed = compressor.decode(compressed_img, decompressed_img)
+                    _ = compressor.decode(compressed_img, decompressed_img)
                     img = decompressed_img
 
                 photon_energy: float

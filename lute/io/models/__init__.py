@@ -1,5 +1,7 @@
 """Pydantic models for Task parameters and configuration."""
 
+# flake8: noqa: F403
+
 from .base import *
 from .sfx_find_peaks import *
 from .sfx_index import *

@@ -393,7 +393,7 @@ def post_elog_run_status(
         {"key": f"{key}", "value": f"{value}"} for key, value in current_status.items()
     ]
     params: Dict[str, List[Dict[str, str]]] = {"json": post_list}
-    resp: requests.models.Response = requests.post(update_url, **params)
+    _: requests.models.Response = requests.post(update_url, **params)
 
 
 def post_elog_message(

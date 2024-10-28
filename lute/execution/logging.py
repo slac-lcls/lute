@@ -10,7 +10,7 @@ Functions:
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Dict
 
 from lute.execution.ipc import SocketCommunicator, Message
 
@@ -20,7 +20,7 @@ __author__ = "Gabriel Dorlhiac"
 STD_PYTHON_LOG_FORMAT: str = "%(levelname)s:%(name)s:%(message)s"
 """Default Python logging formatter specification."""
 
-LUTE_TASK_LOG_FORMAT: str = f"TASK_LOG -- %(levelname)s:%(name)s: %(message)s"
+LUTE_TASK_LOG_FORMAT: str = "TASK_LOG -- %(levelname)s:%(name)s: %(message)s"
 """Format specification for the formatter used by the standard LUTE logger."""
 
 

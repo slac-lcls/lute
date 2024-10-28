@@ -7,7 +7,7 @@ from typing import Type, Optional, Dict, Any
 
 from lute.tasks.task import Task, ThirdPartyTask
 from lute.execution.ipc import Message
-from lute.io.config import *
+from lute.io.config import parse_config
 from lute.io.models.base import TaskParameters, ThirdPartyParameters
 
 
@@ -65,7 +65,7 @@ else:
 
     try:
         TaskType = import_task(task_name)
-    except TaskNotFoundError as err:
+    except TaskNotFoundError:
         logger.debug(
             (
                 f"Task {task_name} not found! Things to double check:\n"

@@ -67,7 +67,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 is_valid_path = True
 
             return is_valid_path, powder_type
-        except:
+        except Exception:
             ...
 
         try:
@@ -166,7 +166,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 mask = np.load(self._task_parameters.mask)
             elif is_valid and dtype == "smd":
                 h5: h5py.File
-                with h5py.File(powder_path) as h5:
+                with h5py.File(mask_path) as h5:
                     unassembled: np.ndarray[np.float64] = h5[
                         f"UserDataCfg/{self._task_parameters.detname}/mask"
                     ][()]

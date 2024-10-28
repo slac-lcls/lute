@@ -4,8 +4,7 @@ Executor-managed Tasks with specific environment specifications are defined
 here.
 """
 
-from lute.execution.executor import *
-from lute.io.config import *
+from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,

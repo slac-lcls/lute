@@ -15,8 +15,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpi4py import MPI
 
-from lute.tasks.task import *
-from lute.io.models.base import *
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import TaskStatus
+from lute.io.models.base import TaskParameters
 from lute.execution.ipc import Message
 
 

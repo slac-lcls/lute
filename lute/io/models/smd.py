@@ -39,7 +39,6 @@ from pydantic import (
 )
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
-from lute.io.db import read_latest_db_entry
 from lute.io.models.validators import validate_smd_path, template_parameter_validator
 
 

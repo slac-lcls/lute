@@ -24,13 +24,12 @@ __all__ = ["BaseExecutor", "Executor", "MPIExecutor"]
 __author__ = "Gabriel Dorlhiac"
 
 import sys
-import _io
 import logging
 import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Tuple, Union
+from typing import Dict, Callable, List, Optional, Any, Tuple
 from typing_extensions import Self, TypedDict
 from abc import ABC, abstractmethod
 import warnings
@@ -46,7 +45,6 @@ from lute.execution.ipc import (
     LUTE_SIGNALS,
     Communicator,
 )
-from lute.tasks.task import Task
 from lute.tasks.dataclasses import (
     DescribedAnalysis,
     TaskResult,
@@ -56,9 +54,8 @@ from lute.tasks.dataclasses import (
 from lute.io.models.base import (
     TaskParameters,
     TemplateParameters,
-    AnalysisHeader,
-    TemplateConfig,
-    TemplateParameters,
+    AnalysisHeader,  # noqa: F401
+    TemplateConfig,  # noqa: F401
     ThirdPartyParameters,
 )  # NOTE: All imports required for unpickling!
 from lute.io.db import record_analysis_db
@@ -543,7 +540,7 @@ class BaseExecutor(ABC):
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
-            logger.debug(f"Task did not change from RUNNING status. Assume COMPLETED.")
+            logger.debug("Task did not change from RUNNING status. Assume COMPLETED.")
             self.Hooks.task_done(self, msg=Message())
         if self._tasklets["after"] is not None:
             # Tasklets before results processing since they may create result
@@ -851,6 +848,7 @@ class Executor(BaseExecutor):
         ) -> bool:
             if isinstance(msg.contents, TaskResult):
                 self._analysis_desc.task_result = msg.contents
+                # flake8: noqa: E731
                 is_printable_type: Callable[[Any], bool] = lambda x: isinstance(
                     x, dict
                 ) or isinstance(x, str)
@@ -947,8 +945,9 @@ class Executor(BaseExecutor):
             if new_payload != "":
                 self._analysis_desc.task_result.payload = new_payload
         elif isinstance(payload, str):
+            ...
             # May be a path to a file...
-            schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
+            # schemas: Optional[str] = self._analysis_desc.task_result.impl_schemas
             # Should also check `impl_schemas` to determine what to do with path
 
     def _process_elog_plot(self, plots: ElogSummaryPlots) -> Optional[str]:

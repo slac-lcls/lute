@@ -103,7 +103,7 @@ class TestReadOutput(Task):
         super().__init__(params=params)
 
     def _run(self) -> None:
-        array: np.ndarray = np.loadtxt(self._task_parameters.in_file, delimiter=",")
+        _: np.ndarray = np.loadtxt(self._task_parameters.in_file, delimiter=",")
         self._report_to_executor(msg=Message(contents="Successfully loaded data!"))
         for i in range(5):
             time.sleep(1)

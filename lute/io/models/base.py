@@ -39,7 +39,6 @@ from pydantic import (
     PrivateAttr,
 )
 from pydantic.dataclasses import dataclass
-from pydantic.schema import model_schema, default_ref_template
 
 
 class AnalysisHeader(BaseModel):
@@ -289,9 +288,6 @@ class ThirdPartyParameters(TaskParameters):
     @root_validator(pre=False)
     def extra_fields_to_thirdparty(cls, values: Dict[str, Any]):
         cls._unknown_template_params = {}
-        my_schema: Dict[str, Any] = model_schema(
-            cls, by_alias=True, ref_template=default_ref_template
-        )
         param_schema_template: Dict[str, Any] = {
             "title": "",
             "description": "Unknown template parameters.",
