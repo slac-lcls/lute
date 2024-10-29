@@ -513,7 +513,7 @@ class OptimizePyFAIGeometry(Task):
             msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
             self._report_to_executor(msg)
             detector = self.update_geometry(optimizer)
-            plot = f'{self._task_parameters.work_dir}/figs/bayes_opt_geom_r{optimizer.run:04}.png'
+            plot = f'{self._task_parameters.work_dir}/figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
             optimizer.visualize_results(
                 powder=optimizer.powder,
                 bo_history=optimizer.bo_history,
