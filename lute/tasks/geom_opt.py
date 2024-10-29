@@ -137,7 +137,7 @@ class BayesGeomOpt:
         self.Imin = Imin
 
     @ignore_warnings(category=ConvergenceWarning)
-    def bayes_opt_center(self, powder_img, dist, bounds, res, n_samples=50, num_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
+    def bayes_opt_center(self, powder_img, dist, bounds, res, n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
         """
         Perform Bayesian Optimization on PONI center parameters, for a fixed distance
         
@@ -155,7 +155,7 @@ class BayesGeomOpt:
             Dictionary of values for fixed parameters
         n_samples : int
             Number of samples to initialize the GP model
-        num_iterations : int
+        n_iterations : int
             Number of iterations for optimization
         af : str
             Acquisition function to use for optimization
@@ -237,7 +237,7 @@ class BayesGeomOpt:
         elif af == "ci":
             af = self.contextual_improvement
 
-        for i in range(num_iterations):
+        for i in range(n_iterations):
             # 1. Generate the Acquisition Function values using the Gaussian Process Regressor
             af_values = af(X_norm, gp_model, best_score, hyperparam)
             af_values[visited_idx] = -np.inf         
@@ -275,7 +275,7 @@ class BayesGeomOpt:
         result = {'bo_history': bo_history, 'params': params, 'residuals': residuals, 'best_idx': best_idx}
         return result
 
-    def bayes_opt_geom(self, powder, bounds, res, Imin='max', n_samples=50, num_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
+    def bayes_opt_geom(self, powder, bounds, res, Imin='max', n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
         """
         From guessed initial geometry, optimize the geometry using Bayesian Optimization on pyFAI package
 
@@ -293,7 +293,7 @@ class BayesGeomOpt:
             Dictionary of values for fixed parameters
         n_samples : int
             Number of samples to initialize the GP model
-        num_iterations : int
+        n_iterations : int
             Number of iterations for optimization
         af : str
             Acquisition function to use for optimization
@@ -321,7 +321,7 @@ class BayesGeomOpt:
         dist = self.comm.scatter(distances, root=0)
         print(f"Rank {self.rank} is working on distance {dist}")
 
-        results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, num_iterations, af, hyperparam, prior, seed)
+        results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, n_iterations, af, hyperparam, prior, seed)
         self.comm.Barrier()
 
         self.scan = {}
@@ -493,7 +493,7 @@ class OptimizePyFAIGeometry(Task):
             res=self._task_parameters.bo_params.res,
             Imin=self._task_parameters.bo_params.Imin,
             n_samples=self._task_parameters.bo_params.n_samples,
-            num_iterations=self._task_parameters.bo_params.n_iterations,
+            n_iterations=self._task_parameters.bo_params.n_iterations,
             af=self._task_parameters.bo_params.af,
             hyperparam=self._task_parameters.bo_params.hyperparams,
             prior=self._task_parameters.bo_params.prior,

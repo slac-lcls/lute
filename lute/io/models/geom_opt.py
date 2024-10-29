@@ -55,6 +55,11 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Number of iterations to run the Bayesian optimization.",
         )
 
+        Imin: Optional[Union[str, int]] = Field(
+            'max',
+            description="Minimal Intensity for extracting key control points, either based on heuristics on the maximal intensity, or a multiple of the photon energy"
+        )
+
         prior: Optional[bool] = Field(
             True,
             description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",
