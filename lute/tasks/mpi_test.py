@@ -62,8 +62,8 @@ class TestMultiNodeCommunication(Task):
             msg = Message(contents=np.random.rand(arr_size))
             self._report_to_executor(msg)
         elif self._task_parameters.send_obj == "plot":
-            x: npt.NDArray[np.float_] = np.linspace(0, 49, 50)
-            y: npt.NDArray[np.float_] = np.random.rand(50)
+            x: npt.NDArray[np.float64] = np.linspace(0, 49, 50)
+            y: npt.NDArray[np.float64] = np.random.rand(50)
             fig, ax = plt.subplots(1, 1)
             ax.plot(x, y, label="Test")
             ax.set_title("Multi-Node Communication Test")

@@ -300,7 +300,7 @@ class ThirdPartyParameters(TaskParameters):
         new_values: Dict[str, Any] = {}
         for key in values:
             if key not in cls.__fields__:
-                new_values[key] = TemplateParameters(values[key])
+                new_values[key] = TemplateParameters(params=values[key])
                 param_schema: Dict[str, Any] = param_schema_template.copy()
                 param_schema["title"] = key
                 param_schema["properties"]["params"] = values[key]

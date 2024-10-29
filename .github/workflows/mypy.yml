@@ -1,0 +1,18 @@
+name: mypy-check
+on: [push, pull_request]
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - uses: mpi4py/setup-mpi@v1
+      - run: "pip install mypy==1.13"
+      - name: "Install python dependencies"
+        run: "pip install numpy pydantic==1.10 zmq jinja2 panel requests mpi4py"
+      - name: "Run mypy install-types"
+        run: "yes | mypy ./lute --install-types || true"
+      - name: "Run mypy"
+        run: "mypy ./lute"

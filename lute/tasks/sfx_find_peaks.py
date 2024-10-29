@@ -188,7 +188,7 @@ class CxiWriter:
 
     def write_event(
         self,
-        img: NDArray[numpy.float_],
+        img: NDArray[numpy.float64],
         peaks: Any,  # Not typed becomes it comes from psana
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
@@ -201,7 +201,7 @@ class CxiWriter:
 
         Parameters:
 
-            img (NDArray[numpy.float_]): Detector data for the event
+            img (NDArray[numpy.float64]): Detector data for the event
 
             peaks: (Any): Peak information for the event, as recovered from the PyAlgos
                 algorithm
@@ -218,10 +218,10 @@ class CxiWriter:
 
             clen (float): Camera length/detector distance.
         """
-        ch_rows: NDArray[numpy.float_] = (
+        ch_rows: NDArray[numpy.float64] = (
             peaks[:, 0] * self._raw_det_shape[-2] + peaks[:, 1]
         )
-        ch_cols: NDArray[numpy.float_] = peaks[:, 2]
+        ch_cols: NDArray[numpy.float64] = peaks[:, 2]
 
         if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
             self._outh5["entry_1/data_1/data"].resize(self._index + 1, axis=0)
@@ -276,7 +276,7 @@ class CxiWriter:
         ] = peaks[:, 4]
 
         # Calculate and write pixel radius
-        peaks_cenx: NDArray[numpy.float_] = (
+        peaks_cenx: NDArray[numpy.float64] = (
             self._i_x[
                 numpy.array(peaks[:, 0], dtype=numpy.int64),
                 numpy.array(peaks[:, 1], dtype=numpy.int64),
@@ -285,7 +285,7 @@ class CxiWriter:
             + 0.5
             - self._ipx
         )
-        peaks_ceny: NDArray[numpy.float_] = (
+        peaks_ceny: NDArray[numpy.float64] = (
             self._i_y[
                 numpy.array(peaks[:, 0], dtype=numpy.int64),
                 numpy.array(peaks[:, 1], dtype=numpy.int64),
@@ -294,7 +294,7 @@ class CxiWriter:
             + 0.5
             - self._ipy
         )
-        peak_radius: NDArray[numpy.float_] = numpy.sqrt(
+        peak_radius: NDArray[numpy.float64] = numpy.sqrt(
             (peaks_cenx**2) + (peaks_ceny**2)
         )
         self._outh5["/entry_1/result_1/peakRadius"][
@@ -313,8 +313,8 @@ class CxiWriter:
 
     def write_non_event_data(
         self,
-        powder_hits: NDArray[numpy.float_],
-        powder_misses: NDArray[numpy.float_],
+        powder_hits: NDArray[numpy.float64],
+        powder_misses: NDArray[numpy.float64],
         mask: NDArray[numpy.uint16],
     ):
         """
@@ -322,9 +322,9 @@ class CxiWriter:
 
         Parameters:
 
-            powder_hits (NDArray[numpy.float_]): Virtual powder pattern from hits
+            powder_hits (NDArray[numpy.float64]): Virtual powder pattern from hits
 
-            powder_misses (NDArray[numpy.float_]): Virtual powder pattern from hits
+            powder_misses (NDArray[numpy.float64]): Virtual powder pattern from hits
 
             mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 
@@ -741,8 +741,8 @@ class FindPeaksPyAlgos(Task):
                         libpressio_mask=mask,
                     )
 
-                powder_hits: NDArray[numpy.float_] = numpy.zeros(det_shape)
-                powder_misses: NDArray[numpy.float_] = numpy.zeros(det_shape)
+                powder_hits: NDArray[numpy.float64] = numpy.zeros(det_shape)
+                powder_misses: NDArray[numpy.float64] = numpy.zeros(det_shape)
 
             peaks: Any = alg.peak_finder_v3r3(
                 img,

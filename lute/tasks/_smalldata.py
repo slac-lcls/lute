@@ -1703,7 +1703,7 @@ class AnalyzeSmallData(Task):
             ("Energy (Pixel)", "Energy (Pixel)")
         )
 
-        bin_centers: npt.NDArray[np.float_] = (scan_bins[:1] + scan_bins[1:]) / 2
+        bin_centers: npt.NDArray[np.float64] = (scan_bins[:1] + scan_bins[1:]) / 2
         diff_img: hv.Image = hv.Image(
             (
                 bin_centers,
