@@ -10,7 +10,7 @@ Functions:
 """
 
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Literal
 
 from lute.execution.ipc import SocketCommunicator, Message
 
@@ -50,7 +50,7 @@ class ColorFormatter(logging.Formatter):
         self,
         fmt: Optional[str] = None,
         datefmt: Optional[str] = None,
-        style: str = "%",
+        style: Literal["%", "{", "$"] = "%",
         validate: bool = True,
         *,
         is_task: bool = True,
@@ -69,7 +69,7 @@ class ColorFormatter(logging.Formatter):
             logging.CRITICAL: f"{self.CRITICAL_COLOR_FMT}{log_format}{self.RESET_COLOR_FMT}",
         }
 
-    def format(self, record):
+    def format(self, record) -> str:
         log_fmt: str = self.level_formats[record.levelno]
         formatter: logging.Formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
@@ -102,7 +102,7 @@ def get_logger(name: str, is_task: bool = True) -> logging.Logger:
     logger.propagate = False
     handler: logging.Handler
     if is_task:
-        handler: SocketCommunicatorHandler = SocketCommunicatorHandler()
+        handler = SocketCommunicatorHandler()
     else:
         handler = logging.StreamHandler()
     formatter: ColorFormatter = ColorFormatter(is_task=is_task)

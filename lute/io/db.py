@@ -240,6 +240,8 @@ def _dict_to_flatdicts(
         corrected_value: Any = value
         if isinstance(corrected_value, TemplateParameters):
             corrected_value = value.params
+        x: Union[Dict[str, Any], List[Tuple[str, Any]]]
+        y: Union[Dict[str, str], List[Tuple[str, str]]]
         if isinstance(corrected_value, dict):
             x, y = _dict_to_flatdicts(corrected_value, curr_key=flat_key)
             param_list.extend(x.items())
@@ -272,6 +274,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         _add_task_entry,
     )
 
+    assert isinstance(cfg.task_parameters, TaskParameters)
     try:
         work_dir: str = cfg.task_parameters.lute_config.work_dir
     except AttributeError:

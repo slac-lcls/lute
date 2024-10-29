@@ -20,7 +20,7 @@ def get_task() -> Optional[Task]:
     return None
 
 
-def timeout_handler(signum: int, frame: types.FrameType) -> None:
+def timeout_handler(signum: int, frame: Optional[types.FrameType]) -> Any:
     """Log and exit gracefully on Task timeout."""
     task: Optional[Task] = get_task()
     if task:

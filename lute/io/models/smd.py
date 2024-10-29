@@ -164,7 +164,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 )
 
             droplet: DropletParams = Field(
-                DropletParams(), description="Droplet finding parameters."
+                DropletParams(threshold=5, thresholdLow=5, thresADU=60, useRms=True),
+                description="Droplet finding parameters.",
             )
 
             aduspphot: int = Field(162, description="")
@@ -482,7 +483,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds())
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
     # analysis_flags: AnalysisFlags
 
 
@@ -526,7 +527,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     ccm_set: Optional[str] = Field(
         None, description="Name of the PV for the setpoint of the CCM."
     )
-    thresholds: Thresholds = Field(Thresholds())
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
     element: Optional[str] = Field(
         None,
         description="Element under investigation. Currently unused. For future EXAFS.",
@@ -569,7 +570,7 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds())
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
     invert_xes_axes: bool = Field(
         False,
         description=(

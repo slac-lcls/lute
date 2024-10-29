@@ -10,14 +10,16 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 import time
+from typing import cast
 
 import numpy as np
-import matplotlib.pyplot as plt
+import numpy.typing as npt
+import matplotlib.pyplot as plt  # type: ignore
 from mpi4py import MPI
 
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus
-from lute.io.models.base import TaskParameters
+from lute.io.models.mpi_tests import TestMultiNodeCommunicationParameters
 from lute.execution.ipc import Message
 
 
@@ -33,13 +35,18 @@ class TestMultiNodeCommunication(Task):
     nodes.
     """
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: TestMultiNodeCommunicationParameters, use_mpi: bool = True
+    ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
         self._comm: MPI.Intracomm = MPI.COMM_WORLD
         self._rank: int = self._comm.Get_rank()
         self._world_size: int = self._comm.Get_size()
 
     def _run(self) -> None:
+        self._task_parameters = cast(
+            TestMultiNodeCommunicationParameters, self._task_parameters
+        )
         time.sleep(self._rank)
         msg: Message = Message(
             f"Rank {self._rank} of {self._world_size} sending message."
@@ -55,8 +62,8 @@ class TestMultiNodeCommunication(Task):
             msg = Message(contents=np.random.rand(arr_size))
             self._report_to_executor(msg)
         elif self._task_parameters.send_obj == "plot":
-            x: np.ndarray[np.float_] = np.linspace(0, 49, 50)
-            y: np.ndarray[np.float_] = np.random.rand(50)
+            x: npt.NDArray[np.float_] = np.linspace(0, 49, 50)
+            y: npt.NDArray[np.float_] = np.random.rand(50)
             fig, ax = plt.subplots(1, 1)
             ax.plot(x, y, label="Test")
             ax.set_title("Multi-Node Communication Test")

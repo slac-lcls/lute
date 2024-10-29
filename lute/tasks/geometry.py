@@ -14,16 +14,16 @@ import logging
 import itertools
 from typing import List, Optional, Tuple, Union, Any, cast
 
-import h5py
-import holoviews as hv
-import lmfit
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
+import lmfit  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import panel as pn
-import psana
+import psana  # type: ignore
 from mpi4py import MPI
-from scipy import sparse
-from scipy.signal import find_peaks
+from scipy import sparse  # type: ignore
+from scipy.signal import find_peaks  # type: ignore
 from lute.io.models.geometry import OptimizeAgBhGeometryExhaustiveParameters
 from lute.execution.logging import get_logger
 from lute.tasks._geometry import geometry_optimize_residual, deploy_geometry
@@ -149,7 +149,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _extract_mask(
         self, mask_path: Optional[str]
-    ) -> Optional[npt.NDArray[np.float64]]:
+    ) -> Optional[npt.NDArray[np.bool_]]:
         """Extract a mask.
 
         May take a smalldata file or numpy array.
@@ -158,14 +158,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
             mask_path (str): Path to the object containing the mask.
 
         Returns:
-            mask (Optional[npt.NDArray[np.float64]]): The extracted mask.
+            mask (Optional[npt.NDArray[np.bool_]]): The extracted mask.
                 Returns None if no powder could be extracted and no specific error
                 was encountered.
         """
         self._task_parameters = cast(
             OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
         )
-        mask: Optional[npt.NDArray[bool]] = None
+        mask: Optional[npt.NDArray[np.bool_]] = None
         is_valid: bool
         dtype: Optional[str]
         if isinstance(self._task_parameters.mask, str):
@@ -175,7 +175,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             elif is_valid and dtype == "smd":
                 h5: h5py.File
                 with h5py.File(mask_path) as h5:
-                    unassembled: npt.NDArray[np.float64] = h5[
+                    unassembled: npt.NDArray[np.bool_] = h5[
                         f"UserDataCfg/{self._task_parameters.detname}/mask"
                     ][()]
                     if unassembled.shape == 2:
@@ -282,7 +282,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
         )
         if self._task_parameters.center_guess is not None:
-            return self._task_parameters.center_guess
+            return np.array(self._task_parameters.center_guess)
         return np.array(powder.shape) / 2.0
 
     def _center_guesses(
@@ -322,7 +322,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _radial_profile(
         self,
         powder: npt.NDArray[np.float64],
-        mask: Optional[npt.NDArray[np.float64]],
+        mask: Optional[npt.NDArray[np.bool_]],
         center: Tuple[float, float],
         threshold: float = 10.0,
         filter_profile: bool = False,
@@ -366,7 +366,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             radius_map = np.where(mask == 1, radius_map, 0)
 
         radius_map_int: npt.NDArray[np.int64] = radius_map.astype(np.int64)
-        tbin: npt.NDArray[np.float64] = np.bincount(
+        tbin: npt.NDArray[np.int64] = np.bincount(
             radius_map_int.ravel(), powder.ravel()
         )
         nr: npt.NDArray[np.int64] = np.bincount(radius_map_int.ravel())
@@ -527,7 +527,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
     def _opt_geom(
         self,
         powder: npt.NDArray[np.float64],
-        mask: npt.NDArray[np.uint64],
+        mask: Optional[npt.NDArray[np.bool_]],
         params_guess: Tuple[int, Tuple[float, float], float],
         n_iterations: int,
         wavelength: float,
@@ -538,8 +538,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
         Args:
             powder (npt.NDArray[np.float64]): 2-D assembled powder image.
 
-            mask (npt.NDArray[np.float64]): Corresponding binary mask for the
-                powder image.
+            mask (Optional[npt.NDArray[np.float64]]): Corresponding binary mask
+                for the powder image.
 
             params_guess (Tuple[int, Tuple[float, float], float]): Initial guesses.
                 In format: (n_peaks, (center_x, center_y), distance).
@@ -619,11 +619,13 @@ class OptimizeAgBhGeometryExhaustive(Task):
         wavelength_angs: float
         pixel_size_mm, wavelength_angs = self._get_pixel_size_and_wavelength(ds, det)
 
-        powder: npt.NDArray[np.float64] = self._extract_powder(
+        powder: Optional[npt.NDArray[np.float64]] = self._extract_powder(
             self._task_parameters.powder
         )
+        if powder is None:
+            raise RuntimeError("Unable to extract powder. Cannot continue.")
 
-        mask: Optional[npt.NDArray[np.float64]] = self._extract_mask(
+        mask: Optional[npt.NDArray[np.bool_]] = self._extract_mask(
             self._task_parameters.mask
         )
         powder[powder > self._task_parameters.threshold] = 0
@@ -686,14 +688,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
         self._mpi_comm.Barrier()
 
         # Gather all results
-        final_scores: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
-            final_scores_by_rank, root=0
+        final_scores: Optional[Union[List[float], List[List[float]]]] = (
+            self._mpi_comm.gather(final_scores_by_rank, root=0)
         )
-        final_distances: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
-            final_distances_by_rank, root=0
+        final_distances: Optional[Union[List[float], List[List[float]]]] = (
+            self._mpi_comm.gather(final_distances_by_rank, root=0)
         )
-        final_centers: Union[
-            List[Tuple[float, float]], List[List[Tuple[float, float]]]
+        final_centers: Optional[
+            Union[List[Tuple[float, float]], List[List[Tuple[float, float]]]]
         ] = self._mpi_comm.gather(final_centers_by_rank, root=0)
 
         # Flatten nested lists
@@ -760,7 +762,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
         distance: float,
         wavelength: float,
         pixel_size: float,
-        mask: Optional[npt.NDArray[np.float64]] = None,
+        mask: Optional[npt.NDArray[np.bool_]] = None,
     ) -> pn.Tabs:
         radial_profile: npt.NDArray[np.float64] = self._radial_profile(
             powder, mask, center

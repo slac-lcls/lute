@@ -225,7 +225,7 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        class Config(BaseModel.Config):
+        class Config(BaseModel.Config):  # type: ignore
             extra: str = "allow"
 
         # Generic input settings: input_

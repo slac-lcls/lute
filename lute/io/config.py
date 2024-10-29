@@ -21,7 +21,7 @@ import warnings
 from typing import List, Dict, Iterator, Any
 
 import pprint
-import yaml
+import yaml  # type: ignore
 
 from lute.io.models import *
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT

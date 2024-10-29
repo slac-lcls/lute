@@ -18,6 +18,7 @@ import signal
 
 from lute.io.models.base import (
     TaskParameters,
+    ThirdPartyParameters,
     TemplateParameters,
     TemplateConfig,
     AnalysisHeader,
@@ -221,7 +222,7 @@ class Task(ABC):
 class ThirdPartyTask(Task):
     """A `Task` interface to analysis with binary executables."""
 
-    def __init__(self, *, params: TaskParameters) -> None:
+    def __init__(self, *, params: ThirdPartyParameters) -> None:
         """Initialize a Task.
 
         Args:
@@ -246,6 +247,8 @@ class ThirdPartyTask(Task):
                 TaskParameters model definition.
         """
         super().__init__(params=params)
+        if not hasattr(self._task_parameters, "executable"):
+            raise RuntimeError("ThirdPartyTask must have executable defined!")
         self._cmd = self._task_parameters.executable
         self._args_list: List[str] = [self._cmd]
         self._template_context: Dict[str, Any] = {}
@@ -280,6 +283,9 @@ class ThirdPartyTask(Task):
         """
         from jinja2 import Environment, FileSystemLoader, Template
 
+        if not hasattr(self._task_parameters, "lute_template_cfg"):
+            raise RuntimeError("Missing lute_template_cfg! Cannot compile template!")
+
         out_file: str = self._task_parameters.lute_template_cfg.output_path
         template_name: str = self._task_parameters.lute_template_cfg.template_name
 
@@ -290,7 +296,7 @@ class ThirdPartyTask(Task):
                 "LUTE_PATH is None in Task process! Using relative path for templates!",
                 category=UserWarning,
             )
-            template_dir: str = "../../config/templates"
+            template_dir = "../../config/templates"
         else:
             template_dir = f"{lute_path}/config/templates"
         environment: Environment = Environment(loader=FileSystemLoader(template_dir))
@@ -318,16 +324,17 @@ class ThirdPartyTask(Task):
         identified.
         """
         super()._pre_run()
-        full_schema: Dict[str, Union[str, Dict[str, Any]]] = (
-            self._task_parameters.schema()
-        )
+        full_schema: Dict[str, Any] = self._task_parameters.schema()
         short_flags_use_eq: bool
         long_flags_use_eq: bool
         if hasattr(self._task_parameters.Config, "short_flags_use_eq"):
-            short_flags_use_eq: bool = self._task_parameters.Config.short_flags_use_eq
-            long_flags_use_eq: bool = self._task_parameters.Config.long_flags_use_eq
+            short_flags_use_eq = self._task_parameters.Config.short_flags_use_eq
         else:
             short_flags_use_eq = False
+
+        if hasattr(self._task_parameters.Config, "long_flags_use_eq"):
+            long_flags_use_eq = self._task_parameters.Config.long_flags_use_eq
+        else:
             long_flags_use_eq = False
         for param, value in self._task_parameters.dict().items():
             # Clunky test with __dict__[param] because compound model-types are

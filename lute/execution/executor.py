@@ -29,8 +29,8 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Tuple, Literal, Union
-from typing_extensions import Self, TypedDict
+from typing import Dict, Callable, List, Optional, Any, Tuple, Literal, Union, cast
+from typing_extensions import Self, TypedDict, TypeAlias
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -79,6 +79,9 @@ class TaskletDict(TypedDict):
     after: Optional[List[Tuple[Callable[[Any], Any], List[Any], bool, bool]]]
 
 
+Executor_T: TypeAlias = "BaseExecutor"
+
+
 class BaseExecutor(ABC):
     """ABC to manage Task execution and communication with user services.
 
@@ -111,37 +114,61 @@ class BaseExecutor(ABC):
         signal.
         """
 
+        @staticmethod
         def no_pickle_mode(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_started(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_failed(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_stopped(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_done(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_cancelled(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> None: ...
 
+        @staticmethod
         def task_result(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> bool:
             return False
 
+        @staticmethod
         def task_log(
-            self: Self, msg: Message, proc: Optional[subprocess.Popen] = None
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
         ) -> bool:
             return False
 
@@ -230,7 +257,8 @@ class BaseExecutor(ABC):
         if self._tasklets[when] is None:
             self._tasklets[when] = [tasklet_tuple]
         else:
-            self._tasklets[when].append(tasklet_tuple)
+            assert isinstance(self._tasklets[when], list)
+            cast(list, self._tasklets[when]).append(tasklet_tuple)
 
     def _sub_tasklet_parameters(self, args: List[Any]) -> List[Any]:
         """Substitute tasklet arguments using TaskParameters members."""
@@ -274,8 +302,9 @@ class BaseExecutor(ABC):
             logger.error(f"Ignore request to run tasklets of unknown kind: {when}")
             return
         if self._tasklets[when] is None:
+            logger.debug(f"No tasklets to run {when}.")
             return
-        for tasklet_spec in self._tasklets[when]:
+        for tasklet_spec in cast(list, self._tasklets[when]):
             tasklet: Callable[[Any], Any]
             args: List[Any]
             set_result: bool
@@ -912,7 +941,7 @@ class Executor(BaseExecutor):
                     hook: Callable[
                         [Executor, Message, Optional[subprocess.Popen]], None
                     ] = getattr(self.Hooks, msg.signal.lower())
-                    should_continue = hook(self, msg, proc)
+                    should_continue = hook(self, msg, proc)  # type: ignore
                     if should_continue:
                         continue
 

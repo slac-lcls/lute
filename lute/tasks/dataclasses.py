@@ -105,7 +105,7 @@ class ElogSummaryPlots:
     """
 
     display_name: str
-    figures: Union[pn.Tabs, hv.Image, plt.Figure, bytes]  # noqa: F821
+    figures: Union[pn.Tabs, hv.Image, plt.Figure, bytes]  # type: ignore # noqa: F821
 
     def __post_init__(self) -> None:
         self._setup_figures()

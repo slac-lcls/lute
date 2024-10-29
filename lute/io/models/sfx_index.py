@@ -162,7 +162,7 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="temp-dir",
     )
-    wait_for_file: conint(gt=-2) = Field(
+    wait_for_file: conint(gt=-2) = Field(  # type: ignore
         0,
         description="Wait at most `x` seconds for a file to be created. A value of -1 means wait forever.",
         flag_type="--",
@@ -440,7 +440,7 @@ class IndexCrystFELParameters(ThirdPartyParameters):
                 f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "tag"
             )
             if tag is None:
-                tag: Optional[str] = read_latest_db_entry(
+                tag = read_latest_db_entry(
                     f"{values['lute_config'].work_dir}", "FindPeaksPsocake", "tag"
                 )
             fname: str = f"{expmt}_r{run:04d}"
@@ -517,7 +517,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        class Config(BaseModel.Config):
+        class Config(BaseModel.Config):  # type: ignore
             extra: str = "allow"
 
         # Generic input settings: input_

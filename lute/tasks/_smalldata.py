@@ -15,15 +15,15 @@ import sys
 import logging
 from typing import List, Optional, Dict, Tuple, Union, cast
 
-import h5py
-import holoviews as hv
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import panel as pn
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 from mpi4py import MPI
-from scipy.signal import find_peaks
-from scipy.optimize import curve_fit
+from scipy.signal import find_peaks  # type: ignore
+from scipy.optimize import curve_fit  # type: ignore
 
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
@@ -416,7 +416,7 @@ class AnalyzeSmallData(Task):
             peak_heights: npt.NDArray = res[1]["peak_heights"]
         except KeyError:
             logger.debug("No peaks found")
-            return np.argmax(corrected_profile)
+            return cast(int, np.argmax(corrected_profile))
 
         peak_idx: int = peak_indices[
             np.argmax(peak_heights)
@@ -504,7 +504,7 @@ class AnalyzeSmallData(Task):
         Returns:
             fwhm (float): Calculated FWHM.
         """
-        from scipy.interpolate import UnivariateSpline
+        from scipy.interpolate import UnivariateSpline  # type: ignore
 
         x = np.linspace(0, len(trace) - 1, len(trace))
         spline = UnivariateSpline(x, (trace - np.max(trace) / 2), s=0)
@@ -560,7 +560,7 @@ class AnalyzeSmallData(Task):
 
             fwhm (float): Width of the convlution signal (fwhm).
         """
-        from scipy.signal import fftconvolve
+        from scipy.signal import fftconvolve  # type: ignore
 
         max_pt: int = self._find_solvent_argmax(laser_on)
         raw_curve: npt.NDArray = np.nan_to_num(diff[max_pt + 10])
@@ -733,7 +733,7 @@ class AnalyzeSmallData(Task):
                         (self._num_events, xes_roi.shape[spatial_axis + 1])
                     )
                 if self._task_parameters.rot_angle is not None:
-                    from scipy.ndimage import rotate
+                    from scipy.ndimage import rotate  # type: ignore
 
                     xes_roi = rotate(
                         xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)

@@ -13,17 +13,17 @@ __author__ = "Valerio Mariani, Gabriel Dorlhiac"
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional, cast
+from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional, cast, Union
 
-import h5py
-import holoviews as hv
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
 import numpy
 import panel as pn
 from mpi4py.MPI import COMM_WORLD, SUM
 from numpy.typing import NDArray
-from psalgos.pypsalgos import PyAlgos
-from psana import Detector, EventId, MPIDataSource
-from PSCalib import GeometryAccess
+from psalgos.pypsalgos import PyAlgos  # type: ignore
+from psana import Detector, EventId, MPIDataSource  # type: ignore
+from PSCalib import GeometryAccess  # type: ignore
 
 from lute.execution.ipc import Message
 from lute.io.models.sfx_find_peaks import FindPeaksPyAlgosParameters
@@ -535,7 +535,7 @@ def generate_libpressio_configuration(
     elif compressor == "sz3":
         pressio_opts = {"pressio:abs": abs_error}
 
-    lp_json = {
+    lp_json: Dict[str, Any] = {
         "compressor_id": "pressio",
         "early_config": {
             "pressio": {
@@ -689,7 +689,7 @@ class FindPeaksPyAlgos(Task):
 
                 if self._task_parameters.psana_mask:
                     mask = det.mask(
-                        self._task_parameters.run,
+                        self._task_parameters.lute_config.run,
                         calib=False,
                         status=True,
                         edges=False,
@@ -759,7 +759,7 @@ class FindPeaksPyAlgos(Task):
             ):
 
                 if self._task_parameters.compression is not None:
-                    from libpressio import PressioCompressor
+                    from libpressio import PressioCompressor  # type: ignore
 
                     libpressio_config_with_peaks = (
                         add_peaks_to_libpressio_configuration(libpressio_config, peaks)
@@ -843,7 +843,7 @@ class FindPeaksPyAlgos(Task):
             )
 
             # Write final summary file
-            f: TextIO
+            f: Union[TextIO, h5py.File]
             with open(
                 Path(self._task_parameters.outdir) / f"peakfinding{tag}.summary", "w"
             ) as f:
@@ -856,7 +856,6 @@ class FindPeaksPyAlgos(Task):
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
             with h5py.File(master_fname, "r") as f:
-                f = cast(h5py.File, f)
                 final_powder_hits: NDArray[numpy.float64] = f[
                     "entry_1/data_1/powderHits"
                 ][:]

@@ -3,7 +3,9 @@
 Functions should be used only by the higher-level database module.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []
 __author__ = "Gabriel Dorlhiac"
 
 import sqlite3
@@ -150,6 +152,7 @@ def _make_task_table(
     Returns:
         success (bool): Whether the table was created correctly or not.
     """
+    sql: str
     # Check existence explicitly because may need to modify...
     if _does_table_exist(con, task_name):
         # Compare current columns vs new columns - the same Task can have
@@ -157,7 +160,7 @@ def _make_task_table(
         current_cols: Dict[str, str] = _get_table_cols(con, task_name)
         if diff := _compare_cols(current_cols, columns):
             for col in diff.items():
-                sql: str = f'ALTER TABLE {task_name} ADD COLUMN "{col[0]}" {col[1]}'
+                sql = f'ALTER TABLE {task_name} ADD COLUMN "{col[0]}" {col[1]}'
                 logger.debug(f"_make_task_table[ALTER]: {sql}")
                 with con:
                     con.execute(sql)
@@ -172,7 +175,7 @@ def _make_task_table(
         f"gen_cfg_id INTEGER, exec_cfg_id INTEGER, {col_str}, "
         "valid_flag INTEGER)"
     )
-    sql: str = f"CREATE TABLE IF NOT EXISTS {db_str}"
+    sql = f"CREATE TABLE IF NOT EXISTS {db_str}"
     logger.debug(f"_make_task_table[CREATE]: {sql}")
     with con:
         con.execute(sql)

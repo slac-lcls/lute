@@ -47,7 +47,7 @@ import queue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set, List, Literal, Union, Tuple
+from typing import Any, Optional, Set, List, Union, Tuple, cast
 from typing_extensions import Self
 
 USE_ZMQ: bool = True
@@ -126,11 +126,11 @@ class Communicator(ABC):
         """Method for sending data through the communication mechanism."""
         ...
 
-    def __str__(self):
+    def __str__(self) -> str:
         name: str = str(type(self)).split("'")[1].split(".")[-1]
         return f"{name}: {self.desc}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     def __enter__(self) -> Self:
@@ -194,8 +194,12 @@ class PipeCommunicator(Communicator):
         """
         signal: Optional[str]
         contents: Optional[str]
-        raw_signal: bytes = proc.stderr.read()
-        raw_contents: bytes = proc.stdout.read()
+        raw_signal: Optional[bytes] = (
+            proc.stderr.read() if proc.stderr is not None else None
+        )
+        raw_contents: Optional[bytes] = (
+            proc.stdout.read() if proc.stdout is not None else None
+        )
         if raw_signal is not None:
             signal = raw_signal.decode()
         else:
@@ -418,12 +422,13 @@ class SocketCommunicator(Communicator):
         to use them.
         """
         self._data_socket: Union[socket.socket, zmq.sugar.socket.Socket]
+        self.desc: str
         if USE_ZMQ:
-            self.desc: str = "Communicates using ZMQ through TCP or Unix sockets."
-            self._context: zmq.context.Context = zmq.Context()
+            self.desc = "Communicates using ZMQ through TCP or Unix sockets."
+            self._context: zmq.Context = zmq.Context()
             self._data_socket = self._create_socket_zmq()
         else:
-            self.desc: str = "Communicates through a TCP or Unix socket."
+            self.desc = "Communicates through a TCP or Unix socket."
             self._data_socket = self._create_socket_raw()
             self._data_socket.settimeout(SocketCommunicator.ACCEPT_TIMEOUT)
 
@@ -491,10 +496,11 @@ class SocketCommunicator(Communicator):
 
         Raw socket implementation for the reader thread.
         """
+        assert isinstance(self._data_socket, socket.socket)
         connection: socket.socket
-        addr: Union[str, Tuple[str, int]]
+        _: Union[str, Tuple[str, int]]
         try:
-            connection, addr = self._data_socket.accept()
+            connection, _ = self._data_socket.accept()
             full_data: bytes = b""
             while True:
                 data: bytes = connection.recv(8192)
@@ -606,6 +612,7 @@ class SocketCommunicator(Communicator):
         if USE_ZMQ:
             self._data_socket.send(packed_msg)
         else:
+            assert isinstance(self._data_socket, socket.socket)
             self._data_socket.sendall(packed_msg)
 
     def write(self, msg: Message) -> None:
@@ -665,7 +672,7 @@ class SocketCommunicator(Communicator):
         Returns:
             data_socket (socket.socket): Unix socket object.
         """
-        socket_type: Literal[zmq.PULL, zmq.PUSH]
+        socket_type: int  # zmq.SocketType - either zmq.PULL or zmq.PUSH
         if self._party == Party.EXECUTOR:
             socket_type = zmq.PULL
         else:
@@ -956,7 +963,7 @@ class SocketCommunicator(Communicator):
             return
         else:
             if self._party == Party.EXECUTOR:
-                os.unlink(os.getenv("LUTE_SOCKET"))  # Should be defined
+                os.unlink(cast(str, os.getenv("LUTE_SOCKET")))  # Should be defined
                 return
             elif self._use_ssh_tunnel:
                 if self._ssh_proc is not None:
