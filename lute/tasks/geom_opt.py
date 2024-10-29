@@ -116,7 +116,7 @@ class BayesGeomOpt:
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
 
-    def min_intensity(self, Imin):
+    def min_intensity(self, Imin, powder):
         """
         Define minimal intensity for control point extraction
         Note: this is a heuristic that has been found to work well but may need some tuning.
@@ -127,23 +127,25 @@ class BayesGeomOpt:
             Minimum intensity to use for control point extraction based on photon energy or max intensity
         """
         if type(Imin) == str:
-            if 'rayonix' not in self.det_type: 
-                Imin = np.max(self.powder_img) * 0.01
+            if 'rayonix' in self.det_type:
+                powder = powder[powder > 1e3]
+                Imin = np.max(powder) * 0.01
             else:
-                self.powder_img = self.powder_img[self.powder_img > 1e3]
-                Imin = np.max(self.powder_img) * 0.01
+                Imin = np.max(powder) * 0.01
         else:
             Imin = Imin * self.photon_energy
         self.Imin = Imin
+        self.powder = powder
+        return powder
 
     @ignore_warnings(category=ConvergenceWarning)
-    def bayes_opt_center(self, powder_img, dist, bounds, res, n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
+    def bayes_opt_center(self, powder, dist, bounds, res, n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
         """
         Perform Bayesian Optimization on PONI center parameters, for a fixed distance
         
         Parameters
         ----------
-        powder_img : np.ndarray
+        powder : np.ndarray
             Powder image
         dist : float
             Fixed distance
@@ -204,7 +206,7 @@ class BayesGeomOpt:
         for i in range(n_samples):
             dist, poni1, poni2, rot1, rot2, rot3 = X_samples[i]
             geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-            sg = SingleGeometry("extract_cp", powder_img, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+            sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
             sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
             y[i] = len(sg.geometry_refinement.data)
             bo_history[f'init_sample_{i+1}'] = {'param':X_samples[i], 'score': y[i]}
@@ -250,7 +252,7 @@ class BayesGeomOpt:
             # 3. Compute the score of the new set of parameters
             dist, poni1, poni2, rot1, rot2, rot3 = new_input
             geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-            sg = SingleGeometry("extract_cp", powder_img, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+            sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
             sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
             score = len(sg.geometry_refinement.data)
             y = np.append(y, [score], axis=0)
@@ -267,7 +269,7 @@ class BayesGeomOpt:
         best_param = X_samples[best_idx]
         dist, poni1, poni2, rot1, rot2, rot3 = best_param
         geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-        sg = SingleGeometry("extract_cp", powder_img, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+        sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
         sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
         self.sg = sg
         residuals = sg.geometry_refinement.refine3(fix=['wavelength'])
@@ -311,7 +313,7 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
-        self.min_intensity(Imin)
+        powder = self.min_intensity(Imin, powder)
 
         if self.rank == 0:
             distances = np.linspace(bounds['dist'][0], bounds['dist'][1], self.size)
@@ -513,7 +515,7 @@ class OptimizePyFAIGeometry(Task):
             detector = self.update_geometry(optimizer)
             plot = f'{self._task_parameters.work_dir}/figs/bayes_opt_geom_r{optimizer.run:04}.png'
             optimizer.visualize_results(
-                powder=optimizer.powder_img,
+                powder=optimizer.powder,
                 bo_history=optimizer.bo_history,
                 detector=detector,
                 params=optimizer.params,
