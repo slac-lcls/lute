@@ -13,7 +13,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import sys
 import logging
-from typing import List, Optional, Dict, Tuple, Union, cast
+from typing import List, Optional, Dict, Tuple, Union, cast, ClassVar
 
 import h5py  # type: ignore
 import holoviews as hv  # type: ignore
@@ -42,8 +42,8 @@ logger: logging.Logger = get_logger(__name__)
 class AnalyzeSmallData(Task):
     """Base class for analyzing a SmallData HDF5 file with MPI support."""
 
-    _LARGE_DETNAMES: List[str] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
-    _SMALL_DETNAMES: List[str] = ["epix_1", "epix_2"]
+    _LARGE_DETNAMES: ClassVar[List[str]] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
+    _SMALL_DETNAMES: ClassVar[List[str]] = ["epix_1", "epix_2"]
 
     def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
         super().__init__(params=params, use_mpi=use_mpi)

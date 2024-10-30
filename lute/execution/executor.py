@@ -974,7 +974,10 @@ class Executor(BaseExecutor):
 
     def _process_result_payload(self, payload: Any) -> None:
         if self._analysis_desc.task_parameters is None:
-            logger.error("Please run Task before using this method!")
+            logger.error(
+                "Please run Task before using this method! (_process_result_payload). "
+                "If you did run a Task, it may have failed immediately!"
+            )
             return
         new_payload: Optional[str]
         if isinstance(payload, ElogSummaryPlots):
@@ -1013,7 +1016,10 @@ class Executor(BaseExecutor):
             path (str): Path the plots were written out to.
         """
         if self._analysis_desc.task_parameters is None:
-            logger.error("Please run Task before using this method!")
+            logger.error(
+                "Please run Task before using this method! (_process_elog_plot). "
+                "If you did run a Task, it may have failed immediately!"
+            )
             return None
         # ElogSummaryPlots has figures and a display name
         # display name also serves as a path.

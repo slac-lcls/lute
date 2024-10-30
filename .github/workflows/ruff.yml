@@ -7,5 +7,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v1
         with:
-          src: "./lute"
+          src: "./lute ./launch_scripts ./utilities ./run_task.py ./subprocess_task.py ./workflows"
           args: "check"
