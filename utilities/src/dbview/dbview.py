@@ -1,19 +1,33 @@
 import os
+import sys
 import sqlite3
 import argparse
 import importlib.util
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional, cast
+from typing_extensions import TypeAlias
 from types import ModuleType
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Footer, Header, DataTable, TabbedContent
 
-spec: importlib.machinery.ModuleSpec = importlib.util.spec_from_file_location(
+ModuleSpec: TypeAlias = "importlib.machinery.ModuleSpec"
+Loader: TypeAlias = "importlib.machinery.SourceFileLoader"
+
+spec: Optional[ModuleSpec] = importlib.util.spec_from_file_location(
     "_sqlite", f"{os.environ.get('LUTE_BASE', '')}/lute/io/_sqlite.py"
 )
-_sqlite: ModuleType = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(_sqlite)
+if spec is None:
+    print("SQLite interface module not found! Exiting.")
+    sys.exit(-1)
+
+_sqlite: ModuleType = importlib.util.module_from_spec(cast(ModuleSpec, spec))
+loader: Optional[Loader] = cast(Loader, cast(ModuleSpec, spec).loader)
+if loader is not None:
+    cast(Loader, loader.exec_module(_sqlite))
+else:
+    print("Unable to generate loader for module! Exiting.")
+    sys.exit(-1)
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(
     prog="DBView",
@@ -58,7 +72,7 @@ class DBView(App):
 
     def pull_table_data(self, table: DataTable) -> DataTable:
         """Query database for all rows in a table and add to display."""
-        table_name: str = table.id[5:]
+        table_name: str = table.id[5:] if table.id is not None else "<UNKNOWN>"
         table.add_columns(*_sqlite._get_table_cols(self._con, table_name))
         rows: List[Tuple[Any, ...]] = _sqlite._get_all_rows_for_table(
             self._con, table_name

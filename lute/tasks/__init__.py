@@ -10,7 +10,7 @@ Exceptions:
 
 from typing import Type
 
-from .task import Task
+from lute.tasks.task import Task
 
 
 class TaskNotFoundError(Exception):

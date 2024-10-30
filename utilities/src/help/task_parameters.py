@@ -105,7 +105,10 @@ def _format_parameter_row(
     if validators is not None:
         msg = f"{msg}\n\tValidators:"
         for validator in validators:
-            msg = f"{msg}\n\t\t- {validator.func.__name__}"
+            if hasattr(validator, "func") and hasattr(validator.func, "__name__"):
+                msg = f"{msg}\n\t\t- {validator.func.__name__}"
+            else:
+                msg = f"{msg}\n\t\t- <CANNOT PARSE NAME>"
     msg = f"{msg}\n\n"
     return msg
 
@@ -121,7 +124,9 @@ if __name__ == "__main__":
         managed_task_map: Dict[str, List[str]] = {}
         for key in dir(managed_tasks):
             obj: Any = getattr(managed_tasks, key)
-            if isinstance(obj, managed_tasks.BaseExecutor):
+            if hasattr(managed_tasks, "BaseExecutor") and isinstance(
+                obj, managed_tasks.BaseExecutor
+            ):
                 task_name = obj._analysis_desc.task_result.task_name
                 if task_name in managed_task_map:
                     managed_task_map[task_name].append(key)
@@ -188,8 +193,9 @@ if __name__ == "__main__":
         if required_parameters is not None:
             out_msg = f"{out_msg}Required Parameters:\n--------------------\n"
             for param in required_parameters:
+                # Ignoring mypy since the typing seems wrong. This is a list | None
                 validators = (
-                    parameter_model.__validators__[param[0]]
+                    parameter_model.__validators__[param[0]]  # type: ignore
                     if param[0] in parameter_model.__validators__
                     else None
                 )
@@ -199,13 +205,15 @@ if __name__ == "__main__":
             out_msg = f"{out_msg}\n\n"
 
         out_msg = f"{out_msg}All Parameters:\n---------------\n"
-        for param in parameter_schema["properties"]:
+        pname: str
+        for pname in parameter_schema["properties"]:
+            # Ignoring mypy since the typing seems wrong. This is a list | None
             validators = (
-                parameter_model.__validators__[param]
-                if param in parameter_model.__validators__
+                parameter_model.__validators__[pname]  # type: ignore
+                if pname in parameter_model.__validators__
                 else None
             )
-            out_msg = f"{out_msg}{_format_parameter_row(param, parameter_schema['properties'][param], validators)}"
+            out_msg = f"{out_msg}{_format_parameter_row(pname, parameter_schema['properties'][pname], validators)}"
 
         if "definitions" in parameter_schema and parameter_schema["definitions"]:
             definitions: List[str] = [
@@ -217,10 +225,10 @@ if __name__ == "__main__":
                 out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
                 for defn in definitions:
                     out_msg = f"{out_msg}{defn}:\n"
-                    for param in parameter_schema["definitions"][defn]["properties"]:
+                    for pname in parameter_schema["definitions"][defn]["properties"]:
                         row: str = _format_parameter_row(
-                            param,
-                            parameter_schema["definitions"][defn]["properties"][param],
+                            pname,
+                            parameter_schema["definitions"][defn]["properties"][pname],
                         )
                         out_msg = f"{out_msg}{row}"
         print(out_msg)
