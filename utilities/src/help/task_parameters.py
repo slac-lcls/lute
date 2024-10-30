@@ -1,8 +1,8 @@
 import sys
 import argparse
 import logging
-from typing import Dict, Optional, List, Set, Tuple, Any, Callable
-from typing_extensions import TypedDict
+from typing import Dict, Optional, List, Set, Tuple, Any, Callable, Generic, Union, cast
+from typing_extensions import TypedDict, TypeVar
 
 import pprint
 
@@ -10,13 +10,18 @@ import lute.io.models
 from lute.io.models.base import TaskParameters
 from lute import managed_tasks
 
+T = TypeVar("T")
+
+
+class OptionalDictKey(Generic[T]): ...
+
 
 class PropertyDict(TypedDict):
     default: str
     description: str
     title: str
-    type: Optional[str]
-    anyOf: Optional[List[Dict[str, str]]]  # Either an anyOf or type per property
+    type: OptionalDictKey[str]
+    anyOf: OptionalDictKey[List[Dict[str, str]]]  # Either an anyOf or type per property
     # Generally only for ThirdPartyTasks
     rename_param: Optional[str]
     flag_type: Optional[str]
@@ -70,7 +75,8 @@ def _format_parameter_row(
     validators: Optional[List[Callable]] = None,
 ) -> str:
     """Take a property dictionary for a parameter and format it for printing."""
-    typeinfo: str
+    # Either type or anyOf exists but not both
+    typeinfo: Union[str, OptionalDictKey]
     if "type" in param_description:
         typeinfo = param_description["type"]
     elif "anyOf" in param_description:  # anyOf is present instead
@@ -106,15 +112,17 @@ def _format_parameter_row(
 
 if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
+    task_name: str
+    parameter_schema: ModelSchema
     if args.list:
-        logger.info(f"Fetching Task list.")
+        logger.info("Fetching Task list.")
         # Construct Task <-> Executor mapping
         # [task_name, [managed_task1, managed_task2, ...]
         managed_task_map: Dict[str, List[str]] = {}
         for key in dir(managed_tasks):
             obj: Any = getattr(managed_tasks, key)
             if isinstance(obj, managed_tasks.BaseExecutor):
-                task_name: str = obj._analysis_desc.task_result.task_name
+                task_name = obj._analysis_desc.task_result.task_name
                 if task_name in managed_task_map:
                     managed_task_map[task_name].append(key)
                 else:
@@ -127,14 +135,14 @@ if __name__ == "__main__":
                 "TaskParameters",
                 "TemplateParameters",
             ):
-                task_name: str = key.replace("Parameters", "")
+                task_name = key.replace("Parameters", "")
                 task_list_msg = f"{task_list_msg}\n\n- {task_name}\n"
                 task_list_msg = f"{task_list_msg}  Current Managed Tasks:"
                 if task_name in managed_task_map:
                     for mgd_task in managed_task_map[task_name]:
                         task_list_msg = f"{task_list_msg} {mgd_task},"
-                obj: TaskParameters = getattr(lute.io.models, key)
-                parameter_schema: ModelSchema = obj.schema()
+                params_obj: TaskParameters = getattr(lute.io.models, key)
+                parameter_schema = cast(ModelSchema, params_obj.schema())
                 description: str = parameter_schema["description"]
                 for line in description.split("\n"):
                     new_line: str
@@ -146,7 +154,7 @@ if __name__ == "__main__":
 
         print(task_list_msg)
 
-    task_name: str = args.Task
+    task_name = args.Task
     if task_name:
         model_name: str = f"{task_name}Parameters"
 
@@ -158,7 +166,7 @@ if __name__ == "__main__":
             sys.exit(-1)
 
         # For types need to check for key `type` or a list of dicts `anyOf=[{'type': ...}, {'type': ...}]`
-        parameter_schema: ModelSchema = parameter_model.schema()
+        parameter_schema = cast(ModelSchema, parameter_model.schema())
         if args.full_schema:
             pprint.pprint(parameter_schema)
             sys.exit(0)
