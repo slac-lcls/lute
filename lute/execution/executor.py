@@ -36,8 +36,6 @@ import warnings
 import copy
 import re
 
-import psutil
-
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
     Party,
@@ -642,19 +640,19 @@ class BaseExecutor(ABC):
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
         os.kill(proc.pid, signal.SIGCONT)
-        status: str = psutil.Process(proc.pid).status()
-        max_tries: int = 10
-        while status != "running":
-            max_tries -= 1
-            os.kill(proc.pid, signal.SIGCONT)
-            status = psutil.Process(proc.pid).status()
-            if max_tries == 0:
-                logger.error(
-                    "Cannot resume process from stopped/sleeping state! Exiting!"
-                )
-                os.kill(proc.pid, signal.SIGKILL)
-                self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-                return None
+        # status: str = psutil.Process(proc.pid).status()
+        # max_tries: int = 10
+        # while status != "running":
+        #    max_tries -= 1
+        #    os.kill(proc.pid, signal.SIGCONT)
+        #    status = psutil.Process(proc.pid).status()
+        #    if max_tries == 0:
+        #        logger.error(
+        #            "Cannot resume process from stopped/sleeping state! Exiting!"
+        #        )
+        #        os.kill(proc.pid, signal.SIGKILL)
+        #        self._analysis_desc.task_result.task_status = TaskStatus.FAILED
+        #        return None
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
 
     def _set_result_from_parameters(self) -> None:
