@@ -29,8 +29,20 @@ import subprocess
 import time
 import os
 import signal
-from typing import Dict, Callable, List, Optional, Any, Tuple, Literal, Union, cast
-from typing_extensions import Self, TypedDict, TypeAlias
+from typing import (
+    Dict,
+    Callable,
+    List,
+    Optional,
+    Any,
+    Tuple,
+    Literal,
+    Union,
+    cast,
+    Protocol,
+    Type,
+)
+from typing_extensions import TypedDict, TypeAlias
 from abc import ABC, abstractmethod
 import warnings
 import copy
@@ -82,6 +94,36 @@ class TaskletDict(TypedDict):
 Executor_T: TypeAlias = "BaseExecutor"
 
 
+class Hook(Protocol):
+    def __call__(
+        self,
+        executor: Executor_T,
+        msg: Message,
+        proc: Optional[subprocess.Popen] = None,
+    ) -> Optional[bool]: ...
+
+
+class ExecutorHooks:
+    """A container class for the Executor's event hooks.
+
+    There is a corresponding function (hook) for each event/signal. Each
+    function takes three parameters - a reference to the Executor, a reference
+    to the Message (msg) which includes the corresponding signal and the Task
+    subprocess.
+    """
+
+    __slots__ = LUTE_SIGNALS
+
+    no_pickle_mode: Hook
+    task_started: Hook
+    task_failed: Hook
+    task_stopped: Hook
+    task_done: Hook
+    task_cancelled: Hook
+    task_result: Hook
+    task_log: Hook
+
+
 class BaseExecutor(ABC):
     """ABC to manage Task execution and communication with user services.
 
@@ -105,72 +147,7 @@ class BaseExecutor(ABC):
         execute_task(): Run the task as a subprocess.
     """
 
-    class Hooks:
-        """A container class for the Executor's event hooks.
-
-        There is a corresponding function (hook) for each event/signal. Each
-        function takes two parameters - a reference to the Executor (self) and
-        a reference to the Message (msg) which includes the corresponding
-        signal.
-        """
-
-        @staticmethod
-        def no_pickle_mode(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_started(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_failed(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_stopped(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_done(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_cancelled(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> None: ...
-
-        @staticmethod
-        def task_result(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> bool:
-            return False
-
-        @staticmethod
-        def task_log(
-            executor: Executor_T,
-            msg: Message,
-            proc: Optional[subprocess.Popen] = None,
-        ) -> bool:
-            return False
+    Hooks: Type[ExecutorHooks] = ExecutorHooks
 
     def __init__(
         self,
@@ -351,7 +328,8 @@ class BaseExecutor(ABC):
     def add_hook(
         self,
         event: str,
-        hook: Callable[[Self, Message, Optional[subprocess.Popen]], Optional[bool]],
+        # hook: Callable[[Self, Message, Optional[subprocess.Popen]], Optional[bool]],
+        hook: Hook,
     ) -> None:
         """Add a new hook.
 
@@ -827,101 +805,123 @@ class Executor(BaseExecutor):
         """Populate the set of default event hooks."""
 
         def no_pickle_mode(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> None:
-            for idx, communicator in enumerate(self._communicators):
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
+            for idx, communicator in enumerate(executor._communicators):
                 if isinstance(communicator, PipeCommunicator):
-                    self._communicators[idx] = PipeCommunicator(
+                    executor._communicators[idx] = PipeCommunicator(
                         Party.EXECUTOR, use_pickle=False
                     )
+            return None
 
         self.add_hook("no_pickle_mode", no_pickle_mode)
 
         def task_started(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen]
-        ) -> None:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             assert proc is not None
             if isinstance(msg.contents, TaskParameters):
-                self._analysis_desc.task_parameters = msg.contents
+                executor._analysis_desc.task_parameters = msg.contents
                 # Run "before" tasklets
-                if self._tasklets["before"] is not None:
-                    self._run_tasklets(when="before")
+                if executor._tasklets["before"] is not None:
+                    executor._run_tasklets(when="before")
                 # Need to continue since Task._signal_start raises SIGSTOP
-                self._continue(proc)
-                if hasattr(self._analysis_desc.task_parameters.Config, "set_result"):
+                executor._continue(proc)
+                if hasattr(
+                    executor._analysis_desc.task_parameters.Config, "set_result"
+                ):
                     # Tasks may mark a parameter as the result
                     # If so, setup the result now.
-                    self._set_result_from_parameters()
+                    executor._set_result_from_parameters()
             logger.info(
-                f"Executor: {self._analysis_desc.task_result.task_name} started"
+                f"Executor: {executor._analysis_desc.task_result.task_name} started"
             )
-            self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
+            executor._analysis_desc.task_result.task_status = TaskStatus.RUNNING
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "RUNNING",
+                f"{executor._analysis_desc.task_result.task_name} status": "RUNNING",
             }
             post_elog_run_status(elog_data)
+            return None
 
         self.add_hook("task_started", task_started)
 
         def task_failed(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> None:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "FAILED",
+                f"{executor._analysis_desc.task_result.task_name} status": "FAILED",
             }
             post_elog_run_status(elog_data)
+            return None
 
         self.add_hook("task_failed", task_failed)
 
         def task_stopped(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> None:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "STOPPED",
+                f"{executor._analysis_desc.task_result.task_name} status": "STOPPED",
             }
             post_elog_run_status(elog_data)
+            return None
 
         self.add_hook("task_stopped", task_stopped)
 
         def task_done(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> None:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+                f"{executor._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
             post_elog_run_status(elog_data)
+            return None
 
         self.add_hook("task_done", task_done)
 
         def task_cancelled(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> None:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "CANCELLED",
+                f"{executor._analysis_desc.task_result.task_name} status": "CANCELLED",
             }
             post_elog_run_status(elog_data)
+            return None
 
         self.add_hook("task_cancelled", task_cancelled)
 
         def task_result(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> bool:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             if isinstance(msg.contents, TaskResult):
-                self._analysis_desc.task_result = msg.contents
+                executor._analysis_desc.task_result = msg.contents
                 # flake8: noqa: E731
                 is_printable_type: Callable[[Any], bool] = lambda x: isinstance(
                     x, dict
                 ) or isinstance(x, str)
-                if is_printable_type(self._analysis_desc.task_result.summary):
-                    logger.info(self._analysis_desc.task_result.summary)
-                elif isinstance(self._analysis_desc.task_result.summary, list):
-                    for item in self._analysis_desc.task_result.summary:
+                if is_printable_type(executor._analysis_desc.task_result.summary):
+                    logger.info(executor._analysis_desc.task_result.summary)
+                elif isinstance(executor._analysis_desc.task_result.summary, list):
+                    for item in executor._analysis_desc.task_result.summary:
                         if is_printable_type(item):
                             logger.info(item)
 
-                logger.info(self._analysis_desc.task_result.task_status)
+                logger.info(executor._analysis_desc.task_result.task_status)
             elog_data: Dict[str, str] = {
-                f"{self._analysis_desc.task_result.task_name} status": "COMPLETED",
+                f"{executor._analysis_desc.task_result.task_name} status": "COMPLETED",
             }
             post_elog_run_status(elog_data)
 
@@ -930,8 +930,10 @@ class Executor(BaseExecutor):
         self.add_hook("task_result", task_result)
 
         def task_log(
-            self: Executor, msg: Message, proc: Optional[subprocess.Popen] = None
-        ) -> bool:
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
             if isinstance(msg.contents, str):
                 # This should be log formatted already
                 print(msg.contents)
@@ -1059,7 +1061,10 @@ class Executor(BaseExecutor):
                 individually.
         """
         if self._analysis_desc.task_parameters is None:
-            logger.error("Please run Task before using this method!")
+            logger.error(
+                "Please run Task before using this method! (_process_result_summary). "
+                "If you did run a Task, it may have failed immediately!"
+            )
             return
         if isinstance(summary, dict):
             # Assume dict is key: value pairs of eLog run parameters to post
@@ -1094,7 +1099,10 @@ class Executor(BaseExecutor):
                 summary field of the database.
         """
         if self._analysis_desc.task_parameters is None:
-            logger.error("Please run Task before using this method!")
+            logger.error(
+                "Please run Task before using this method! (_process_summary_run_params). "
+                "If you did run a Task, it may have failed immediately!"
+            )
             return ""
         exp: str = self._analysis_desc.task_parameters.lute_config.experiment
         run: int = int(self._analysis_desc.task_parameters.lute_config.run)
