@@ -311,6 +311,7 @@ class BayesGeomOpt:
         seed : int
             Random seed for reproducibility
         """
+        from time import time
         if seed is not None:
             np.random.seed(seed)
 
@@ -321,15 +322,19 @@ class BayesGeomOpt:
         powder = self.min_intensity(Imin, powder)
 
         if self.rank == 0:
-            logger.info(f"Number of distances to scan: {self.size}")
+            print(f"Number of distances to scan: {self.size}")
             distances = np.linspace(bounds['dist'][0], bounds['dist'][1], self.size)
         else:
             distances = None
 
         dist = self.comm.scatter(distances, root=0)
-        logger.info(f"Rank {self.rank} is working on distance {dist}")
+        print(f"Rank {self.rank} is working on distance {dist}")
 
+        t0 = time()
         results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, n_iterations, af, hyperparam, prior, seed)
+        t1 = time()
+        with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt', 'w') as f:
+            f.write(f"Bayesian Optimization on Center on Rank {self.rank} took {t1-t0:.2f} seconds")
         self.comm.Barrier()
 
         self.scan = {}
@@ -478,15 +483,16 @@ class OptimizePyFAIGeometry(Task):
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
+        from time import time
         msg = Message(contents="Starting PyFAI geometry optimization", signal="")
         self._report_to_executor(msg)
         msg = Message(contents="Building PyFAI detector", signal="")
         self._report_to_executor(msg)
         detector = self.build_pyFAI_detector()
-        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {RANK}", signal="")
-        self._report_to_executor(msg)
         rank = MPI.COMM_WORLD.Get_rank()
-        logger.info(f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}")
+        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}", signal="")
+        self._report_to_executor(msg)
+        t0 = time()
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
             run=self._task_parameters.run,
@@ -509,6 +515,9 @@ class OptimizePyFAIGeometry(Task):
             prior=self._task_parameters.bo_params.prior,
             seed=self._task_parameters.bo_params.seed,
         )
+        t1 = time()
+        with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_{rank}.txt', 'w') as f:
+            f.write(f"Bayesian Optimization Geometry took {t1-t0:.2f} seconds")
         if optimizer.rank == 0:
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
@@ -520,12 +529,6 @@ class OptimizePyFAIGeometry(Task):
             self._report_to_executor(msg)
             msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
             self._report_to_executor(msg)
-            logger.info(f"Optimization complete")
-            logger.info(f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
-            logger.info(f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})")
-            logger.info(f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e}")
-            logger.info(f"Final Residuals: {optimizer.residuals:.2e}")
-            detector = self.update_geometry(optimizer)
             plot = f'{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
             optimizer.visualize_results(
                 powder=optimizer.powder,
