@@ -60,10 +60,6 @@ def get_logger(name: str) -> logging.Logger:
             other_logger, logging.PlaceHolder
         ):
             other_logger.disabled = True
-            other_logger.propagate = False
-
-            for handler in other_logger.handlers:
-                handler.disabled = True
         elif "numpy" in other_name and not isinstance(
             other_logger, logging.PlaceHolder
         ):
