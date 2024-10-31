@@ -23,12 +23,16 @@ from pyFAI.geometry import Geometry
 from pyFAI.goniometer import SingleGeometry
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from pyFAI.calibrant import CALIBRANT_FACTORY
-from mpi4py import MPI
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from scipy.stats import norm
+
+from mpi4py import MPI
+COMM = MPI.COMM_WORLD
+RANK = COMM.Get_rank()
+SIZE = COMM.Get_size()
 
 class BayesGeomOpt:
     """
@@ -62,9 +66,9 @@ class BayesGeomOpt:
         self.exp = exp
         self.run = run
         self.det_type = det_type.lower()
-        self.comm = MPI.COMM_WORLD
-        self.rank = self.comm.Get_rank()
-        self.size = self.comm.Get_size()
+        self.comm = COMM
+        self.rank = RANK
+        self.size = SIZE
         self.detector = detector
         self.calibrant = calibrant
         self.wavelength = wavelength
@@ -477,8 +481,7 @@ class OptimizePyFAIGeometry(Task):
         msg = Message(contents="Building PyFAI detector", signal="")
         self._report_to_executor(msg)
         detector = self.build_pyFAI_detector()
-        rank = MPI.COMM_WORLD.Get_rank()
-        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}", signal="")
+        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {RANK}", signal="")
         self._report_to_executor(msg)
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
