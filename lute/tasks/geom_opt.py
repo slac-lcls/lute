@@ -312,6 +312,7 @@ class BayesGeomOpt:
             Random seed for reproducibility
         """
         from time import time
+        from datetime import datetime
         if seed is not None:
             np.random.seed(seed)
 
@@ -330,11 +331,12 @@ class BayesGeomOpt:
         dist = self.comm.scatter(distances, root=0)
         print(f"Rank {self.rank} is working on distance {dist}")
 
+        start = datetime.now()
         t0 = time()
         results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, n_iterations, af, hyperparam, prior, seed)
         t1 = time()
         with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt', 'w') as f:
-            f.write(f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} took {t1-t0:.2f} seconds")
+            f.write(f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds")
         self.comm.Barrier()
 
         self.scan = {}
@@ -484,6 +486,7 @@ class OptimizePyFAIGeometry(Task):
 
     def _run(self) -> None:
         from time import time
+        from datetime import datetime
         msg = Message(contents="Starting PyFAI geometry optimization", signal="")
         self._report_to_executor(msg)
         msg = Message(contents="Building PyFAI detector", signal="")
@@ -502,6 +505,7 @@ class OptimizePyFAIGeometry(Task):
         )
         msg = Message(contents="Running Bayesian Optimization", signal="")
         self._report_to_executor(msg)
+        start = datetime.now()
         t0 = time()
         optimizer.bayes_opt_geom(
             powder=self._task_parameters.powder,
@@ -517,7 +521,7 @@ class OptimizePyFAIGeometry(Task):
         )
         t1 = time()
         with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt', 'w') as f:
-            f.write(f"Bayesian Optimization Geometry gave residuals={optimizer.residuals:.2e} and took {t1-t0:.2f} seconds")
+            f.write(f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds")
         if optimizer.rank == 0:
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
