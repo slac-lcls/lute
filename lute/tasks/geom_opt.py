@@ -15,7 +15,7 @@ from lute.tasks.task import *
 from lute.execution.logging import get_logger
 
 import logging
-logger: logging.Logger = get_logger(__name__, is_task=True)
+logger: logging.Logger = get_logger(__name__)
 
 import sys
 sys.path.append('/sdf/home/l/lconreux/LCLSGeom')
