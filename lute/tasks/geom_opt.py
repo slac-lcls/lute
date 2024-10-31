@@ -334,7 +334,7 @@ class BayesGeomOpt:
         results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, n_iterations, af, hyperparam, prior, seed)
         t1 = time()
         with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt', 'w') as f:
-            f.write(f"Bayesian Optimization on Center on Rank {self.rank} took {t1-t0:.2f} seconds")
+            f.write(f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} took {t1-t0:.2f} seconds")
         self.comm.Barrier()
 
         self.scan = {}
@@ -492,7 +492,6 @@ class OptimizePyFAIGeometry(Task):
         rank = MPI.COMM_WORLD.Get_rank()
         msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}", signal="")
         self._report_to_executor(msg)
-        t0 = time()
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
             run=self._task_parameters.run,
@@ -503,6 +502,7 @@ class OptimizePyFAIGeometry(Task):
         )
         msg = Message(contents="Running Bayesian Optimization", signal="")
         self._report_to_executor(msg)
+        t0 = time()
         optimizer.bayes_opt_geom(
             powder=self._task_parameters.powder,
             bounds=self._task_parameters.bo_params.bounds,
@@ -516,8 +516,8 @@ class OptimizePyFAIGeometry(Task):
             seed=self._task_parameters.bo_params.seed,
         )
         t1 = time()
-        with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_{rank}.txt', 'w') as f:
-            f.write(f"Bayesian Optimization Geometry took {t1-t0:.2f} seconds")
+        with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt', 'w') as f:
+            f.write(f"Bayesian Optimization Geometry gave residuals={optimizer.residuals:.2e} and took {t1-t0:.2f} seconds")
         if optimizer.rank == 0:
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
