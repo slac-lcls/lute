@@ -43,6 +43,7 @@ from lute.tasks.dataclasses import *
 from lute.io.models.base import TaskParameters, TemplateParameters
 from lute.io.db import record_analysis_db
 from lute.io.elog import post_elog_run_status, post_elog_run_table
+from lute.execution.logging import get_logger
 
 if __debug__:
     warnings.simplefilter("default")
@@ -54,7 +55,7 @@ else:
     warnings.simplefilter("ignore")
     os.environ["PYTHONWARNINGS"] = "ignore"
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__)
 
 
 class TaskletDict(TypedDict):
