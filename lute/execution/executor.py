@@ -954,10 +954,8 @@ class Executor(BaseExecutor):
             while True:
                 msg: Message = communicator.read(proc)
                 if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
-                    hook: Callable[
-                        [Executor, Message, Optional[subprocess.Popen]], None
-                    ] = getattr(self.Hooks, msg.signal.lower())
-                    should_continue = hook(self, msg, proc)  # type: ignore
+                    hook: Hook = getattr(self.Hooks, msg.signal.lower())
+                    should_continue = hook(self, msg, proc)
                     if should_continue:
                         continue
 
