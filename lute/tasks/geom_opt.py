@@ -477,7 +477,8 @@ class OptimizePyFAIGeometry(Task):
         msg = Message(contents="Building PyFAI detector", signal="")
         self._report_to_executor(msg)
         detector = self.build_pyFAI_detector()
-        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type}", signal="")
+        rank = MPI.COMM_WORLD.Get_rank()
+        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}", signal="")
         self._report_to_executor(msg)
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
@@ -513,7 +514,7 @@ class OptimizePyFAIGeometry(Task):
             msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
             self._report_to_executor(msg)
             detector = self.update_geometry(optimizer)
-            plot = f'{self._task_parameters.work_dir}/figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
+            plot = f'{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
             optimizer.visualize_results(
                 powder=optimizer.powder,
                 bo_history=optimizer.bo_history,
