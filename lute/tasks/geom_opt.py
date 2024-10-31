@@ -478,13 +478,13 @@ class OptimizePyFAIGeometry(Task):
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
-        # msg = Message(contents="Starting PyFAI geometry optimization", signal="")
-        # self._report_to_executor(msg)
-        # msg = Message(contents="Building PyFAI detector", signal="")
-        # self._report_to_executor(msg)
+        msg = Message(contents="Starting PyFAI geometry optimization", signal="")
+        self._report_to_executor(msg)
+        msg = Message(contents="Building PyFAI detector", signal="")
+        self._report_to_executor(msg)
         detector = self.build_pyFAI_detector()
-        # msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {RANK}", signal="")
-        # self._report_to_executor(msg)
+        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {RANK}", signal="")
+        self._report_to_executor(msg)
         rank = MPI.COMM_WORLD.Get_rank()
         logger.info(f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}")
         optimizer = BayesGeomOpt(
@@ -495,8 +495,8 @@ class OptimizePyFAIGeometry(Task):
             calibrant=self._task_parameters.calibrant,
             wavelength=self._task_parameters.wavelength,
         )
-        # msg = Message(contents="Running Bayesian Optimization", signal="")
-        # self._report_to_executor(msg)
+        msg = Message(contents="Running Bayesian Optimization", signal="")
+        self._report_to_executor(msg)
         optimizer.bayes_opt_geom(
             powder=self._task_parameters.powder,
             bounds=self._task_parameters.bo_params.bounds,
@@ -510,16 +510,16 @@ class OptimizePyFAIGeometry(Task):
             seed=self._task_parameters.bo_params.seed,
         )
         if optimizer.rank == 0:
-            # msg = Message(contents="Optimization complete", signal="")
-            # self._report_to_executor(msg)
-            # msg = Message(contents=f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
-            # self._report_to_executor(msg)
-            # msg = Message(contents=f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})", signal="")
-            # self._report_to_executor(msg)
-            # msg = Message(contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})", signal="")
-            # self._report_to_executor(msg)
-            # msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
-            # self._report_to_executor(msg)
+            msg = Message(contents="Optimization complete", signal="")
+            self._report_to_executor(msg)
+            msg = Message(contents=f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
+            self._report_to_executor(msg)
+            msg = Message(contents=f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})", signal="")
+            self._report_to_executor(msg)
+            msg = Message(contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})", signal="")
+            self._report_to_executor(msg)
+            msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
+            self._report_to_executor(msg)
             logger.info(f"Optimization complete")
             logger.info(f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
             logger.info(f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})")
