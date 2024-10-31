@@ -320,6 +320,7 @@ class BayesGeomOpt:
         powder = self.min_intensity(Imin, powder)
 
         if self.rank == 0:
+            print(f"Number of distances to scan: {self.size}")
             distances = np.linspace(bounds['dist'][0], bounds['dist'][1], self.size)
         else:
             distances = None
