@@ -1035,9 +1035,10 @@ class MPIExecutor(Executor):
             cmd (str): Appropriately formatted command for this Executor.
         """
         py_cmd: str = ""
-        nprocs: int = max(
-            int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
-        )
+        #nprocs: int = max(
+        #    int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
+        #)
+        nprocs: int = 4
         mpi_cmd: str = f"mpirun -np {nprocs}"
         if __debug__:
             py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
