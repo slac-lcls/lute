@@ -125,6 +125,7 @@ fi
 source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 
 export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
+export NUMEXPR_MAX_THREADS=1
 EXECUTABLE="${LUTE_PATH}run_task.py"
 
 if [[ ${DEBUG} ]]; then
