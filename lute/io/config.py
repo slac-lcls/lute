@@ -11,29 +11,19 @@ Exceptions:
         Pydantic)
 """
 
+# flake8: noqa: F403,F405
+
 __all__ = ["parse_config"]
 __author__ = "Gabriel Dorlhiac"
 
 import re
 import warnings
-from typing import List, Dict, Iterator, Dict, Any
+from typing import List, Dict, Iterator, Any
 
 import pprint
 import yaml
-from pydantic import (
-    BaseModel,
-    BaseSettings,
-    HttpUrl,
-    PositiveInt,
-    NonNegativeInt,
-    Field,
-    conint,
-    root_validator,
-    validator,
-)
-from pydantic.dataclasses import dataclass
 
-from .models import *
+from lute.io.models import *
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 
 
@@ -195,7 +185,7 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
     try:
         task_config: Dict[str, Any] = dict(config[task_name])
         lute_config.update(task_config)
-    except KeyError as err:
+    except KeyError:
         warnings.warn(
             (
                 f"{task_name} has no parameter definitions in YAML file."

@@ -63,7 +63,7 @@ def test_dynamic():
         )
         if wf_dict is not None:
             task_list: List[JIDSlurmOperator] = []
-            first_task: JIDSlurmOperator = create_links(wf_dict, task_list=task_list)
+            _: JIDSlurmOperator = create_links(wf_dict, task_list=task_list)
 
     @task(trigger_rule=TriggerRule.ALL_DONE)
     def delete_workflow(**context):

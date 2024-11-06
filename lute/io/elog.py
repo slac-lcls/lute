@@ -53,7 +53,7 @@ from requests.auth import HTTPBasicAuth
 import mimetypes
 import os
 import logging
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union, Tuple, Mapping, cast
 from io import BufferedReader
 
 from lute.io.exceptions import ElogFileFormatError
@@ -221,7 +221,7 @@ def get_elog_kerberos_auth() -> Dict[str, str]:
     Returns:
         auth (Dict[str, str]): Dictionary containing Kerberos authorization key.
     """
-    from krtc import KerberosTicket
+    from krtc import KerberosTicket  # type: ignore
 
     return KerberosTicket("HTTP@pswww.slac.stanford.edu").getAuthHeaders()
 
@@ -340,15 +340,19 @@ def _get_current_run_status(update_url: str) -> Dict[str, Union[str, int, float]
     """
     import getpass
 
+    if os.getenv("ARP_ROOT_JOB_ID") is None or os.getenv("RUN_NUM") is None:
+        raise RuntimeError(
+            "Cannot call _get_current_run_status with no ROOT_JOB or RUN_NUM"
+        )
     user: str = getpass.getuser()
     replace_counters_parts: List[str] = update_url.split("/")
     exp: str = replace_counters_parts[-2]
     get_url: str = "/".join(replace_counters_parts[:-3])
     get_url = f"{get_url}/{exp}/get_counters"
     job_doc: Dict[str, str] = {
-        "_id": os.environ.get("ARP_ROOT_JOB_ID"),
+        "_id": cast(str, os.environ.get("ARP_ROOT_JOB_ID")),
         "experiment": exp,
-        "run_num": os.environ.get("RUN_NUM"),
+        "run_num": cast(str, os.environ.get("RUN_NUM")),
         "user": user,
     }
     resp: requests.models.Response = requests.post(
@@ -363,7 +367,7 @@ def _get_current_run_status(update_url: str) -> Dict[str, Union[str, int, float]
 
 
 def post_elog_run_status(
-    data: Dict[str, Union[str, int, float]], update_url: Optional[str] = None
+    data: Mapping[str, Union[str, int, float]], update_url: Optional[str] = None
 ) -> None:
     """Post a summary to the status/report section of a specific run.
 
@@ -392,8 +396,7 @@ def post_elog_run_status(
     post_list: List[Dict[str, str]] = [
         {"key": f"{key}", "value": f"{value}"} for key, value in current_status.items()
     ]
-    params: Dict[str, List[Dict[str, str]]] = {"json": post_list}
-    resp: requests.models.Response = requests.post(update_url, **params)
+    _: requests.models.Response = requests.post(update_url, json=post_list)
 
 
 def post_elog_message(
@@ -450,6 +453,7 @@ def post_elog_message(
     if resp_msg != "SUCCESS":
         return resp_msg
     # NEED to handle/propagate errors...
+    return None
 
 
 def post_elog_run_table(
@@ -482,6 +486,7 @@ def post_elog_run_table(
     if resp_msg != "SUCCESS":
         return resp_msg
     # NEED to handle/propagate errors....
+    return None
 
 
 def get_elog_runs_by_tag(
@@ -509,7 +514,7 @@ def get_elog_runs_by_tag(
 
 def get_elog_params_by_run(
     exp: str, params: List[str], runs: Optional[List[int]] = None
-) -> Dict[str, str]:
+) -> Optional[Dict[str, str]]:
     """Retrieve requested parameters by run or for all runs.
 
     Args:
@@ -519,4 +524,4 @@ def get_elog_params_by_run(
             parameter recorded in the eLog (PVs, parameters posted by other
             Tasks, etc.)
     """
-    ...
+    return None

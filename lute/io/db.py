@@ -21,7 +21,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
-from typing import List, Dict, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any, Tuple, Optional, Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters, TemplateParameters
@@ -165,7 +165,7 @@ def _check_type(value: Any) -> str:
 
 
 def _list_to_flatlists(
-    l: List[Any], curr_key: str = ""
+    l_entry: Union[List[Any], Tuple], curr_key: str = ""
 ) -> Tuple[List[Tuple[str, Any]], List[Tuple[str, str]]]:
     """Flatten lists for database storage.
 
@@ -174,7 +174,7 @@ def _list_to_flatlists(
     function is called recursively to handle nesting.
 
     Args:
-        l (List[Any]): Dictionary to flatten.
+        l_entry (List[Any]): Dictionary to flatten.
 
         curr_key (str): Current flattened key. Base key for indexing.
 
@@ -188,7 +188,7 @@ def _list_to_flatlists(
     type_list: List[Tuple[str, str]] = []
     idx: int
     indexed_value: Any
-    for idx, indexed_value in enumerate(l):
+    for idx, indexed_value in enumerate(l_entry):
         indexed_curr_key: str = f"{curr_key}[{idx}]"
         if isinstance(indexed_value, tuple) or isinstance(indexed_value, list):
             x, y = _list_to_flatlists(indexed_value, indexed_curr_key)
@@ -240,6 +240,8 @@ def _dict_to_flatdicts(
         corrected_value: Any = value
         if isinstance(corrected_value, TemplateParameters):
             corrected_value = value.params
+        x: Union[Dict[str, Any], List[Tuple[str, Any]]]
+        y: Union[Dict[str, str], List[Tuple[str, str]]]
         if isinstance(corrected_value, dict):
             x, y = _dict_to_flatdicts(corrected_value, curr_key=flat_key)
             param_list.extend(x.items())
@@ -272,6 +274,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         _add_task_entry,
     )
 
+    assert isinstance(cfg.task_parameters, TaskParameters)
     try:
         work_dir: str = cfg.task_parameters.lute_config.work_dir
     except AttributeError:
@@ -331,7 +334,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
             logger.error(f"Database storage error: {err}")
     try:
         os.chmod(db_path, 0o664)
-    except:
+    except Exception:
         logger.error("Cannot setup permissions on database!")
 
 

@@ -12,19 +12,19 @@ __author__ = "Gabriel Dorlhiac"
 import os
 import logging
 import itertools
-from typing import List, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Union, Any, cast
 
-import h5py
-import holoviews as hv
-import lmfit
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
+import lmfit  # type: ignore
 import numpy as np
+import numpy.typing as npt
 import panel as pn
-import psana
+import psana  # type: ignore
 from mpi4py import MPI
-from scipy import sparse
-from scipy.signal import find_peaks
-
-from lute.io.models.base import TaskParameters
+from scipy import sparse  # type: ignore
+from scipy.signal import find_peaks  # type: ignore
+from lute.io.models.geometry import OptimizeAgBhGeometryExhaustiveParameters
 from lute.execution.logging import get_logger
 from lute.tasks._geometry import geometry_optimize_residual, deploy_geometry
 from lute.tasks.task import Task
@@ -36,7 +36,9 @@ logger: logging.Logger = get_logger(__name__)
 class OptimizeAgBhGeometryExhaustive(Task):
     """Task to perform geometry optimization."""
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: OptimizeAgBhGeometryExhaustiveParameters, use_mpi: bool = True
+    ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
         hv.extension("bokeh")
         pn.extension()
@@ -67,7 +69,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 is_valid_path = True
 
             return is_valid_path, powder_type
-        except:
+        except Exception:
             ...
 
         try:
@@ -80,7 +82,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
         return is_valid_path, powder_type
 
-    def _extract_powder(self, powder_path: str) -> Optional[np.ndarray[np.float64]]:
+    def _extract_powder(self, powder_path: str) -> Optional[npt.NDArray[np.float64]]:
         """Extract a powder image.
 
         May take a smalldata file or numpy array.
@@ -89,11 +91,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
             powder_path (str): Path to the object containing the powder image.
 
         Returns:
-            powder (Optional[np.ndarray[np.float64]]): The extracted powder image.
+            powder (Optional[npt.NDArray[np.float64]]): The extracted powder image.
                 Returns None if no powder could be extracted and no specific error
                 was encountered.
         """
-        powder: Optional[np.ndarray[np.float64]] = None
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
+        powder: Optional[npt.NDArray[np.float64]] = None
         if isinstance(powder_path, str):
             is_valid: bool
             dtype: Optional[str]
@@ -103,17 +108,17 @@ class OptimizeAgBhGeometryExhaustive(Task):
             elif is_valid and dtype == "smd":
                 h5: h5py.File
                 with h5py.File(powder_path) as h5:
-                    unassembled: np.ndarray[np.float64] = h5[
+                    unassembled: npt.NDArray[np.float64] = h5[
                         f"Sums/{self._task_parameters.detname}_calib"
                     ][()]
                     if unassembled.shape == 2:
                         # E.g. Rayonix
                         powder = unassembled
                     else:
-                        ix: np.ndarray[np.uint64] = h5[
+                        ix: npt.NDArray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/ix"
                         ][()]
-                        iy: np.ndarray[np.uint64] = h5[
+                        iy: npt.NDArray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/iy"
                         ][()]
 
@@ -144,7 +149,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _extract_mask(
         self, mask_path: Optional[str]
-    ) -> Optional[np.ndarray[np.float64]]:
+    ) -> Optional[npt.NDArray[np.bool_]]:
         """Extract a mask.
 
         May take a smalldata file or numpy array.
@@ -153,11 +158,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
             mask_path (str): Path to the object containing the mask.
 
         Returns:
-            mask (Optional[np.ndarray[np.float64]]): The extracted mask.
+            mask (Optional[npt.NDArray[np.bool_]]): The extracted mask.
                 Returns None if no powder could be extracted and no specific error
                 was encountered.
         """
-        mask: Optional[np.ndarray[bool]] = None
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
+        mask: Optional[npt.NDArray[np.bool_]] = None
         is_valid: bool
         dtype: Optional[str]
         if isinstance(self._task_parameters.mask, str):
@@ -166,18 +174,18 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 mask = np.load(self._task_parameters.mask)
             elif is_valid and dtype == "smd":
                 h5: h5py.File
-                with h5py.File(powder_path) as h5:
-                    unassembled: np.ndarray[np.float64] = h5[
+                with h5py.File(mask_path) as h5:
+                    unassembled: npt.NDArray[np.bool_] = h5[
                         f"UserDataCfg/{self._task_parameters.detname}/mask"
                     ][()]
                     if unassembled.shape == 2:
                         # E.g. Rayonix
                         mask = unassembled
                     else:
-                        ix: np.ndarray[np.uint64] = h5[
+                        ix: npt.NDArray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/ix"
                         ][()]
-                        iy: np.ndarray[np.uint64] = h5[
+                        iy: npt.NDArray[np.uint64] = h5[
                             f"UserDataCfg/{self._task_parameters.detname}/iy"
                         ][()]
 
@@ -221,6 +229,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
             wavelength (float): X-ray wavelength in Angstroms.
         """
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         pixel_size: float
         if self._task_parameters.detname.lower() == "rayonix":
             pixel_size = ds.env().configStore().get(psana.Rayonix.ConfigV2).pixelWidth()
@@ -241,6 +252,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
             distance (float): Estimated distance, or user-provided guess if one
                 was present in the TaskParameters.
         """
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         if self._task_parameters.distance_guess is not None:
             return self._task_parameters.distance_guess
         exp: str = self._task_parameters.lute_config.experiment
@@ -250,26 +264,29 @@ class OptimizeAgBhGeometryExhaustive(Task):
         return -1 * np.mean(det.coords_z(run)) / 1e3
 
     def _initial_image_center(
-        self, powder: np.ndarray[np.float64]
-    ) -> np.ndarray[np.float64]:
+        self, powder: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Estimate a beam center.
 
         Will estimate the center as the powder image center if no guess is
         provided, otherwise this method returns the provided guess.
 
         Args:
-            powder (np.ndarray[np.float64]): Powder image.
+            powder (npt.NDArray[np.float64]): Powder image.
 
         Returns:
-            center (np.ndarray[np.float64]): Estimated center, or user-provided
+            center (npt.NDArray[np.float64]): Estimated center, or user-provided
                 guess if one was present in the TaskParameters.
         """
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         if self._task_parameters.center_guess is not None:
-            return self._task_parameters.center_guess
+            return np.array(self._task_parameters.center_guess)
         return np.array(powder.shape) / 2.0
 
     def _center_guesses(
-        self, powder: np.ndarray[np.float64]
+        self, powder: npt.NDArray[np.float64]
     ) -> List[Tuple[float, float]]:
         """Return starting beam center points based on dx/dy parameters.
 
@@ -279,17 +296,20 @@ class OptimizeAgBhGeometryExhaustive(Task):
         model.
 
         Args:
-            powder (np.ndarray[np.float64]): Powder image.
+            powder (npt.NDArray[np.float64]): Powder image.
 
         Returns:
             guesses (List[Tuple[float,float]]): Starting guesses for the beam
                 center optimization routine.
         """
-        initial_center: np.ndarray[np.float64] = self._initial_image_center(powder)
-        dx: Tuple[int, int, int] = self._task_parameters.dx
-        dy: Tuple[int, int, int] = self._task_parameters.dy
-        x_offsets: np.ndarray[np.float64] = np.linspace(dx[0], dx[1], dx[2])
-        y_offsets: np.ndarray[np.float64] = np.linspace(dy[0], dy[1], dy[2])
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
+        initial_center: npt.NDArray[np.float64] = self._initial_image_center(powder)
+        dx: Tuple[float, float, int] = self._task_parameters.dx
+        dy: Tuple[float, float, int] = self._task_parameters.dy
+        x_offsets: npt.NDArray[np.float64] = np.linspace(dx[0], dx[1], dx[2])
+        y_offsets: npt.NDArray[np.float64] = np.linspace(dy[0], dy[1], dy[2])
         center_offsets: List[Tuple[float, float]] = list(
             itertools.product(x_offsets, y_offsets)
         )
@@ -301,20 +321,20 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _radial_profile(
         self,
-        powder: np.ndarray[np.float64],
-        mask: Optional[np.ndarray[np.float64]],
+        powder: npt.NDArray[np.float64],
+        mask: Optional[npt.NDArray[np.bool_]],
         center: Tuple[float, float],
         threshold: float = 10.0,
         filter_profile: bool = False,
         filter_order: int = 2,
         filter_threshold: float = 0.25,
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """Compute the radial intensity profile of an image.
 
         Args:
-            powder (np.ndarray[np.float64]): 2-D assembled powder image.
+            powder (npt.NDArray[np.float64]): 2-D assembled powder image.
 
-            mask (Optional[np.ndarray[np.float64]]): Corresponding binary mask
+            mask (Optional[npt.NDArray[np.float64]]): Corresponding binary mask
                 for the powder image.
 
             center (Tuple[float, float]): Beam center in the image, in pixels.
@@ -332,25 +352,25 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 Butterworth filter, if applying it.
 
         Returns:
-            radial_profile (np.ndarray[np.float64]): 1-D array of peak intensities
+            radial_profile (npt.NDArray[np.float64]): 1-D array of peak intensities
                 for an azimuthally integrated powder image.
         """
-        y: np.ndarray[np.int64]
-        x: np.ndarray[np.int64]
+        y: npt.NDArray[np.int64]
+        x: npt.NDArray[np.int64]
         y, x = np.indices(powder.shape)
-        radius_map: np.ndarray[np.float64] = (
+        radius_map: npt.NDArray[np.float64] = (
             (x - center[0]) ** 2 + (y - center[1]) ** 2
         ) ** 0.5
 
         if mask is not None:
             radius_map = np.where(mask == 1, radius_map, 0)
 
-        radius_map_int: np.ndarray[np.int64] = radius_map.astype(np.int64)
-        tbin: np.ndarray[np.float64] = np.bincount(
+        radius_map_int: npt.NDArray[np.int64] = radius_map.astype(np.int64)
+        tbin: npt.NDArray[np.int64] = np.bincount(
             radius_map_int.ravel(), powder.ravel()
         )
-        nr: np.ndarray[np.int64] = np.bincount(radius_map_int.ravel())
-        radial_profile: np.ndarray[np.float64] = np.divide(
+        nr: npt.NDArray[np.int64] = np.bincount(radius_map_int.ravel())
+        radial_profile: npt.NDArray[np.float64] = np.divide(
             tbin, nr, out=np.zeros(nr.shape[0]), where=nr != 0
         )
         if filter_profile:
@@ -363,40 +383,40 @@ class OptimizeAgBhGeometryExhaustive(Task):
         return radial_profile
 
     def _calc_and_score_ideal_rings(
-        self, q_peaks: np.ndarray[np.float64]
-    ) -> Tuple[np.ndarray[np.float64], float]:
+        self, q_peaks: npt.NDArray[np.float64]
+    ) -> Tuple[npt.NDArray[np.float64], float]:
         """Score inter-peak distances in q-space based on known behenate pattern.
 
         Relies on the equidistance of peaks in q-space for silver behenate powder.
 
         Args:
-            q_peaks (np.ndarray[np.float64]): Positions of powder peaks in q-space
+            q_peaks (npt.NDArray[np.float64]): Positions of powder peaks in q-space
                 (inverse Angstrom). 1 dimensional.
 
         Returns:
-            rings (np.ndarray[np.float64]): Predicted positions of peaks based on
+            rings (npt.NDArray[np.float64]): Predicted positions of peaks based on
                 the best fit q-spacing. 1 dimensional.
 
             final_score (float): Final score calculated from residuals associated
                 with each q-spacin.
         """
         # Q-spacings between behenate peaks
-        delta_qs: np.ndarray[np.float64] = np.arange(0.01, 0.03, 0.00005)
+        delta_qs: npt.NDArray[np.float64] = np.arange(0.01, 0.03, 0.00005)
         order_max: int = 13
-        qround: np.ndarray[np.int64] = np.round(q_peaks, 5)
+        qround: npt.NDArray[np.int64] = np.round(q_peaks, 5)
         scores: List[float] = []
         dq: float
         for dq in delta_qs:
-            order: np.ndarray[np.float64] = qround / dq
-            remainder: np.ndarray[np.float64] = np.minimum(
+            order: npt.NDArray[np.float64] = qround / dq
+            remainder: npt.NDArray[np.float64] = np.minimum(
                 qround % dq, np.abs(dq - (qround % dq))
             )
-            score: np.ndarray[np.float64] = (
+            score: float = (
                 np.mean(remainder[np.where(order < order_max)]) / dq
             )  # %mod helps prevent half periods from scoring well
             scores.append(score)
         deltaq_current = delta_qs[np.argmin(scores)]
-        rings: np.ndarray[np.float64] = np.arange(
+        rings: npt.NDArray[np.float64] = np.arange(
             deltaq_current, deltaq_current * (order_max + 1), deltaq_current
         )
 
@@ -407,15 +427,15 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _opt_distance(
         self,
-        radial_profile: np.ndarray[np.float64],
+        radial_profile: npt.NDArray[np.float64],
         distance_guess: float,
         wavelength: float,
         pixel_size: float,
-    ) -> Tuple[np.ndarray[np.int64], np.ndarray[np.float64], float, float]:
+    ) -> Tuple[npt.NDArray[np.int64], npt.NDArray[np.float64], float, float]:
         """Optimize the detector distance.
 
         Args:
-            radial_profile (np.ndarray[np.float64]): 1-D array of peak intensities
+            radial_profile (npt.NDArray[np.float64]): 1-D array of peak intensities
                 for an azimuthally integrated powder image.
 
             distance_guess (float): Starting guess for the detector distance.
@@ -425,26 +445,26 @@ class OptimizeAgBhGeometryExhaustive(Task):
             pixel_size (float): Size of detector pixels in mm.
 
         Returns:
-            peak_indices (np.ndarray[np.int64]): 1-D array of peak indices.
+            peak_indices (npt.NDArray[np.int64]): 1-D array of peak indices.
 
-            selected_peaks (np.ndarray[np.float64]): Array of selected peaks.
+            selected_peaks (npt.NDArray[np.float64]): Array of selected peaks.
 
             new_distance (float): New, optimized, detector distance.
 
             final_score (float): Final score calculated from residuals associated
                 with each q-spacing.
         """
-        peak_indices: np.ndarray[np.int64]
+        peak_indices: npt.NDArray[np.int64]
         peak_indices, _ = find_peaks(radial_profile, prominence=1, distance=10)
-        theta: np.ndarray[np.float64] = np.arctan(
+        theta: npt.NDArray[np.float64] = np.arctan(
             np.arange(radial_profile.shape[0]) * pixel_size / distance_guess
         )
-        q_profile: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength
+        q_profile: npt.NDArray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength
 
-        rings: np.ndarray[np.float64]
+        rings: npt.NDArray[np.float64]
         final_score: float
         rings, final_score = self._calc_and_score_ideal_rings(q_profile[peak_indices])
-        peaks_predicted: np.ndarray[np.float64] = (
+        peaks_predicted: npt.NDArray[np.float64] = (
             2 * distance_guess * np.arcsin(rings * wavelength / 2.0) / pixel_size
         )
 
@@ -462,16 +482,16 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _opt_center(
         self,
-        powder: np.ndarray[np.float64],
-        indices: np.ndarray[np.int64],
+        powder: npt.NDArray[np.float64],
+        indices: npt.NDArray[np.int64],
         center_guess: Tuple[float, float],
     ) -> lmfit.minimizer.MinimizerResult:
         """Optimize the beam center position on the detector.
 
         Args:
-            powder (np.ndarray[np.float64]): 2-D assembled powder image.
+            powder (npt.NDArray[np.float64]): 2-D assembled powder image.
 
-            indices (np.ndarray[np.float64]): Indices of peaks in a radial profile
+            indices (npt.NDArray[np.float64]): Indices of peaks in a radial profile
                 of the azimuthally integrated powder image.
 
             center_guess (Tuple[float, float]): Starting guess for the beam center
@@ -482,7 +502,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                 res.params["cx"] and res.params["cy"] contain the new beam center.
         """
         # Perform fitting - mean center and normalize image first
-        powder_norm: np.ndarray[np.float64] = (powder - np.mean(powder)) / np.std(
+        powder_norm: npt.NDArray[np.float64] = (powder - np.mean(powder)) / np.std(
             powder
         )
         params: lmfit.Parameters = lmfit.Parameters()
@@ -506,8 +526,8 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _opt_geom(
         self,
-        powder: np.ndarray[np.float64],
-        mask: np.ndarray[np.uint64],
+        powder: npt.NDArray[np.float64],
+        mask: Optional[npt.NDArray[np.bool_]],
         params_guess: Tuple[int, Tuple[float, float], float],
         n_iterations: int,
         wavelength: float,
@@ -516,10 +536,10 @@ class OptimizeAgBhGeometryExhaustive(Task):
         """Optimize the detector distance and beam center.
 
         Args:
-            powder (np.ndarray[np.float64]): 2-D assembled powder image.
+            powder (npt.NDArray[np.float64]): 2-D assembled powder image.
 
-            mask (np.ndarray[np.float64]): Corresponding binary mask for the
-                powder image.
+            mask (Optional[npt.NDArray[np.float64]]): Corresponding binary mask
+                for the powder image.
 
             params_guess (Tuple[int, Tuple[float, float], float]): Initial guesses.
                 In format: (n_peaks, (center_x, center_y), distance).
@@ -531,9 +551,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
             pixel_size (float): Size of detector pixels in mm.
 
         Returns:
-            peak_indices (np.ndarray[np.int64]): 1-D array of peak indices.
+            peak_indices (npt.NDArray[np.int64]): 1-D array of peak indices.
 
-            selected_peaks (np.ndarray[np.float64]): Array of selected peaks.
+            selected_peaks (npt.NDArray[np.float64]): Array of selected peaks.
 
             final_scores (float): Final scores calculated from residuals associated
                 with each q-spacing for each iteration of optimization.
@@ -544,12 +564,15 @@ class OptimizeAgBhGeometryExhaustive(Task):
             calc_centers (List[Tuple[float, float]]): Optimized centers associated
                 with each score.
         """
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         n_peaks: int = self._task_parameters.n_peaks
-        radial_profile: np.ndarray[np.float64] = self._radial_profile(
+        radial_profile: npt.NDArray[np.float64] = self._radial_profile(
             powder, mask, params_guess[1]
         )
-        indices: np.ndarray[np.int64]
-        peaks: np.ndarray[np.float64]
+        indices: npt.NDArray[np.int64]
+        peaks: npt.NDArray[np.float64]
         distance: float
         final_score: float
         indices, peaks, distance, final_score = self._opt_distance(
@@ -563,7 +586,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
         center_guess: Tuple[float, float] = params_guess[1]
         for iter in range(n_iterations):
             # Select the highest intensity peaks from the first 8 in q
-            selected_indices: np.ndarray[np.int64] = indices[
+            selected_indices: npt.NDArray[np.int64] = indices[
                 np.argsort(peaks[:8])[::-1][:n_peaks]
             ]
             res: lmfit.minimizer.MinimizerResult = self._opt_center(
@@ -585,19 +608,24 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
         Requires a powder image from data acquired of Ag Behenate.
         """
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         exp: str = self._task_parameters.lute_config.experiment
-        run: Union[int, str] = self._task_parameters.lute_config.run
+        run: int = int(self._task_parameters.lute_config.run)
         ds: psana.DataSource = psana.DataSource(f"exp={exp}:run={run}")
         det: psana.Detector = psana.Detector(self._task_parameters.detname, ds.env())
         pixel_size_mm: float
         wavelength_angs: float
         pixel_size_mm, wavelength_angs = self._get_pixel_size_and_wavelength(ds, det)
 
-        powder: np.ndarray[np.float64] = self._extract_powder(
+        powder: Optional[npt.NDArray[np.float64]] = self._extract_powder(
             self._task_parameters.powder
         )
+        if powder is None:
+            raise RuntimeError("Unable to extract powder. Cannot continue.")
 
-        mask: Optional[np.ndarray[np.float64]] = self._extract_mask(
+        mask: Optional[npt.NDArray[np.bool_]] = self._extract_mask(
             self._task_parameters.mask
         )
         powder[powder > self._task_parameters.threshold] = 0
@@ -621,7 +649,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
                     for rank in range(self._mpi_size)
                 ]
             )
-            start_indices_per_rank: np.ndarray[np.int64] = np.zeros(
+            start_indices_per_rank: npt.NDArray[np.int64] = np.zeros(
                 self._mpi_size, dtype=np.int64
             )
             start_indices_per_rank[1:] = np.cumsum(parameters_per_rank[:-1])
@@ -660,14 +688,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
         self._mpi_comm.Barrier()
 
         # Gather all results
-        final_scores: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
-            final_scores_by_rank, root=0
+        final_scores: Optional[Union[List[float], List[List[float]]]] = (
+            self._mpi_comm.gather(final_scores_by_rank, root=0)
         )
-        final_distances: Union[List[float], List[List[float]]] = self._mpi_comm.gather(
-            final_distances_by_rank, root=0
+        final_distances: Optional[Union[List[float], List[List[float]]]] = (
+            self._mpi_comm.gather(final_distances_by_rank, root=0)
         )
-        final_centers: Union[
-            List[Tuple[float, float], List[List[Tuple[float, float]]]]
+        final_centers: Optional[
+            Union[List[Tuple[float, float]], List[List[Tuple[float, float]]]]
         ] = self._mpi_comm.gather(final_centers_by_rank, root=0)
 
         # Flatten nested lists
@@ -678,17 +706,21 @@ class OptimizeAgBhGeometryExhaustive(Task):
             return flattened
 
         if self._mpi_rank == 0:
-            final_scores = flatten(final_scores)
-            final_distances = flatten(final_distances)
-            final_centers = flatten(final_centers)
-            best_idx: int = np.argmax(final_scores)
-            best_distance: float = final_distances[best_idx]
-            best_center: Tuple[float, float] = final_centers[best_idx]
+            final_scores = flatten(cast(List[List[float]], final_scores))
+            final_distances = flatten(cast(List[List[float]], final_distances))
+            final_centers = flatten(
+                cast(List[List[Tuple[float, float]]], final_centers)
+            )
+            best_idx: int = cast(int, np.argmax(final_scores))
+            best_distance: float = cast(float, final_distances[best_idx])
+            best_center: Tuple[float, float] = cast(
+                Tuple[float, float], final_centers[best_idx]
+            )
             # Calculate resolution at edge
-            theta: np.ndarray[np.float64] = np.arctan(
+            theta: float = np.arctan(
                 np.array((powder.shape[0] / 2)) * pixel_size_mm / best_distance
             )
-            q: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength_angs
+            q: float = 2.0 * np.sin(theta / 2.0) / wavelength_angs
             edge_resolution: float = 1.0 / q
 
             self._result.summary = []
@@ -699,8 +731,6 @@ class OptimizeAgBhGeometryExhaustive(Task):
                     "Detector edge resolution (A)": edge_resolution,
                 }
             )
-
-            run: int = int(self._task_parameters.lute_config.run)
 
             plots: pn.Tabs = self.plot_powder_and_summaries(
                 powder, best_center, best_distance, wavelength_angs, pixel_size_mm, mask
@@ -727,26 +757,26 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def plot_powder_and_summaries(
         self,
-        powder: np.ndarray[np.float64],
+        powder: npt.NDArray[np.float64],
         center: Tuple[float, float],
         distance: float,
         wavelength: float,
         pixel_size: float,
-        mask: Optional[np.ndarray[np.float64]] = None,
+        mask: Optional[npt.NDArray[np.bool_]] = None,
     ) -> pn.Tabs:
-        radial_profile: np.ndarray[np.float64] = self._radial_profile(
+        radial_profile: npt.NDArray[np.float64] = self._radial_profile(
             powder, mask, center
         )
         peak_indices, _ = find_peaks(radial_profile, prominence=1, distance=10)
-        theta: np.ndarray[np.float64] = np.arctan(
+        theta: npt.NDArray[np.float64] = np.arctan(
             np.arange(radial_profile.shape[0]) * pixel_size / distance
         )
-        q_profile: np.ndarray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength
+        q_profile: npt.NDArray[np.float64] = 2.0 * np.sin(theta / 2.0) / wavelength
 
-        rings: np.ndarray[np.float64]
+        rings: npt.NDArray[np.float64]
         final_score: float
         rings, final_score = self._calc_and_score_ideal_rings(q_profile[peak_indices])
-        peaks_predicted: np.ndarray[np.float64] = (
+        peaks_predicted: npt.NDArray[np.float64] = (
             2 * distance * np.arcsin(rings * wavelength / 2.0) / pixel_size
         )
         powder_grid: pn.GridSpec = self._plot_powder_and_rings(
@@ -762,9 +792,9 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _plot_radial_profile(
         self,
-        radial_profile: np.ndarray[np.float64],
-        qprofile: np.ndarray[np.float64],
-        peaks_observed: np.ndarray[np.int64],
+        radial_profile: npt.NDArray[np.float64],
+        qprofile: npt.NDArray[np.float64],
+        peaks_observed: npt.NDArray[np.int64],
     ) -> pn.GridSpec:
         xdim: hv.core.dimension.Dimension = hv.Dimension(("Q", "Q"))
         ydim: hv.core.dimension.Dimesnion = hv.Dimension(("I", "I"))
@@ -783,11 +813,14 @@ class OptimizeAgBhGeometryExhaustive(Task):
 
     def _plot_powder_and_rings(
         self,
-        powder: np.ndarray[np.float64],
+        powder: npt.NDArray[np.float64],
         center: Tuple[float, float],
-        peaks_observed: np.ndarray[np.float64],
-        peaks_predicted: np.ndarray[np.float64],
+        peaks_observed: npt.NDArray[np.float64],
+        peaks_predicted: npt.NDArray[np.float64],
     ) -> pn.GridSpec:
+        self._task_parameters = cast(
+            OptimizeAgBhGeometryExhaustiveParameters, self._task_parameters
+        )
         dim: hv.core.dimension.Dimension = hv.Dimension(
             ("image", "Powder"),
             range=(
@@ -796,7 +829,7 @@ class OptimizeAgBhGeometryExhaustive(Task):
             ),
         )
         # (left, bottom, right, top)
-        bounds: Tuple[int, int, int, int] = (
+        bounds: Tuple[float, float, float, float] = (
             -0.5,
             -0.5,
             powder.shape[0] - 0.5,

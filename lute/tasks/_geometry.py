@@ -1,42 +1,45 @@
 from __future__ import annotations
 
-import os
-from typing import List, Optional, Tuple, Union
+# flake8: noqa: F821 -- __future__ annota.
 
-import lmfit
+import os
+from typing import List, Optional, Tuple, Union, cast
+
+import lmfit  # type: ignore
 import numpy as np
-from scipy.ndimage import map_coordinates
+import numpy.typing as npt
+from scipy.ndimage import map_coordinates  # type: ignore
 
 
 def generate_concentric_sample_pts(
-    peak_radii: np.ndarray[np.int64],
+    peak_radii: Union[npt.NDArray[np.int64], List[int]],
     center: List[float],
     num_pts: int = 200,
-) -> np.ndarray[np.float64]:
+) -> npt.NDArray[np.float64]:
     """Generate sample points along concentric circles.
 
     Args:
-        peak_radii (np.ndarray[np.int64]): Radii indices.
+        peak_radii (npt.NDArray[np.int64]): Radii indices.
 
         center (List[float]): Center_x, Center_y for the concentric circles.
 
         num_pts (int): Number of sample points.
 
     Returns:
-        coords (np.ndarray[np.float64]): X/Y coordinates of sample points.
+        coords (npt.NDArray[np.float64]): X/Y coordinates of sample points.
     """
     # X,Y labelling seems backwards
     cx: float = center[0]
     cy: float = center[1]
     # Reshape linear radii (peak indices) for broadcasting
-    radii: np.ndarray[np.int64] = np.array([peak_radii]).reshape(-1, 1)
-    theta: np.ndarray[np.float64] = np.linspace(0.0, 2 * np.pi, 200)
+    radii: npt.NDArray[np.int64] = np.array([peak_radii]).reshape(-1, 1)
+    theta: npt.NDArray[np.float64] = np.linspace(0.0, 2 * np.pi, 200)
 
-    coords_x: np.ndarray[np.float64] = radii * np.cos(theta) + cx
-    coords_y: np.ndarray[np.float64] = radii * np.sin(theta) + cy
+    coords_x: npt.NDArray[np.float64] = radii * np.cos(theta) + cx
+    coords_y: npt.NDArray[np.float64] = radii * np.sin(theta) + cy
 
     # Reshape for optimization routines
-    coords: np.ndarray[np.float64] = np.zeros((2, num_pts * len(peak_radii)))
+    coords: npt.NDArray[np.float64] = np.zeros((2, num_pts * len(peak_radii)))
     coords[1] = coords_x.reshape(-1)
     coords[0] = coords_y.reshape(-1)
 
@@ -44,31 +47,31 @@ def generate_concentric_sample_pts(
 
 
 def geometry_optimize_residual(
-    params: lmfit.Parameters, powder: np.ndarray[np.float64]
-) -> np.ndarray[np.float64]:
+    params: lmfit.Parameters, powder: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
     """Target function for OptimizeAgBhGeometryExhaustive geometry fitting.
 
     Args:
         params (lmfit.Parameters): Parameters. [center_x, center_y, peaks...]
             Center values are floats. Peaks are integers.
 
-        powder (np.ndarray[np.float64]): Powder image.
+        powder (npt.NDArray[np.float64]): Powder image.
 
     Returns:
-        pixel_values (np.ndarray[np.float64]): Residuals for fitting.
+        pixel_values (npt.NDArray[np.float64]): Residuals for fitting.
     """
     # Unpack the parameters
-    params_l: List[float] = [val.value for _, val in params.items()]
+    params_l: List[Union[float, int]] = [val.value for _, val in params.items()]
     center_guess: List[float] = params_l[:2]
     # Indices are in radii units since they are for a radial profile
-    indices: List[float] = params_l[2:]
-    coords: np.ndarray[np.float64] = generate_concentric_sample_pts(
+    indices: List[int] = cast(List[int], params_l[2:])
+    coords: npt.NDArray[np.float64] = generate_concentric_sample_pts(
         indices, center_guess
     )
 
     # Use residual for fitting - difference between intensity in ring
     # and powder max
-    pixel_values: np.ndarray[np.float64] = map_coordinates(powder, coords)
+    pixel_values: npt.NDArray[np.float64] = map_coordinates(powder, coords)
     pixel_values -= np.max(powder)
     return pixel_values
 
@@ -76,8 +79,8 @@ def geometry_optimize_residual(
 def generate_geom_file(
     exp: str,
     run: int,
-    ds: Union[psana.DataSource, psana.MPIDataSource],
-    det: psana.Detector,
+    ds: Union[psana.DataSource, psana.MPIDataSource],  # type: ignore
+    det: psana.Detector,  # type: ignore
     input_file: str,
     output_file: str,
     det_dist: Optional[float] = None,
@@ -108,7 +111,7 @@ def generate_geom_file(
 
         pv_camera_length (Optional[str]): PV associated with the camera length
     """
-    from psgeom import camera, sensors
+    from psgeom import camera, sensors  # type: ignore
 
     if input_file.split(".")[-1] == "data":
         geom = camera.CompoundAreaCamera.from_psana_file(input_file)
@@ -241,8 +244,8 @@ def deploy_geometry(
     out_dir: str,
     exp: str,
     run: int,
-    ds: Union[psana.DataSource, psana.MPIDataSource],
-    det: psana.Detector,
+    ds: Union[psana.DataSource, psana.MPIDataSource],  # type: ignore
+    det: psana.Detector,  # type: ignore
     pixel_size_mm: float,
     center: Tuple[float, float],
     distance: float,
@@ -271,7 +274,7 @@ def deploy_geometry(
 
         pv_camera_length (str | None): PV associated with camera length.
     """
-    import PSCalib
+    import PSCalib  # type: ignore
 
     # retrieve original geometry
     geom: PSCalib.GeometryAcces.GeometryAccess = det.geometry(run)

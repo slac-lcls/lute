@@ -4,8 +4,8 @@ import logging
 import os
 from typing import List
 
-from lute.io.config import *
-from lute.execution.executor import *
+from lute.execution.executor import BaseExecutor, Executor
+from lute import managed_tasks
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -37,14 +37,10 @@ task_name: str = args.taskname
 # Environment variables need to be set before importing Executors
 os.environ["LUTE_CONFIGPATH"] = config
 
-from lute import managed_tasks
-
 if hasattr(managed_tasks, task_name):
     managed_task: Executor = getattr(managed_tasks, task_name)
 else:
     import difflib
-
-    from lute.execution.executor import BaseExecutor
 
     logger.error(f"{task_name} unrecognized!")
     valid_names: List[str] = [

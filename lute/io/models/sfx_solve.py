@@ -9,7 +9,7 @@ __all__ = ["DimpleSolveParameters", "RunSHELXCParameters"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any
 
 from pydantic import Field, validator, PositiveFloat, PositiveInt, root_validator
 

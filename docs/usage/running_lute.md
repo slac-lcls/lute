@@ -143,10 +143,10 @@ slurm_params: ''
 next:
 - task_name: CrystFELIndexer
   slurm_params: ''
-  next: []
+  next:
   - task_name: PartialatorMerger
     slurm_params: ''
-    next: []
+    next:
     - task_name: HKLComparer
       slurm_params: ''
       next:

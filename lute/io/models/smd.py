@@ -39,7 +39,6 @@ from pydantic import (
 )
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
-from lute.io.db import read_latest_db_entry
 from lute.io.models.validators import validate_smd_path, template_parameter_validator
 
 
@@ -165,7 +164,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 )
 
             droplet: DropletParams = Field(
-                DropletParams(), description="Droplet finding parameters."
+                DropletParams(threshold=5, thresholdLow=5, thresADU=60, useRms=True),
+                description="Droplet finding parameters.",
             )
 
             aduspphot: int = Field(162, description="")
@@ -483,7 +483,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds())
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
     # analysis_flags: AnalysisFlags
 
 
@@ -508,9 +508,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
     )
-    xas_detname: Optional[str] = Field(
-        None, description="Name of the detector with absorption data."
-    )
+    xas_detname: str = Field(description="Name of the detector with absorption data.")
     xss_detname: Optional[str] = Field(
         None,
         description="Name of the detector with scattering data, for normalization.",
@@ -529,8 +527,8 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     ccm_set: Optional[str] = Field(
         None, description="Name of the PV for the setpoint of the CCM."
     )
-    thresholds: Thresholds = Field(Thresholds())
-    element: Optional[bool] = Field(
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
+    element: Optional[str] = Field(
         None,
         description="Element under investigation. Currently unused. For future EXAFS.",
     )
@@ -557,9 +555,7 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
     smd_path: str = Field(
         "", description="Path to the Small Data HDF5 file to analyze."
     )
-    xes_detname: Optional[str] = Field(
-        None, description="Name of the detector with absorption data."
-    )
+    xes_detname: str = Field(description="Name of the detector with absorption data.")
     xss_detname: Optional[str] = Field(
         None,
         description="Name of the detector with scattering data, for normalization.",
@@ -574,7 +570,7 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds())
+    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
     invert_xes_axes: bool = Field(
         False,
         description=(

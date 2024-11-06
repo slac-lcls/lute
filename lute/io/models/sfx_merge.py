@@ -23,7 +23,6 @@ import os
 from typing import Union, Optional, Dict, Any
 
 from pydantic import Field, validator, BaseModel
-from pydantic.schema import model_schema, default_ref_template  # Update `schema` method
 
 from lute.io.db import read_latest_db_entry
 from lute.io.models.base import ThirdPartyParameters, TemplateConfig
@@ -226,7 +225,7 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        class Config(BaseModel.Config):
+        class Config(BaseModel.Config):  # type: ignore
             extra: str = "allow"
 
         # Generic input settings: input_

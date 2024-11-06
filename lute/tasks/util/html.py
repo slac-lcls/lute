@@ -3,7 +3,9 @@
 This includes HTML templates and associated functions.
 """
 
-__all__ = []
+from typing import List
+
+__all__: List[str] = []
 __author__ = "Gabriel Dorlhiac"
 
 DIMPLE_HTML: str = """

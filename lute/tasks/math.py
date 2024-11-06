@@ -11,15 +11,16 @@ __all__ = ["gaussian", "sigma_to_fwhm"]
 __author__ = "Gabriel Dorlhiac"
 
 import numpy as np
+import numpy.typing as npt
 
 
 def gaussian(
-    x_vals: np.ndarray[np.float64], amp: float, x0: float, sigma: float, bkgnd: float
-) -> np.ndarray[np.float64]:
+    x_vals: npt.NDArray[np.float64], amp: float, x0: float, sigma: float, bkgnd: float
+) -> npt.NDArray[np.float64]:
     """1D Gaussian distribution with specified parameters.
 
     Args:
-        x_vals (np.ndarray[np.float64]): Values over which to calculate the
+        x_vals (npt.NDArray[np.float64]): Values over which to calculate the
             distribution.
 
         amp (float): Amplitude of the distribution.
@@ -28,11 +29,11 @@ def gaussian(
 
         sigma (float): Standard deviation of the distribution.
 
-        bkgnd (float | np.ndarray[np.float64]): Background/noise. Constant
+        bkgnd (float | npt.NDArray[np.float64]): Background/noise. Constant
             offset (float) or an array of offsets of the same length as `x_vals`.
 
     Returns:
-        distribution (np.ndarray[np.float64]): Calculated Gaussian distribution
+        distribution (npt.NDArray[np.float64]): Calculated Gaussian distribution
             based on given parameters. Same shape as x_vals.
     """
     numerator = -((x_vals - x0) ** 2)
