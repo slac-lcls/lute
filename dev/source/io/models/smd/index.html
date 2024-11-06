@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -1816,9 +1816,7 @@ scanned motors.</p>
 <span class="normal">531</span>
 <span class="normal">532</span>
 <span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
-<span class="normal">536</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AnalyzeSmallDataXASParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
+<span class="normal">534</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AnalyzeSmallDataXASParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;TaskParameter model for AnalyzeSmallDataXAS Task.</span>
 
 <span class="sd">    This Task does basic analysis of XAS data based on a SmallData HDF5 output</span>
@@ -1839,9 +1837,7 @@ scanned motors.</p>
     <span class="n">smd_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Path to the Small Data HDF5 file to analyze.&quot;</span>
     <span class="p">)</span>
-    <span class="n">xas_detname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with absorption data.&quot;</span>
-    <span class="p">)</span>
+    <span class="n">xas_detname</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with absorption data.&quot;</span><span class="p">)</span>
     <span class="n">xss_detname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with scattering data, for normalization.&quot;</span><span class="p">,</span>
@@ -1860,8 +1856,8 @@ scanned motors.</p>
     <span class="n">ccm_set</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the PV for the setpoint of the CCM.&quot;</span>
     <span class="p">)</span>
-    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">())</span>
-    <span class="n">element</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">(</span><span class="n">min_Iscat</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">min_ipm</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">))</span>
+    <span class="n">element</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Element under investigation. Currently unused. For future EXAFS.&quot;</span><span class="p">,</span>
     <span class="p">)</span>
@@ -1916,7 +1912,9 @@ scanned motors.</p>
 
               <details class="quote">
                 <summary>Source code in <code>lute/io/models/smd.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">539</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
 <span class="normal">540</span>
 <span class="normal">541</span>
 <span class="normal">542</span>
@@ -1965,11 +1963,7 @@ scanned motors.</p>
 <span class="normal">585</span>
 <span class="normal">586</span>
 <span class="normal">587</span>
-<span class="normal">588</span>
-<span class="normal">589</span>
-<span class="normal">590</span>
-<span class="normal">591</span>
-<span class="normal">592</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AnalyzeSmallDataXESParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
+<span class="normal">588</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AnalyzeSmallDataXESParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;TaskParameter model for AnalyzeSmallDataXES Task.</span>
 
 <span class="sd">    This Task does basic analysis of XES data based on a SmallData HDF5 output</span>
@@ -1990,9 +1984,7 @@ scanned motors.</p>
     <span class="n">smd_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Path to the Small Data HDF5 file to analyze.&quot;</span>
     <span class="p">)</span>
-    <span class="n">xes_detname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with absorption data.&quot;</span>
-    <span class="p">)</span>
+    <span class="n">xes_detname</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with absorption data.&quot;</span><span class="p">)</span>
     <span class="n">xss_detname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the detector with scattering data, for normalization.&quot;</span><span class="p">,</span>
@@ -2007,7 +1999,7 @@ scanned motors.</p>
             <span class="s2">&quot;E.g. lxt, lens_h, etc.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">())</span>
+    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">(</span><span class="n">min_Iscat</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">min_ipm</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">))</span>
     <span class="n">invert_xes_axes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
@@ -2150,7 +2142,7 @@ scanned motors.</p>
             <span class="s2">&quot;E.g. lxt, lens_h, etc.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">())</span>
+    <span class="n">thresholds</span><span class="p">:</span> <span class="n">Thresholds</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">Thresholds</span><span class="p">(</span><span class="n">min_Iscat</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">min_ipm</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">))</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -2199,7 +2191,8 @@ scanned motors.</p>
 
               <details class="quote">
                 <summary>Source code in <code>lute/io/models/smd.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 46</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 45</span>
+<span class="normal"> 46</span>
 <span class="normal"> 47</span>
 <span class="normal"> 48</span>
 <span class="normal"> 49</span>
@@ -2720,7 +2713,8 @@ scanned motors.</p>
                 <span class="p">)</span>
 
             <span class="n">droplet</span><span class="p">:</span> <span class="n">DropletParams</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-                <span class="n">DropletParams</span><span class="p">(),</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Droplet finding parameters.&quot;</span>
+                <span class="n">DropletParams</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">thresholdLow</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">thresADU</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">useRms</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Droplet finding parameters.&quot;</span><span class="p">,</span>
             <span class="p">)</span>
 
             <span class="n">aduspphot</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">162</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -3037,14 +3031,14 @@ scanned motors.</p>
 
               <details class="quote">
                 <summary>Source code in <code>lute/io/models/smd.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">48</span>
+<span class="normal">49</span>
 <span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">ThirdPartyParameters</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>
+<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">ThirdPartyParameters</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Identical to super-class Config but includes a result.&quot;&quot;&quot;</span>
 
     <span class="n">set_result</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>

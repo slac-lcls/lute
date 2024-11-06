@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -2275,9 +2275,10 @@ compression and decompression with libpressio for data reduction tests.</p>
             <span class="p">)</span>
 
         <span class="c1"># Peak-related entries</span>
+        <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;nPeaks&quot;</span><span class="p">:</span>
-                <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+                <span class="n">ds_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                     <span class="p">(</span><span class="n">n_events</span><span class="p">,),</span>
                     <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span>
@@ -2286,7 +2287,7 @@ compression and decompression with libpressio for data reduction tests.</p>
                 <span class="n">ds_x</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;minPeaks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_peaks</span>
                 <span class="n">ds_x</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;maxPeaks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_peaks</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+                <span class="n">ds_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                     <span class="p">(</span><span class="n">n_events</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">),</span>
                     <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">),</span>
@@ -2297,17 +2298,16 @@ compression and decompression with libpressio for data reduction tests.</p>
 
         <span class="c1"># Timestamp entries</span>
         <span class="n">lcls_1</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">&quot;LCLS&quot;</span><span class="p">)</span>
-        <span class="n">keys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span>
             <span class="s2">&quot;eventNumber&quot;</span><span class="p">,</span>
             <span class="s2">&quot;machineTime&quot;</span><span class="p">,</span>
             <span class="s2">&quot;machineTimeNanoSeconds&quot;</span><span class="p">,</span>
             <span class="s2">&quot;fiducial&quot;</span><span class="p">,</span>
             <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">,</span>
         <span class="p">]</span>
-        <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">:</span>
-                <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">lcls_1</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+                <span class="n">ds_x</span> <span class="o">=</span> <span class="n">lcls_1</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">n_events</span><span class="p">,),</span> <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
@@ -2323,7 +2323,7 @@ compression and decompression with libpressio for data reduction tests.</p>
 
     <span class="k">def</span> <span class="nf">write_event</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
+        <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
         <span class="n">peaks</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>  <span class="c1"># Not typed becomes it comes from psana</span>
         <span class="n">timestamp_seconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">timestamp_nanoseconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -2336,7 +2336,7 @@ compression and decompression with libpressio for data reduction tests.</p>
 
 <span class="sd">        Parameters:</span>
 
-<span class="sd">            img (NDArray[numpy.float_]): Detector data for the event</span>
+<span class="sd">            img (NDArray[numpy.float64]): Detector data for the event</span>
 
 <span class="sd">            peaks: (Any): Peak information for the event, as recovered from the PyAlgos</span>
 <span class="sd">                algorithm</span>
@@ -2353,10 +2353,10 @@ compression and decompression with libpressio for data reduction tests.</p>
 
 <span class="sd">            clen (float): Camera length/detector distance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
         <span class="p">)</span>
-        <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -2411,7 +2411,7 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span>
 
         <span class="c1"># Calculate and write pixel radius</span>
-        <span class="n">peaks_cenx</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">peaks_cenx</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_i_x</span><span class="p">[</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
@@ -2420,7 +2420,7 @@ compression and decompression with libpressio for data reduction tests.</p>
             <span class="o">+</span> <span class="mf">0.5</span>
             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ipx</span>
         <span class="p">)</span>
-        <span class="n">peaks_ceny</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">peaks_ceny</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_i_y</span><span class="p">[</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
@@ -2429,7 +2429,7 @@ compression and decompression with libpressio for data reduction tests.</p>
             <span class="o">+</span> <span class="mf">0.5</span>
             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ipy</span>
         <span class="p">)</span>
-        <span class="n">peak_radius</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+        <span class="n">peak_radius</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
             <span class="p">(</span><span class="n">peaks_cenx</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">peaks_ceny</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/result_1/peakRadius&quot;</span><span class="p">][</span>
@@ -2448,8 +2448,8 @@ compression and decompression with libpressio for data reduction tests.</p>
 
     <span class="k">def</span> <span class="nf">write_non_event_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
-        <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
+        <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+        <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
         <span class="n">mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">],</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2457,9 +2457,9 @@ compression and decompression with libpressio for data reduction tests.</p>
 
 <span class="sd">        Parameters:</span>
 
-<span class="sd">            powder_hits (NDArray[numpy.float_]): Virtual powder pattern from hits</span>
+<span class="sd">            powder_hits (NDArray[numpy.float64]): Virtual powder pattern from hits</span>
 
-<span class="sd">            powder_misses (NDArray[numpy.float_]): Virtual powder pattern from hits</span>
+<span class="sd">            powder_misses (NDArray[numpy.float64]): Virtual powder pattern from hits</span>
 
 <span class="sd">            mask: (NDArray[numpy.uint16]): Pixel ask to write into the file</span>
 
@@ -2498,7 +2498,7 @@ compression and decompression with libpressio for data reduction tests.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
             <span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">data_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/nPeaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">num_hits</span><span class="p">,))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/result_1/nPeaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">num_hits</span><span class="p">,))</span>
         <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span>
             <span class="s2">&quot;peakXPosRaw&quot;</span><span class="p">,</span>
@@ -2839,9 +2839,10 @@ tag (str): Tag to append to cxi file names.
         <span class="p">)</span>
 
     <span class="c1"># Peak-related entries</span>
+    <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;nPeaks&quot;</span><span class="p">:</span>
-            <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+            <span class="n">ds_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">n_events</span><span class="p">,),</span>
                 <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span>
@@ -2850,7 +2851,7 @@ tag (str): Tag to append to cxi file names.
             <span class="n">ds_x</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;minPeaks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_peaks</span>
             <span class="n">ds_x</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;maxPeaks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_peaks</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+            <span class="n">ds_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">n_events</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">),</span>
                 <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_peaks</span><span class="p">),</span>
@@ -2861,17 +2862,16 @@ tag (str): Tag to append to cxi file names.
 
     <span class="c1"># Timestamp entries</span>
     <span class="n">lcls_1</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="o">.</span><span class="n">create_group</span><span class="p">(</span><span class="s2">&quot;LCLS&quot;</span><span class="p">)</span>
-    <span class="n">keys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span>
         <span class="s2">&quot;eventNumber&quot;</span><span class="p">,</span>
         <span class="s2">&quot;machineTime&quot;</span><span class="p">,</span>
         <span class="s2">&quot;machineTimeNanoSeconds&quot;</span><span class="p">,</span>
         <span class="s2">&quot;fiducial&quot;</span><span class="p">,</span>
         <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">,</span>
     <span class="p">]</span>
-    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;photon_energy_eV&quot;</span><span class="p">:</span>
-            <span class="n">ds_x</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">lcls_1</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
+            <span class="n">ds_x</span> <span class="o">=</span> <span class="n">lcls_1</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">n_events</span><span class="p">,),</span> <span class="n">maxshape</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -2983,7 +2983,7 @@ max_peaks (int): Maximum number of peaks (per event) for which information
     <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
         <span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">data_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
     <span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;/entry_1/result_1/nPeaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">num_hits</span><span class="p">,))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/result_1/nPeaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">num_hits</span><span class="p">,))</span>
     <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span>
         <span class="s2">&quot;peakXPosRaw&quot;</span><span class="p">,</span>
@@ -3030,7 +3030,7 @@ max_peaks (int): Maximum number of peaks (per event) for which information
 
         <p>Write peak finding results for an event into the HDF5 file.</p>
 <p>Parameters:</p>
-<pre><code>img (NDArray[numpy.float_]): Detector data for the event
+<pre><code>img (NDArray[numpy.float64]): Detector data for the event
 
 peaks: (Any): Peak information for the event, as recovered from the PyAlgos
     algorithm
@@ -3175,7 +3175,7 @@ clen (float): Camera length/detector distance.
 <span class="normal">311</span>
 <span class="normal">312</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_event</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
+    <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
     <span class="n">peaks</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>  <span class="c1"># Not typed becomes it comes from psana</span>
     <span class="n">timestamp_seconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">timestamp_nanoseconds</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -3188,7 +3188,7 @@ clen (float): Camera length/detector distance.
 
 <span class="sd">    Parameters:</span>
 
-<span class="sd">        img (NDArray[numpy.float_]): Detector data for the event</span>
+<span class="sd">        img (NDArray[numpy.float64]): Detector data for the event</span>
 
 <span class="sd">        peaks: (Any): Peak information for the event, as recovered from the PyAlgos</span>
 <span class="sd">            algorithm</span>
@@ -3205,10 +3205,10 @@ clen (float): Camera length/detector distance.
 
 <span class="sd">        clen (float): Camera length/detector distance.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">ch_rows</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_raw_det_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
     <span class="p">)</span>
-    <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">ch_cols</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -3263,7 +3263,7 @@ clen (float): Camera length/detector distance.
     <span class="p">]</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span>
 
     <span class="c1"># Calculate and write pixel radius</span>
-    <span class="n">peaks_cenx</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">peaks_cenx</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_i_x</span><span class="p">[</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
@@ -3272,7 +3272,7 @@ clen (float): Camera length/detector distance.
         <span class="o">+</span> <span class="mf">0.5</span>
         <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ipx</span>
     <span class="p">)</span>
-    <span class="n">peaks_ceny</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">peaks_ceny</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_i_y</span><span class="p">[</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">peaks</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
@@ -3281,7 +3281,7 @@ clen (float): Camera length/detector distance.
         <span class="o">+</span> <span class="mf">0.5</span>
         <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ipy</span>
     <span class="p">)</span>
-    <span class="n">peak_radius</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+    <span class="n">peak_radius</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
         <span class="p">(</span><span class="n">peaks_cenx</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">peaks_ceny</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_outh5</span><span class="p">[</span><span class="s2">&quot;/entry_1/result_1/peakRadius&quot;</span><span class="p">][</span>
@@ -3316,9 +3316,9 @@ clen (float): Camera length/detector distance.
 
         <p>Write to the file data that is not related to a specific event (masks, powders)</p>
 <p>Parameters:</p>
-<pre><code>powder_hits (NDArray[numpy.float_]): Virtual powder pattern from hits
+<pre><code>powder_hits (NDArray[numpy.float64]): Virtual powder pattern from hits
 
-powder_misses (NDArray[numpy.float_]): Virtual powder pattern from hits
+powder_misses (NDArray[numpy.float64]): Virtual powder pattern from hits
 
 mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 </code></pre>
@@ -3355,8 +3355,8 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 <span class="normal">341</span>
 <span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write_non_event_data</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
-    <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">],</span>
+    <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+    <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">],</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -3364,9 +3364,9 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 
 <span class="sd">    Parameters:</span>
 
-<span class="sd">        powder_hits (NDArray[numpy.float_]): Virtual powder pattern from hits</span>
+<span class="sd">        powder_hits (NDArray[numpy.float64]): Virtual powder pattern from hits</span>
 
-<span class="sd">        powder_misses (NDArray[numpy.float_]): Virtual powder pattern from hits</span>
+<span class="sd">        powder_misses (NDArray[numpy.float64]): Virtual powder pattern from hits</span>
 
 <span class="sd">        mask: (NDArray[numpy.uint16]): Pixel ask to write into the file</span>
 
@@ -3409,7 +3409,7 @@ mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="tasks.task.Task" href="../task/#tasks.task.Task">Task</a></code></p>
+              Bases: <code><span title="lute.tasks.task.Task">Task</span></code></p>
 
 
         <p>Task that performs peak finding using the PyAlgos peak finding algorithms and
@@ -3798,18 +3798,20 @@ writes the peak information to CXI files.</p>
 <span class="normal">983</span>
 <span class="normal">984</span>
 <span class="normal">985</span>
-<span class="normal">986</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FindPeaksPyAlgos</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
+<span class="normal">986</span>
+<span class="normal">987</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FindPeaksPyAlgos</span><span class="p">(</span><span class="n">Task</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Task that performs peak finding using the PyAlgos peak finding algorithms and</span>
 <span class="sd">    writes the peak information to CXI files.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">TaskParameters</span><span class="p">,</span> <span class="n">use_mpi</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">FindPeaksPyAlgosParameters</span><span class="p">,</span> <span class="n">use_mpi</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">use_mpi</span><span class="o">=</span><span class="n">use_mpi</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">compression</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">libpressio</span> <span class="kn">import</span> <span class="n">PressioCompressor</span>
 
     <span class="k">def</span> <span class="nf">_run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">FindPeaksPyAlgosParameters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="p">)</span>
         <span class="n">ds</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">MPIDataSource</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;exp=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">experiment</span><span class="si">}</span><span class="s2">:&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;run=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="si">}</span><span class="s2">:smd&quot;</span>
@@ -3859,7 +3861,7 @@ writes the peak information to CXI files.</p>
                 <span class="p">)</span>
 
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">event_logic</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">event_code</span> <span class="ow">in</span> <span class="n">event_codes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">event_code</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">event_codes</span><span class="p">:</span>
                     <span class="k">continue</span>
 
             <span class="n">img</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">det</span><span class="o">.</span><span class="n">calib</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span>
@@ -3879,7 +3881,7 @@ writes the peak information to CXI files.</p>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">psana_mask</span><span class="p">:</span>
                     <span class="n">mask</span> <span class="o">=</span> <span class="n">det</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">task_parameters</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
                         <span class="n">calib</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                         <span class="n">status</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                         <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -3891,16 +3893,16 @@ writes the peak information to CXI files.</p>
                 <span class="n">hdffh</span><span class="p">:</span> <span class="n">Any</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">mask_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">mask_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdffh</span><span class="p">:</span>
-                        <span class="n">loaded_mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">hdffh</span><span class="p">[</span><span class="s2">&quot;entry_1/data_1/mask&quot;</span><span class="p">][</span>
-                            <span class="p">:</span>
-                        <span class="p">]</span>
+                        <span class="n">loaded_mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">]</span> <span class="o">=</span> <span class="n">hdffh</span><span class="p">[</span>
+                            <span class="s2">&quot;entry_1/data_1/mask&quot;</span>
+                        <span class="p">][:]</span>
                         <span class="n">mask</span> <span class="o">*=</span> <span class="n">loaded_mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
 
                 <span class="n">file_writer</span><span class="p">:</span> <span class="n">CxiWriter</span> <span class="o">=</span> <span class="n">CxiWriter</span><span class="p">(</span>
                     <span class="n">outdir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span>
                     <span class="n">rank</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span>
                     <span class="n">exp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
-                    <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+                    <span class="n">run</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">),</span>
                     <span class="n">n_events</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">n_events</span><span class="p">,</span>
                     <span class="n">det_shape</span><span class="o">=</span><span class="n">det_shape</span><span class="p">,</span>
                     <span class="n">raw_det_shape</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
@@ -3912,7 +3914,7 @@ writes the peak information to CXI files.</p>
                     <span class="n">max_peaks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">max_peaks</span><span class="p">,</span>
                     <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="n">alg</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">PyAlgos</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">pbits</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># pbits controls verbosity</span>
+                <span class="n">alg</span> <span class="o">=</span> <span class="n">PyAlgos</span><span class="p">(</span><span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span> <span class="n">pbits</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># pbits controls verbosity</span>
                 <span class="n">alg</span><span class="o">.</span><span class="n">set_peak_selection_pars</span><span class="p">(</span>
                     <span class="n">npix_min</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">npix_min</span><span class="p">,</span>
                     <span class="n">npix_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">npix_max</span><span class="p">,</span>
@@ -3931,8 +3933,8 @@ writes the peak information to CXI files.</p>
                         <span class="n">libpressio_mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
                     <span class="p">)</span>
 
-                <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">det_shape</span><span class="p">)</span>
-                <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float_</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">det_shape</span><span class="p">)</span>
+                <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">det_shape</span><span class="p">)</span>
+                <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">det_shape</span><span class="p">)</span>
 
             <span class="n">peaks</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">alg</span><span class="o">.</span><span class="n">peak_finder_v3r3</span><span class="p">(</span>
                 <span class="n">img</span><span class="p">,</span>
@@ -3949,6 +3951,7 @@ writes the peak information to CXI files.</p>
             <span class="p">):</span>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">compression</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="kn">from</span> <span class="nn">libpressio</span> <span class="kn">import</span> <span class="n">PressioCompressor</span>  <span class="c1"># type: ignore</span>
 
                     <span class="n">libpressio_config_with_peaks</span> <span class="o">=</span> <span class="p">(</span>
                         <span class="n">add_peaks_to_libpressio_configuration</span><span class="p">(</span><span class="n">libpressio_config</span><span class="p">,</span> <span class="n">peaks</span><span class="p">)</span>
@@ -3958,7 +3961,7 @@ writes the peak information to CXI files.</p>
                     <span class="p">)</span>
                     <span class="n">compressed_img</span> <span class="o">=</span> <span class="n">compressor</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
                     <span class="n">decompressed_img</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
-                    <span class="n">decompressed</span> <span class="o">=</span> <span class="n">compressor</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">compressed_img</span><span class="p">,</span> <span class="n">decompressed_img</span><span class="p">)</span>
+                    <span class="n">_</span> <span class="o">=</span> <span class="n">compressor</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">compressed_img</span><span class="p">,</span> <span class="n">decompressed_img</span><span class="p">)</span>
                     <span class="n">img</span> <span class="o">=</span> <span class="n">decompressed_img</span>
 
                 <span class="n">photon_energy</span><span class="p">:</span> <span class="nb">float</span>
@@ -4014,23 +4017,25 @@ writes the peak information to CXI files.</p>
 
         <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Barrier</span><span class="p">()</span>
 
-        <span class="n">num_hits_per_rank</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">num_hits_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">SUM</span><span class="p">)</span>
-        <span class="n">num_events_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_events</span><span class="p">,</span> <span class="n">SUM</span><span class="p">)</span>
+        <span class="n">num_hits_per_rank</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+            <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">num_hits_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_hits</span><span class="p">,</span> <span class="n">SUM</span><span class="p">))</span>
+        <span class="n">num_events_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">num_events</span><span class="p">,</span> <span class="n">SUM</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="n">ds</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">master_fname</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">write_master_file</span><span class="p">(</span>
                 <span class="n">mpi_size</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
                 <span class="n">outdir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span>
                 <span class="n">exp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
-                <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+                <span class="n">run</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">),</span>
                 <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">,</span>
                 <span class="n">n_hits_per_rank</span><span class="o">=</span><span class="n">num_hits_per_rank</span><span class="p">,</span>
                 <span class="n">n_hits_total</span><span class="o">=</span><span class="n">num_hits_total</span><span class="p">,</span>
             <span class="p">)</span>
 
             <span class="c1"># Write final summary file</span>
-            <span class="n">f</span><span class="p">:</span> <span class="n">TextIO</span>
+            <span class="n">f</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">TextIO</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">]</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
                 <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;peakfinding</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">.summary&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -4043,10 +4048,10 @@ writes the peak information to CXI files.</p>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No. hits per rank: </span><span class="si">{</span><span class="n">num_hits_per_rank</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
 
             <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">master_fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">final_powder_hits</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span>
+                <span class="n">final_powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span>
                     <span class="s2">&quot;entry_1/data_1/powderHits&quot;</span>
                 <span class="p">][:]</span>
-                <span class="n">final_powder_misses</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span>
+                <span class="n">final_powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span>
                     <span class="s2">&quot;entry_1/data_1/powderMisses&quot;</span>
                 <span class="p">][:]</span>
                 <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -4075,8 +4080,8 @@ writes the peak information to CXI files.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">_result</span><span class="o">.</span><span class="n">task_status</span> <span class="o">=</span> <span class="n">TaskStatus</span><span class="o">.</span><span class="n">COMPLETED</span>
 
     <span class="k">def</span> <span class="nf">_assemble_image</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span> <span class="n">img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span> <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble an image based on psana geometry.</span>
 
 <span class="sd">        Args:</span>
@@ -4090,20 +4095,16 @@ writes the peak information to CXI files.</p>
 <span class="sd">            assembled_img(numpy.ndarray[np.float64]): Assembled 2D image.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">geom</span><span class="p">:</span> <span class="n">GeometryAccess</span> <span class="o">=</span> <span class="n">det</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">)</span>
-        <span class="n">tmp</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_pixel_coord_indexes</span><span class="p">()</span>
-        <span class="n">pixel_map</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">unit64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+        <span class="n">tmp</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_pixel_coord_indexes</span><span class="p">()</span>
+        <span class="n">pixel_map</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
             <span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span>
         <span class="p">)</span>
         <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">unflattened_img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
-            <span class="n">pixel_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="p">)</span>
+        <span class="n">unflattened_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">pixel_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">idx_max_y</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Adding one</span>
         <span class="n">idx_max_x</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># casts to float</span>
-        <span class="n">assembled_img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
-            <span class="p">(</span><span class="n">idx_max_y</span><span class="p">,</span> <span class="n">idx_max_x</span><span class="p">)</span>
-        <span class="p">)</span>
+        <span class="n">assembled_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">idx_max_y</span><span class="p">,</span> <span class="n">idx_max_x</span><span class="p">))</span>
         <span class="n">assembled_img</span><span class="p">[</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">unflattened_img</span>
 
         <span class="k">return</span> <span class="n">assembled_img</span>
@@ -4111,8 +4112,8 @@ writes the peak information to CXI files.</p>
     <span class="k">def</span> <span class="nf">_create_powder_plots</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span>
-        <span class="n">powder_hits</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
-        <span class="n">powder_misses</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+        <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+        <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pn</span><span class="o">.</span><span class="n">Tabs</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a tabbed display of hits and misses &#39;powder&#39; plots.</span>
 
@@ -4129,10 +4130,11 @@ writes the peak information to CXI files.</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            tabs (pn.Tabs): Tabbed display of the image plots.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">assembled_powder_hits</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">FindPeaksPyAlgosParameters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="p">)</span>
+        <span class="n">assembled_powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
             <span class="n">det</span><span class="p">,</span> <span class="n">powder_hits</span>
         <span class="p">)</span>
-        <span class="n">assembled_powder_misses</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
+        <span class="n">assembled_powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
             <span class="n">det</span><span class="p">,</span> <span class="n">powder_misses</span>
         <span class="p">)</span>
 
@@ -4277,11 +4279,7 @@ generally be of shape (n_panels, ss, fs)</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/sfx_find_peaks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">886</span>
-<span class="normal">887</span>
-<span class="normal">888</span>
-<span class="normal">889</span>
-<span class="normal">890</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">890</span>
 <span class="normal">891</span>
 <span class="normal">892</span>
 <span class="normal">893</span>
@@ -4310,8 +4308,8 @@ generally be of shape (n_panels, ss, fs)</p>
 <span class="normal">916</span>
 <span class="normal">917</span>
 <span class="normal">918</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_assemble_image</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span> <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span> <span class="n">img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+    <span class="bp">self</span><span class="p">,</span> <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span> <span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Assemble an image based on psana geometry.</span>
 
 <span class="sd">    Args:</span>
@@ -4325,20 +4323,16 @@ generally be of shape (n_panels, ss, fs)</p>
 <span class="sd">        assembled_img(numpy.ndarray[np.float64]): Assembled 2D image.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">geom</span><span class="p">:</span> <span class="n">GeometryAccess</span> <span class="o">=</span> <span class="n">det</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">run</span><span class="p">)</span>
-    <span class="n">tmp</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_pixel_coord_indexes</span><span class="p">()</span>
-    <span class="n">pixel_map</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">unit64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
+    <span class="n">tmp</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">get_pixel_coord_indexes</span><span class="p">()</span>
+    <span class="n">pixel_map</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
         <span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">(</span><span class="mi">2</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">uint64</span>
     <span class="p">)</span>
     <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">unflattened_img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
-        <span class="n">pixel_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-    <span class="p">)</span>
+    <span class="n">unflattened_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">pixel_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">idx_max_y</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Adding one</span>
     <span class="n">idx_max_x</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># casts to float</span>
-    <span class="n">assembled_img</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
-        <span class="p">(</span><span class="n">idx_max_y</span><span class="p">,</span> <span class="n">idx_max_x</span><span class="p">)</span>
-    <span class="p">)</span>
+    <span class="n">assembled_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">idx_max_y</span><span class="p">,</span> <span class="n">idx_max_x</span><span class="p">))</span>
     <span class="n">assembled_img</span><span class="p">[</span><span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">pixel_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">unflattened_img</span>
 
     <span class="k">return</span> <span class="n">assembled_img</span>
@@ -4518,11 +4512,12 @@ misses across the run.</p>
 <span class="normal">983</span>
 <span class="normal">984</span>
 <span class="normal">985</span>
-<span class="normal">986</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_create_powder_plots</span><span class="p">(</span>
+<span class="normal">986</span>
+<span class="normal">987</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_create_powder_plots</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">det</span><span class="p">:</span> <span class="n">Detector</span><span class="p">,</span>
-    <span class="n">powder_hits</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
-    <span class="n">powder_misses</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+    <span class="n">powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+    <span class="n">powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pn</span><span class="o">.</span><span class="n">Tabs</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a tabbed display of hits and misses &#39;powder&#39; plots.</span>
 
@@ -4539,10 +4534,11 @@ misses across the run.</p>
 <span class="sd">    Returns:</span>
 <span class="sd">        tabs (pn.Tabs): Tabbed display of the image plots.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">assembled_powder_hits</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">FindPeaksPyAlgosParameters</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_task_parameters</span><span class="p">)</span>
+    <span class="n">assembled_powder_hits</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
         <span class="n">det</span><span class="p">,</span> <span class="n">powder_hits</span>
     <span class="p">)</span>
-    <span class="n">assembled_powder_misses</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
+    <span class="n">assembled_powder_misses</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assemble_image</span><span class="p">(</span>
         <span class="n">det</span><span class="p">,</span> <span class="n">powder_misses</span>
     <span class="p">)</span>
 
@@ -4820,7 +4816,7 @@ for the libpressio library
     <span class="k">elif</span> <span class="n">compressor</span> <span class="o">==</span> <span class="s2">&quot;sz3&quot;</span><span class="p">:</span>
         <span class="n">pressio_opts</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pressio:abs&quot;</span><span class="p">:</span> <span class="n">abs_error</span><span class="p">}</span>
 
-    <span class="n">lp_json</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">lp_json</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;compressor_id&quot;</span><span class="p">:</span> <span class="s2">&quot;pressio&quot;</span><span class="p">,</span>
         <span class="s2">&quot;early_config&quot;</span><span class="p">:</span> <span class="p">{</span>
             <span class="s2">&quot;pressio&quot;</span><span class="p">:</span> <span class="p">{</span>

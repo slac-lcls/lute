@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -2378,7 +2378,7 @@ experimental runs.</p>
     <span class="k">class</span> <span class="nc">PhilParameters</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Template parameters for CCTBX phil file.&quot;&quot;&quot;</span>
 
-        <span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseModel</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>
+        <span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseModel</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
             <span class="n">extra</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;allow&quot;</span>
 
         <span class="c1"># Generic input settings: input_</span>
@@ -2951,7 +2951,7 @@ experimental runs.</p>
 <span class="normal">707</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">PhilParameters</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Template parameters for CCTBX phil file.&quot;&quot;&quot;</span>
 
-    <span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseModel</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseModel</span><span class="o">.</span><span class="n">Config</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
         <span class="n">extra</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;allow&quot;</span>
 
     <span class="c1"># Generic input settings: input_</span>
@@ -3744,7 +3744,7 @@ https://www.desy.de/~twhite/crystfel/manual-indexamajig.html</p>
         <span class="n">flag_type</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
         <span class="n">rename_param</span><span class="o">=</span><span class="s2">&quot;temp-dir&quot;</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">wait_for_file</span><span class="p">:</span> <span class="n">conint</span><span class="p">(</span><span class="n">gt</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+    <span class="n">wait_for_file</span><span class="p">:</span> <span class="n">conint</span><span class="p">(</span><span class="n">gt</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>  <span class="c1"># type: ignore</span>
         <span class="mi">0</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Wait at most `x` seconds for a file to be created. A value of -1 means wait forever.&quot;</span><span class="p">,</span>
         <span class="n">flag_type</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
@@ -4022,7 +4022,7 @@ https://www.desy.de/~twhite/crystfel/manual-indexamajig.html</p>
                 <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">values</span><span class="p">[</span><span class="s1">&#39;lute_config&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">work_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;FindPeaksPyAlgos&quot;</span><span class="p">,</span> <span class="s2">&quot;tag&quot;</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">tag</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">read_latest_db_entry</span><span class="p">(</span>
+                <span class="n">tag</span> <span class="o">=</span> <span class="n">read_latest_db_entry</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">values</span><span class="p">[</span><span class="s1">&#39;lute_config&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">work_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;FindPeaksPsocake&quot;</span><span class="p">,</span> <span class="s2">&quot;tag&quot;</span>
                 <span class="p">)</span>
             <span class="n">fname</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expmt</span><span class="si">}</span><span class="s2">_r</span><span class="si">{</span><span class="n">run</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">&quot;</span>

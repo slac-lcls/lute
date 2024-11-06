@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -2121,7 +2121,9 @@ Types are one of TEXT, INTEGER, REAL.</p>
 <span class="normal">252</span>
 <span class="normal">253</span>
 <span class="normal">254</span>
-<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_dict_to_flatdicts</span><span class="p">(</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_dict_to_flatdicts</span><span class="p">(</span>
     <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">curr_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Flattens a dictionary delimiting parameters with a &#39;.&#39;.</span>
@@ -2161,6 +2163,8 @@ Types are one of TEXT, INTEGER, REAL.</p>
         <span class="n">corrected_value</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">corrected_value</span><span class="p">,</span> <span class="n">TemplateParameters</span><span class="p">):</span>
             <span class="n">corrected_value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">params</span>
+        <span class="n">x</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span>
+        <span class="n">y</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">corrected_value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_dict_to_flatdicts</span><span class="p">(</span><span class="n">corrected_value</span><span class="p">,</span> <span class="n">curr_key</span><span class="o">=</span><span class="n">flat_key</span><span class="p">)</span>
             <span class="n">param_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
@@ -2184,7 +2188,7 @@ Types are one of TEXT, INTEGER, REAL.</p>
 
 
 <h2 id="io.db._list_to_flatlists" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">_list_to_flatlists</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">curr_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">_list_to_flatlists</span><span class="p">(</span><span class="n">l_entry</span><span class="p">,</span> <span class="n">curr_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
 
 </h2>
 
@@ -2210,7 +2214,7 @@ function is called recursively to handle nesting.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                <code>l</code>
+                <code>l_entry</code>
             </td>
             <td>
                   <code><span title="typing.List">List</span>[<span title="typing.Any">Any</span>]</code>
@@ -2313,7 +2317,7 @@ Types are one of TEXT, INTEGER, REAL</p>
 <span class="normal">198</span>
 <span class="normal">199</span>
 <span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">_list_to_flatlists</span><span class="p">(</span>
-    <span class="n">l</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">curr_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">l_entry</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">],</span> <span class="n">curr_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Flatten lists for database storage.</span>
 
@@ -2322,7 +2326,7 @@ Types are one of TEXT, INTEGER, REAL</p>
 <span class="sd">    function is called recursively to handle nesting.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        l (List[Any]): Dictionary to flatten.</span>
+<span class="sd">        l_entry (List[Any]): Dictionary to flatten.</span>
 
 <span class="sd">        curr_key (str): Current flattened key. Base key for indexing.</span>
 
@@ -2336,7 +2340,7 @@ Types are one of TEXT, INTEGER, REAL</p>
     <span class="n">type_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">indexed_value</span><span class="p">:</span> <span class="n">Any</span>
-    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">indexed_value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">indexed_value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">l_entry</span><span class="p">):</span>
         <span class="n">indexed_curr_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">curr_key</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">]&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indexed_value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indexed_value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_list_to_flatlists</span><span class="p">(</span><span class="n">indexed_value</span><span class="p">,</span> <span class="n">indexed_curr_key</span><span class="p">)</span>
@@ -2833,10 +2837,7 @@ that can be found in the database. Returns None if nothing found.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/io/db.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">341</span>
 <span class="normal">342</span>
 <span class="normal">343</span>
 <span class="normal">344</span>
@@ -2889,7 +2890,10 @@ that can be found in the database. Returns None if nothing found.</p>
 <span class="normal">391</span>
 <span class="normal">392</span>
 <span class="normal">393</span>
-<span class="normal">394</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read_latest_db_entry</span><span class="p">(</span>
     <span class="n">db_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2972,9 +2976,7 @@ some of the information can be shared across multiple Tasks. Refer to
 
             <details class="quote">
               <summary>Source code in <code>lute/io/db.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
 <span class="normal">263</span>
@@ -3049,7 +3051,10 @@ some of the information can be shared across multiple Tasks. Refer to
 <span class="normal">332</span>
 <span class="normal">333</span>
 <span class="normal">334</span>
-<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">record_analysis_db</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">DescribedAnalysis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write an DescribedAnalysis object to the database.</span>
 
 <span class="sd">    The DescribedAnalysis object is maintained by the Executor and contains all</span>
@@ -3066,6 +3071,7 @@ some of the information can be shared across multiple Tasks. Refer to
         <span class="n">_add_task_entry</span><span class="p">,</span>
     <span class="p">)</span>
 
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">task_parameters</span><span class="p">,</span> <span class="n">TaskParameters</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">work_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">task_parameters</span><span class="o">.</span><span class="n">lute_config</span><span class="o">.</span><span class="n">work_dir</span>
     <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
@@ -3125,7 +3131,7 @@ some of the information can be shared across multiple Tasks. Refer to
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Database storage error: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">db_path</span><span class="p">,</span> <span class="mo">0o664</span><span class="p">)</span>
-    <span class="k">except</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cannot setup permissions on database!&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>

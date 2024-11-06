@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -1806,10 +1806,7 @@
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">243</span>
 <span class="normal">244</span>
 <span class="normal">245</span>
 <span class="normal">246</span>
@@ -1874,12 +1871,15 @@
 <span class="normal">305</span>
 <span class="normal">306</span>
 <span class="normal">307</span>
-<span class="normal">308</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">deploy_geometry</span><span class="p">(</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">deploy_geometry</span><span class="p">(</span>
     <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">exp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">run</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">ds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">psana</span><span class="o">.</span><span class="n">DataSource</span><span class="p">,</span> <span class="n">psana</span><span class="o">.</span><span class="n">MPIDataSource</span><span class="p">],</span>
-    <span class="n">det</span><span class="p">:</span> <span class="n">psana</span><span class="o">.</span><span class="n">Detector</span><span class="p">,</span>
+    <span class="n">ds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">psana</span><span class="o">.</span><span class="n">DataSource</span><span class="p">,</span> <span class="n">psana</span><span class="o">.</span><span class="n">MPIDataSource</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+    <span class="n">det</span><span class="p">:</span> <span class="n">psana</span><span class="o">.</span><span class="n">Detector</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
     <span class="n">pixel_size_mm</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">center</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="n">distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -1908,7 +1908,7 @@
 
 <span class="sd">        pv_camera_length (str | None): PV associated with camera length.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">import</span> <span class="nn">PSCalib</span>
+    <span class="kn">import</span> <span class="nn">PSCalib</span>  <span class="c1"># type: ignore</span>
 
     <span class="c1"># retrieve original geometry</span>
     <span class="n">geom</span><span class="p">:</span> <span class="n">PSCalib</span><span class="o">.</span><span class="n">GeometryAcces</span><span class="o">.</span><span class="n">GeometryAccess</span> <span class="o">=</span> <span class="n">det</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
@@ -1979,7 +1979,7 @@
                 <code>peak_radii</code>
             </td>
             <td>
-                  <code><span title="numpy.ndarray">ndarray</span>[<span title="numpy.int64">int64</span>]</code>
+                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.int64">int64</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2037,7 +2037,7 @@
       <tbody>
           <tr class="doc-section-item">
 <td><code>coords</code></td>            <td>
-                  <code><span title="numpy.ndarray">ndarray</span>[<span title="numpy.float64">float64</span>]</code>
+                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.float64">float64</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2050,10 +2050,7 @@
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
 <span class="normal">17</span>
@@ -2082,35 +2079,38 @@
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_concentric_sample_pts</span><span class="p">(</span>
-    <span class="n">peak_radii</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">],</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_concentric_sample_pts</span><span class="p">(</span>
+    <span class="n">peak_radii</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
     <span class="n">center</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
     <span class="n">num_pts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate sample points along concentric circles.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        peak_radii (np.ndarray[np.int64]): Radii indices.</span>
+<span class="sd">        peak_radii (npt.NDArray[np.int64]): Radii indices.</span>
 
 <span class="sd">        center (List[float]): Center_x, Center_y for the concentric circles.</span>
 
 <span class="sd">        num_pts (int): Number of sample points.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        coords (np.ndarray[np.float64]): X/Y coordinates of sample points.</span>
+<span class="sd">        coords (npt.NDArray[np.float64]): X/Y coordinates of sample points.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># X,Y labelling seems backwards</span>
     <span class="n">cx</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">cy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     <span class="c1"># Reshape linear radii (peak indices) for broadcasting</span>
-    <span class="n">radii</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">peak_radii</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+    <span class="n">radii</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">peak_radii</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">theta</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
 
-    <span class="n">coords_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">radii</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">cx</span>
-    <span class="n">coords_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">radii</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">cy</span>
+    <span class="n">coords_x</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">radii</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">cx</span>
+    <span class="n">coords_y</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">radii</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">cy</span>
 
     <span class="c1"># Reshape for optimization routines</span>
-    <span class="n">coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_pts</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">peak_radii</span><span class="p">)))</span>
+    <span class="n">coords</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_pts</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">peak_radii</span><span class="p">)))</span>
     <span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">coords_x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">coords_y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
@@ -2284,10 +2284,7 @@ geometry for this run, which is used to compute the coffset parameter.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 76</span>
-<span class="normal"> 77</span>
-<span class="normal"> 78</span>
-<span class="normal"> 79</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 79</span>
 <span class="normal"> 80</span>
 <span class="normal"> 81</span>
 <span class="normal"> 82</span>
@@ -2366,11 +2363,14 @@ geometry for this run, which is used to compute the coffset parameter.</p>
 <span class="normal">155</span>
 <span class="normal">156</span>
 <span class="normal">157</span>
-<span class="normal">158</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_geom_file</span><span class="p">(</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">generate_geom_file</span><span class="p">(</span>
     <span class="n">exp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">run</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">ds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">psana</span><span class="o">.</span><span class="n">DataSource</span><span class="p">,</span> <span class="n">psana</span><span class="o">.</span><span class="n">MPIDataSource</span><span class="p">],</span>
-    <span class="n">det</span><span class="p">:</span> <span class="n">psana</span><span class="o">.</span><span class="n">Detector</span><span class="p">,</span>
+    <span class="n">ds</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">psana</span><span class="o">.</span><span class="n">DataSource</span><span class="p">,</span> <span class="n">psana</span><span class="o">.</span><span class="n">MPIDataSource</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+    <span class="n">det</span><span class="p">:</span> <span class="n">psana</span><span class="o">.</span><span class="n">Detector</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
     <span class="n">input_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">output_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">det_dist</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2401,7 +2401,7 @@ geometry for this run, which is used to compute the coffset parameter.</p>
 
 <span class="sd">        pv_camera_length (Optional[str]): PV associated with the camera length</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">from</span> <span class="nn">psgeom</span> <span class="kn">import</span> <span class="n">camera</span><span class="p">,</span> <span class="n">sensors</span>
+    <span class="kn">from</span> <span class="nn">psgeom</span> <span class="kn">import</span> <span class="n">camera</span><span class="p">,</span> <span class="n">sensors</span>  <span class="c1"># type: ignore</span>
 
     <span class="k">if</span> <span class="n">input_file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span>
         <span class="n">geom</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">CompoundAreaCamera</span><span class="o">.</span><span class="n">from_psana_file</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
@@ -2502,7 +2502,7 @@ Center values are floats. Peaks are integers.</p>
                 <code>powder</code>
             </td>
             <td>
-                  <code><span title="numpy.ndarray">ndarray</span>[<span title="numpy.float64">float64</span>]</code>
+                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.float64">float64</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2528,7 +2528,7 @@ Center values are floats. Peaks are integers.</p>
       <tbody>
           <tr class="doc-section-item">
 <td><code>pixel_values</code></td>            <td>
-                  <code><span title="numpy.ndarray">ndarray</span>[<span title="numpy.float64">float64</span>]</code>
+                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.float64">float64</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2541,10 +2541,7 @@ Center values are floats. Peaks are integers.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
 <span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span>
@@ -2568,32 +2565,35 @@ Center values are floats. Peaks are integers.</p>
 <span class="normal">70</span>
 <span class="normal">71</span>
 <span class="normal">72</span>
-<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">geometry_optimize_residual</span><span class="p">(</span>
-    <span class="n">params</span><span class="p">:</span> <span class="n">lmfit</span><span class="o">.</span><span class="n">Parameters</span><span class="p">,</span> <span class="n">powder</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">geometry_optimize_residual</span><span class="p">(</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">lmfit</span><span class="o">.</span><span class="n">Parameters</span><span class="p">,</span> <span class="n">powder</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Target function for OptimizeAgBhGeometryExhaustive geometry fitting.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        params (lmfit.Parameters): Parameters. [center_x, center_y, peaks...]</span>
 <span class="sd">            Center values are floats. Peaks are integers.</span>
 
-<span class="sd">        powder (np.ndarray[np.float64]): Powder image.</span>
+<span class="sd">        powder (npt.NDArray[np.float64]): Powder image.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        pixel_values (np.ndarray[np.float64]): Residuals for fitting.</span>
+<span class="sd">        pixel_values (npt.NDArray[np.float64]): Residuals for fitting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Unpack the parameters</span>
-    <span class="n">params_l</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+    <span class="n">params_l</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
     <span class="n">center_guess</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">params_l</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
     <span class="c1"># Indices are in radii units since they are for a radial profile</span>
-    <span class="n">indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">params_l</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
-    <span class="n">coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">generate_concentric_sample_pts</span><span class="p">(</span>
+    <span class="n">indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">params_l</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+    <span class="n">coords</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">generate_concentric_sample_pts</span><span class="p">(</span>
         <span class="n">indices</span><span class="p">,</span> <span class="n">center_guess</span>
     <span class="p">)</span>
 
     <span class="c1"># Use residual for fitting - difference between intensity in ring</span>
     <span class="c1"># and powder max</span>
-    <span class="n">pixel_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_coordinates</span><span class="p">(</span><span class="n">powder</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
+    <span class="n">pixel_values</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_coordinates</span><span class="p">(</span><span class="n">powder</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
     <span class="n">pixel_values</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">powder</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">pixel_values</span>
 </code></pre></div></td></tr></table></div>
@@ -2697,10 +2697,7 @@ Center values are floats. Peaks are integers.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">208</span>
 <span class="normal">209</span>
 <span class="normal">210</span>
 <span class="normal">211</span>
@@ -2729,7 +2726,10 @@ Center values are floats. Peaks are integers.</p>
 <span class="normal">234</span>
 <span class="normal">235</span>
 <span class="normal">236</span>
-<span class="normal">237</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">modify_crystfel_coffset_res</span><span class="p">(</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">modify_crystfel_coffset_res</span><span class="p">(</span>
     <span class="n">input_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">coffset</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">res</span><span class="p">:</span> <span class="nb">float</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Overwrite coffset and res entries in a CrystFEL .geom file.</span>
@@ -2838,10 +2838,7 @@ Center values are floats. Peaks are integers.</p>
 
             <details class="quote">
               <summary>Source code in <code>lute/tasks/_geometry.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">164</span>
 <span class="normal">165</span>
 <span class="normal">166</span>
 <span class="normal">167</span>
@@ -2879,7 +2876,10 @@ Center values are floats. Peaks are integers.</p>
 <span class="normal">199</span>
 <span class="normal">200</span>
 <span class="normal">201</span>
-<span class="normal">202</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">modify_crystfel_header</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">):</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">modify_crystfel_header</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">output_file</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Modify the header of a psgeom-generated Crystfel (.geom) file.</span>
 
 <span class="sd">    This function performs the following modifications:</span>

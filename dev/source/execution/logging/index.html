@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.42">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
     
     
       
@@ -1678,7 +1678,7 @@ reduce logging from libraries which output many messages.</p>
 
 
 <h2 id="execution.logging.LUTE_TASK_LOG_FORMAT" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">LUTE_TASK_LOG_FORMAT</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;TASK_LOG -- %(levelname)s:%(name)s: %(message)s&#39;</span></code>
+            <code class="highlight language-python"><span class="n">LUTE_TASK_LOG_FORMAT</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;TASK_LOG -- </span><span class="si">%(levelname)s</span><span class="s1">:</span><span class="si">%(name)s</span><span class="s1">: </span><span class="si">%(message)s</span><span class="s1">&#39;</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -1787,7 +1787,7 @@ reduce logging from libraries which output many messages.</p>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">fmt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">datefmt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;%&quot;</span><span class="p">,</span>
+        <span class="n">style</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;$&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;%&quot;</span><span class="p">,</span>
         <span class="n">validate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">is_task</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -1806,7 +1806,7 @@ reduce logging from libraries which output many messages.</p>
             <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">CRITICAL_COLOR_FMT</span><span class="si">}{</span><span class="n">log_format</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">RESET_COLOR_FMT</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">log_fmt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_formats</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">levelno</span><span class="p">]</span>
         <span class="n">formatter</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="n">log_fmt</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">formatter</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
@@ -2044,7 +2044,7 @@ particularly useful when running in debug mode.</p>
     <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">handler</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Handler</span>
     <span class="k">if</span> <span class="n">is_task</span><span class="p">:</span>
-        <span class="n">handler</span><span class="p">:</span> <span class="n">SocketCommunicatorHandler</span> <span class="o">=</span> <span class="n">SocketCommunicatorHandler</span><span class="p">()</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">SocketCommunicatorHandler</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
     <span class="n">formatter</span><span class="p">:</span> <span class="n">ColorFormatter</span> <span class="o">=</span> <span class="n">ColorFormatter</span><span class="p">(</span><span class="n">is_task</span><span class="o">=</span><span class="n">is_task</span><span class="p">)</span>
