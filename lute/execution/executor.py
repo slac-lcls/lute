@@ -1151,7 +1151,7 @@ class MPIExecutor(Executor):
         nprocs: int = max(
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
         )
-        mpi_cmd: str = f"mpirun -np {nprocs} --bind-to none"
+        mpi_cmd: str = f"mpirun -np {nprocs} --map-by slot"
         if __debug__:
             py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
         else:

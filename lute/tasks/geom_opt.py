@@ -12,10 +12,11 @@ __author__ = "Louis Conreux"
 from lute.execution.ipc import Message
 from lute.io.models.geom_opt import *
 from lute.tasks.task import *
+from lute.tasks.dataclasses import *
 
 import sys
 sys.path.append('/sdf/home/l/lconreux/LCLSGeom')
-from LCLSGeom.swap_geom import PsanaToPyFAI, PyFAIToCrystFEL, CrystFELToPsana
+from LCLSGeom.swap_geom import PsanaToPyFAI, PyFAIToCrystFEL, CrystFELToPsana, get_beam_center
 
 import logging
 from lute.execution.logging import get_logger
@@ -523,9 +524,10 @@ class OptimizePyFAIGeometry(Task):
         if optimizer.rank == 0:
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
-            msg = Message(contents=f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
+            distance, cx, cy = get_beam_center(optimizer.params)
+            msg = Message(contents=f"Detector Distance to Point of Normal Incidence: {distance:.2e}")
             self._report_to_executor(msg)
-            msg = Message(contents=f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})", signal="")
+            msg = Message(contents=f"Beam center: ({cx:.2e}, {cy:.2e})", signal="")
             self._report_to_executor(msg)
             msg = Message(contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})", signal="")
             self._report_to_executor(msg)
@@ -534,8 +536,8 @@ class OptimizePyFAIGeometry(Task):
             plot = f'{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
             with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt', 'w') as f:
                 f.write(f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n")
-                f.write(f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e} \n")
-                f.write(f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e}) \n")
+                f.write(f"Detector Distance to Point of Normal Incidence: {distance:.2e} \n")
+                f.write(f"Beam center: ({cx:.2e}, {cy:.2e}) \n")
                 f.write(f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n")
                 f.write(f"Final Residuals: {optimizer.residuals:.2e}")
             detector = self.update_geometry(optimizer)
