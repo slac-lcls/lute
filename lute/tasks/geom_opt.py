@@ -14,11 +14,13 @@ from lute.io.models.geom_opt import *
 from lute.tasks.task import *
 
 import sys
-sys.path.append('/sdf/home/l/lconreux/LCLSGeom')
+
+sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import PsanaToPyFAI, PyFAIToCrystFEL, CrystFELToPsana
 
 import logging
 from lute.execution.logging import get_logger
+
 logger = get_logger(__name__)
 
 import numpy as np
@@ -33,6 +35,7 @@ from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from scipy.stats import norm
 from mpi4py import MPI
+
 
 class BayesGeomOpt:
     """
@@ -74,7 +77,14 @@ class BayesGeomOpt:
         self.wavelength = wavelength
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
         self.space = ["poni1", "poni2"]
-        self.values = {'dist': 0.1,'poni1':0, 'poni2':0, 'rot1':0, 'rot2':0, 'rot3':0}
+        self.values = {
+            "dist": 0.1,
+            "poni1": 0,
+            "poni2": 0,
+            "rot1": 0,
+            "rot2": 0,
+            "rot3": 0,
+        }
 
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
@@ -95,15 +105,15 @@ class BayesGeomOpt:
         z = (y_pred - best_y + epsilon) / y_std
         pi = norm.cdf(z)
         return pi
-    
+
     @staticmethod
     def contextual_improvement(X, gp_model, best_y, hyperparam=None):
         y_pred, y_std = gp_model.predict(X, return_std=True)
         cv = np.mean(y_std**2) / best_y
-        z = (y_pred - best_y + cv) / y_std 
+        z = (y_pred - best_y + cv) / y_std
         ci = y_pred - best_y * norm.cdf(z) + y_std * norm.pdf(z)
         return ci
-    
+
     def build_calibrant(self):
         """
         Define calibrant for optimization
@@ -131,7 +141,7 @@ class BayesGeomOpt:
             Minimum intensity to use for control point extraction based on photon energy or max intensity
         """
         if type(Imin) == str:
-            if 'rayonix' in self.det_type:
+            if "rayonix" in self.det_type:
                 powder = powder[powder > 1e3]
                 Imin = np.max(powder) * 0.01
             else:
@@ -143,10 +153,22 @@ class BayesGeomOpt:
         return powder
 
     @ignore_warnings(category=ConvergenceWarning)
-    def bayes_opt_center(self, powder, dist, bounds, res, n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
+    def bayes_opt_center(
+        self,
+        powder,
+        dist,
+        bounds,
+        res,
+        n_samples=50,
+        n_iterations=50,
+        af="ucb",
+        hyperparam=None,
+        prior=True,
+        seed=None,
+    ):
         """
         Perform Bayesian Optimization on PONI center parameters, for a fixed distance
-        
+
         Parameters
         ----------
         powder : np.ndarray
@@ -176,7 +198,7 @@ class BayesGeomOpt:
         if seed is not None:
             np.random.seed(seed)
 
-        self.values['dist'] = dist
+        self.values["dist"] = dist
 
         if res is None:
             res = self.detector.pixel_size
@@ -185,18 +207,31 @@ class BayesGeomOpt:
         norm_inputs = {}
         for p in self.order:
             if p in self.space:
-                inputs[p] = np.arange(bounds[p][0], bounds[p][1]+res, res)
+                inputs[p] = np.arange(bounds[p][0], bounds[p][1] + res, res)
                 norm_inputs[p] = inputs[p]
             else:
                 inputs[p] = np.array([self.values[p]])
-        X = np.array(np.meshgrid(*[inputs[p] for p in self.order])).T.reshape(-1, len(self.order))
-        X_space = np.array(np.meshgrid(*[norm_inputs[p] for p in self.space])).T.reshape(-1, len(self.space))
-        X_norm = (X_space - np.mean(X_space, axis=0)) / (np.max(X_space, axis=0) - np.min(X_space, axis=0))
+        X = np.array(np.meshgrid(*[inputs[p] for p in self.order])).T.reshape(
+            -1, len(self.order)
+        )
+        X_space = np.array(
+            np.meshgrid(*[norm_inputs[p] for p in self.space])
+        ).T.reshape(-1, len(self.space))
+        X_norm = (X_space - np.mean(X_space, axis=0)) / (
+            np.max(X_space, axis=0) - np.min(X_space, axis=0)
+        )
         if prior:
             means = np.mean(X_space, axis=0)
-            cov = np.diag([((bounds[param][1] - bounds[param][0]) / 5)**2 for param in self.space])
+            cov = np.diag(
+                [
+                    ((bounds[param][1] - bounds[param][0]) / 5) ** 2
+                    for param in self.space
+                ]
+            )
             X_samples = np.random.multivariate_normal(means, cov, n_samples)
-            X_norm_samples = (X_samples - np.mean(X_space, axis=0)) / (np.max(X_space, axis=0) - np.min(X_space, axis=0))
+            X_norm_samples = (X_samples - np.mean(X_space, axis=0)) / (
+                np.max(X_space, axis=0) - np.min(X_space, axis=0)
+            )
             for p in self.order:
                 if p not in self.space:
                     idx = self.order.index(p)
@@ -210,36 +245,53 @@ class BayesGeomOpt:
         y = np.zeros((n_samples))
         for i in range(n_samples):
             dist, poni1, poni2, rot1, rot2, rot3 = X_samples[i]
-            geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-            sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+            geom_initial = Geometry(
+                dist=dist,
+                poni1=poni1,
+                poni2=poni2,
+                rot1=rot1,
+                rot2=rot2,
+                rot3=rot3,
+                detector=self.detector,
+                wavelength=self.calibrant.wavelength,
+            )
+            sg = SingleGeometry(
+                "extract_cp",
+                powder,
+                calibrant=self.calibrant,
+                detector=self.detector,
+                geometry=geom_initial,
+            )
             sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
             y[i] = len(sg.geometry_refinement.data)
-            bo_history[f'init_sample_{i+1}'] = {'param':X_samples[i], 'score': y[i]}
+            bo_history[f"init_sample_{i+1}"] = {"param": X_samples[i], "score": y[i]}
 
         y_norm = (y - np.mean(y)) / np.std(y)
         best_score = np.max(y_norm)
 
-        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) \
-                * ConstantKernel(constant_value=1.0, constant_value_bounds=(0.5, 1.5)) \
-                + WhiteKernel(noise_level=0.001, noise_level_bounds = 'fixed')
-        gp_model = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=42)
+        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
+            constant_value=1.0, constant_value_bounds=(0.5, 1.5)
+        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+        gp_model = GaussianProcessRegressor(
+            kernel=kernel, n_restarts_optimizer=10, random_state=42
+        )
         gp_model.fit(X_norm_samples, y_norm)
         visited_idx = list([])
 
         if af == "ucb":
             if hyperparam is None:
-                hyperparam = {'beta': 1.96}
-            hyperparam = hyperparam['beta']
+                hyperparam = {"beta": 1.96}
+            hyperparam = hyperparam["beta"]
             af = self.upper_confidence_bound
         elif af == "ei":
             if hyperparam is None:
-                hyperparam = {'epsilon': 0}
-            hyperparam = hyperparam['epsilon']
+                hyperparam = {"epsilon": 0}
+            hyperparam = hyperparam["epsilon"]
             af = self.expected_improvement
         elif af == "pi":
             if hyperparam is None:
-                hyperparam = {'epsilon': 0}
-            hyperparam = hyperparam['epsilon']
+                hyperparam = {"epsilon": 0}
+            hyperparam = hyperparam["epsilon"]
             af = self.probability_of_improvement
         elif af == "ci":
             af = self.contextual_improvement
@@ -247,8 +299,8 @@ class BayesGeomOpt:
         for i in range(n_iterations):
             # 1. Generate the Acquisition Function values using the Gaussian Process Regressor
             af_values = af(X_norm, gp_model, best_score, hyperparam)
-            af_values[visited_idx] = -np.inf         
-            
+            af_values[visited_idx] = -np.inf
+
             # 2. Select the next set of parameters based on the Acquisition Function
             new_idx = np.argmax(af_values)
             new_input = X[new_idx]
@@ -256,33 +308,85 @@ class BayesGeomOpt:
 
             # 3. Compute the score of the new set of parameters
             dist, poni1, poni2, rot1, rot2, rot3 = new_input
-            geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-            sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+            geom_initial = Geometry(
+                dist=dist,
+                poni1=poni1,
+                poni2=poni2,
+                rot1=rot1,
+                rot2=rot2,
+                rot3=rot3,
+                detector=self.detector,
+                wavelength=self.calibrant.wavelength,
+            )
+            sg = SingleGeometry(
+                "extract_cp",
+                powder,
+                calibrant=self.calibrant,
+                detector=self.detector,
+                geometry=geom_initial,
+            )
             sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
             score = len(sg.geometry_refinement.data)
             y = np.append(y, [score], axis=0)
             ypred = gp_model.predict(X_norm, return_std=False)
-            bo_history[f'iteration_{i+1}'] = {'param':X[new_idx], 'score': score, 'pred': ypred, 'af': af_values}
+            bo_history[f"iteration_{i+1}"] = {
+                "param": X[new_idx],
+                "score": score,
+                "pred": ypred,
+                "af": af_values,
+            }
             X_samples = np.append(X_samples, [X[new_idx]], axis=0)
             X_norm_samples = np.append(X_norm_samples, [X_norm[new_idx]], axis=0)
             y_norm = (y - np.mean(y)) / np.std(y)
             best_score = np.max(y_norm)
             # 4. Update the Gaussian Process Regressor
             gp_model.fit(X_norm_samples, y_norm)
-        
+
         best_idx = np.argmax(y_norm)
         best_param = X_samples[best_idx]
         dist, poni1, poni2, rot1, rot2, rot3 = best_param
-        geom_initial = Geometry(dist=dist, poni1=poni1, poni2=poni2, rot1=rot1, rot2=rot2, rot3=rot3, detector=self.detector, wavelength=self.calibrant.wavelength)
-        sg = SingleGeometry("extract_cp", powder, calibrant=self.calibrant, detector=self.detector, geometry=geom_initial)
+        geom_initial = Geometry(
+            dist=dist,
+            poni1=poni1,
+            poni2=poni2,
+            rot1=rot1,
+            rot2=rot2,
+            rot3=rot3,
+            detector=self.detector,
+            wavelength=self.calibrant.wavelength,
+        )
+        sg = SingleGeometry(
+            "extract_cp",
+            powder,
+            calibrant=self.calibrant,
+            detector=self.detector,
+            geometry=geom_initial,
+        )
         sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
         self.sg = sg
-        residuals = sg.geometry_refinement.refine3(fix=['wavelength'])
+        residuals = sg.geometry_refinement.refine3(fix=["wavelength"])
         params = sg.geometry_refinement.param
-        result = {'bo_history': bo_history, 'params': params, 'residuals': residuals, 'best_idx': best_idx}
+        result = {
+            "bo_history": bo_history,
+            "params": params,
+            "residuals": residuals,
+            "best_idx": best_idx,
+        }
         return result
 
-    def bayes_opt_geom(self, powder, bounds, res, Imin='max', n_samples=50, n_iterations=50, af="ucb", hyperparam=None, prior=True, seed=None):
+    def bayes_opt_geom(
+        self,
+        powder,
+        bounds,
+        res,
+        Imin="max",
+        n_samples=50,
+        n_iterations=50,
+        af="ucb",
+        hyperparam=None,
+        prior=True,
+        seed=None,
+    ):
         """
         From guessed initial geometry, optimize the geometry using Bayesian Optimization on pyFAI package
 
@@ -313,6 +417,7 @@ class BayesGeomOpt:
         """
         from time import time
         from datetime import datetime
+
         if seed is not None:
             np.random.seed(seed)
 
@@ -324,7 +429,7 @@ class BayesGeomOpt:
 
         if self.rank == 0:
             print(f"Number of distances to scan: {self.size}")
-            distances = np.linspace(bounds['dist'][0], bounds['dist'][1], self.size)
+            distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
         else:
             distances = None
 
@@ -333,28 +438,43 @@ class BayesGeomOpt:
 
         start = datetime.now()
         t0 = time()
-        results = self.bayes_opt_center(powder, dist, bounds, res, n_samples, n_iterations, af, hyperparam, prior, seed)
+        results = self.bayes_opt_center(
+            powder,
+            dist,
+            bounds,
+            res,
+            n_samples,
+            n_iterations,
+            af,
+            hyperparam,
+            prior,
+            seed,
+        )
         t1 = time()
-        with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt', 'w') as f:
-            f.write(f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds")
+        with open(
+            f"/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt", "w"
+        ) as f:
+            f.write(
+                f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds"
+            )
         self.comm.Barrier()
 
         self.scan = {}
-        self.scan['bo_history'] = self.comm.gather(results['bo_history'], root=0)
-        self.scan['params'] = self.comm.gather(results['params'], root=0)
-        self.scan['residuals'] = self.comm.gather(results['residuals'], root=0)
-        self.scan['best_idx'] = self.comm.gather(results['best_idx'], root=0)
+        self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
+        self.scan["params"] = self.comm.gather(results["params"], root=0)
+        self.scan["residuals"] = self.comm.gather(results["residuals"], root=0)
+        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
         self.finalize()
 
     def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
-                self.scan[key] = np.array([item for item in self.scan[key]])  
-            index = np.argmin(self.scan['residuals']) 
-            self.bo_history = self.scan['bo_history'][index]
-            self.params = self.scan['params'][index]
-            self.residuals = self.scan['residuals'][index]
-            self.best_idx = self.scan['best_idx'][index]
+                self.scan[key] = np.array([item for item in self.scan[key]])
+            index = np.argmin(self.scan["residuals"])
+            self.bo_history = self.scan["bo_history"][index]
+            self.params = self.scan["params"][index]
+            self.residuals = self.scan["residuals"][index]
+            self.best_idx = self.scan["best_idx"][index]
 
     def display(self, powder=None, cp=None, ai=None, label=None, sg=None, ax=None):
         """
@@ -375,17 +495,16 @@ class BayesGeomOpt:
                 ai = sg.geometry_refinement
             if label is None:
                 label = sg.label
-        ax.imshow(powder.T,
-                origin="lower",
-                cmap="viridis",
-                vmax=self.Imin)
+        ax.imshow(powder.T, origin="lower", cmap="viridis", vmax=self.Imin)
         ax.set_title(label)
         if ai is not None and cp.calibrant is not None:
             tth = cp.calibrant.get_2th()
             ttha = ai.twoThetaArray()
-            ax.contour(ttha.T, levels=tth, cmap="autumn", linewidths=0.5, linestyles="dashed")
+            ax.contour(
+                ttha.T, levels=tth, cmap="autumn", linewidths=0.5, linestyles="dashed"
+            )
         return ax
-    
+
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
         """
         Display the powder diffraction pattern
@@ -421,8 +540,13 @@ class BayesGeomOpt:
             x_values = calibrant.get_peaks(unit)
             if x_values is not None:
                 for x in x_values:
-                    line = lines.Line2D([x, x], ax.axis()[2:4],
-                                        color='red', linestyle='--', linewidth=0.5)
+                    line = lines.Line2D(
+                        [x, x],
+                        ax.axis()[2:4],
+                        color="red",
+                        linestyle="--",
+                        linewidth=0.5,
+                    )
                     ax.add_line(line)
 
         ax.set_title("Radial Profile")
@@ -430,7 +554,7 @@ class BayesGeomOpt:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
 
-    def visualize_results(self, powder, bo_history, detector, params, plot=''):
+    def visualize_results(self, powder, bo_history, detector, params, plot=""):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
 
@@ -447,53 +571,70 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8,8),dpi=120)
-        nrow,ncol=2,2
-        irow,icol=0,0
-        
+        fig = plt.figure(figsize=(8, 8), dpi=120)
+        nrow, ncol = 2, 2
+        irow, icol = 0, 0
+
         # Plotting BO convergence
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        scores = [bo_history[key]['score'] for key in bo_history.keys()]
+        scores = [bo_history[key]["score"] for key in bo_history.keys()]
         ax1.plot(np.maximum.accumulate(scores))
         ax1.set_xticks(np.arange(len(scores), step=20))
-        ax1.set_xlabel('Iteration')
-        ax1.set_ylabel('Best score so far')
-        ax1.set_title('Convergence Plot')
+        ax1.set_xlabel("Iteration")
+        ax1.set_ylabel("Best score so far")
+        ax1.set_title("Convergence Plot")
         icol += 1
 
         # Plotting radial profiles with peaks
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol-icol)
-        ai = AzimuthalIntegrator(dist=params[0], detector=detector, wavelength=self.calibrant.wavelength)
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ai = AzimuthalIntegrator(
+            dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
+        )
         res = ai.integrate1d(powder, 1000)
         self.radial_integration(res, calibrant=self.calibrant, ax=ax2)
         irow += 1
 
         # Plotting stacked powder
         geometry = Geometry(dist=params[0])
-        sg = SingleGeometry(f'Max {self.calibrant_name}', powder, calibrant=self.calibrant, detector=detector, geometry=geometry)
+        sg = SingleGeometry(
+            f"Max {self.calibrant_name}",
+            powder,
+            calibrant=self.calibrant,
+            detector=detector,
+            geometry=geometry,
+        )
         sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, 0), rowspan=nrow-irow, colspan=ncol)
+        ax3 = plt.subplot2grid(
+            (nrow, ncol), (irow, 0), rowspan=nrow - irow, colspan=ncol
+        )
         self.display(sg=sg, ax=ax3)
 
-        if plot != '':
+        if plot != "":
             fig.savefig(plot, dpi=300)
+
 
 class OptimizePyFAIGeometry(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
-    def __init__(self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
+    ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
         from time import time
         from datetime import datetime
+
         msg = Message(contents="Starting PyFAI geometry optimization", signal="")
         self._report_to_executor(msg)
         msg = Message(contents="Building PyFAI detector", signal="")
         self._report_to_executor(msg)
         detector = self.build_pyFAI_detector()
         rank = MPI.COMM_WORLD.Get_rank()
-        msg = Message(contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}", signal="")
+        msg = Message(
+            contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}",
+            signal="",
+        )
         self._report_to_executor(msg)
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
@@ -523,20 +664,40 @@ class OptimizePyFAIGeometry(Task):
         if optimizer.rank == 0:
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
-            msg = Message(contents=f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}")
+            msg = Message(
+                contents=f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e}"
+            )
             self._report_to_executor(msg)
-            msg = Message(contents=f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})", signal="")
+            msg = Message(
+                contents=f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e})",
+                signal="",
+            )
             self._report_to_executor(msg)
-            msg = Message(contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})", signal="")
+            msg = Message(
+                contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})",
+                signal="",
+            )
             self._report_to_executor(msg)
-            msg = Message(contents=f"Final Residuals: {optimizer.residuals:.2e}", signal="")
+            msg = Message(
+                contents=f"Final Residuals: {optimizer.residuals:.2e}", signal=""
+            )
             self._report_to_executor(msg)
-            plot = f'{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png'
-            with open(f'/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt', 'w') as f:
-                f.write(f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n")
-                f.write(f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e} \n")
-                f.write(f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e}) \n")
-                f.write(f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n")
+            plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
+            with open(
+                f"/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt", "w"
+            ) as f:
+                f.write(
+                    f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n"
+                )
+                f.write(
+                    f"Detector Distance to Point of Normal Incidence: {optimizer.params[0]:.2e} \n"
+                )
+                f.write(
+                    f"Beam center: ({optimizer.params[1]:.2e}, {optimizer.params[2]:.2e}) \n"
+                )
+                f.write(
+                    f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n"
+                )
                 f.write(f"Final Residuals: {optimizer.residuals:.2e}")
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
@@ -551,20 +712,36 @@ class OptimizePyFAIGeometry(Task):
 
     def build_pyFAI_detector(self):
         """
-        Fetch the geometry data and build a pyFAI detector object.        
+        Fetch the geometry data and build a pyFAI detector object.
         """
         in_file = self._task_parameters.in_file
         det_type = self._task_parameters.det_type
         psana_to_pyfai = PsanaToPyFAI(in_file=in_file, det_type=det_type)
         detector = psana_to_pyfai.detector
         return detector
-    
+
     def update_geometry(self, optimizer):
         """
         Update the geometry and write a new .geom file and .data file
         """
-        PyFAIToCrystFEL(detector=optimizer.detector, params=optimizer.params, psana_file=self._task_parameters.in_file, out_file=self._task_parameters.in_file.replace("0-end.data", f"r{self._task_parameters.run:0>4}.geom"))
-        CrystFELToPsana(in_file=self._task_parameters.in_file.replace("0-end.data", f"r{self._task_parameters.run:0>4}.geom"), det_type=optimizer.det_type, out_file=self._task_parameters.out_file)
-        psana_to_pyfai = PsanaToPyFAI(in_file=self._task_parameters.out_file, det_type=self._task_parameters.det_type)
+        PyFAIToCrystFEL(
+            detector=optimizer.detector,
+            params=optimizer.params,
+            psana_file=self._task_parameters.in_file,
+            out_file=self._task_parameters.in_file.replace(
+                "0-end.data", f"r{self._task_parameters.run:0>4}.geom"
+            ),
+        )
+        CrystFELToPsana(
+            in_file=self._task_parameters.in_file.replace(
+                "0-end.data", f"r{self._task_parameters.run:0>4}.geom"
+            ),
+            det_type=optimizer.det_type,
+            out_file=self._task_parameters.out_file,
+        )
+        psana_to_pyfai = PsanaToPyFAI(
+            in_file=self._task_parameters.out_file,
+            det_type=self._task_parameters.det_type,
+        )
         detector = psana_to_pyfai.detector
         return detector
