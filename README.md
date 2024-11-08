@@ -109,7 +109,9 @@ Inspired by `pcdshub` repositories, in turn following [NumPy conventions](https:
 ### Class and Object Naming Conventions
 
 ### Style, Formatting, Linting
-This repository uses [Black](https://black.readthedocs.io/en/stable/) for formatting of Python code. Pre-commit hooks will be setup shortly to facilitate compliance with the formatting rules.
+This repository uses [Black](https://black.readthedocs.io/en/stable/) for formatting of Python code. [Ruff](https://docs.astral.sh/ruff/) is used for linting with flake8 rules, and [mypy](https://mypy-lang.org/) for type checking.
+
+Github actions implement checks for compliance. Formatting changes are auto-committed.
 
 ### Debugging Code
 Temporary debugging code should **not** be commited to the repository. E.g., extraneous `print` statements, etc, which are added when fixing a bug. Nonetheless, a selection of permanent debugging options may be included in the code provided they can be disabled when not running in debug mode. For standard operation, this package should be run using the `-O` flag which disables `assert` statements and sets the constant `__debug__ = False`. Without that flag, the package is considered to be running in "debug mode". As such, to include debug related code, please use a construction similar to the following:

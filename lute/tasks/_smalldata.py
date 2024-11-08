@@ -13,22 +13,26 @@ __author__ = "Gabriel Dorlhiac"
 
 import sys
 import logging
-from typing import List, Optional, Dict, Tuple, Union
+from typing import List, Optional, Dict, Tuple, Union, cast, ClassVar
 
-import h5py
-import holoviews as hv
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
 import numpy as np
+import numpy.typing as npt
 import panel as pn
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 from mpi4py import MPI
-from scipy.signal import find_peaks
-from scipy.optimize import curve_fit
+from scipy.signal import find_peaks  # type: ignore
+from scipy.optimize import curve_fit  # type: ignore
 
-from lute.execution.ipc import Message
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
-from lute.tasks.task import *
-from lute.tasks.dataclasses import ElogSummaryPlots
+from lute.io.models.smd import (
+    AnalyzeSmallDataXASParameters,
+    AnalyzeSmallDataXESParameters,
+    AnalyzeSmallDataXSSParameters,
+)
+from lute.tasks.task import Task
 from lute.tasks.math import gaussian, sigma_to_fwhm
 
 
@@ -38,11 +42,19 @@ logger: logging.Logger = get_logger(__name__)
 class AnalyzeSmallData(Task):
     """Base class for analyzing a SmallData HDF5 file with MPI support."""
 
-    _LARGE_DETNAMES: List[str] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
-    _SMALL_DETNAMES: List[str] = ["epix_1", "epix_2"]
+    _LARGE_DETNAMES: ClassVar[List[str]] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
+    _SMALL_DETNAMES: ClassVar[List[str]] = ["epix_1", "epix_2"]
 
     def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
+        self._task_parameters = cast(
+            Union[
+                AnalyzeSmallDataXASParameters,
+                AnalyzeSmallDataXESParameters,
+                AnalyzeSmallDataXSSParameters,
+            ],
+            self._task_parameters,
+        )
         hv.extension("bokeh")
         pn.extension()
         self._mpi_comm: MPI.Intracomm = MPI.COMM_WORLD
@@ -56,8 +68,8 @@ class AnalyzeSmallData(Task):
             self._mpi_comm.Barrier()
             sys.exit(-1)
 
-        self._events_per_rank: np.ndarray[np.int64]
-        self._start_indices_per_rank: np.ndarray[np.int64]
+        self._events_per_rank: npt.NDArray[np.int64]
+        self._start_indices_per_rank: npt.NDArray[np.int64]
         if self._mpi_rank == 0:
             self._total_num_events: int = len(self._smd_h5["event_time"][()])
             quotient: int
@@ -100,13 +112,15 @@ class AnalyzeSmallData(Task):
         )
 
         # Generic filtering variables
-        self._filter_dict: Dict[str, np.ndarray[np.float64]] = {}
-        self._xray_intensity: np.ndarray[np.float64]
-        self._integrated_intensity: np.ndarray[np.float64]
+        self._filter_dict: Dict[
+            str, Union[npt.NDArray[np.float64], npt.NDArray[np.bool_]]
+        ] = {}
+        self._xray_intensity: npt.NDArray[np.float64]
+        self._integrated_intensity: npt.NDArray[np.float64]
 
         # Scan vars
         self._scan_var_name: Optional[str] = None
-        self._scan_values: np.ndarray[np.float64]
+        self._scan_values: npt.NDArray[np.float64]
 
     def _pre_run(self) -> None: ...
 
@@ -117,12 +131,20 @@ class AnalyzeSmallData(Task):
     def _extract_standard_data(self) -> None:
         """Setup up stored attributes by taking data from the smalldata hdf5 file."""
 
+        self._task_parameters = cast(
+            Union[
+                AnalyzeSmallDataXASParameters,
+                AnalyzeSmallDataXESParameters,
+                AnalyzeSmallDataXSSParameters,
+            ],
+            self._task_parameters,
+        )
         self._extract_az_int()
         try:
             self._xray_intensity = self._smd_h5[self._task_parameters.ipm_var][
                 self._start_idx : self._stop_idx
             ]
-        except KeyError as e:
+        except KeyError:
             logger.error("ipm data not found! Check config!")
         self._integrated_intensity = np.nansum(self._az_int, axis=(1, 2))
         self._setup_std_filters()
@@ -134,7 +156,7 @@ class AnalyzeSmallData(Task):
                     self._start_idx : self._stop_idx
                 ]
                 self._scan_var_name = scan_var
-            except KeyError as e:
+            except KeyError:
                 logger.error(f"Scan variable {scan_var} not found!")
         elif isinstance(self._task_parameters.scan_var, list):
             for scan_var in self._task_parameters.scan_var:
@@ -144,7 +166,7 @@ class AnalyzeSmallData(Task):
                     ]
                     self._scan_var_name = scan_var
                     break
-                except KeyError as e:
+                except KeyError:
                     logger.debug(f"Scan variable {scan_var} not found!")
                     continue
         if not hasattr(self, "_scan_values"):
@@ -156,7 +178,7 @@ class AnalyzeSmallData(Task):
                 ]
                 self._scan_var_name = "lxt_fast"
                 logger.debug("Using scan variable lxt_fast")
-            except KeyError as e:
+            except KeyError:
                 logger.debug("Scan variable lxt_fast not found!")
                 self._scan_values = np.linspace(
                     self._start_idx, self._stop_idx, self._num_events
@@ -247,6 +269,14 @@ class AnalyzeSmallData(Task):
 
         E.g. update the minimum scattering intensity to use in analyses.
         """
+        self._task_parameters = cast(
+            Union[
+                AnalyzeSmallDataXASParameters,
+                AnalyzeSmallDataXESParameters,
+                AnalyzeSmallDataXSSParameters,
+            ],
+            self._task_parameters,
+        )
         scattering_thresh: float = self._task_parameters.thresholds.min_Iscat
         ipm_thresh: float = self._task_parameters.thresholds.min_ipm
         self._filter_dict["total scattering"] = (
@@ -259,7 +289,7 @@ class AnalyzeSmallData(Task):
 
     def _calc_norm_by_qrange(
         self, q_limits: Tuple[float, float] = (0.9, 3.5)
-    ) -> np.ndarray[np.float64]:
+    ) -> npt.NDArray[np.float64]:
         """Calculate a normalization factor by averaging over a range of Q values.
 
         Args:
@@ -267,22 +297,22 @@ class AnalyzeSmallData(Task):
                 Q-range to average.
 
         Returns:
-            norm (np.ndarray[np.float64]): The 2D norm with shape
+            norm (npt.NDArray[np.float64]): The 2D norm with shape
                 (num_events, num_phi)
         """
-        norm_range: np.array = self._q_vals > q_limits[0]
+        norm_range: npt.NDArray[np.bool_] = self._q_vals > q_limits[0]
         norm_range &= self._q_vals < q_limits[1]
         return np.nanmean(self._az_int[..., norm_range], axis=-1)
 
-    def _calc_norm_by_max(self) -> np.ndarray[np.float64]:
+    def _calc_norm_by_max(self) -> npt.NDArray[np.float64]:
         """Calculate a normalization factor by taking the maximum of each profile.
 
         Returns:
-        norm (np.ndarray[np.float64]): The 1D norm with shape (num_events)
+        norm (npt.NDArray[np.float64]): The 1D norm with shape (num_events)
         """
         return np.nanmax(self._az_int, axis=(1, 2))
 
-    def _calc_1d_water_norm(self) -> np.ndarray[np.float64]:
+    def _calc_1d_water_norm(self) -> npt.NDArray[np.float64]:
         """Calculate normalization factors by integrating the water ring.
 
         https://www.osti.gov/servlets/purl/1760438 says to use 1.5-3.5 A-1
@@ -298,7 +328,7 @@ class AnalyzeSmallData(Task):
 
     def _aggregate_filters(
         self, filter_vars: str = ("xray on, laser on, total scattering, ipm")
-    ) -> np.ndarray[np.bool_]:
+    ) -> npt.NDArray[np.bool_]:
         """Combine a number of possible data filters.
 
         Takes a string of filters to be applied in the order specified. The
@@ -323,16 +353,16 @@ class AnalyzeSmallData(Task):
                 taken from the list above. E.g. "xray on, laser on".
 
         Returns:
-            total_filter (np.ndarray[np.bool]): A 1D boolean array with a shape
+            total_filter (npt.NDArray[np.bool]): A 1D boolean array with a shape
                 of (num_events) which can be used to index and filter a data array.
         """
         filters: List[str] = [f.strip() for f in filter_vars.split(",")]
-        total_filter: np.ndarray = np.ones([self._num_events], dtype=bool)
+        total_filter: npt.NDArray = np.ones([self._num_events], dtype=bool)
 
         for data_filter in filters:
             try:
                 total_filter &= self._filter_dict[data_filter]
-            except KeyError as e:
+            except KeyError:
                 logger.debug(
                     f"Unrecognized filter requested: {data_filter}. "
                     "Ignoring and continuing processing."
@@ -342,18 +372,18 @@ class AnalyzeSmallData(Task):
         return total_filter
 
     def _calc_xss_dark_mean(
-        self, profiles: np.ndarray[np.float64]
-    ) -> np.ndarray[np.float64]:
+        self, profiles: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Calculate the dark (X-ray off) mean of a set of XSS profiles.
 
         Args:
-            profiles (np.ndarray[np.float64]): Set of profiles to calculate the
+            profiles (npt.NDArray[np.float64]): Set of profiles to calculate the
                 dark mean from. Shape: (n_events, q_bins)
         Returns:
-            dark_mean (np.ndarray[np.float64]): The calculated dark mean.
+            dark_mean (npt.NDArray[np.float64]): The calculated dark mean.
                 Shape: (q_bins)
         """
-        dark_mean: np.ndarray[np.float64]
+        dark_mean: npt.NDArray[np.float64]
         try:
             dark_mean = np.nanmean(profiles[self._filter_dict["xray off"]], axis=0)
             dark_mean = self._mpi_comm.allreduce(dark_mean, op=MPI.SUM)
@@ -366,27 +396,27 @@ class AnalyzeSmallData(Task):
             dark_mean = np.zeros([self._num_events])
         return dark_mean
 
-    def _find_solvent_argmax(self, corrected_profile: np.ndarray) -> int:
+    def _find_solvent_argmax(self, corrected_profile: npt.NDArray) -> int:
         """Find the index of the solvent ring maximum.
 
         Currently just a hack around SciPy find_peaks.
 
         Args:
-            corrected_profile (np.ndarray[np.float64]): 1D normalized and dark
+            corrected_profile (npt.NDArray[np.float64]): 1D normalized and dark
                 mean corrected, laser on, scattering profile.
 
         Returns:
             peak_idx (int): The index where the solvent maximum is located.
         """
-        res: Tuple[np.ndarray[np.int64], Dict[str, np.ndarray[np.float64]]] = (
+        res: Tuple[npt.NDArray[np.int64], Dict[str, npt.NDArray[np.float64]]] = (
             find_peaks(corrected_profile, 1)
         )
         try:
-            peak_indices: np.ndarray = res[0]
-            peak_heights: np.ndarray = res[1]["peak_heights"]
-        except KeyError as e:
+            peak_indices: npt.NDArray = res[0]
+            peak_heights: npt.NDArray = res[1]["peak_heights"]
+        except KeyError:
             logger.debug("No peaks found")
-            return np.argmax(corrected_profile)
+            return cast(int, np.argmax(corrected_profile))
 
         peak_idx: int = peak_indices[
             np.argmax(peak_heights)
@@ -396,21 +426,23 @@ class AnalyzeSmallData(Task):
 
     def _fit_overlap(
         self,
-        laser_on: np.ndarray[np.float64],
-        bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
         guess: Optional[List[float]] = None,
-    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]:
+    ) -> Tuple[
+        npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
+    ]:
         """Fit overlap based on scattering difference signal to a Gaussian.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 scattering profile.
 
-            bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 2D difference signal of shape
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
                 (q_bins, scan_bins).
 
             guess (Optional[List[float]]): A list of initial parameter guesses
@@ -418,22 +450,23 @@ class AnalyzeSmallData(Task):
                 offset)
 
         Returns:
-            raw_curve (np.ndarray[np.float64]): 1D difference slice at a specific
+            raw_curve (npt.NDArray[np.float64]): 1D difference slice at a specific
                 Q value used for calculating the overlap.
 
-            opt (np.ndarray[np.float64]): Optimized parameters.
+            opt (npt.NDArray[np.float64]): Optimized parameters.
 
-            res (np.ndarray[np.float64]): Covariances.
+            res (npt.NDArray[np.float64]): Covariances.
         """
-        Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]
+        Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]
         max_pt: int = self._find_solvent_argmax(laser_on)
+        idx_peak_q: int
         try:
-            idx_peak_q: int = max_pt + 10
+            idx_peak_q = max_pt + 10
         except IndexError as e:
             logger.debug(f"{e}: No non-nan values found.")
-            idx_peak_q: int = 15
+            idx_peak_q = 15
 
-        raw_curve: np.ndarray = diff[idx_peak_q]
+        raw_curve: npt.NDArray = diff[idx_peak_q]
         if not guess:
             max_val: int = raw_curve.max()
             min_val: int = raw_curve.min()
@@ -459,19 +492,19 @@ class AnalyzeSmallData(Task):
         return raw_curve, opt, res
 
     def _fit_convolution_fwhm(
-        self, trace: np.ndarray, bins: np.ndarray[np.float64]
+        self, trace: npt.NDArray, bins: npt.NDArray[np.float64]
     ) -> float:
         """Calculate the FWHM of a convolution signal.
 
         Args:
-            trace (np.ndarray[np.float64]): 1D convolution trace.
+            trace (npt.NDArray[np.float64]): 1D convolution trace.
 
-            bins (np.ndarray[np.float64]): 1D set of bins used.
+            bins (npt.NDArray[np.float64]): 1D set of bins used.
 
         Returns:
             fwhm (float): Calculated FWHM.
         """
-        from scipy.interpolate import UnivariateSpline
+        from scipy.interpolate import UnivariateSpline  # type: ignore
 
         x = np.linspace(0, len(trace) - 1, len(trace))
         spline = UnivariateSpline(x, (trace - np.max(trace) / 2), s=0)
@@ -501,42 +534,41 @@ class AnalyzeSmallData(Task):
 
     def _convolution_fit(
         self,
-        laser_on: np.ndarray[np.float64],
-        bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
-    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], int, float]:
+        laser_on: npt.NDArray[np.float64],
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], int, float]:
         """Fits a time scan through convolution with Heaviside kernel.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 scattering profile.
 
-            bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 2D difference signal of shape
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
                 (q_bins, scan_bins).
 
         Returns:
-            raw_curve (np.ndarray[np.float64]): 1D difference slice at a specific
+            raw_curve (npt.NDArray[np.float64]): 1D difference slice at a specific
                 Q value used for calculating the overlap.
 
-            trace (np.ndarray[np.float64]): 1D convolution trace.
+            trace (npt.NDArray[np.float64]): 1D convolution trace.
 
             center (int): The index of the center from the convolution.
 
             fwhm (float): Width of the convlution signal (fwhm).
         """
-        from scipy.signal import fftconvolve
+        from scipy.signal import fftconvolve  # type: ignore
 
-        results: List[Tuple] = []
         max_pt: int = self._find_solvent_argmax(laser_on)
-        raw_curve: np.ndarray = np.nan_to_num(diff[max_pt + 10])
+        raw_curve: npt.NDArray = np.nan_to_num(diff[max_pt + 10])
         npts: int = len(raw_curve)
-        kernel: np.ndarray = np.zeros([npts])
+        kernel: npt.NDArray = np.zeros([npts])
         kernel[: npts // 2] = 1
-        trace: np.ndarray = fftconvolve(raw_curve, kernel, mode="same")
-        center: int = trace.argmax()
+        trace: npt.NDArray = fftconvolve(raw_curve, kernel, mode="same")
+        center: int = cast(int, trace.argmax())
         fwhm: float = self._fit_convolution_fwhm(trace, bins)
         return raw_curve, trace, center, fwhm
 
@@ -552,6 +584,7 @@ class AnalyzeSmallData(Task):
         Args:
             detname (str): The detector name to extract data for.
         """
+        assert isinstance(self._task_parameters, AnalyzeSmallDataXASParameters)
         self._xas_raw = self._smd_h5[f"{detname}/ROI_0_sum"][
             self._start_idx : self._stop_idx
         ]
@@ -570,10 +603,10 @@ class AnalyzeSmallData(Task):
     def _calc_binned_difference_xas(
         self,
     ) -> Tuple[
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
     ]:
         """Calculate the binned difference absorption.
 
@@ -584,19 +617,19 @@ class AnalyzeSmallData(Task):
         Returns None for all values if the final number of CCM bins is small (<=2).
 
         Returns:
-            bins (Optional[np.ndarray[np.float64]]): 1D array of ccm bins used.
+            bins (Optional[npt.NDArray[np.float64]]): 1D array of ccm bins used.
 
-            diff (Optional[np.ndarray[np.float64]]): 1D binned difference absorption
+            diff (Optional[npt.NDArray[np.float64]]): 1D binned difference absorption
                 of shape (ccm_bins)
 
-            laser_on (Optional[np.ndarray[np.float64]]): 1D laser on absorption
+            laser_on (Optional[npt.NDArray[np.float64]]): 1D laser on absorption
                 profiles of shape (ccm_bins)
 
-            laser_off (Optional[np.ndarray[np.float64]]): 1D laser off absorption
+            laser_off (Optional[npt.NDArray[np.float64]]): 1D laser off absorption
                 profiles of shape (ccm_bins)
         """
         nbins: int
-        b_edges: np.ndarray[np.float64]
+        b_edges: npt.NDArray[np.float64]
         if self._ccm_E_set_pt is not None:
             # nbins = len(self.ccm_E_set_pt)
             nbins, b_edges = self._calc_ccm_bins_by_set_pt()
@@ -606,20 +639,20 @@ class AnalyzeSmallData(Task):
         if nbins <= 2:
             return None, None, None, None
 
-        filter_las_on: np.ndarray = self._aggregate_filters()
-        filter_las_off: np.ndarray = self._aggregate_filters(
+        filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters()
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        norm: np.ndarray[np.float64] = self._calc_1d_water_norm()
+        norm: npt.NDArray[np.float64] = self._calc_1d_water_norm()
         if (norm < 0).any():
             norm = self._xray_intensity
-        xas_norm: np.ndarray[np.float64] = self._xas_raw / norm
+        xas_norm: npt.NDArray[np.float64] = self._xas_raw / norm
 
-        xas_laser_on: np.ndarray = np.zeros(nbins)
-        xas_laser_off: np.ndarray = np.zeros(nbins)
+        xas_laser_on: npt.NDArray = np.zeros(nbins)
+        xas_laser_off: npt.NDArray = np.zeros(nbins)
         # bins are [lower, upper) except for last which is [lower, upper]
         # _, b_edges = np.histogram(self.ccm_E_unique, bins=nbins)
-        bins: np.ndarray = np.zeros([nbins])
+        bins: npt.NDArray = np.zeros([nbins])
         i: int = 0
         while i < nbins:  # - win_size + 1
             win = b_edges[i : i + 2]
@@ -630,7 +663,7 @@ class AnalyzeSmallData(Task):
             lower: int = b_edges[i]
             upper: int = b_edges[i + 1]
             # Prepare CCM_E bin
-            energy_filt: np.ndarray
+            energy_filt: npt.NDArray
             if i == nbins - 1:
                 # upper edge inclusive bin
                 energy_filt = self._ccm_E <= upper
@@ -667,6 +700,7 @@ class AnalyzeSmallData(Task):
         Args:
             detname (str): The detector name to extract data for.
         """
+        assert isinstance(self._task_parameters, AnalyzeSmallDataXESParameters)
         # Lets assume they set up the ROI nicley?
         # By xcsl1004821
         # proj0 should be spatial distribution
@@ -680,7 +714,9 @@ class AnalyzeSmallData(Task):
             spatial_axis = 1
             spectral_axis = 0
 
-        self._xes: np.ndarray[np.float64]
+        self._xes: npt.NDArray[np.float64]
+        spatial_dist: npt.NDArray[np.float64]
+        guess_idx: int
         if self._task_parameters.batch_size:
             # Read data in batches for OOM issues
             size: int = self._task_parameters.batch_size
@@ -697,15 +733,13 @@ class AnalyzeSmallData(Task):
                         (self._num_events, xes_roi.shape[spatial_axis + 1])
                     )
                 if self._task_parameters.rot_angle is not None:
-                    from scipy.ndimage import rotate
+                    from scipy.ndimage import rotate  # type: ignore
 
                     xes_roi = rotate(
                         xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)
                     )
-                spatial_dist: np.ndarray[np.float64] = np.nansum(
-                    xes_roi, axis=(0, spatial_axis + 1)
-                )
-                guess_idx: int = np.argmax(spatial_dist)
+                spatial_dist = np.nansum(xes_roi, axis=(0, spatial_axis + 1))
+                guess_idx = cast(int, np.argmax(spatial_dist))
                 if not self._task_parameters.invert_xes_axes:
                     self._xes[start:end] = np.nansum(
                         xes_roi[..., guess_idx - 5 : guess_idx + 5],
@@ -727,10 +761,8 @@ class AnalyzeSmallData(Task):
                     xes_roi, angle=self._task_parameters.rot_angle, axes=(2, 1)
                 )
 
-            spatial_dist: np.ndarray[np.float64] = np.nansum(
-                xes_roi, axis=(0, spatial_axis + 1)
-            )
-            guess_idx: int = np.argmax(spatial_dist)
+            spatial_dist = np.nansum(xes_roi, axis=(0, spatial_axis + 1))
+            guess_idx = cast(int, np.argmax(spatial_dist))
             if not self._task_parameters.invert_xes_axes:
                 self._xes = np.nansum(
                     xes_roi[..., guess_idx - 5 : guess_idx + 5], axis=spectral_axis + 1
@@ -743,9 +775,9 @@ class AnalyzeSmallData(Task):
     def _calc_avg_difference_xes(
         self,
     ) -> Tuple[
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
     ]:
         """Calculate the average difference XES.
 
@@ -755,38 +787,38 @@ class AnalyzeSmallData(Task):
         image rotation if that is requested (see _extract_xes).
 
         Returns:
-            diff (np.ndarray[np.float64]): 1D binned difference emission of shape
+            diff (npt.NDArray[np.float64]): 1D binned difference emission of shape
                 (pixels)
 
-            laser_on (np.ndarray[np.float64]): 1D laser on emission profiles
+            laser_on (npt.NDArray[np.float64]): 1D laser on emission profiles
                 of shape (pixels)
 
-            laser_off (np.ndarray[np.float64]): 1D laser off emission profiles
+            laser_off (npt.NDArray[np.float64]): 1D laser off emission profiles
                 of shape (pixels)
         """
 
-        filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
-        filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
+        filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters()
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
 
-        xes_on: np.ndarray[np.float64] = np.nanmean(self._xes[filter_las_on], axis=0)
-        xes_off: np.ndarray[np.float64] = np.nanmean(self._xes[filter_las_off], axis=0)
+        xes_on: npt.NDArray[np.float64] = np.nanmean(self._xes[filter_las_on], axis=0)
+        xes_off: npt.NDArray[np.float64] = np.nanmean(self._xes[filter_las_off], axis=0)
 
-        diff: np.ndarray[np.float64] = xes_on - xes_off
+        diff: npt.NDArray[np.float64] = xes_on - xes_off
 
         return diff, xes_on, xes_off
 
     # Binning
     ############################################################################
-    def _calc_ccm_bins_by_set_pt(self) -> np.ndarray[np.float64]:
+    def _calc_ccm_bins_by_set_pt(self) -> Tuple[int, npt.NDArray[np.float64]]:
         """Caculate bin edges based on the provided CCM_E set points.
 
         Returns:
-            bins (np.ndarray[np.float64]): 1D array of ccm bins used.
+            bins (npt.NDArray[np.float64]): 1D array of ccm bins used.
         """
         if self._ccm_E_set_pt is not None:
-            all_set_pts: np.ndarray[np.float64] = np.zeros(
+            all_set_pts: npt.NDArray[np.float64] = np.zeros(
                 np.sum(self._events_per_rank), dtype=np.float64
             )
             self._mpi_comm.Allgatherv(
@@ -798,12 +830,12 @@ class AnalyzeSmallData(Task):
                     MPI.DOUBLE,
                 ],
             )
-            bin_centers: np.ndarray[np.float64] = np.sort(np.unique(all_set_pts))
+            bin_centers: npt.NDArray[np.float64] = np.sort(np.unique(all_set_pts))
             nbins: int = len(bin_centers)
         else:
             raise RuntimeError("Set points not provided/not found!")
 
-        edges: np.ndarray[np.float64] = np.empty(nbins + 1)
+        edges: npt.NDArray[np.float64] = np.empty(nbins + 1)
         edges[1:-1] = (bin_centers[1:] + bin_centers[:-1]) / 2
         # How to handle the ends?
         # Lower bin inclusive, upper not (except last)
@@ -814,7 +846,7 @@ class AnalyzeSmallData(Task):
 
     def _calc_ccm_bins_by_unique(
         self, nbins: int = 50
-    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64]]:
+    ) -> Tuple[int, npt.NDArray[np.float64]]:
         """Calculate bin edges based on unique CCM_E recorded values.
 
         Args:
@@ -823,9 +855,9 @@ class AnalyzeSmallData(Task):
         Returns:
             nbins (int): Number of bins.
 
-            b_edges (np.ndarray[np.float64]): Bin edges.
+            b_edges (npt.NDArray[np.float64]): Bin edges.
         """
-        all_ccm_values: np.ndarray[np.float64] = np.zeros(
+        all_ccm_values: npt.NDArray[np.float64] = np.zeros(
             np.sum(self._events_per_rank), dtype=np.float64
         )
         self._mpi_comm.Allgatherv(
@@ -837,23 +869,23 @@ class AnalyzeSmallData(Task):
                 MPI.DOUBLE,
             ],
         )
-        unique: np.ndarray[np.float64] = np.unique(all_ccm_values)
+        unique: npt.NDArray[np.float64] = np.unique(all_ccm_values)
         del all_ccm_values
         nbins = np.min([nbins, len(unique)])
-        b_edges = np.histogram_bin_edges(unique, bins=nbins)
+        b_edges: npt.NDArray[np.float64] = np.histogram_bin_edges(unique, bins=nbins)
         return nbins, b_edges
 
-    def _calc_scan_bins(self, nbins: int = 51) -> np.ndarray[np.float64]:
+    def _calc_scan_bins(self, nbins: int = 51) -> npt.NDArray[np.float64]:
         """Calculate a set of scan bins.
 
         Args:
             nbins (int): Number of bins to create.
 
         Returns:
-            scan_bins (np.ndarray[np.float64]): 1D set of scan bins.
+            scan_bins (npt.NDArray[np.float64]): 1D set of scan bins.
         """
         # Create a full set of scan values
-        all_scan_values: np.ndarray[np.float64] = np.zeros(
+        all_scan_values: npt.NDArray[np.float64] = np.zeros(
             np.sum(self._events_per_rank), dtype=np.float64
         )
         self._mpi_comm.Allgatherv(
@@ -866,7 +898,7 @@ class AnalyzeSmallData(Task):
             ],
         )
         all_scan_values = np.nan_to_num(all_scan_values)
-        scan_bins: np.ndarray[np.float64]
+        scan_bins: npt.NDArray[np.float64]
         if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
             scan_bins = np.histogram_bin_edges(np.unique(all_scan_values), bins=nbins)
         elif self._scan_var_name is not None:
@@ -880,7 +912,9 @@ class AnalyzeSmallData(Task):
 
     def _calc_scan_binned_difference_xss(
         self,
-    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], np.ndarray[np.float64]]:
+    ) -> Tuple[
+        npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
+    ]:
         """Calculate the binned difference scattering.
 
         Calculates the 1D difference scattering for each bin of a scan variable.
@@ -888,36 +922,36 @@ class AnalyzeSmallData(Task):
         the laser on profiles.
 
         Returns:
-            bins (np.ndarray[np.float64]): 1D array of scan bins used.
+            bins (npt.NDArray[np.float64]): 1D array of scan bins used.
 
-            diff (np.ndarray[np.float64]): 2D binned difference scattering of shape
+            diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
                 (q_bins, scan_bins)
 
-            laser_on (np.ndarray[np.float64]): 2D laser on scattering profiles
+            laser_on (npt.NDArray[np.float64]): 2D laser on scattering profiles
                 of shape (n_events_las_on, q_bins)
         """
-        profiles: np.ndarray[np.float64, np.float64] = np.nansum(self._az_int, axis=1)
-        dark_mean: np.ndarray[np.float64] = self._calc_xss_dark_mean(profiles)
+        profiles: npt.NDArray[np.float64] = np.nansum(self._az_int, axis=1)
+        dark_mean: npt.NDArray[np.float64] = self._calc_xss_dark_mean(profiles)
         if len(np.unique(dark_mean)) > 1:
             # Can be len == 1 if all nan
             profiles -= dark_mean
-        norm: np.ndarray[np.float64] = self._calc_norm_by_qrange()
+        norm: npt.NDArray[np.float64] = self._calc_norm_by_qrange()
         profiles = (profiles.T / np.nanmean(norm, axis=-1).T).T
         del dark_mean
         del norm
 
-        filter_las_on: np.ndarray[np.float64] = self._aggregate_filters()
-        filter_las_off: np.ndarray[np.float64] = self._aggregate_filters(
+        filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters()
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        normed_xss_las_on: np.ndarray[np.float64] = profiles[filter_las_on]
-        normed_xss_las_off: np.ndarray[np.float64] = profiles[filter_las_off]
+        normed_xss_las_on: npt.NDArray[np.float64] = profiles[filter_las_on]
+        normed_xss_las_off: npt.NDArray[np.float64] = profiles[filter_las_off]
 
-        bins: np.ndarray[np.float64] = self._calc_scan_bins()
-        binned_on: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
-        binned_off: np.ndarray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
-        scanvals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
-        scanvals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
+        bins: npt.NDArray[np.float64] = self._calc_scan_bins()
+        binned_on: npt.NDArray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
+        binned_off: npt.NDArray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
+        scanvals_las_on: npt.NDArray[np.float64] = self._scan_values[filter_las_on]
+        scanvals_las_off: npt.NDArray[np.float64] = self._scan_values[filter_las_off]
 
         idx: int
         scan_bin: float
@@ -925,10 +959,10 @@ class AnalyzeSmallData(Task):
             if self._scan_var_name is not None and "lxt_fast" in self._scan_var_name:
                 if idx == len(bins) - 1:
                     continue
-                mask_on: np.ndarray[np.bool_] = (scanvals_las_on >= scan_bin) * (
+                mask_on: npt.NDArray[np.bool_] = (scanvals_las_on >= scan_bin) * (
                     scanvals_las_on < bins[idx + 1]
                 )
-                mask_off: np.ndarray[np.bool_] = (scanvals_las_off >= scan_bin) * (
+                mask_off: npt.NDArray[np.bool_] = (scanvals_las_off >= scan_bin) * (
                     scanvals_las_off < bins[idx + 1]
                 )
                 binned_on[:, idx] = np.nanmean(normed_xss_las_on[mask_on], axis=0)
@@ -940,7 +974,7 @@ class AnalyzeSmallData(Task):
                 binned_off[:, idx] = np.nanmean(
                     normed_xss_las_off[(scanvals_las_off == scan_bin)], axis=0
                 )
-        diff: np.ndarray[np.float64] = np.nan_to_num(binned_on) - np.nan_to_num(
+        diff: npt.NDArray[np.float64] = np.nan_to_num(binned_on) - np.nan_to_num(
             binned_off
         )
         return bins, diff, normed_xss_las_on
@@ -948,10 +982,10 @@ class AnalyzeSmallData(Task):
     def _calc_scan_binned_difference_xas(
         self,
     ) -> Tuple[
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
-        Optional[np.ndarray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
+        Optional[npt.NDArray[np.float64]],
     ]:
         """Calculate the binned difference absorption.
 
@@ -961,47 +995,49 @@ class AnalyzeSmallData(Task):
         Returns None for all values if the final number of bins is small (<=2).
 
         Returns:
-            bins (Optional[np.ndarray[np.float64]]): 1D array of scan bins used.
+            bins (Optional[npt.NDArray[np.float64]]): 1D array of scan bins used.
 
-            diff (Optional[np.ndarray[np.float64]]): 1D difference absorption.
+            diff (Optional[npt.NDArray[np.float64]]): 1D difference absorption.
 
-            laser_off (Optional[np.ndarray[np.float64]]): 1D laser on absorption.
+            laser_off (Optional[npt.NDArray[np.float64]]): 1D laser on absorption.
 
-            laser_off (Optional[np.ndarray[np.float64]]): 1D laser off absorption.
+            laser_off (Optional[npt.NDArray[np.float64]]): 1D laser off absorption.
         """
-        bins: np.ndarray[np.float64] = self._calc_scan_bins()
+        bins: npt.NDArray[np.float64] = self._calc_scan_bins()
         if len(bins) <= 2:
             return None, None, None, None
-        filter_las_on: np.ndarray = self._aggregate_filters()
-        filter_las_off: np.ndarray = self._aggregate_filters(
+        filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters()
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        norm: np.ndarray[np.float64] = self._xray_intensity
-        normed_xas: np.ndarray[np.float64] = self._xas_raw / norm
-        normed_xas_las_on: np.ndarray[np.float64] = normed_xas[filter_las_on]
-        normed_xas_las_off: np.ndarray[np.float64] = normed_xas[filter_las_off]
+        norm: npt.NDArray[np.float64] = self._xray_intensity
+        normed_xas: npt.NDArray[np.float64] = self._xas_raw / norm
+        normed_xas_las_on: npt.NDArray[np.float64] = normed_xas[filter_las_on]
+        normed_xas_las_off: npt.NDArray[np.float64] = normed_xas[filter_las_off]
 
-        scan_vals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
-        scan_vals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
+        scan_vals_las_on: npt.NDArray[np.float64] = self._scan_values[filter_las_on]
+        scan_vals_las_off: npt.NDArray[np.float64] = self._scan_values[filter_las_off]
 
         lxt_fast_scan: bool = (
             self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
         )
+        binned_xas_las_on: npt.NDArray[np.float64]
+        binned_xas_las_off: npt.NDArray[np.float64]
         if lxt_fast_scan:
-            binned_xas_las_on: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
-            binned_xas_las_off: np.ndarray[np.float64] = np.zeros(len(bins) - 1)
+            binned_xas_las_on = np.zeros(len(bins) - 1)
+            binned_xas_las_off = np.zeros(len(bins) - 1)
         else:
-            binned_xas_las_on: np.ndarray[np.float64] = np.zeros(len(bins))
-            binned_xas_las_off: np.ndarray[np.float64] = np.zeros(len(bins))
+            binned_xas_las_on = np.zeros(len(bins))
+            binned_xas_las_off = np.zeros(len(bins))
 
         for idx, bin_or_bin_edge in enumerate(bins):
             if lxt_fast_scan:
                 if idx == len(bins) - 1:
                     continue
-                mask_on: np.ndarray[np.float64] = (
+                mask_on: npt.NDArray[np.float64] = (
                     scan_vals_las_on >= bin_or_bin_edge
                 ) * (scan_vals_las_on < bins[idx + 1])
-                mask_off: np.ndarray[np.float64] = (
+                mask_off: npt.NDArray[np.float64] = (
                     scan_vals_las_off >= bin_or_bin_edge
                 ) * (scan_vals_las_off < bins[idx + 1])
                 binned_xas_las_on[idx] = np.mean(normed_xas_las_on[mask_on])
@@ -1014,16 +1050,16 @@ class AnalyzeSmallData(Task):
                     normed_xas_las_off[scan_vals_las_off == bin_or_bin_edge]
                 )
 
-        diff: np.ndarray[np.float64] = binned_xas_las_on - binned_xas_las_off
+        diff: npt.NDArray[np.float64] = binned_xas_las_on - binned_xas_las_off
         return bins, diff, binned_xas_las_on, binned_xas_las_off
 
     def _calc_scan_binned_difference_xes(
         self,
     ) -> Tuple[
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
-        np.ndarray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
     ]:
         """Calculate the binned difference emission.
 
@@ -1032,53 +1068,47 @@ class AnalyzeSmallData(Task):
         axis is energy.
 
         Returns:
-            bins (np.ndarray[np.float64]): 1D array of scan bins used.
+            bins (npt.NDArray[np.float64]): 1D array of scan bins used.
 
-            diff (np.ndarray[np.float64]): 2D difference emission.
+            diff (npt.NDArray[np.float64]): 2D difference emission.
 
-            laser_off (np.ndarray[np.float64]): 2D laser on emission.
+            laser_off (npt.NDArray[np.float64]): 2D laser on emission.
 
-            laser_off (np.ndarray[np.float64]): 2D laser off emission.
+            laser_off (npt.NDArray[np.float64]): 2D laser off emission.
         """
-        filter_las_on: np.ndarray = self._aggregate_filters()
-        filter_las_off: np.ndarray = self._aggregate_filters(
+        filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters()
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        norm: np.ndarray[np.float64] = self._xray_intensity
-        normed_xes: np.ndarray[np.float64] = (self._xes.T / norm).T
-        normed_xes_las_on: np.ndarray[np.float64] = normed_xes[filter_las_on]
-        normed_xes_las_off: np.ndarray[np.float64] = normed_xes[filter_las_off]
+        norm: npt.NDArray[np.float64] = self._xray_intensity
+        normed_xes: npt.NDArray[np.float64] = (self._xes.T / norm).T
+        normed_xes_las_on: npt.NDArray[np.float64] = normed_xes[filter_las_on]
+        normed_xes_las_off: npt.NDArray[np.float64] = normed_xes[filter_las_off]
 
-        scan_vals_las_on: np.ndarray[np.float64] = self._scan_values[filter_las_on]
-        scan_vals_las_off: np.ndarray[np.float64] = self._scan_values[filter_las_off]
-        bins: np.ndarray[np.float64] = self._calc_scan_bins()
+        scan_vals_las_on: npt.NDArray[np.float64] = self._scan_values[filter_las_on]
+        scan_vals_las_off: npt.NDArray[np.float64] = self._scan_values[filter_las_off]
+        bins: npt.NDArray[np.float64] = self._calc_scan_bins()
 
         lxt_fast_scan: bool = (
             self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
         )
+        binned_xes_las_on: npt.NDArray[np.float64]
+        binned_xes_las_off: npt.NDArray[np.float64]
         if lxt_fast_scan:
-            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(
-                (normed_xes_las_on.shape[1], len(bins) - 1)
-            )
-            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(
-                (normed_xes_las_off.shape[1], len(bins) - 1)
-            )
+            binned_xes_las_on = np.zeros((normed_xes_las_on.shape[1], len(bins) - 1))
+            binned_xes_las_off = np.zeros((normed_xes_las_off.shape[1], len(bins) - 1))
         else:
-            binned_xes_las_on: np.ndarray[np.float64] = np.zeros(
-                (normed_xes_las_on.shape[1], len(bins))
-            )
-            binned_xes_las_off: np.ndarray[np.float64] = np.zeros(
-                (normed_xes_las_off.shape[1], len(bins))
-            )
+            binned_xes_las_on = np.zeros((normed_xes_las_on.shape[1], len(bins)))
+            binned_xes_las_off = np.zeros((normed_xes_las_off.shape[1], len(bins)))
 
         for idx, bin_or_bin_edge in enumerate(bins):
             if lxt_fast_scan:
                 if idx == len(bins) - 1:
                     continue
-                mask_on: np.ndarray[np.float64] = (
+                mask_on: npt.NDArray[np.float64] = (
                     scan_vals_las_on >= bin_or_bin_edge
                 ) * (scan_vals_las_on < bins[idx + 1])
-                mask_off: np.ndarray[np.float64] = (
+                mask_off: npt.NDArray[np.float64] = (
                     scan_vals_las_off >= bin_or_bin_edge
                 ) * (scan_vals_las_off < bins[idx + 1])
                 binned_xes_las_on[:, idx] = np.mean(normed_xes_las_on[mask_on], axis=0)
@@ -1093,9 +1123,9 @@ class AnalyzeSmallData(Task):
                     normed_xes_las_off[scan_vals_las_off == bin_or_bin_edge], axis=0
                 )
 
-        diff: np.ndarray[np.float64] = np.nan_to_num(binned_xes_las_on) - np.nan_to_num(
-            binned_xes_las_off
-        )
+        diff: npt.NDArray[np.float64] = np.nan_to_num(
+            binned_xes_las_on
+        ) - np.nan_to_num(binned_xes_las_off)
         return bins, diff, binned_xes_las_on, binned_xes_las_off
 
     # Plots
@@ -1104,27 +1134,27 @@ class AnalyzeSmallData(Task):
     # XSS
     def plot_avg_xss(
         self,
-        laser_on: np.ndarray[np.float64],
-        q_vals: np.ndarray[np.float64],
-        phis: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        q_vals: npt.NDArray[np.float64],
+        phis: npt.NDArray[np.float64],
     ) -> plt.Figure: ...
 
     def plot_difference_xss_hv(
         self,
-        bins: np.ndarray[np.float64],
-        q_vals: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        bins: npt.NDArray[np.float64],
+        q_vals: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
         scan_var_name: str,
     ) -> pn.GridSpec:
         """Plot the binned difference scattering.
 
         Args:
-            bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            q_vals (np.ndarray[np.float64]): 1D set of Q bins.
+            q_vals (npt.NDArray[np.float64]): 1D set of Q bins.
 
-            diff (np.ndarray[np.float64]): 2D difference signal of shape
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
                 (q_bins, scan_bins).
 
             scan_var_name (str): Name of the scan variable (for titles, etc.).
@@ -1146,8 +1176,8 @@ class AnalyzeSmallData(Task):
             hv.opts.Contours(cmap="fire", colorbar=True, tools=["hover"], width=325)
         ).opts(shared_axes=False)
         grid[:2, :2] = contours
-        xdim: hv.core.dimension.Dimension = hv.Dimension(("Q", f"Q"))
-        ydim: hv.core.dimension.Dimension = hv.Dimension(("dS", "dS"))
+        xdim = hv.Dimension(("Q", "Q"))
+        ydim = hv.Dimension(("dS", "dS"))
         diff_curves: hv.Overlay
         diff_curves = hv.Curve((q_vals, diff[:, 0]))
         for i, _ in enumerate(bins):
@@ -1166,33 +1196,34 @@ class AnalyzeSmallData(Task):
 
     def plot_xss_overlap_fit(
         self,
-        laser_on: np.ndarray[np.float64],
-        bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> plt.Figure:
         """Plot the overlap fit to a slice of the binned difference.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 scattering profile.
 
-            bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 2D difference signal of shape
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
                 (q_bins, scan_bins).
 
         Returns:
             plot (plt.Figure): Plotted overlap fit.
         """
         fig, ax = plt.subplots(1, 1, figsize=(6, 3), dpi=200)
+        raw_curve: npt.NDArray[np.float64]
+        msg: str
         if self._scan_var_name is not None and "lxt" in self._scan_var_name:
-            raw_curve: np.ndarray[np.float64]
-            trace: np.ndarray[np.float64]
+            trace: npt.NDArray[np.float64]
             center: int
             fwhm: float
             raw_curve, trace, center, fwhm = self._convolution_fit(laser_on, bins, diff)
-            msg: str = (
+            msg = (
                 f"Scan Var: {self._scan_var_name}\n"
                 f"Overlap Position: {bins[center]}\n"
                 f"FWHM: {fwhm}"
@@ -1206,10 +1237,9 @@ class AnalyzeSmallData(Task):
             ax.set_ylabel(r"$\Delta$S")
             plt.legend(loc=0, frameon=False)
         else:
-            raw_curve: np.ndarray[np.float64]
-            opt: np.ndarray[np.float64]
+            opt: npt.NDArray[np.float64]
             raw_curve, opt, _ = self._fit_overlap(laser_on, bins, diff)
-            msg: str = (
+            msg = (
                 f"Scan Var: {self._scan_var_name}\n"
                 f"Overlap Position: {opt[1]}\n"
                 f"FWHM: {sigma_to_fwhm(opt[2])}"
@@ -1225,21 +1255,21 @@ class AnalyzeSmallData(Task):
 
     def plot_all_xss(
         self,
-        laser_on: np.ndarray[np.float64],
-        bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
         scan_var_name: str,
     ) -> pn.Tabs:
         """Plot all relevant scattering plots.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 scattering profile.
 
-            bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 2D difference signal of shape
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
                 (q_bins, scan_bins).
 
             scan_var_name (str): Name of the scan variable (for titles, etc.).
@@ -1266,24 +1296,24 @@ class AnalyzeSmallData(Task):
     # XAS
     def plot_all_xas(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        ccm_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        ccm_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Plot XAS and optionally EXAFS
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 absorption spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 absorption spectrum.
 
-            ccm_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            ccm_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference absorption.
+            diff (npt.NDArray[np.float64]): 1D difference absorption.
 
         Returns:
             plot (pn.Tabs): All plots in separated tabs in a pn.Tabs object.
@@ -1304,24 +1334,24 @@ class AnalyzeSmallData(Task):
 
     def plot_std_xas_hv(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        ccm_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        ccm_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.GridSpec:
         """Plot relevant XAS plots.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 absorption spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 absorption spectrum.
 
-            ccm_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            ccm_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference absorption.
+            diff (npt.NDArray[np.float64]): 1D difference absorption.
 
         Returns:
             plot (pn.GridSpec): Laser on/off and difference XAS plots.
@@ -1358,26 +1388,26 @@ class AnalyzeSmallData(Task):
 
     def plot_xas_scan_hv(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> Optional[pn.Tabs]:
         """Plot scan binned XAS data.
 
         Currently handles lxe_opa power titration and t0 (lxt_fast) XAS scans.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 absorption spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 absorption spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference absorption.
+            diff (npt.NDArray[np.float64]): 1D difference absorption.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1391,27 +1421,28 @@ class AnalyzeSmallData(Task):
             )
         elif "lxt_fast" in self._scan_var_name:
             return self.plot_xas_lxt_fast_scan(laser_on, laser_off, scan_bins, diff)
+        return None
 
     def plot_xas_lxt_fast_scan(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Produce a plot of an lxt_fast scan for time zero (or real signal).
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 absorption spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 absorption spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference absorption.
+            diff (npt.NDArray[np.float64]): 1D difference absorption.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1421,7 +1452,7 @@ class AnalyzeSmallData(Task):
             ("Normalized A", "Normalized A")
         )
 
-        bin_centers: np.ndarray[np.float64] = (scan_bins[:-1] + scan_bins[1:]) / 2
+        bin_centers: npt.NDArray[np.float64] = (scan_bins[:-1] + scan_bins[1:]) / 2
 
         on_pts: hv.Points = hv.Points(
             (bin_centers, laser_on), kdims=[xdim, ydim], label="Laser on"
@@ -1456,24 +1487,24 @@ class AnalyzeSmallData(Task):
 
     def plot_xas_power_titration_scan(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Produce a plot of the lxe_opa power titration.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 absorption spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 absorption spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference absorption.
+            diff (npt.NDArray[np.float64]): 1D difference absorption.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1517,24 +1548,24 @@ class AnalyzeSmallData(Task):
     # XES
     def plot_xes_hv(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        energy_bins: Optional[np.ndarray[np.float64]],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        energy_bins: Optional[npt.NDArray[np.float64]],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Plot XES and difference XES. In the future will provide other plots.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 emission spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 emission spectrum.
 
-            energy_bins (Optional[np.ndarray[np.float64]]): 1D set of bins used
+            energy_bins (Optional[npt.NDArray[np.float64]]): 1D set of bins used
                 for the energy axis. If None, will just use pixels for that axis.
 
-            diff (np.ndarray[np.float64]): 1D difference emission.
+            diff (npt.NDArray[np.float64]): 1D difference emission.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1549,24 +1580,24 @@ class AnalyzeSmallData(Task):
 
     def plot_std_xes_hv(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        energy_bins: Optional[np.ndarray[np.float64]],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        energy_bins: Optional[npt.NDArray[np.float64]],
+        diff: npt.NDArray[np.float64],
     ) -> pn.GridSpec:
         """Plot XES and difference XES.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 emission spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 emission spectrum.
 
-            energy_bins (Optional[np.ndarray[np.float64]]): 1D set of bins used
+            energy_bins (Optional[npt.NDArray[np.float64]]): 1D set of bins used
                 for the energy axis. If None, will just use pixels for that axis.
 
-            diff (np.ndarray[np.float64]): 1D difference emission.
+            diff (npt.NDArray[np.float64]): 1D difference emission.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1574,7 +1605,7 @@ class AnalyzeSmallData(Task):
         xdim: hv.core.dimension.Dimension = hv.Dimension(("Energy", "Energy"))
         ydim: hv.core.dimension.Dimension = hv.Dimension(("I", "I"))
 
-        bins: np.ndarray[Union[np.int64, np.float64]]
+        bins: npt.NDArray[Union[np.int64, np.float64]]
         if energy_bins is None:
             bins = np.arange(len(laser_on))
         else:
@@ -1608,26 +1639,26 @@ class AnalyzeSmallData(Task):
 
     def plot_xes_scan_hv(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> Optional[pn.Tabs]:
         """Plot scan binned XES data.
 
         Currently handles lxt and lxt_fast XES scans.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 emission spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 emission spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference emission.
+            diff (npt.NDArray[np.float64]): 1D difference emission.
 
         Returns:
             plot (Optional[pn.Tabs]): Plotted binned difference. Returns None if
@@ -1640,27 +1671,28 @@ class AnalyzeSmallData(Task):
             return self.plot_xes_lxt_fast_scan(laser_on, laser_off, scan_bins, diff)
         elif "lxt" in self._scan_var_name:
             return self.plot_xes_lxt_scan(laser_on, laser_off, scan_bins, diff)
+        return None
 
     def plot_xes_lxt_fast_scan(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Plot lxt_fast scan binned XES data.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 emission spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 emission spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference emission.
+            diff (npt.NDArray[np.float64]): 1D difference emission.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1671,7 +1703,7 @@ class AnalyzeSmallData(Task):
             ("Energy (Pixel)", "Energy (Pixel)")
         )
 
-        bin_centers: np.ndarray[np.float_] = (scan_bins[:1] + scan_bins[1:]) / 2
+        bin_centers: npt.NDArray[np.float64] = (scan_bins[:1] + scan_bins[1:]) / 2
         diff_img: hv.Image = hv.Image(
             (
                 bin_centers,
@@ -1688,10 +1720,8 @@ class AnalyzeSmallData(Task):
         shared.opts(shared_axes=False)
         grid[:2, :2] = shared
 
-        xdim: hv.core.dimension.Dimension = hv.Dimension(
-            ("Energy (Pixel)", "Energy (Pixel)")
-        )
-        ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
+        xdim = hv.Dimension(("Energy (Pixel)", "Energy (Pixel)"))
+        ydim = hv.Dimension(("dI", "dI"))
 
         diff_curves: hv.Curve = hv.Curve((range(len(diff[:, 0])), diff[:, 0]))
         for idx, _ in enumerate(bin_centers):
@@ -1706,24 +1736,24 @@ class AnalyzeSmallData(Task):
 
     def plot_xes_lxt_scan(
         self,
-        laser_on: np.ndarray[np.float64],
-        laser_off: np.ndarray[np.float64],
-        scan_bins: np.ndarray[np.float64],
-        diff: np.ndarray[np.float64],
+        laser_on: npt.NDArray[np.float64],
+        laser_off: npt.NDArray[np.float64],
+        scan_bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
     ) -> pn.Tabs:
         """Plot lxt scan binned XES data.
 
         Args:
-            laser_on (np.ndarray[np.float64]): 1D corrected average laser on
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
                 emission spectrum.
 
-            laser_off (np.ndarray[np.float64]): 1D corrected average laser off
+            laser_off (npt.NDArray[np.float64]): 1D corrected average laser off
                 emission spectrum.
 
-            scan_bins (np.ndarray[np.float64]): 1D set of bins used for difference
+            scan_bins (npt.NDArray[np.float64]): 1D set of bins used for difference
                 signal.
 
-            diff (np.ndarray[np.float64]): 1D difference emission.
+            diff (npt.NDArray[np.float64]): 1D difference emission.
 
         Returns:
             plot (pn.Tabs): Plotted binned difference.
@@ -1750,10 +1780,8 @@ class AnalyzeSmallData(Task):
         shared.opts(shared_axes=False)
         grid[:2, :2] = shared
 
-        xdim: hv.core.dimension.Dimension = hv.Dimension(
-            ("Energy (Pixel)", "Energy (Pixel)")
-        )
-        ydim: hv.core.dimension.Dimension = hv.Dimension(("dI", "dI"))
+        xdim = hv.Dimension(("Energy (Pixel)", "Energy (Pixel)"))
+        ydim = hv.Dimension(("dI", "dI"))
 
         diff_curves: hv.Curve = hv.Curve((range(len(diff[:, 0])), diff[:, 0]))
         for idx, _ in enumerate(scan_bins):

@@ -10,7 +10,7 @@ Exceptions:
 
 from typing import Type
 
-from .task import Task
+from lute.tasks.task import Task
 
 
 class TaskNotFoundError(Exception):
@@ -90,4 +90,10 @@ def import_task(task_name: str) -> Type[Task]:
         from .geom_opt import OptimizePyFAIGeometry
 
         return OptimizePyFAIGeometry
+
+    if task_name == "OptimizeAgBhGeometryExhaustive":
+        from .geometry import OptimizeAgBhGeometryExhaustive
+
+        return OptimizeAgBhGeometryExhaustive
+
     raise TaskNotFoundError

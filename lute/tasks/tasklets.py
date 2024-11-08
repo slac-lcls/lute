@@ -67,14 +67,14 @@ import subprocess
 from typing import List, Dict, Tuple, Optional
 
 from lute.tasks.dataclasses import ElogSummaryPlots
-
+from lute.execution.logging import get_logger
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 def concat_files(location: str, in_files_glob: str, out_file: str) -> None:
@@ -143,7 +143,7 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
     out, _ = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
     ).communicate()
-    modify_permissions(location, permissions)
+    modify_permissions(f"{location}/{repo_only}", permissions)
 
 
 def clone_smalldata(producer_location: str) -> None:
@@ -240,7 +240,8 @@ def compare_hkl_fom_summary(
         figure_display_name (str): Display name of the figure in the eLog.
     """
     import numpy as np
-    import holoviews as hv
+    import numpy.typing as npt
+    import holoviews as hv  # type: ignore
     import panel as pn
 
     with open(shell_file, "r") as f:
@@ -248,7 +249,7 @@ def compare_hkl_fom_summary(
 
     header: str = lines[0]
     fom: str = header.split()[2]
-    shells_arr: np.ndarray[np.float64] = np.loadtxt(lines[1:])
+    shells_arr: npt.NDArray[np.float64] = np.loadtxt(lines[1:])
     run_params: Dict[str, str] = {fom: str(shells_arr[1])}
     if shells_arr.ndim == 1:
         return run_params, None
@@ -260,7 +261,7 @@ def compare_hkl_fom_summary(
     )
     ydim: hv.core.dimension.Dimension = hv.Dimension((fom, fom))
 
-    angs_bins: np.ndarray[np.float64] = 10.0 / shells_arr[:, 0]
+    angs_bins: npt.NDArray[np.float64] = 10.0 / shells_arr[:, 0]
     pts: hv.Points = hv.Points((angs_bins, shells_arr[:, 1]), kdims=[xdim, ydim])
     grid: pn.GridSpec = pn.GridSpec(name="Figures of Merit")
     grid[:2, :2] = pts

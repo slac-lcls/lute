@@ -59,14 +59,14 @@ class RequestOnlyOperator(BaseOperator):
                 contains a list of available variables and their description.
         """
         # logger.info(f"Attempting to run at {self.get_location(context)}...")
-        logger.info(f"Attempting to run at S3DF.")
+        logger.info("Attempting to run at S3DF.")
         dagrun_config: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = (
             context.get("dag_run").conf
         )
         jid_job_definition: Dict[str, str] = {
             "_id": str(uuid.uuid4()),
             "name": self.task_id,
-            "executable": f"myexecutable.sh",
+            "executable": "myexecutable.sh",
             "trigger": "MANUAL",
             "location": dagrun_config.get("ARP_LOCATION", "S3DF"),
             "parameters": "--partition=milano --account=lcls:data",
@@ -320,11 +320,11 @@ class JIDSlurmOperator(BaseOperator):
                 properly handled by the Airflow server.
         """
         logger.debug(f"{resp.status_code}: {resp.content}")
-        if not resp.status_code in (200,):
+        if resp.status_code not in (200,):
             raise AirflowException(f"Bad response from JID {resp}: {resp.content}")
         try:
             json: Dict[str, Union[str, int]] = resp.json()
-            if not json.get("success", "") in (True,):
+            if json.get("success", "") not in (True,):
                 raise AirflowException(f"Error from JID {resp}: {resp.content}")
             value: Dict[str, Any] = json.get("value")
 
@@ -401,7 +401,7 @@ class JIDSlurmOperator(BaseOperator):
                 contains a list of available variables and their description.
         """
         # logger.info(f"Attempting to run at {self.get_location(context)}...")
-        logger.info(f"Attempting to run at S3DF.")
+        logger.info("Attempting to run at S3DF.")
         control_doc = self.create_control_doc(context)
         logger.info(control_doc)
         logger.info(f"{self.jid_api_location}/{self.jid_api_endpoints['start_job']}")

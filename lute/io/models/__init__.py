@@ -1,5 +1,7 @@
 """Pydantic models for Task parameters and configuration."""
 
+# flake8: noqa: F403
+
 from .base import *
 from .sfx_find_peaks import *
 from .sfx_index import *
@@ -8,4 +10,5 @@ from .sfx_solve import *
 from .smd import *
 from .tests import *
 from .mpi_tests import *
+from .geometry import *
 from .geom_opt import *

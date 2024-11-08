@@ -13,22 +13,22 @@ __author__ = "Valerio Mariani, Gabriel Dorlhiac"
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional
+from typing import Any, Dict, List, Literal, TextIO, Tuple, Optional, cast, Union
 
-import h5py
-import holoviews as hv
+import h5py  # type: ignore
+import holoviews as hv  # type: ignore
 import numpy
 import panel as pn
 from mpi4py.MPI import COMM_WORLD, SUM
 from numpy.typing import NDArray
-from psalgos.pypsalgos import PyAlgos
-from psana import Detector, EventId, MPIDataSource
-from PSCalib import GeometryAccess
+from psalgos.pypsalgos import PyAlgos  # type: ignore
+from psana import Detector, EventId, MPIDataSource  # type: ignore
+from PSCalib import GeometryAccess  # type: ignore
 
 from lute.execution.ipc import Message
-from lute.io.models.base import *
-from lute.tasks.task import *
-from lute.tasks.dataclasses import ElogSummaryPlots
+from lute.io.models.sfx_find_peaks import FindPeaksPyAlgosParameters
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 
 hv.extension("bokeh")
 pn.extension()
@@ -140,9 +140,10 @@ class CxiWriter:
             )
 
         # Peak-related entries
+        ds_x: Any
         for key in keys:
             if key == "nPeaks":
-                ds_x: Any = self._outh5.create_dataset(
+                ds_x = self._outh5.create_dataset(
                     f"/entry_1/result_1/{key}",
                     (n_events,),
                     maxshape=(None,),
@@ -151,7 +152,7 @@ class CxiWriter:
                 ds_x.attrs["minPeaks"] = min_peaks
                 ds_x.attrs["maxPeaks"] = max_peaks
             else:
-                ds_x: Any = self._outh5.create_dataset(
+                ds_x = self._outh5.create_dataset(
                     f"/entry_1/result_1/{key}",
                     (n_events, max_peaks),
                     maxshape=(None, max_peaks),
@@ -162,17 +163,16 @@ class CxiWriter:
 
         # Timestamp entries
         lcls_1: Any = self._outh5.create_group("LCLS")
-        keys: List[str] = [
+        keys = [
             "eventNumber",
             "machineTime",
             "machineTimeNanoSeconds",
             "fiducial",
             "photon_energy_eV",
         ]
-        key: str
         for key in keys:
             if key == "photon_energy_eV":
-                ds_x: Any = lcls_1.create_dataset(
+                ds_x = lcls_1.create_dataset(
                     f"{key}", (n_events,), maxshape=(None,), dtype=float
                 )
             else:
@@ -188,7 +188,7 @@ class CxiWriter:
 
     def write_event(
         self,
-        img: NDArray[numpy.float_],
+        img: NDArray[numpy.float64],
         peaks: Any,  # Not typed becomes it comes from psana
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
@@ -201,7 +201,7 @@ class CxiWriter:
 
         Parameters:
 
-            img (NDArray[numpy.float_]): Detector data for the event
+            img (NDArray[numpy.float64]): Detector data for the event
 
             peaks: (Any): Peak information for the event, as recovered from the PyAlgos
                 algorithm
@@ -218,10 +218,10 @@ class CxiWriter:
 
             clen (float): Camera length/detector distance.
         """
-        ch_rows: NDArray[numpy.float_] = (
+        ch_rows: NDArray[numpy.float64] = (
             peaks[:, 0] * self._raw_det_shape[-2] + peaks[:, 1]
         )
-        ch_cols: NDArray[numpy.float_] = peaks[:, 2]
+        ch_cols: NDArray[numpy.float64] = peaks[:, 2]
 
         if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
             self._outh5["entry_1/data_1/data"].resize(self._index + 1, axis=0)
@@ -276,7 +276,7 @@ class CxiWriter:
         ] = peaks[:, 4]
 
         # Calculate and write pixel radius
-        peaks_cenx: NDArray[numpy.float_] = (
+        peaks_cenx: NDArray[numpy.float64] = (
             self._i_x[
                 numpy.array(peaks[:, 0], dtype=numpy.int64),
                 numpy.array(peaks[:, 1], dtype=numpy.int64),
@@ -285,7 +285,7 @@ class CxiWriter:
             + 0.5
             - self._ipx
         )
-        peaks_ceny: NDArray[numpy.float_] = (
+        peaks_ceny: NDArray[numpy.float64] = (
             self._i_y[
                 numpy.array(peaks[:, 0], dtype=numpy.int64),
                 numpy.array(peaks[:, 1], dtype=numpy.int64),
@@ -294,7 +294,7 @@ class CxiWriter:
             + 0.5
             - self._ipy
         )
-        peak_radius: NDArray[numpy.float_] = numpy.sqrt(
+        peak_radius: NDArray[numpy.float64] = numpy.sqrt(
             (peaks_cenx**2) + (peaks_ceny**2)
         )
         self._outh5["/entry_1/result_1/peakRadius"][
@@ -313,8 +313,8 @@ class CxiWriter:
 
     def write_non_event_data(
         self,
-        powder_hits: NDArray[numpy.float_],
-        powder_misses: NDArray[numpy.float_],
+        powder_hits: NDArray[numpy.float64],
+        powder_misses: NDArray[numpy.float64],
         mask: NDArray[numpy.uint16],
     ):
         """
@@ -322,9 +322,9 @@ class CxiWriter:
 
         Parameters:
 
-            powder_hits (NDArray[numpy.float_]): Virtual powder pattern from hits
+            powder_hits (NDArray[numpy.float64]): Virtual powder pattern from hits
 
-            powder_misses (NDArray[numpy.float_]): Virtual powder pattern from hits
+            powder_misses (NDArray[numpy.float64]): Virtual powder pattern from hits
 
             mask: (NDArray[numpy.uint16]): Pixel ask to write into the file
 
@@ -363,7 +363,7 @@ class CxiWriter:
         self._outh5["/entry_1/data_1/data"].resize(
             (num_hits, data_shape[1], data_shape[2])
         )
-        self._outh5[f"/entry_1/result_1/nPeaks"].resize((num_hits,))
+        self._outh5["/entry_1/result_1/nPeaks"].resize((num_hits,))
         key: str
         for key in [
             "peakXPosRaw",
@@ -535,7 +535,7 @@ def generate_libpressio_configuration(
     elif compressor == "sz3":
         pressio_opts = {"pressio:abs": abs_error}
 
-    lp_json = {
+    lp_json: Dict[str, Any] = {
         "compressor_id": "pressio",
         "early_config": {
             "pressio": {
@@ -613,12 +613,13 @@ class FindPeaksPyAlgos(Task):
     writes the peak information to CXI files.
     """
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: FindPeaksPyAlgosParameters, use_mpi: bool = True
+    ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
-        if self._task_parameters.compression is not None:
-            from libpressio import PressioCompressor
 
     def _run(self) -> None:
+        self._task_parameters = cast(FindPeaksPyAlgosParameters, self._task_parameters)
         ds: Any = MPIDataSource(
             f"exp={self._task_parameters.lute_config.experiment}:"
             f"run={self._task_parameters.lute_config.run}:smd"
@@ -668,7 +669,7 @@ class FindPeaksPyAlgos(Task):
                 )
 
             if self._task_parameters.event_logic:
-                if not self._task_parameters.event_code in event_codes:
+                if self._task_parameters.event_code not in event_codes:
                     continue
 
             img: Any = det.calib(evt)
@@ -688,7 +689,7 @@ class FindPeaksPyAlgos(Task):
 
                 if self._task_parameters.psana_mask:
                     mask = det.mask(
-                        self.task_parameters.run,
+                        self._task_parameters.lute_config.run,
                         calib=False,
                         status=True,
                         edges=False,
@@ -700,16 +701,16 @@ class FindPeaksPyAlgos(Task):
                 hdffh: Any
                 if self._task_parameters.mask_file is not None:
                     with h5py.File(self._task_parameters.mask_file, "r") as hdffh:
-                        loaded_mask: NDArray[numpy.int] = hdffh["entry_1/data_1/mask"][
-                            :
-                        ]
+                        loaded_mask: NDArray[numpy.int64] = hdffh[
+                            "entry_1/data_1/mask"
+                        ][:]
                         mask *= loaded_mask.astype(numpy.uint16)
 
                 file_writer: CxiWriter = CxiWriter(
                     outdir=self._task_parameters.outdir,
                     rank=ds.rank,
                     exp=self._task_parameters.lute_config.experiment,
-                    run=self._task_parameters.lute_config.run,
+                    run=int(self._task_parameters.lute_config.run),
                     n_events=self._task_parameters.n_events,
                     det_shape=det_shape,
                     raw_det_shape=img.shape,
@@ -721,7 +722,7 @@ class FindPeaksPyAlgos(Task):
                     max_peaks=self._task_parameters.max_peaks,
                     tag=tag,
                 )
-                alg: Any = PyAlgos(mask=mask, pbits=0)  # pbits controls verbosity
+                alg = PyAlgos(mask=mask, pbits=0)  # pbits controls verbosity
                 alg.set_peak_selection_pars(
                     npix_min=self._task_parameters.npix_min,
                     npix_max=self._task_parameters.npix_max,
@@ -740,8 +741,8 @@ class FindPeaksPyAlgos(Task):
                         libpressio_mask=mask,
                     )
 
-                powder_hits: NDArray[numpy.float_] = numpy.zeros(det_shape)
-                powder_misses: NDArray[numpy.float_] = numpy.zeros(det_shape)
+                powder_hits: NDArray[numpy.float64] = numpy.zeros(det_shape)
+                powder_misses: NDArray[numpy.float64] = numpy.zeros(det_shape)
 
             peaks: Any = alg.peak_finder_v3r3(
                 img,
@@ -758,6 +759,7 @@ class FindPeaksPyAlgos(Task):
             ):
 
                 if self._task_parameters.compression is not None:
+                    from libpressio import PressioCompressor  # type: ignore
 
                     libpressio_config_with_peaks = (
                         add_peaks_to_libpressio_configuration(libpressio_config, peaks)
@@ -767,7 +769,7 @@ class FindPeaksPyAlgos(Task):
                     )
                     compressed_img = compressor.encode(img)
                     decompressed_img = numpy.zeros_like(img)
-                    decompressed = compressor.decode(compressed_img, decompressed_img)
+                    _ = compressor.decode(compressed_img, decompressed_img)
                     img = decompressed_img
 
                 photon_energy: float
@@ -823,23 +825,25 @@ class FindPeaksPyAlgos(Task):
 
         COMM_WORLD.Barrier()
 
-        num_hits_per_rank: List[int] = COMM_WORLD.gather(num_hits, root=0)
-        num_hits_total: int = COMM_WORLD.reduce(num_hits, SUM)
-        num_events_total: int = COMM_WORLD.reduce(num_events, SUM)
+        num_hits_per_rank: List[int] = cast(
+            List[int], COMM_WORLD.gather(num_hits, root=0)
+        )
+        num_hits_total: int = cast(int, COMM_WORLD.reduce(num_hits, SUM))
+        num_events_total: int = cast(int, COMM_WORLD.reduce(num_events, SUM))
 
         if ds.rank == 0:
             master_fname: Path = write_master_file(
                 mpi_size=ds.size,
                 outdir=self._task_parameters.outdir,
                 exp=self._task_parameters.lute_config.experiment,
-                run=self._task_parameters.lute_config.run,
+                run=int(self._task_parameters.lute_config.run),
                 tag=tag,
                 n_hits_per_rank=num_hits_per_rank,
                 n_hits_total=num_hits_total,
             )
 
             # Write final summary file
-            f: TextIO
+            f: Union[TextIO, h5py.File]
             with open(
                 Path(self._task_parameters.outdir) / f"peakfinding{tag}.summary", "w"
             ) as f:
@@ -852,10 +856,10 @@ class FindPeaksPyAlgos(Task):
                 print(f"No. hits per rank: {num_hits_per_rank}", file=f)
 
             with h5py.File(master_fname, "r") as f:
-                final_powder_hits: numpy.ndarray[numpy.float64] = f[
+                final_powder_hits: NDArray[numpy.float64] = f[
                     "entry_1/data_1/powderHits"
                 ][:]
-                final_powder_misses: numpy.ndarray[numpy.float64] = f[
+                final_powder_misses: NDArray[numpy.float64] = f[
                     "entry_1/data_1/powderMisses"
                 ][:]
                 f.close()
@@ -884,8 +888,8 @@ class FindPeaksPyAlgos(Task):
         self._result.task_status = TaskStatus.COMPLETED
 
     def _assemble_image(
-        self, det: Detector, img: numpy.ndarray[numpy.float64]
-    ) -> numpy.ndarray[numpy.float64]:
+        self, det: Detector, img: NDArray[numpy.float64]
+    ) -> NDArray[numpy.float64]:
         """Assemble an image based on psana geometry.
 
         Args:
@@ -899,20 +903,16 @@ class FindPeaksPyAlgos(Task):
             assembled_img(numpy.ndarray[np.float64]): Assembled 2D image.
         """
         geom: GeometryAccess = det.geometry(self._task_parameters.lute_config.run)
-        tmp: Tuple[numpy.ndarray[numpy.uint64], ...] = geom.get_pixel_coord_indexes()
-        pixel_map: numpy.ndarray[numpy.unit64] = numpy.zeros(
+        tmp: Tuple[NDArray[numpy.uint64], ...] = geom.get_pixel_coord_indexes()
+        pixel_map: NDArray[numpy.uint64] = numpy.zeros(
             tmp[0].shape[1:] + (2,), dtype=numpy.uint64
         )
         pixel_map[..., 0] = tmp[0][0]
         pixel_map[..., 1] = tmp[1][0]
-        unflattened_img: numpy.ndarray[numpy.float64] = img.reshape(
-            pixel_map.shape[:-1]
-        )
+        unflattened_img: NDArray[numpy.float64] = img.reshape(pixel_map.shape[:-1])
         idx_max_y: int = int(numpy.max(pixel_map[..., 0]) + 1)  # Adding one
         idx_max_x: int = int(numpy.max(pixel_map[..., 1]) + 1)  # casts to float
-        assembled_img: numpy.ndarray[numpy.float64] = numpy.zeros(
-            (idx_max_y, idx_max_x)
-        )
+        assembled_img: NDArray[numpy.float64] = numpy.zeros((idx_max_y, idx_max_x))
         assembled_img[pixel_map[..., 0], pixel_map[..., 1]] = unflattened_img
 
         return assembled_img
@@ -920,8 +920,8 @@ class FindPeaksPyAlgos(Task):
     def _create_powder_plots(
         self,
         det: Detector,
-        powder_hits: numpy.ndarray[numpy.float64],
-        powder_misses: numpy.ndarray[numpy.float64],
+        powder_hits: NDArray[numpy.float64],
+        powder_misses: NDArray[numpy.float64],
     ) -> pn.Tabs:
         """Create a tabbed display of hits and misses 'powder' plots.
 
@@ -938,10 +938,11 @@ class FindPeaksPyAlgos(Task):
         Returns:
             tabs (pn.Tabs): Tabbed display of the image plots.
         """
-        assembled_powder_hits: numpy.ndarray[numpy.float64] = self._assemble_image(
+        self._task_parameters = cast(FindPeaksPyAlgosParameters, self._task_parameters)
+        assembled_powder_hits: NDArray[numpy.float64] = self._assemble_image(
             det, powder_hits
         )
-        assembled_powder_misses: numpy.ndarray[numpy.float64] = self._assemble_image(
+        assembled_powder_misses: NDArray[numpy.float64] = self._assemble_image(
             det, powder_misses
         )
 

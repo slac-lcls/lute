@@ -21,17 +21,18 @@ __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
-from typing import List, Dict, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any, Tuple, Optional, Union
 
-from .models.base import TaskParameters, TemplateParameters
-from ..tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
+from lute.execution.logging import get_logger
+from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_logger(__name__, is_task=False)
 
 
 class DatabaseError(Exception):
@@ -163,6 +164,42 @@ def _check_type(value: Any) -> str:
         return "BLOB"
 
 
+def _list_to_flatlists(
+    l_entry: Union[List[Any], Tuple], curr_key: str = ""
+) -> Tuple[List[Tuple[str, Any]], List[Tuple[str, str]]]:
+    """Flatten lists for database storage.
+
+    Indexes entries in the list using "[idx]" notation.
+    Nested lists are handled with multiple indices [x][y][...]. This
+    function is called recursively to handle nesting.
+
+    Args:
+        l_entry (List[Any]): Dictionary to flatten.
+
+        curr_key (str): Current flattened key. Base key for indexing.
+
+    Returns:
+        flattened_params (List[Tuple[str, Any]]): List of (indexed_key, value) pairs.
+
+        flattened_types (List[Tuple[str, str]]): List of (indexed_key, type) pairs.
+            Types are one of TEXT, INTEGER, REAL
+    """
+    param_list: List[Tuple[str, Any]] = []
+    type_list: List[Tuple[str, str]] = []
+    idx: int
+    indexed_value: Any
+    for idx, indexed_value in enumerate(l_entry):
+        indexed_curr_key: str = f"{curr_key}[{idx}]"
+        if isinstance(indexed_value, tuple) or isinstance(indexed_value, list):
+            x, y = _list_to_flatlists(indexed_value, indexed_curr_key)
+            param_list.extend(x)
+            type_list.extend(y)
+        else:
+            param_list.append((indexed_curr_key, indexed_value))
+            type_list.append((indexed_curr_key, _check_type(indexed_value)))
+    return param_list, type_list
+
+
 def _dict_to_flatdicts(
     d: Dict[str, Any], curr_key: str = ""
 ) -> Tuple[Dict[str, Any], Dict[str, str]]:
@@ -203,16 +240,16 @@ def _dict_to_flatdicts(
         corrected_value: Any = value
         if isinstance(corrected_value, TemplateParameters):
             corrected_value = value.params
+        x: Union[Dict[str, Any], List[Tuple[str, Any]]]
+        y: Union[Dict[str, str], List[Tuple[str, str]]]
         if isinstance(corrected_value, dict):
             x, y = _dict_to_flatdicts(corrected_value, curr_key=flat_key)
             param_list.extend(x.items())
             type_list.extend(y.items())
         elif isinstance(corrected_value, tuple) or isinstance(corrected_value, list):
-            indexed_flat_key: str
-            for idx, indexed_value in enumerate(corrected_value):
-                indexed_flat_key = f"{flat_key}[{idx}]"
-                param_list.append((indexed_flat_key, indexed_value))
-                type_list.append((indexed_flat_key, _check_type(indexed_value)))
+            x, y = _list_to_flatlists(corrected_value, flat_key)
+            param_list.extend(x)
+            type_list.extend(y)
         else:
             param_list.append((flat_key, corrected_value))
             type_list.append((flat_key, _check_type(corrected_value)))
@@ -237,10 +274,11 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         _add_task_entry,
     )
 
+    assert isinstance(cfg.task_parameters, TaskParameters)
     try:
         work_dir: str = cfg.task_parameters.lute_config.work_dir
     except AttributeError:
-        logger.info(
+        logger.error(
             (
                 "Unable to access TaskParameters object. Likely wasn't created. "
                 "Cannot store result."
@@ -296,7 +334,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
             logger.error(f"Database storage error: {err}")
     try:
         os.chmod(db_path, 0o664)
-    except:
+    except Exception:
         logger.error("Cannot setup permissions on database!")
 
 
@@ -339,7 +377,9 @@ def read_latest_db_entry(
             cond: Dict[str, str] = {}
             if valid_only:
                 cond = {"valid_flag": "1"}
-            entries: Any = _select_from_db(con, task_name, f"gen_cfg_id,{param}", cond)
+            entries: Any = _select_from_db(
+                con, task_name, f'gen_cfg_id,"{param}"', cond
+            )
             if for_run is not None:
                 gen_cfg_entries: Any = _select_from_db(
                     con, "gen_cfg", "id", {"run": str(for_run)}

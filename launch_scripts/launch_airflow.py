@@ -16,7 +16,7 @@ import datetime
 import logging
 import argparse
 import time
-from typing import Dict, Union, List, Optional, Any
+from typing import Dict, Union, List, Optional, Any, cast, TypedDict
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -33,6 +33,26 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
+
+class DagRunConf(TypedDict):
+    experiment: str
+    run_id: str
+    JID_UPDATE_COUNTERS: Optional[str]
+    ARP_ROOT_JOB_ID: str
+    ARP_LOCATION: str
+    Authorization: str
+    user: str
+    lute_location: str
+    kerb_file: Optional[str]
+    lute_params: Dict[str, Union[str, bool]]
+    slurm_params: List[str]
+    workflow: Dict[str, Any]
+
+
+class DagRunData(TypedDict):
+    dag_run_id: str
+    conf: DagRunConf
 
 
 def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
@@ -68,8 +88,8 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
             token is used for the entirety of a workflow, it must have a lifetime
             equal or longer than the duration of the workflow's execution time.
     """
-    from kerberos import GSSError
-    from krtc import KerberosTicket
+    from kerberos import GSSError  # type: ignore
+    from krtc import KerberosTicket  # type: ignore
 
     try:
         krbheaders: Dict[str, str] = KerberosTicket(
@@ -139,7 +159,11 @@ if __name__ == "__main__":
         True  # Always copy kerberos ticket so non-active experiments can work.
     )
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")
-    if os.getenv("Authorization") is None:
+    if (
+        os.getenv("Authorization") is None
+        or os.getenv("EXPERIMENT") is None
+        or os.getenv("RUN_NUM") is None
+    ):
         if cache_file is None:
             logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
             sys.exit(-1)
@@ -203,7 +227,7 @@ if __name__ == "__main__":
     )
     resp.raise_for_status()
 
-    params: Dict[str, Union[str, int, List[str]]] = {
+    params: Dict[str, Union[str, bool]] = {
         "config_file": args.config,
         "debug": args.debug,
     }
@@ -257,15 +281,20 @@ if __name__ == "__main__":
         logger.debug("Re-parsed DAG for setup with new workflow.")
 
     # Experiment, run #, and ARP env variables come from ARP submission only
-    dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
+    # We override above or exit if we cannot, so we cast here
+    assert isinstance(os.getenv("EXPERIMENT"), str)
+    assert isinstance(os.getenv("RUN_NUM"), str)
+    assert isinstance(os.getenv("ARP_JOB_ID"), str)
+    assert isinstance(os.getenv("Authorization"), str)
+    dag_run_data: DagRunData = {
         "dag_run_id": str(uuid.uuid4()),
         "conf": {
-            "experiment": os.environ.get("EXPERIMENT"),
-            "run_id": f"{os.environ.get('RUN_NUM')}_{datetime.datetime.utcnow().isoformat()}",
-            "JID_UPDATE_COUNTERS": os.environ.get("JID_UPDATE_COUNTERS"),
-            "ARP_ROOT_JOB_ID": os.environ.get("ARP_JOB_ID"),
-            "ARP_LOCATION": os.environ.get("ARP_LOCATION", "S3DF"),
-            "Authorization": os.environ.get("Authorization"),
+            "experiment": cast(str, os.getenv("EXPERIMENT")),
+            "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
+            "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
+            "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
+            "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
+            "Authorization": cast(str, os.getenv("Authorization")),
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
             "kerb_file": cache_file,
@@ -329,11 +358,15 @@ if __name__ == "__main__":
         task_url: str = f"{url}/taskInstances"
         resp = requests.get(task_url, auth=auth)
         resp.raise_for_status()
-        instance_information: Dict[str, Any] = resp.json()["task_instances"]
+        instance_information: List[Dict[str, Any]] = resp.json()["task_instances"]
         for inst in instance_information:
             task_id: str = inst["task_id"]
             task_state: Optional[str] = inst["state"]
-            if task_id not in completed_tasks and task_state not in (None, "scheduled"):
+            if task_id not in completed_tasks and task_state not in (
+                None,
+                "scheduled",
+                "queued",
+            ):
                 if task_id not in logged_running:
                     # Should be "running" by first time it reaches here.
                     # Or e.g. "upstream_failed"... Setup to skip "scheduled"
@@ -364,9 +397,10 @@ if __name__ == "__main__":
                     logger.info(f"End of logs for {task_id}")
                     completed_tasks[task_id] = task_state
 
-                elif task_state in ("upstream_failed"):
+                # Ignore type check since cannot be None here
+                elif task_state in ("upstream_failed"):  # type: ignore
                     # upstream_failed never launches so has no log
-                    completed_tasks[task_id] = task_state
+                    completed_tasks[task_id] = task_state  # type: ignore
 
         if dag_state in ("queued", "running"):
             continue
@@ -382,9 +416,9 @@ if __name__ == "__main__":
         if cache_file is not None:
             try:
                 os.remove(cache_file[5:])
+                os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
             except FileNotFoundError:
                 logger.error("No cache file found to remove.")
-            os.rmdir(f"{os.path.expanduser('~')}/.tmp_cache")
 
     if dag_state == "failed":
         sys.exit(1)
