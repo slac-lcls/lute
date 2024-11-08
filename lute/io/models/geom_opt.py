@@ -19,15 +19,17 @@ from ..db import read_latest_db_entry
 
 from PSCalib.CalibFileFinder import CalibFileFinder
 
+
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
-    
+
     The Bayesian Optimization has default hyperparameters that can be overriden by the user.
     """
+
     class Config(TaskParameters.Config):
-            set_result: bool = True
-            """Whether the Executor should mark a specified parameter as a result."""
-    
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
     class BayesGeomOptParameters(BaseModel):
         """Bayesian optimization hyperparameters."""
 
@@ -56,8 +58,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         )
 
         Imin: Optional[Union[str, int]] = Field(
-            'max',
-            description="Minimal Intensity for extracting key control points, either based on heuristics on the maximal intensity, or a multiple of the photon energy"
+            "max",
+            description="Minimal Intensity for extracting key control points, either based on heuristics on the maximal intensity, or a multiple of the photon energy",
         )
 
         prior: Optional[bool] = Field(
@@ -70,7 +72,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Acquisition function to be used by the Bayesian optimization.",
         )
 
-        hyperparams : Optional[Dict[str, float]] = Field(
+        hyperparams: Optional[Dict[str, float]] = Field(
             {
                 "beta": 1.96,
                 "epsilon": 0.01,
@@ -78,32 +80,32 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Hyperparameters for the acquisition function.",
         )
 
-        seed : Optional[int] = Field(
+        seed: Optional[int] = Field(
             None,
             description="Seed for the random number generator for potential reproducibility.",
         )
 
-    exp : str = Field(
+    exp: str = Field(
         "",
         description="Experiment name.",
     )
 
-    run : Union[str, int] = Field(
+    run: Union[str, int] = Field(
         None,
         description="Run number.",
     )
 
-    det_type : str = Field(
+    det_type: str = Field(
         "",
         description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Rayonix2', 'Jungfrau1M', 'Jungfrau4M'",
     )
 
-    date : str = Field(
+    date: str = Field(
         "",
         description="Start date of analysis",
     )
 
-    work_dir : str = Field(
+    work_dir: str = Field(
         "",
         description="Main working directory for LUTE.",
     )
@@ -120,7 +122,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     calibrant: str = Field(
         "",
-        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration"
+        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration",
     )
 
     wavelength: float = Field(
@@ -144,33 +146,35 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         if exp == "":
             exp: str = values["lute_config"].experiment
         return exp
-    
+
     @validator("run", always=True)
-    def validate_run(cls, run: Union[str, int], values: Dict[str, Any]) -> Union[str, int]:
+    def validate_run(
+        cls, run: Union[str, int], values: Dict[str, Any]
+    ) -> Union[str, int]:
         if run is None:
             run: Union[str, int] = values["lute_config"].run
         return run
-    
+
     @validator("date", always=True)
     def validate_date(cls, date: str, values: Dict[str, Any]) -> str:
         if date == "":
             date: str = values["lute_config"].date
         return date
-    
+
     @validator("work_dir", always=True)
     def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
         if work_dir == "":
             work_dir: str = values["lute_config"].work_dir
         return work_dir
-    
+
     @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             exp = values["exp"]
             run = values["run"]
-            cdir = f'/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib'
-            src = 'MfxEndstation.0:Epix10ka2M.0'
-            type = 'geometry'
+            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
+            src = "MfxEndstation.0:Epix10ka2M.0"
+            type = "geometry"
             cff = CalibFileFinder(cdir)
             in_file = cff.findCalibFile(src, type, run)
         return in_file
@@ -183,7 +187,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
                 f"{work_dir}/powder", "ComputePowder", "out_file"
             )
         return powder
-    
+
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
