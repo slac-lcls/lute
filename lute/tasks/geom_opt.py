@@ -457,12 +457,12 @@ class BayesGeomOpt:
             seed,
         )
         t1 = time()
-        with open(
-            f"/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt", "w"
-        ) as f:
-            f.write(
-                f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds"
-            )
+        # with open(
+        #     f"/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt", "w"
+        # ) as f:
+        #     f.write(
+        #         f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds"
+        #     )
         self.comm.Barrier()
 
         self.scan = {}
@@ -687,20 +687,20 @@ class OptimizePyFAIGeometry(Task):
             )
             self._report_to_executor(msg)
             plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
-            with open(
-                f"/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt", "w"
-            ) as f:
-                f.write(
-                    f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n"
-                )
-                f.write(
-                    f"Detector Distance to Point of Normal Incidence: {distance:.2e} \n"
-                )
-                f.write(f"Beam center: ({cx:.2e}, {cy:.2e}) \n")
-                f.write(
-                    f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n"
-                )
-                f.write(f"Final Residuals: {optimizer.residuals:.2e}")
+            # with open(
+            #     f"/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt", "w"
+            # ) as f:
+            #     f.write(
+            #         f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n"
+            #     )
+            #     f.write(
+            #         f"Detector Distance to Point of Normal Incidence: {distance:.2e} \n"
+            #     )
+            #     f.write(f"Beam center: ({cx:.2e}, {cy:.2e}) \n")
+            #     f.write(
+            #         f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n"
+            #     )
+            #     f.write(f"Final Residuals: {optimizer.residuals:.2e}")
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
                 powder=optimizer.powder,
