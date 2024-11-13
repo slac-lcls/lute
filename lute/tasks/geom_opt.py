@@ -14,6 +14,8 @@ from lute.io.models.geom_opt import *
 from lute.tasks.task import *
 from lute.tasks.dataclasses import *
 
+import psana
+
 import sys
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
@@ -147,11 +149,7 @@ class BayesGeomOpt:
             Minimum intensity to use for control point extraction based on photon energy or max intensity
         """
         if type(Imin) == str:
-            if "rayonix" in self.det_type:
-                powder = powder[powder > 1e3]
-                Imin = np.max(powder) * 0.01
-            else:
-                Imin = np.max(powder) * 0.01
+            Imin = np.max(powder) * 0.01
         else:
             Imin = Imin * self.photon_energy
         self.Imin = Imin
@@ -718,7 +716,17 @@ class OptimizePyFAIGeometry(Task):
         """
         in_file = self._task_parameters.in_file
         det_type = self._task_parameters.det_type
-        psana_to_pyfai = PsanaToPyFAI(in_file=in_file, det_type=det_type)
+        ds_args = f"exp={self.exp}:run={self.run}:idx"
+        self.ds = psana.DataSource(ds_args)
+        self.det = psana.Detector(det_type, self.ds.env())
+        self.shape = self.det.shape()
+        if det_type.lower() == "rayonix":
+            env = self.ds.env()
+            cfg = env.configStore()
+            self.pixel_size = cfg.get(psana.Rayonix.ConfigV2).pixelWidth()
+        else:
+            self.pixel_size = self.det.pixel_size(self.ds.env())
+        psana_to_pyfai = PsanaToPyFAI(in_file=in_file, det_type=det_type, pixel_size=self.pixel_size, shape=self.shape)
         detector = psana_to_pyfai.detector
         return detector
 
