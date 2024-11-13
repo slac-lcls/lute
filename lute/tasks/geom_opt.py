@@ -669,9 +669,7 @@ class OptimizePyFAIGeometry(Task):
             msg = Message(contents="Optimization complete", signal="")
             self._report_to_executor(msg)
             distance, cx, cy = get_beam_center(optimizer.params)
-            msg = Message(
-                contents=f"Detector Distance to Sample: {distance:.2e}"
-            )
+            msg = Message(contents=f"Detector Distance to Sample: {distance:.2e}")
             self._report_to_executor(msg)
             msg = Message(contents=f"Beam center: ({cx:.2e}, {cy:.2e})", signal="")
             self._report_to_executor(msg)
