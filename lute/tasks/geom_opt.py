@@ -133,6 +133,9 @@ class BayesGeomOpt:
         """
         self.calibrant_name = self.calibrant
         calibrant = CALIBRANT_FACTORY(self.calibrant)
+        ds_args = f"exp={self.exp}:run={self.run}:idx"
+        self.ds = psana.DataSource(ds_args)
+        self.wavelength = self.ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         photon_energy = 1.23984197386209e-09 / self.wavelength
         self.photon_energy = photon_energy
         calibrant.wavelength = self.wavelength
@@ -751,6 +754,8 @@ class OptimizePyFAIGeometry(Task):
             ),
             det_type=optimizer.det_type,
             out_file=self._task_parameters.out_file,
+            pixel_size=self.pixel_size,
+            shape=self.shape,
         )
         psana_to_pyfai = PsanaToPyFAI(
             in_file=self._task_parameters.out_file,
