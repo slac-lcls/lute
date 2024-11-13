@@ -714,7 +714,7 @@ class OptimizePyFAIGeometry(Task):
         """
         in_file = self._task_parameters.in_file
         det_type = self._task_parameters.det_type
-        ds_args = f"exp={self.exp}:run={self.run}:idx"
+        ds_args = f"exp={self._task_parameters.exp}:run={self._task_parameters.run}:idx"
         self.ds = psana.DataSource(ds_args)
         self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
