@@ -760,6 +760,8 @@ class OptimizePyFAIGeometry(Task):
         psana_to_pyfai = PsanaToPyFAI(
             in_file=self._task_parameters.out_file,
             det_type=self._task_parameters.det_type,
+            pixel_size=self.pixel_size,
+            shape=self.shape,
         )
         detector = psana_to_pyfai.detector
         return detector
