@@ -724,7 +724,12 @@ class OptimizePyFAIGeometry(Task):
             self.pixel_size = cfg.get(psana.Rayonix.ConfigV2).pixelWidth()
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env())
-        psana_to_pyfai = PsanaToPyFAI(in_file=in_file, det_type=det_type, pixel_size=self.pixel_size, shape=self.shape)
+        psana_to_pyfai = PsanaToPyFAI(
+            in_file=in_file,
+            det_type=det_type,
+            pixel_size=self.pixel_size,
+            shape=self.shape,
+        )
         detector = psana_to_pyfai.detector
         return detector
 
