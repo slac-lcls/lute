@@ -57,11 +57,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Number of iterations to run the Bayesian optimization.",
         )
 
-        Imin: Optional[Union[str, int]] = Field(
-            "max",
-            description="Minimal Intensity for extracting key control points, either based on heuristics on the maximal intensity, or a multiple of the photon energy",
-        )
-
         prior: Optional[bool] = Field(
             True,
             description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",
@@ -97,7 +92,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     det_type: str = Field(
         "",
-        description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Rayonix2', 'Jungfrau1M', 'Jungfrau4M'",
+        description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
     )
 
     date: str = Field(
@@ -123,11 +118,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     calibrant: str = Field(
         "",
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration",
-    )
-
-    wavelength: float = Field(
-        1e-10,
-        description="Wavelength of the X-ray beam in meters.",
     )
 
     out_file: str = Field(

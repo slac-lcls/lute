@@ -29,7 +29,7 @@ from LCLSGeom.swap_geom import (
 import logging
 from lute.execution.logging import get_logger
 
-logger = get_logger(__name__)
+logger: logging.Logger = get_logger(__name__)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -61,8 +61,6 @@ class BayesGeomOpt:
         PyFAI detector object
     calibrant : str
         Calibrant name
-    wavelength : float
-        Wavelength of the experiment
     """
 
     def __init__(
@@ -72,7 +70,6 @@ class BayesGeomOpt:
         det_type,
         detector,
         calibrant,
-        wavelength,
     ):
         self.exp = exp
         self.run = run
@@ -82,7 +79,6 @@ class BayesGeomOpt:
         self.size = self.comm.Get_size()
         self.detector = detector
         self.calibrant = calibrant
-        self.wavelength = wavelength
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
         self.space = ["poni1", "poni2"]
         self.values = {
@@ -134,32 +130,28 @@ class BayesGeomOpt:
         self.calibrant_name = self.calibrant
         calibrant = CALIBRANT_FACTORY(self.calibrant)
         ds_args = f"exp={self.exp}:run={self.run}:idx"
-        self.ds = psana.DataSource(ds_args)
+        ds = psana.DataSource(ds_args)
         self.wavelength = (
-            self.ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
+            ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         )
         photon_energy = 1.23984197386209e-09 / self.wavelength
         self.photon_energy = photon_energy
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
 
-    def min_intensity(self, Imin, powder):
+    def min_intensity(self, powder):
         """
         Define minimal intensity for control point extraction
         Note: this is a heuristic that has been found to work well but may need some tuning.
 
         Parameters
         ----------
-        Imin : int or str
-            Minimum intensity to use for control point extraction based on photon energy or max intensity
+        Imin : float
+            Minimum intensity to use for control point extraction based on intensity distribution
         """
-        if type(Imin) == str:
-            Imin = np.max(powder) * 0.01
-        else:
-            Imin = Imin * self.photon_energy
+        Imin = np.percentile(powder, 90)
         self.Imin = Imin
         self.powder = powder
-        return powder
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -206,9 +198,7 @@ class BayesGeomOpt:
 
         if seed is not None:
             np.random.seed(seed)
-
         self.values["dist"] = dist
-
         if res is None:
             res = self.detector.pixel_size
 
@@ -388,7 +378,6 @@ class BayesGeomOpt:
         powder,
         bounds,
         res,
-        Imin="max",
         n_samples=50,
         n_iterations=50,
         af="ucb",
@@ -407,8 +396,6 @@ class BayesGeomOpt:
             Dictionary of bounds and resolution for search parameters
         res : float
             Resolution of the grid used to discretize the parameter search space
-        Imin : int or str
-            Minimum intensity to use for control point extraction based on photon energy or max intensity
         values : dict
             Dictionary of values for fixed parameters
         n_samples : int
@@ -424,8 +411,6 @@ class BayesGeomOpt:
         seed : int
             Random seed for reproducibility
         """
-        from time import time
-        from datetime import datetime
 
         if seed is not None:
             np.random.seed(seed)
@@ -434,19 +419,17 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
-        powder = self.min_intensity(Imin, powder)
+        self.min_intensity(powder)
 
         if self.rank == 0:
-            print(f"Number of distances to scan: {self.size}")
+            logger.info(f"Number of distances to scan: {self.size}")
             distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
         else:
             distances = None
 
         dist = self.comm.scatter(distances, root=0)
-        print(f"Rank {self.rank} is working on distance {dist}")
+        logger.info(f"Rank {self.rank} is working on distance {dist}")
 
-        start = datetime.now()
-        t0 = time()
         results = self.bayes_opt_center(
             powder,
             dist,
@@ -459,13 +442,6 @@ class BayesGeomOpt:
             prior,
             seed,
         )
-        t1 = time()
-        # with open(
-        #     f"/sdf/home/l/lconreux/launchpad/bayes_opt_center_rank_{self.rank}.txt", "w"
-        # ) as f:
-        #     f.write(
-        #         f"Bayesian Optimization on Center with distance {dist:.2f} on Rank {self.rank} started at {start} and took {t1-t0:.2f} seconds"
-        #     )
         self.comm.Barrier()
 
         self.scan = {}
@@ -631,37 +607,23 @@ class OptimizePyFAIGeometry(Task):
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
-        from time import time
-        from datetime import datetime
-
-        msg = Message(contents="Starting PyFAI geometry optimization", signal="")
-        self._report_to_executor(msg)
-        msg = Message(contents="Building PyFAI detector", signal="")
-        self._report_to_executor(msg)
+        logger.info("Starting PyFAI geometry optimization")
+        logger.info("Building PyFAI detector")
         detector = self.build_pyFAI_detector()
         rank = MPI.COMM_WORLD.Get_rank()
-        msg = Message(
-            contents=f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}",
-            signal="",
-        )
-        self._report_to_executor(msg)
+        logger.info(f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}")
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
             run=self._task_parameters.run,
             det_type=self._task_parameters.det_type,
             detector=detector,
             calibrant=self._task_parameters.calibrant,
-            wavelength=self._task_parameters.wavelength,
         )
-        msg = Message(contents="Running Bayesian Optimization", signal="")
-        self._report_to_executor(msg)
-        start = datetime.now()
-        t0 = time()
+        logger.info("Running Bayesian Optimization")
         optimizer.bayes_opt_geom(
             powder=self._task_parameters.powder,
             bounds=self._task_parameters.bo_params.bounds,
             res=self._task_parameters.bo_params.res,
-            Imin=self._task_parameters.bo_params.Imin,
             n_samples=self._task_parameters.bo_params.n_samples,
             n_iterations=self._task_parameters.bo_params.n_iterations,
             af=self._task_parameters.bo_params.af,
@@ -669,39 +631,14 @@ class OptimizePyFAIGeometry(Task):
             prior=self._task_parameters.bo_params.prior,
             seed=self._task_parameters.bo_params.seed,
         )
-        t1 = time()
         if optimizer.rank == 0:
-            msg = Message(contents="Optimization complete", signal="")
-            self._report_to_executor(msg)
+            logger.info("Optimization complete")
             distance, cx, cy = get_beam_center(optimizer.params)
-            msg = Message(contents=f"Detector Distance to Sample: {distance:.2e}")
-            self._report_to_executor(msg)
-            msg = Message(contents=f"Beam center: ({cx:.2e}, {cy:.2e})", signal="")
-            self._report_to_executor(msg)
-            msg = Message(
-                contents=f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})",
-                signal="",
-            )
-            self._report_to_executor(msg)
-            msg = Message(
-                contents=f"Final Residuals: {optimizer.residuals:.2e}", signal=""
-            )
-            self._report_to_executor(msg)
+            logger.info(f"Detector Distance to Sample: {distance:.2e}")
+            logger.info(f"Beam center: ({cx:.2e}, {cy:.2e})")
+            logger.info(f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})")
+            logger.info(f"Final Residuals: {optimizer.residuals:.2e}")
             plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
-            # with open(
-            #     f"/sdf/home/l/lconreux/launchpad/bayes_opt_geom_rank_{rank}.txt", "w"
-            # ) as f:
-            #     f.write(
-            #         f"Bayesian Optimization Geometry started at {start} took {t1-t0:.2f} seconds \n"
-            #     )
-            #     f.write(
-            #         f"Detector Distance to Point of Normal Incidence: {distance:.2e} \n"
-            #     )
-            #     f.write(f"Beam center: ({cx:.2e}, {cy:.2e}) \n")
-            #     f.write(
-            #         f"Rotations: \u03B8x = {optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e} \n"
-            #     )
-            #     f.write(f"Final Residuals: {optimizer.residuals:.2e}")
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
                 powder=optimizer.powder,
