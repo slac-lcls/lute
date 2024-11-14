@@ -429,6 +429,7 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
+        self.max_rings = max_rings
         Imin, powder = self.min_intensity(Imin, powder)
 
         if self.rank == 0:
@@ -600,7 +601,7 @@ class BayesGeomOpt:
             detector=detector,
             geometry=geometry,
         )
-        sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
+        sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
         ax3 = plt.subplot2grid(
             (nrow, ncol), (irow, 0), rowspan=nrow - irow, colspan=ncol
         )
