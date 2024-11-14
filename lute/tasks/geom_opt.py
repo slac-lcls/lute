@@ -89,7 +89,7 @@ class BayesGeomOpt:
             "rot2": 0,
             "rot3": 0,
         }
-        self.MAX_RINGS = 10
+        self.MAX_RINGS = 5
 
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
@@ -148,7 +148,7 @@ class BayesGeomOpt:
         Imin : float
             Minimum intensity to use for control point extraction based on intensity distribution
         """
-        powder[powder > 1e4] = 0
+        #powder[powder > 1e4] = 0
         Imin = np.percentile(powder, 99)
         self.Imin = Imin
         self.powder = powder
