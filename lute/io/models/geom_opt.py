@@ -48,7 +48,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         )
 
         Imin: float = Field(
-            90,
+            99,
             description="Minimum intensity threshold for the Bayesian optimization based on intensity distribution percentile.",
         )
 

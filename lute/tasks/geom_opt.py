@@ -149,8 +149,12 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        powder[powder > 1e4] = 0
-        Imin = np.percentile(powder, Imin)
+        mean = np.mean(powder)
+        std = np.std(powder)
+        threshold = mean + 2 * std
+        nice_pix = powder < threshold
+        Imin = np.percentile(powder[nice_pix], Imin)
+        powder[nice_pix] = 0
         self.Imin = Imin
         self.powder = powder
         return Imin, powder
