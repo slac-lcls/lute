@@ -89,7 +89,6 @@ class BayesGeomOpt:
             "rot2": 0,
             "rot3": 0,
         }
-        self.MAX_RINGS = 10
 
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
@@ -138,7 +137,7 @@ class BayesGeomOpt:
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
 
-    def min_intensity(self, powder):
+    def min_intensity(self, Imin, powder):
         """
         Define minimal intensity for control point extraction
         Note: this is a heuristic that has been found to work well but may need some tuning.
@@ -147,12 +146,14 @@ class BayesGeomOpt:
         ----------
         Imin : float
             Minimum intensity to use for control point extraction based on intensity distribution
+        powder : np.ndarray
+            Powder image
         """
         powder[powder > 1e4] = 0
-        Imin = np.percentile(powder, 99)
+        Imin = np.percentile(powder, Imin)
         self.Imin = Imin
         self.powder = powder
-        return powder
+        return Imin, powder
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -161,6 +162,8 @@ class BayesGeomOpt:
         dist,
         bounds,
         res,
+        Imin=90,
+        max_rings=5,
         n_samples=50,
         n_iterations=50,
         af="ucb",
@@ -181,8 +184,10 @@ class BayesGeomOpt:
             Dictionary of bounds for each parameter
         res : float
             Resolution of the grid used to discretize the parameter search space
-        values : dict
-            Dictionary of values for fixed parameters
+        Imin : float
+            Minimum intensity threshold for control point extraction based on intensity distribution percentile
+        max_rings : int
+            Maximum number of rings to use for control point extraction
         n_samples : int
             Number of samples to initialize the GP model
         n_iterations : int
@@ -262,7 +267,7 @@ class BayesGeomOpt:
                 detector=self.detector,
                 geometry=geom_initial,
             )
-            sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
+            sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
             y[i] = len(sg.geometry_refinement.data)
             bo_history[f"init_sample_{i+1}"] = {"param": X_samples[i], "score": y[i]}
 
@@ -325,7 +330,7 @@ class BayesGeomOpt:
                 detector=self.detector,
                 geometry=geom_initial,
             )
-            sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
+            sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
             score = len(sg.geometry_refinement.data)
             y = np.append(y, [score], axis=0)
             ypred = gp_model.predict(X_norm, return_std=False)
@@ -362,7 +367,7 @@ class BayesGeomOpt:
             detector=self.detector,
             geometry=geom_initial,
         )
-        sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
+        sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
         residuals = sg.geometry_refinement.refine3(fix=["wavelength"])
         params = sg.geometry_refinement.param
@@ -379,6 +384,8 @@ class BayesGeomOpt:
         powder,
         bounds,
         res,
+        Imin=90,
+        max_rings=5,
         n_samples=50,
         n_iterations=50,
         af="ucb",
@@ -397,8 +404,10 @@ class BayesGeomOpt:
             Dictionary of bounds and resolution for search parameters
         res : float
             Resolution of the grid used to discretize the parameter search space
-        values : dict
-            Dictionary of values for fixed parameters
+        Imin : float
+            Minimum intensity threshold for control point extraction based on intensity distribution percentile
+        max_rings : int
+            Maximum number of rings to use for control point extraction
         n_samples : int
             Number of samples to initialize the GP model
         n_iterations : int
@@ -420,7 +429,7 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
-        powder = self.min_intensity(powder)
+        Imin, powder = self.min_intensity(Imin, powder)
 
         if self.rank == 0:
             logger.info(f"Number of distances to scan: {self.size}")
@@ -436,6 +445,8 @@ class BayesGeomOpt:
             dist,
             bounds,
             res,
+            Imin,
+            max_rings,
             n_samples,
             n_iterations,
             af,
@@ -627,6 +638,8 @@ class OptimizePyFAIGeometry(Task):
             powder=self._task_parameters.powder,
             bounds=self._task_parameters.bo_params.bounds,
             res=self._task_parameters.bo_params.res,
+            Imin=self._task_parameters.bo_params.Imin,
+            max_rings=self._task_parameters.bo_params.max_rings,
             n_samples=self._task_parameters.bo_params.n_samples,
             n_iterations=self._task_parameters.bo_params.n_iterations,
             af=self._task_parameters.bo_params.af,

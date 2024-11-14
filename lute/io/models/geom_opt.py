@@ -47,6 +47,16 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Resolution of the grid used to discretize the parameter search space.",
         )
 
+        Imin: float = Field(
+            90,
+            description="Minimum intensity threshold for the Bayesian optimization based on intensity distribution percentile.",
+        )
+
+        max_rings: int = Field(
+            5,
+            description="Maximum number of rings to be used for the Bayesian optimization.",
+        )
+
         n_samples: Optional[int] = Field(
             50,
             description="Number of random starts to initialize the Bayesian optimization.",
