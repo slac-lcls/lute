@@ -91,7 +91,6 @@ class BayesGeomOpt:
         }
         MAX_RINGS = 10
 
-
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
         y_pred, y_std = gp_model.predict(X, return_std=True)
