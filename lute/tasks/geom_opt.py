@@ -89,7 +89,7 @@ class BayesGeomOpt:
             "rot2": 0,
             "rot3": 0,
         }
-        self.MAX_RINGS = 5
+        self.MAX_RINGS = 10
 
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
