@@ -131,9 +131,7 @@ class BayesGeomOpt:
         calibrant = CALIBRANT_FACTORY(self.calibrant)
         ds_args = f"exp={self.exp}:run={self.run}:idx"
         ds = psana.DataSource(ds_args)
-        self.wavelength = (
-            ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
-        )
+        self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         photon_energy = 1.23984197386209e-09 / self.wavelength
         self.photon_energy = photon_energy
         calibrant.wavelength = self.wavelength
@@ -613,7 +611,9 @@ class OptimizePyFAIGeometry(Task):
         logger.info("Building PyFAI detector")
         detector = self.build_pyFAI_detector()
         rank = MPI.COMM_WORLD.Get_rank()
-        logger.info(f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}")
+        logger.info(
+            f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}"
+        )
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
             run=self._task_parameters.run,
@@ -638,7 +638,9 @@ class OptimizePyFAIGeometry(Task):
             distance, cx, cy = get_beam_center(optimizer.params)
             logger.info(f"Detector Distance to Sample: {distance:.2e}")
             logger.info(f"Beam center: ({cx:.2e}, {cy:.2e})")
-            logger.info(f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})")
+            logger.info(
+                f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
+            )
             logger.info(f"Final Residuals: {optimizer.residuals:.2e}")
             plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
             detector = self.update_geometry(optimizer)
