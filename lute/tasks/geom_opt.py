@@ -148,7 +148,7 @@ class BayesGeomOpt:
             Minimum intensity to use for control point extraction based on intensity distribution
         """
         powder[powder > 1e4] = 0
-        Imin = np.percentile(powder, 95)
+        Imin = np.percentile(powder, 98)
         self.Imin = Imin
         self.powder = powder
         return powder
