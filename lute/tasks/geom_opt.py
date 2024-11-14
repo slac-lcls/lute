@@ -149,9 +149,11 @@ class BayesGeomOpt:
         Imin : float
             Minimum intensity to use for control point extraction based on intensity distribution
         """
-        Imin = np.percentile(powder, 90)
+        powder[powder > 1e4] = 0
+        Imin = np.percentile(powder, 95)
         self.Imin = Imin
         self.powder = powder
+        return powder
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -419,7 +421,7 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
-        self.min_intensity(powder)
+        powder = self.min_intensity(powder)
 
         if self.rank == 0:
             logger.info(f"Number of distances to scan: {self.size}")
