@@ -89,6 +89,8 @@ class BayesGeomOpt:
             "rot2": 0,
             "rot3": 0,
         }
+        MAX_RINGS = 10
+
 
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
@@ -261,7 +263,7 @@ class BayesGeomOpt:
                 detector=self.detector,
                 geometry=geom_initial,
             )
-            sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
+            sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
             y[i] = len(sg.geometry_refinement.data)
             bo_history[f"init_sample_{i+1}"] = {"param": X_samples[i], "score": y[i]}
 
@@ -324,7 +326,7 @@ class BayesGeomOpt:
                 detector=self.detector,
                 geometry=geom_initial,
             )
-            sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
+            sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
             score = len(sg.geometry_refinement.data)
             y = np.append(y, [score], axis=0)
             ypred = gp_model.predict(X_norm, return_std=False)
@@ -361,7 +363,7 @@ class BayesGeomOpt:
             detector=self.detector,
             geometry=geom_initial,
         )
-        sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
+        sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
         self.sg = sg
         residuals = sg.geometry_refinement.refine3(fix=["wavelength"])
         params = sg.geometry_refinement.param
@@ -588,7 +590,7 @@ class BayesGeomOpt:
             detector=detector,
             geometry=geometry,
         )
-        sg.extract_cp(max_rings=5, pts_per_deg=1, Imin=self.Imin)
+        sg.extract_cp(max_rings=self.MAX_RINGS, pts_per_deg=1, Imin=self.Imin)
         ax3 = plt.subplot2grid(
             (nrow, ncol), (irow, 0), rowspan=nrow - irow, colspan=ncol
         )
