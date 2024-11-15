@@ -373,12 +373,14 @@ class BayesGeomOpt:
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
         residuals = sg.geometry_refinement.refine3(fix=["wavelength"])
+        score = len(sg.geometry_refinement.data) * np.log(residuals)
         params = sg.geometry_refinement.param
         result = {
             "bo_history": bo_history,
             "params": params,
             "residuals": residuals,
             "best_idx": best_idx,
+            "score": score,
         }
         return result
 
@@ -465,17 +467,19 @@ class BayesGeomOpt:
         self.scan["params"] = self.comm.gather(results["params"], root=0)
         self.scan["residuals"] = self.comm.gather(results["residuals"], root=0)
         self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.scan["score"] = self.comm.gather(results["score"], root=0)
         self.finalize()
 
     def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            index = np.argmin(self.scan["residuals"])
+            index = np.argmin(self.scan["score"])
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residuals = self.scan["residuals"][index]
             self.best_idx = self.scan["best_idx"][index]
+            self.score = self.scan["score"][index]
 
     def display(self, powder=None, cp=None, ai=None, label=None, sg=None, ax=None):
         """
