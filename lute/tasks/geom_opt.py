@@ -500,7 +500,7 @@ class BayesGeomOpt:
             powder.T,
             origin="lower",
             cmap="viridis",
-            vmin=np.percentile(powder, 5),
+            vmin=np.percentile(powder, 25),
             vmax=self.Imin,
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
