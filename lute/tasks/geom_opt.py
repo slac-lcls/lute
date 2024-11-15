@@ -496,8 +496,9 @@ class BayesGeomOpt:
                 ai = sg.geometry_refinement
             if label is None:
                 label = sg.label
-        ax.imshow(powder.T, origin="lower", cmap="viridis", vmax=self.Imin)
-        ax.set_title(label)
+        ax.imshow(powder.T, origin="lower", cmap="viridis", vmin=np.min(powder), vmax=self.Imin)
+        cbar = plt.colorbar(ax=ax, orientation='vertical')
+        cbar.set_label('Intensity')
         if ai is not None and cp.calibrant is not None:
             tth = cp.calibrant.get_2th()
             ttha = ai.twoThetaArray()
