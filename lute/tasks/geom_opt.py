@@ -151,10 +151,9 @@ class BayesGeomOpt:
         """
         mean = np.mean(powder)
         std = np.std(powder)
-        threshold = mean + 2 * std
+        threshold = mean + 3 * std
         nice_pix = powder < threshold
         Imin = np.percentile(powder[nice_pix], Imin)
-        powder[nice_pix] = 0
         self.Imin = Imin
         self.powder = powder
         return Imin, powder
