@@ -477,7 +477,7 @@ class BayesGeomOpt:
             norm_residuals = (self.scan["residual"] - np.min(self.scan["residual"]))/(np.max(self.scan["residual"])-np.min(self.scan["residual"]))
             norm_score = (self.scan["score"] - np.min(self.scan["score"]))/(np.max(self.scan["score"])-np.min(self.scan["score"]))
             lb = 0.5
-            final_score = lb * norm_residuals + (1 - lb) * norm_score
+            final_score = lb * norm_residuals - (1 - lb) * norm_score
             index = np.argmin(final_score)
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
