@@ -474,7 +474,7 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            index = np.argmin(self.scan["score"])
+            index = np.argmin(self.scan["residuals"])
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residuals = self.scan["residuals"][index]
