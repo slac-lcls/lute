@@ -571,6 +571,22 @@ class BayesGeomOpt:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
 
+    def distance_scan(self, ax):
+        scores = self.scan["score"]
+        ax.plot(scores)
+        ax.set_xticks(np.arange(len(scores), step=20))
+        ax.set_xlabel("Distance index")
+        ax.set_ylabel("Score")
+        ax.set_title("Number of Control Points vs Distance")
+
+    def residual_scan(self, ax):
+        residuals = self.scan["residual"]
+        ax.plot(residuals)
+        ax.set_xticks(np.arange(len(residuals), step=20))
+        ax.set_xlabel("Distance index")
+        ax.set_ylabel("Residual")
+        ax.set_title("Residual vs Distance")
+
     def visualize_results(self, powder, bo_history, detector, params, plot=""):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
@@ -588,8 +604,8 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(12, 8), dpi=180)
-        nrow, ncol = 2, 3
+        fig = plt.figure(figsize=(8, 12), dpi=180)
+        nrow, ncol = 3, 2
         irow, icol = 0, 0
 
         # Plotting BO convergence
@@ -602,26 +618,17 @@ class BayesGeomOpt:
         ax1.set_title(f"Convergence Plot, best score: {int(self.score)}")
         icol += 1
 
-        # Plotting scores vs distance
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        scores = self.scan["score"]
-        ax2.plot(scores)
-        ax2.set_xticks(np.arange(len(scores), step=20))
-        ax2.set_xlabel("Distance index")
-        ax2.set_ylabel("Score")
-        ax2.set_title("Number of Control Points vs Distance")
-        icol += 1
-
         # Plotting radial profiles with peaks
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
         res = ai.integrate1d(powder, 1000)
-        self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
+        self.radial_integration(res, calibrant=self.calibrant, ax=ax2)
         irow += 1
 
         # Plotting stacked powder
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, 0), colspan=ncol)
         geometry = Geometry(dist=params[0])
         sg = SingleGeometry(
             f"Max {self.calibrant_name}",
@@ -631,10 +638,18 @@ class BayesGeomOpt:
             geometry=geometry,
         )
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
-        ax4 = plt.subplot2grid(
-            (nrow, ncol), (irow, 0), rowspan=nrow - irow, colspan=ncol
-        )
-        self.display(sg=sg, ax=ax4)
+        self.display(sg=sg, ax=ax3)
+        irow += 1
+        icol = 0
+
+        # Plotting score scan over distance
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.distance_scan(ax=ax4)
+        icol += 1
+
+        # Plotting residual scan over distance
+        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.residual_scan(ax=ax5)
 
         if plot != "":
             fig.savefig(plot, dpi=180)
