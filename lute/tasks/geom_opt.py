@@ -439,6 +439,7 @@ class BayesGeomOpt:
 
         if self.rank == 0:
             logger.info(f"Number of distances to scan: {self.size}")
+            self.bounds = bounds
             distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
         else:
             distances = None
@@ -473,12 +474,6 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            logger.info(f"Mean Score: {np.mean(self.scan['score'])}")
-            logger.info(f"STD Score: {np.std(self.scan['score'])}")
-            logger.info(f"5% Percentile Score: {np.percentile(self.scan['score'], 5)}")
-            logger.info(
-                f"95% Percentile Score: {np.percentile(self.scan['score'], 95)}"
-            )
             index = np.argmin(self.scan["residual"])
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
@@ -571,21 +566,81 @@ class BayesGeomOpt:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
 
-    def distance_scan(self, ax):
+    def score_distance_scan(self, bounds, ax):
+        """
+        Plot the score scan over distance
+
+        Parameters
+        ----------
+        bounds : dict
+            Dictionary of bounds for each parameter
+        ax : plt.Axes
+            Matplotlib axes
+        """
         scores = self.scan["score"]
-        ax.plot(scores)
+        distances = np.linspace(bounds['dist'][0], bounds['dist'][1], len(scores))
+        ax.plot(distances, scores)
         ax.set_xticks(np.arange(len(scores), step=20))
+        ax.set_yticks(scores[::100])
+        ax.set_yticklabels([f"{v/1000:.1f}k" for v in scores[::100]])
         ax.set_xlabel("Distance index")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
 
-    def residual_scan(self, ax):
+    def residual_distance_scan(self, bounds, ax):
+        """
+        Plot the residual scan over distance
+
+        Parameters
+        ----------
+        bounds : dict
+            Dictionary of bounds for each parameter
+        ax : plt.Axes
+            Matplotlib axes
+        """
         residuals = self.scan["residual"]
-        ax.plot(residuals)
+        distances = np.linspace(bounds['dist'][0], bounds['dist'][1], len(residuals))
+        ax.plot(distances, residuals)
+        best_dist = distances[np.argmin(residuals)]
+        ax.axvline(best_dist, color="red", linestyle="--", label=f"Best distance: {best_dist:.2e}")
         ax.set_xticks(np.arange(len(residuals), step=20))
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
         ax.set_xlabel("Distance index")
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
+
+    def hist_and_compute_stats(self, powder, exp, run, ax):
+        """
+        Plot histogram of pixel intensities and compute statistics
+
+        Parameters
+        ----------
+        powder : np.ndarray
+            Powder image
+        exp : str
+            Experiment name
+        run : int
+            Run number
+        ax : plt.Axes
+            Matplotlib axes
+        """
+        mean = np.mean(powder)
+        threshold = np.mean(powder)+3*np.std(powder)
+        nice_pix = powder < threshold        
+        mean = np.mean(powder[nice_pix])
+        std_dev = np.std(powder[nice_pix])
+        percentile_99 = np.percentile(powder[nice_pix], 99)
+        _ = ax.hist(powder[nice_pix], bins=1000, color='skyblue', edgecolor='black', alpha=0.7, label="Pixel Intensities")
+        ax.axvline(mean, color='red', linestyle='--', linewidth=1.5, label=f'Mean ({mean:.2f})')
+        ax.axvline(mean + std_dev, color='orange', linestyle='--', linewidth=1.5, label=f'Mean + 1 Std ({mean + std_dev:.2f})')
+        ax.axvline(mean + 2 * std_dev, color='green', linestyle='--', linewidth=1.5, label=f'Mean + 2 Std ({mean + 2 * std_dev:.2f})')
+        ax.axvline(mean + 3 * std_dev, color='blue', linestyle='--', linewidth=1.5, label=f'Mean + 3 Std ({mean + 3 * std_dev:.2f})')
+        ax.axvline(percentile_99, color='purple', linestyle=':', linewidth=1.5, label=f'99th Percentile ({percentile_99:.2f})')
+        ax.set_xlim(0, mean + 5 * std_dev)
+        ax.set_xlabel('Pixel Intensity')
+        ax.set_ylabel('Frequency')
+        ax.set_title(f'Histogram of Pixel Intensities with Statistical Thresholds for {exp} run {run}')
+        ax.legend()
 
     def visualize_results(self, powder, bo_history, detector, params, plot=""):
         """
@@ -618,17 +673,23 @@ class BayesGeomOpt:
         ax1.set_title(f"Convergence Plot, best score: {int(self.score)}")
         icol += 1
 
-        # Plotting radial profiles with peaks
+        # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.hist_and_compute_stats(powder, self.exp, self.run, ax2)
+        irow += 1
+        icol = 0
+
+        # Plotting radial profiles with peaks
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol))
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
         res = ai.integrate1d(powder, 1000)
-        self.radial_integration(res, calibrant=self.calibrant, ax=ax2)
-        irow += 1
+        self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
+        icol += 1
 
         # Plotting stacked powder
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, 0), colspan=ncol)
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
         geometry = Geometry(dist=params[0])
         sg = SingleGeometry(
             f"Max {self.calibrant_name}",
@@ -638,18 +699,18 @@ class BayesGeomOpt:
             geometry=geometry,
         )
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
-        self.display(sg=sg, ax=ax3)
+        self.display(sg=sg, ax=ax4)
         irow += 1
         icol = 0
 
         # Plotting score scan over distance
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.distance_scan(ax=ax4)
+        self.score_distance_scan(self.bounds, ax4)
         icol += 1
 
         # Plotting residual scan over distance
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.residual_scan(ax=ax5)
+        self.residual_distance_scan(self.bounds, ax5)
 
         if plot != "":
             fig.savefig(plot, dpi=180)
