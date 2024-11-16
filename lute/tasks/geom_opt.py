@@ -372,15 +372,15 @@ class BayesGeomOpt:
         )
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
-        residuals = sg.geometry_refinement.refine3(fix=["wavelength"])
-        score = len(sg.geometry_refinement.data) * np.log(residuals)
+        residual = sg.geometry_refinement.refine3(fix=["wavelength"])
+        score = len(sg.geometry_refinement.data)
         params = sg.geometry_refinement.param
         result = {
             "bo_history": bo_history,
             "params": params,
-            "residuals": residuals,
-            "best_idx": best_idx,
+            "residual": residual,
             "score": score,
+            "best_idx": best_idx,
         }
         return result
 
@@ -465,21 +465,25 @@ class BayesGeomOpt:
         self.scan = {}
         self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
         self.scan["params"] = self.comm.gather(results["params"], root=0)
-        self.scan["residuals"] = self.comm.gather(results["residuals"], root=0)
-        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.scan["residual"] = self.comm.gather(results["residual"], root=0)
         self.scan["score"] = self.comm.gather(results["score"], root=0)
+        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
         self.finalize()
 
     def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            index = np.argmin(self.scan["residuals"])
+            norm_residuals = (self.scan["residual"] - np.min(self.scan["residual"]))/(np.max(self.scan["residual"])-np.min(self.scan["residual"]))
+            norm_score = (self.scan["score"] - np.min(self.scan["score"]))/(np.max(self.scan["score"])-np.min(self.scan["score"]))
+            lb = 0.5
+            final_score = lb * norm_residuals + (1 - lb) * norm_score
+            index = np.argmin(final_score)
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
-            self.residuals = self.scan["residuals"][index]
-            self.best_idx = self.scan["best_idx"][index]
+            self.residual = self.scan["residual"][index]
             self.score = self.scan["score"][index]
+            self.best_idx = self.scan["best_idx"][index]
 
     def display(self, powder=None, cp=None, ai=None, label=None, sg=None, ax=None):
         """
@@ -504,7 +508,7 @@ class BayesGeomOpt:
             powder.T,
             origin="lower",
             cmap="viridis",
-            vmin=np.percentile(powder, 25),
+            vmin=np.mean(powder),
             vmax=self.Imin,
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
@@ -594,7 +598,7 @@ class BayesGeomOpt:
         ax1.set_xticks(np.arange(len(scores), step=20))
         ax1.set_xlabel("Iteration")
         ax1.set_ylabel("Best score so far")
-        ax1.set_title("Convergence Plot")
+        ax1.set_title(f"Convergence Plot, best score: {int(self.score)}")
         icol += 1
 
         # Plotting radial profiles with peaks
@@ -670,7 +674,7 @@ class OptimizePyFAIGeometry(Task):
             logger.info(
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
-            logger.info(f"Final Residuals: {optimizer.residuals:.2e}")
+            logger.info(f"Final Residuals: {optimizer.residual:.2e}")
             plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
