@@ -444,7 +444,6 @@ class BayesGeomOpt:
             distances = None
 
         dist = self.comm.scatter(distances, root=0)
-        logger.info(f"Rank {self.rank} is working on distance {dist}")
 
         results = self.bayes_opt_center(
             powder,
@@ -648,13 +647,7 @@ class OptimizePyFAIGeometry(Task):
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
-        logger.info("Starting PyFAI geometry optimization")
-        logger.info("Building PyFAI detector")
         detector = self.build_pyFAI_detector()
-        rank = MPI.COMM_WORLD.Get_rank()
-        logger.info(
-            f"Setting up Bayesian Optimization for {self._task_parameters.exp} run {self._task_parameters.run} on {self._task_parameters.det_type} on rank {rank}"
-        )
         optimizer = BayesGeomOpt(
             exp=self._task_parameters.exp,
             run=self._task_parameters.run,
@@ -662,7 +655,6 @@ class OptimizePyFAIGeometry(Task):
             detector=detector,
             calibrant=self._task_parameters.calibrant,
         )
-        logger.info("Running Bayesian Optimization")
         optimizer.bayes_opt_geom(
             powder=self._task_parameters.powder,
             bounds=self._task_parameters.bo_params.bounds,
