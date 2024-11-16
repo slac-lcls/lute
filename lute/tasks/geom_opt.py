@@ -580,9 +580,6 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.set_xticks(np.arange(len(scores), step=20))
-        ax.set_yticks(scores[::100])
-        ax.set_yticklabels([f"{v/1000:.1f}k" for v in scores[::100]])
         ax.set_xlabel("Distance index")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
@@ -609,7 +606,6 @@ class BayesGeomOpt:
             label=f"Best distance: {best_dist:.2e}",
         )
         ax.set_yscale("log")
-        ax.set_xticks(np.arange(len(residuals), step=20))
         ax.set_xlabel("Distance index")
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
@@ -678,9 +674,9 @@ class BayesGeomOpt:
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
         ax.set_title(
-            f"Histogram of Pixel Intensities with Statistical Thresholds for {exp} run {run}"
+            f"Histogram of Pixel Intensities \n for {exp} run {run}"
         )
-        ax.legend()
+        ax.legend(fontsize='x-small')
 
     def visualize_results(self, powder, bo_history, detector, params, plot=""):
         """
@@ -699,7 +695,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 12), dpi=180)
+        fig = plt.figure(figsize=(10, 14), dpi=180)
         nrow, ncol = 3, 2
         irow, icol = 0, 0
 
