@@ -474,15 +474,11 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            norm_residuals = (self.scan["residual"] - np.min(self.scan["residual"])) / (
-                np.max(self.scan["residual"]) - np.min(self.scan["residual"])
-            )
-            norm_score = (self.scan["score"] - np.min(self.scan["score"])) / (
-                np.max(self.scan["score"]) - np.min(self.scan["score"])
-            )
-            lb = 0.5
-            final_score = lb * norm_residuals - (1 - lb) * norm_score
-            index = np.argmin(final_score)
+            logger.info(f"Mean Score: {np.mean(self.scan['score'])}")
+            logger.info(f"STD Score: {np.std(self.scan['score'])}")
+            logger.info(f"5% Percentile Score: {np.percentile(self.scan['score'], 5)}")
+            logger.info(f"95% Percentile Score: {np.percentile(self.scan['score'], 95)}")
+            index = np.argmin(self.scan["residual"])
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
@@ -512,8 +508,8 @@ class BayesGeomOpt:
             powder.T,
             origin="lower",
             cmap="viridis",
-            vmin=np.mean(powder),
-            vmax=self.Imin,
+            vmin=np.percentile(powder, 5),
+            vmax=np.percentile(powder, 95),
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
@@ -591,8 +587,8 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 8), dpi=120)
-        nrow, ncol = 2, 2
+        fig = plt.figure(figsize=(12, 8), dpi=180)
+        nrow, ncol = 2, 3
         irow, icol = 0, 0
 
         # Plotting BO convergence
@@ -605,13 +601,23 @@ class BayesGeomOpt:
         ax1.set_title(f"Convergence Plot, best score: {int(self.score)}")
         icol += 1
 
+        # Plotting scores vs distance
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        scores = self.scan["score"]
+        ax2.plot(scores)
+        ax2.set_xticks(np.arange(len(scores), step=20))
+        ax2.set_xlabel("Distance index")
+        ax2.set_ylabel("Score")
+        ax2.set_title("Number of Control Points vs Distance")
+        icol += 1
+
         # Plotting radial profiles with peaks
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
         res = ai.integrate1d(powder, 1000)
-        self.radial_integration(res, calibrant=self.calibrant, ax=ax2)
+        self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
         irow += 1
 
         # Plotting stacked powder
@@ -624,13 +630,13 @@ class BayesGeomOpt:
             geometry=geometry,
         )
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
-        ax3 = plt.subplot2grid(
+        ax4 = plt.subplot2grid(
             (nrow, ncol), (irow, 0), rowspan=nrow - irow, colspan=ncol
         )
-        self.display(sg=sg, ax=ax3)
+        self.display(sg=sg, ax=ax4)
 
         if plot != "":
-            fig.savefig(plot, dpi=300)
+            fig.savefig(plot, dpi=180)
 
 
 class OptimizePyFAIGeometry(Task):
