@@ -578,7 +578,7 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        distances = np.linspace(bounds['dist'][0], bounds['dist'][1], len(scores))
+        distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.set_xticks(np.arange(len(scores), step=20))
         ax.set_yticks(scores[::100])
@@ -599,10 +599,15 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         residuals = self.scan["residual"]
-        distances = np.linspace(bounds['dist'][0], bounds['dist'][1], len(residuals))
+        distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(residuals))
         ax.plot(distances, residuals)
         best_dist = distances[np.argmin(residuals)]
-        ax.axvline(best_dist, color="red", linestyle="--", label=f"Best distance: {best_dist:.2e}")
+        ax.axvline(
+            best_dist,
+            color="red",
+            linestyle="--",
+            label=f"Best distance: {best_dist:.2e}",
+        )
         ax.set_xticks(np.arange(len(residuals), step=20))
         ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
         ax.set_xlabel("Distance index")
@@ -625,21 +630,56 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         mean = np.mean(powder)
-        threshold = np.mean(powder)+3*np.std(powder)
-        nice_pix = powder < threshold        
+        threshold = np.mean(powder) + 3 * np.std(powder)
+        nice_pix = powder < threshold
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
         percentile_99 = np.percentile(powder[nice_pix], 99)
-        _ = ax.hist(powder[nice_pix], bins=1000, color='skyblue', edgecolor='black', alpha=0.7, label="Pixel Intensities")
-        ax.axvline(mean, color='red', linestyle='--', linewidth=1.5, label=f'Mean ({mean:.2f})')
-        ax.axvline(mean + std_dev, color='orange', linestyle='--', linewidth=1.5, label=f'Mean + 1 Std ({mean + std_dev:.2f})')
-        ax.axvline(mean + 2 * std_dev, color='green', linestyle='--', linewidth=1.5, label=f'Mean + 2 Std ({mean + 2 * std_dev:.2f})')
-        ax.axvline(mean + 3 * std_dev, color='blue', linestyle='--', linewidth=1.5, label=f'Mean + 3 Std ({mean + 3 * std_dev:.2f})')
-        ax.axvline(percentile_99, color='purple', linestyle=':', linewidth=1.5, label=f'99th Percentile ({percentile_99:.2f})')
+        _ = ax.hist(
+            powder[nice_pix],
+            bins=1000,
+            color="skyblue",
+            edgecolor="black",
+            alpha=0.7,
+            label="Pixel Intensities",
+        )
+        ax.axvline(
+            mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
+        )
+        ax.axvline(
+            mean + std_dev,
+            color="orange",
+            linestyle="--",
+            linewidth=1.5,
+            label=f"Mean + 1 Std ({mean + std_dev:.2f})",
+        )
+        ax.axvline(
+            mean + 2 * std_dev,
+            color="green",
+            linestyle="--",
+            linewidth=1.5,
+            label=f"Mean + 2 Std ({mean + 2 * std_dev:.2f})",
+        )
+        ax.axvline(
+            mean + 3 * std_dev,
+            color="blue",
+            linestyle="--",
+            linewidth=1.5,
+            label=f"Mean + 3 Std ({mean + 3 * std_dev:.2f})",
+        )
+        ax.axvline(
+            percentile_99,
+            color="purple",
+            linestyle=":",
+            linewidth=1.5,
+            label=f"99th Percentile ({percentile_99:.2f})",
+        )
         ax.set_xlim(0, mean + 5 * std_dev)
-        ax.set_xlabel('Pixel Intensity')
-        ax.set_ylabel('Frequency')
-        ax.set_title(f'Histogram of Pixel Intensities with Statistical Thresholds for {exp} run {run}')
+        ax.set_xlabel("Pixel Intensity")
+        ax.set_ylabel("Frequency")
+        ax.set_title(
+            f"Histogram of Pixel Intensities with Statistical Thresholds for {exp} run {run}"
+        )
         ax.legend()
 
     def visualize_results(self, powder, bo_history, detector, params, plot=""):
