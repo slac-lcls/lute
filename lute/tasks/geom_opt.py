@@ -673,10 +673,8 @@ class BayesGeomOpt:
         ax.set_xlim(0, mean + 5 * std_dev)
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
-        ax.set_title(
-            f"Histogram of Pixel Intensities \n for {exp} run {run}"
-        )
-        ax.legend(fontsize='x-small')
+        ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
+        ax.legend(fontsize="x-small")
 
     def visualize_results(self, powder, bo_history, detector, params, plot=""):
         """
