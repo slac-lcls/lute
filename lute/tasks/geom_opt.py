@@ -602,7 +602,12 @@ class BayesGeomOpt:
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(residuals))
         ax.plot(distances, residuals)
         best_dist = distances[np.argmin(residuals)]
-        ax.axvline(best_dist, color="red", linestyle="--", label=f"Best distance: {best_dist:.2e}")
+        ax.axvline(
+            best_dist,
+            color="red",
+            linestyle="--",
+            label=f"Best distance: {best_dist:.2e}",
+        )
         ax.set_yscale("log")
         ax.set_xticks(np.arange(len(residuals), step=20))
         ax.set_xlabel("Distance index")
