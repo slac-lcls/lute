@@ -474,8 +474,12 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            norm_residuals = (self.scan["residual"] - np.min(self.scan["residual"]))/(np.max(self.scan["residual"])-np.min(self.scan["residual"]))
-            norm_score = (self.scan["score"] - np.min(self.scan["score"]))/(np.max(self.scan["score"])-np.min(self.scan["score"]))
+            norm_residuals = (self.scan["residual"] - np.min(self.scan["residual"])) / (
+                np.max(self.scan["residual"]) - np.min(self.scan["residual"])
+            )
+            norm_score = (self.scan["score"] - np.min(self.scan["score"])) / (
+                np.max(self.scan["score"]) - np.min(self.scan["score"])
+            )
             lb = 0.5
             final_score = lb * norm_residuals + (1 - lb) * norm_score
             index = np.argmin(final_score)
