@@ -477,7 +477,9 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {np.mean(self.scan['score'])}")
             logger.info(f"STD Score: {np.std(self.scan['score'])}")
             logger.info(f"5% Percentile Score: {np.percentile(self.scan['score'], 5)}")
-            logger.info(f"95% Percentile Score: {np.percentile(self.scan['score'], 95)}")
+            logger.info(
+                f"95% Percentile Score: {np.percentile(self.scan['score'], 95)}"
+            )
             index = np.argmin(self.scan["residual"])
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
