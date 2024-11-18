@@ -18,7 +18,7 @@ setup(
         "requests",
         "zmq",
         "jinja2",
-        #"mpi4py",
+        # "mpi4py",
     ],
     extras_require={
         "docs": [
@@ -31,7 +31,14 @@ setup(
         ],
     },
     packages=find_packages(where="."),
-    include_package_data=True,
+    package_data={"config": ["*.yaml", "templates/*.*"]},
     platforms="any",
-    scripts=["run_task.py", "subprocess_task.py"],
+    scripts=[
+        "run_task.py",
+        "subprocess_task.py",
+        "launch_scripts/launch_airflow.py",
+        "launch_scripts/submit_slurm.sh",
+        "launch_scripts/submit_launch_airflow.sh",
+        "utilities/activate_installation",
+    ],
 )

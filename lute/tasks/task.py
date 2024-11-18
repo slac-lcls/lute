@@ -15,6 +15,7 @@ from typing import Any, List, Dict, Union, Type, TextIO, Optional
 import os
 import warnings
 import signal
+import sys
 
 from lute.io.models.base import (
     TaskParameters,
@@ -298,7 +299,10 @@ class ThirdPartyTask(Task):
             )
             template_dir = "../../config/templates"
         else:
-            template_dir = f"{lute_path}/config/templates"
+            py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
+            template_dir = f"{lute_path}/lib/{py_ver}/site-packages/config/templates"
+            if not os.path.exists(template_dir):
+                template_dir = f"{lute_path}/config/templates"
         environment: Environment = Environment(loader=FileSystemLoader(template_dir))
         template: Template = environment.get_template(template_name)
 

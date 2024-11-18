@@ -11,7 +11,7 @@ import requests
 import shutil
 import subprocess
 import sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from krtc import KerberosTicket
 
@@ -83,6 +83,37 @@ def git_clone(repo: str, location: str, tag: str) -> None:
     cmd = ["git", "checkout", tag]
     _run_subprocess_log(cmd)
     os.chdir(cwd)
+
+def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
+    """Install from a source directory to an optionally specified directory.
+
+    If no prefix (`install_dir`) is provided, this will install to the current
+    packages directory determined by, e.g., conda environment, etc.
+
+    If a prefix is provided this command will also create the directory (or
+    multiple directories) if necessary.
+
+    Args:
+        src_dir (str): Directory with the source code and setup.py.
+
+        install_dir (Optional[str]): Optionally provide a directory to install
+            install to.
+    """
+    cmd: List[str] = [
+        "pip",
+        "install",
+        src_dir
+    ]
+    if install_dir is not None:
+        cmd.append(f"--prefix={install_dir}")
+        if not os.path.exists(install_dir):
+            mkdir_cmd: List[str] = [
+                "mkdir",
+                "-p",
+                install_dir
+            ]
+            _run_subprocess_log(mkdir_cmd)
+    _run_subprocess_log(cmd)
 
 def inplace_sed(in_file: str, pattern: str) -> None:
     """Perform an in-place operation on a file using sed.
@@ -161,23 +192,25 @@ if __name__ == "__main__":
     results_dir: str = f"/sdf/data/lcls/ds/{hutch}/{args.experiment}/results"
     lute_path: str
     if args.fresh_install:
-        git_clone("slac-lcls/lute", results_dir, args.version)
         lute_path = f"{results_dir}/lute"
+        # pip_install will also create directories at lute_path
+        pip_install(f"{os.path.realpath(__file__)}/..", lute_path)
         modify_permissions(lute_path)
     else:
         lute_path = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
 
-    arp_executable: str = f"{lute_path}/launch_scripts/submit_launch_airflow.sh"
-    launch_executable: str = f"{lute_path}/launch_scripts/launch_airflow.py"
+    arp_executable: str = f"{lute_path}/bin/submit_launch_airflow.sh"
+    launch_executable: str = f"{lute_path}/bin/launch_airflow.py"
 
-    std_hutch_config: str = f"{lute_path}/config/{hutch}.yaml"
+    py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    std_hutch_config: str = f"{lute_path}/lib/{py_ver}/site-packages/config/{hutch}.yaml"
     lute_output_dir: str = f"{results_dir}/lute_output"
     if not os.path.exists(lute_output_dir):
         os.makedirs(lute_output_dir, mode=0o777)
         os.chmod(lute_output_dir, 0o777)
     config_path: str = f"{lute_output_dir}/{hutch}_lute.yaml"
     if not os.path.exists(std_hutch_config):
-        shutil.copy(f"{lute_path}/config/test.yaml", config_path)
+        shutil.copy(f"{lute_path}/lib/{py_ver}/site-packages/config/test.yaml", config_path)
     else:
         shutil.copy(std_hutch_config, config_path)
     os.chmod(config_path, 0o666)

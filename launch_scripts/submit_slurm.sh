@@ -124,14 +124,31 @@ fi
 # By default source the psana environment since most Tasks will use it.
 source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 
-export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
-EXECUTABLE="${LUTE_PATH}run_task.py"
+# activate LUTE
+EXECUTABLE="run_task.py"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
+# LUTE_PATH is really only used for clones not installations
+export LUTE_PATH="$(echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g)"
+
+if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
+    # Running from a clone: /path/to/lute/launch_scripts
+    EXECUTABLE="${LUTE_PATH}run_task.py"
+else
+    # Running from an installation: /path/to/lute/bin
+    activate_installation
+    EXECUTABLE=$(which run_task.py)
+    # ideally would use run_task instead of python run_task.py but need
+    # a non-hacky way to provide python arguments to shebang (e.g. -O)
+fi
+
+DEBUG_PRINT="Running in debug mode -verbose logging."
+NON_DEBUG_PRINT="Running in standard mode."
 
 if [[ ${DEBUG} ]]; then
-    echo "Running in debug mode - verbose logging."
+    echo $DEBUG_PRINT
     CMD="python -B ${EXECUTABLE} -c ${CONFIGPATH} -t ${TASK}"
 else
-    echo "Running in standard mode."
+    echo $NON_DEBUG_PRINT
     CMD="python -OB ${EXECUTABLE} -c ${CONFIGPATH} -t ${TASK}"
 fi
 
