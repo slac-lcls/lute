@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import argparse
 import logging
@@ -51,29 +52,32 @@ parser.add_argument(
     "-t", "--taskname", type=str, help="Name of the Task to run.", default="test"
 )
 
-args: argparse.Namespace = parser.parse_args()
-config: str = args.config
-task_name: str = args.taskname
-task_parameters: TaskParameters = parse_config(task_name=task_name, config_path=config)
+if __name__ == "__main__":
+    args: argparse.Namespace = parser.parse_args()
+    config: str = args.config
+    task_name: str = args.taskname
+    task_parameters: TaskParameters = parse_config(
+        task_name=task_name, config_path=config
+    )
 
-# Hack to avoid importing modules with conflicting dependencie
-TaskType: Type[Task]
-if isinstance(task_parameters, ThirdPartyParameters):
-    TaskType = ThirdPartyTask
-else:
-    from lute.tasks import import_task, TaskNotFoundError
+    # Hack to avoid importing modules with conflicting dependencie
+    TaskType: Type[Task]
+    if isinstance(task_parameters, ThirdPartyParameters):
+        TaskType = ThirdPartyTask
+    else:
+        from lute.tasks import import_task, TaskNotFoundError
 
-    try:
-        TaskType = import_task(task_name)
-    except TaskNotFoundError:
-        logger.debug(
-            (
-                f"Task {task_name} not found! Things to double check:\n"
-                "\t - The spelling of the Task name.\n"
-                "\t - Has the Task been registered in lute.tasks.import_task."
+        try:
+            TaskType = import_task(task_name)
+        except TaskNotFoundError:
+            logger.debug(
+                (
+                    f"Task {task_name} not found! Things to double check:\n"
+                    "\t - The spelling of the Task name.\n"
+                    "\t - Has the Task been registered in lute.tasks.import_task."
+                )
             )
-        )
-        sys.exit(-1)
+            sys.exit(-1)
 
-task: Task = TaskType(params=task_parameters)
-task.run()
+    task: Task = TaskType(params=task_parameters)
+    task.run()
