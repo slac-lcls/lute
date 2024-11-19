@@ -845,12 +845,14 @@ class OptimizePyFAIGeometry(Task):
             params=optimizer.params,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file.replace(
-                f"{self._task_parameters.run}-end.data", f"r{self._task_parameters.run:0>4}.geom"
+                f"{self._task_parameters.run}-end.data",
+                f"r{self._task_parameters.run:0>4}.geom",
             ),
         )
         CrystFELToPsana(
             in_file=self._task_parameters.in_file.replace(
-                f"{self._task_parameters.run}-end.data", f"r{self._task_parameters.run:0>4}.geom"
+                f"{self._task_parameters.run}-end.data",
+                f"r{self._task_parameters.run:0>4}.geom",
             ),
             det_type=optimizer.det_type,
             out_file=self._task_parameters.out_file,
