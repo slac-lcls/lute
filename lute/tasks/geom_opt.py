@@ -474,9 +474,9 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            percentile_10 = np.percentile(self.scan["score"], 10)
-            logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            valid_indices = np.where(self.scan["score"] > percentile_10)[0]
+            percentile_15 = np.percentile(self.scan["score"], 15)
+            logger.info(f"10th Score Percentile: {percentile_15:.2e}")
+            valid_indices = np.where(self.scan["score"] > percentile_15)[0]
             shift_index = np.argmin(self.scan["residual"][valid_indices])
             index = valid_indices[shift_index]
             self.index = index
@@ -583,14 +583,14 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        percentile_10 = np.percentile(scores, 10)
+        percentile_15 = np.percentile(scores, 15)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
             percentile_10,
             color="red",
             linestyle="--",
-            label=f"10th Percentile: {percentile_10:.2e}",
+            label=f"15th Percentile: {percentile_15:.2e}",
         )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
