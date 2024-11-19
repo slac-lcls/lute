@@ -796,7 +796,7 @@ class OptimizePyFAIGeometry(Task):
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
             logger.info(f"Final Residuals: {optimizer.residual:.2e}")
-            plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = f"{self._task_parameters.work_dir}/figs/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
                 powder=optimizer.powder,
@@ -841,13 +841,13 @@ class OptimizePyFAIGeometry(Task):
             detector=optimizer.detector,
             params=optimizer.params,
             psana_file=self._task_parameters.in_file,
-            out_file=self._task_parameters.in_file.replace(
-                "0-end.data", f"r{self._task_parameters.run:0>4}.geom"
+            out_file=self._task_parameters.out_file.replace(
+                f"{self._task_parameters.run}-end.data", f"r{self._task_parameters.run:0>4}.geom"
             ),
         )
         CrystFELToPsana(
             in_file=self._task_parameters.in_file.replace(
-                "0-end.data", f"r{self._task_parameters.run:0>4}.geom"
+                f"{self._task_parameters.run}-end.data", f"r{self._task_parameters.run:0>4}.geom"
             ),
             det_type=optimizer.det_type,
             out_file=self._task_parameters.out_file,
