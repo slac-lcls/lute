@@ -474,7 +474,10 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            index = np.argmin(self.scan["residual"])
+            percentile_10 = np.percentile(self.scan["score"], 10)
+            logger.info(f"10th Score Percentile: {percentile_10:.2e}")
+            index = np.argmin(self.scan["residual"][self.scan["score"] > percentile_10])
+            self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
@@ -578,9 +581,13 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
+        percentile_10 = np.percentile(scores, 10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.set_xlabel("Distance index")
+        ax.axhline(percentile_10, color="red", linestyle="--",
+            label=f"10th Percentile: {percentile_10:.2e}",
+        )
+        ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
 
@@ -598,15 +605,15 @@ class BayesGeomOpt:
         residuals = self.scan["residual"]
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(residuals))
         ax.plot(distances, residuals)
-        best_dist = distances[np.argmin(residuals)]
+        best_dist = distances[self.index]
         ax.axvline(
             best_dist,
-            color="red",
+            color="green",
             linestyle="--",
             label=f"Best distance: {best_dist:.2e}",
         )
         ax.set_yscale("log")
-        ax.set_xlabel("Distance index")
+        ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
 
@@ -789,7 +796,7 @@ class OptimizePyFAIGeometry(Task):
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
             logger.info(f"Final Residuals: {optimizer.residual:.2e}")
-            plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_r{optimizer.run:0>4}.png"
+            plot = f"{self._task_parameters.work_dir}figs/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
             detector = self.update_geometry(optimizer)
             optimizer.visualize_results(
                 powder=optimizer.powder,
