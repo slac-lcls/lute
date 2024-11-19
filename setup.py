@@ -14,7 +14,7 @@ setup(
     description="LCLS Unified Task Executor.",
     install_requires=[
         "numpy",
-        "pydantic==1.10",
+        "pydantic==1.10.13",
         "requests",
         "zmq",
         "jinja2",

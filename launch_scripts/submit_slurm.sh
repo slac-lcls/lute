@@ -135,7 +135,7 @@ if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
     EXECUTABLE="${LUTE_PATH}run_task.py"
 else
     # Running from an installation: /path/to/lute/bin
-    activate_installation
+    source "${SCRIPT_DIR}/activate_installation"
     EXECUTABLE=$(which run_task.py)
     # ideally would use run_task instead of python run_task.py but need
     # a non-hacky way to provide python arguments to shebang (e.g. -O)

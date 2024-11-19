@@ -102,6 +102,7 @@ def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
     cmd: List[str] = [
         "pip",
         "install",
+        "--no-deps",
         src_dir
     ]
     if install_dir is not None:
