@@ -584,7 +584,10 @@ class BayesGeomOpt:
         percentile_10 = np.percentile(scores, 10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.axhline(percentile_10, color="red", linestyle="--",
+        ax.axhline(
+            percentile_10,
+            color="red",
+            linestyle="--",
             label=f"10th Percentile: {percentile_10:.2e}",
         )
         ax.set_xlabel("Distance (m)")
