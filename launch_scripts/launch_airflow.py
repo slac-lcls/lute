@@ -1,4 +1,4 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
+#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.63-py3/bin/python
 
 """Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
 
@@ -44,6 +44,7 @@ class DagRunConf(TypedDict):
     Authorization: str
     user: str
     lute_location: str
+    executable_subdir: str
     kerb_file: Optional[str]
     lute_params: Dict[str, Union[str, bool]]
     slurm_params: List[str]
@@ -297,6 +298,9 @@ if __name__ == "__main__":
             "Authorization": cast(str, os.getenv("Authorization")),
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
+            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[
+                -1
+            ],
             "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
