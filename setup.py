@@ -4,6 +4,14 @@ setup.py for LUTE
 
 from setuptools import find_packages, setup
 
+USE_MYPYC: bool
+try:
+    from mypyc.build import mypycify
+
+    USE_MYPYC = True
+except ModuleNotFoundError:
+    USE_MYPYC = False
+
 version_fh = open("lute/__init__.py", "r")
 version = version_fh.readlines()[-1].split("=")[1].strip().split('"')[1]
 version_fh.close()
@@ -31,6 +39,7 @@ setup(
         ],
     },
     packages=find_packages(where="."),
+    ext_modules=(mypycify(["lute/execution", "lute/tasks"]) if USE_MYPYC else []),
     package_data={"config": ["*.yaml", "templates/*.*"]},
     platforms="any",
     scripts=[

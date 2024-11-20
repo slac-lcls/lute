@@ -42,6 +42,7 @@ from typing import (
     cast,
     Protocol,
     Type,
+    Final,
 )
 from typing_extensions import TypedDict, TypeAlias
 from abc import ABC, abstractmethod
@@ -148,7 +149,7 @@ class BaseExecutor(ABC):
         execute_task(): Run the task as a subprocess.
     """
 
-    Hooks: Type[ExecutorHooks] = ExecutorHooks
+    Hooks: Final[Type[ExecutorHooks]] = ExecutorHooks
 
     def __init__(
         self,
