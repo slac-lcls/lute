@@ -137,6 +137,25 @@ class BayesGeomOpt:
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
 
+    def build_mask(self, central=True, edges=True):
+        """
+        Mask pixels marked as false status, edges and central pixels of panels
+
+        Parameters
+        ----------
+        central : bool
+            Mask central pixel of panels
+        edges : bool
+            Mask edges of panels
+        """
+        ds_args = f"exp={self.exp}:run={self.run}:idx"
+        ds = psana.DataSource(ds_args)
+        det = psana.Detector(self.det_type, ds.env())
+        mask = det.mask_v2(par=self.run, central=central, edges=edges)
+        if len(mask.shape) != 2:
+            mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
+        return mask
+
     def min_intensity(self, Imin, powder):
         """
         Define minimal intensity for control point extraction
@@ -446,6 +465,10 @@ class BayesGeomOpt:
 
         self.build_calibrant()
 
+        mask = self.build_mask()
+
+        powder = powder * mask
+
         self.max_rings = max_rings
         Imin, powder = self.min_intensity(Imin, powder)
 
@@ -487,13 +510,13 @@ class BayesGeomOpt:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zero_scores = np.where(self.scan["score"] > 0)[0]
-            percentile_12 = np.percentile(self.scan["score"][non_zero_scores], 12)
+            percentile_10 = np.percentile(self.scan["score"][non_zero_scores], 10)
             mean = np.mean(self.scan["score"][non_zero_scores])
-            std = np.std(self.scan["score"][non_zero_scores])
-            threshold = mean - std
-            logger.info(f"Threshold Score: {threshold:.2e}")
-            logger.info(f"12th Score Percentile: {percentile_12:.2e}")
-            valid_indices = np.where(self.scan["score"] > percentile_12)[0]
+            std_dev = np.std(self.scan["score"][non_zero_scores])
+            logger.info(f"Mean Score: {mean:.2e}")
+            logger.info(f"Score Std Dev: {std_dev:.2e}")
+            logger.info(f"12th Score Percentile: {percentile_10:.2e}")
+            valid_indices = np.where(self.scan["score"] > percentile_10)[0]
             shift_index = np.argmin(self.scan["residual"][valid_indices])
             index = valid_indices[shift_index]
             self.index = index
@@ -602,16 +625,15 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
         mean = np.mean(scores[non_zero_scores])
-        mini = np.min(scores[non_zero_scores])
         std_dev = np.std(scores[non_zero_scores])
-        percentile_12 = np.percentile(scores[non_zero_scores], 12)
+        percentile_10 = np.percentile(scores[non_zero_scores], 10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
-            percentile_12,
+            percentile_10,
             color="purple",
             linestyle="--",
-            label=f"12th Percentile: {percentile_12:.2e}",
+            label=f"10th Percentile: {percentile_10:.2e}",
         )
         ax.axhline(
             mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
@@ -622,19 +644,6 @@ class BayesGeomOpt:
             linestyle="--",
             linewidth=1.5,
             label=f"Mean - 1 Std ({mean - std_dev:.2f})",
-        )
-        ax.axhline(
-            mean - 2 * std_dev,
-            color="green",
-            linestyle="--",
-            linewidth=1.5,
-            label=f"Mean - 2 Std ({mean - 2 * std_dev:.2f})",
-        )
-        ax.axhline(
-            mini + std_dev,
-            color="yellow",
-            linestyle="--",
-            label=f"Minimum + 1 Std: {mini + std_dev:.2e}",
         )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
@@ -776,6 +785,12 @@ class BayesGeomOpt:
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
+        if self.det_type.lower() == "rayonix":
+            radius = powder.shape[0] / 4
+            row, col = np.ogrid[:powder.shape[0], :powder.shape[1]]
+            center = (powder.shape[0] / 2, powder.shape[1] / 2)
+            mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius ** 2
+            powder = powder * mask
         res = ai.integrate1d(powder, 1000)
         self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
         icol += 1
