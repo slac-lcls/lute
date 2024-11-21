@@ -795,7 +795,7 @@ class BayesGeomOpt:
         )
         masked_powder = powder
         if self.det_type.lower() == "rayonix":
-            radius = powder.shape[0] / 4
+            radius = np.sqrt(2) * powder.shape[0] / 4
             row, col = np.ogrid[: powder.shape[0], : powder.shape[1]]
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
@@ -820,13 +820,13 @@ class BayesGeomOpt:
         icol = 0
 
         # Plotting score scan over distance
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.score_distance_scan(self.bounds, ax4)
+        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.score_distance_scan(self.bounds, ax5)
         icol += 1
 
         # Plotting residual scan over distance
-        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.residual_distance_scan(self.bounds, ax5)
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.residual_distance_scan(self.bounds, ax6)
 
         if plot != "":
             fig.savefig(plot, dpi=180)
