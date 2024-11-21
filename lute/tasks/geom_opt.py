@@ -274,6 +274,16 @@ class BayesGeomOpt:
             y[i] = len(sg.geometry_refinement.data)
             bo_history[f"init_sample_{i+1}"] = {"param": X_samples[i], "score": y[i]}
 
+        if np.all(y == 0):
+            result = {
+                "bo_history": bo_history,
+                "params": [dist, 0, 0, 0, 0, 0],
+                "residual": 0,
+                "score": 0,
+                "best_idx": 0,
+            }
+            logger.warning(f"All samples have score 0 for dist={dist}. Skipping Bayesian Optimization.")
+            return result
         y_norm = (y - np.mean(y)) / np.std(y)
         best_score = np.max(y_norm)
 
