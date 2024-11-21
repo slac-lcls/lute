@@ -154,9 +154,13 @@ class BayesGeomOpt:
         runner = next(ds.runs())
         evt = runner.event(runner.times()[0])
         runnum = evt.run()
-        mask = det.mask_v2(par=runnum, central=central, edges=edges)
-        if len(mask.shape) != 2:
-            mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
+        try:
+            mask = det.mask_v2(par=runnum, central=central, edges=edges)
+        except:
+            mask = None
+        if mask is not None:
+            if len(mask.shape) != 2:
+                mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
         return mask
 
     def min_intensity(self, Imin, powder):
@@ -171,10 +175,11 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        mean = np.mean(powder)
-        std = np.std(powder)
+        non_zero = powder > 0
+        mean = np.mean(powder[non_zero])
+        std = np.std(powder[non_zero])
         threshold = mean + 3 * std
-        nice_pix = powder < threshold
+        nice_pix = powder[non_zero] < threshold
         Imin = np.percentile(powder[nice_pix], Imin)
         self.Imin = Imin
         self.powder = powder
@@ -469,8 +474,8 @@ class BayesGeomOpt:
         self.build_calibrant()
 
         mask = self.build_mask()
-
-        powder = powder * mask
+        if mask is not None:
+            powder = powder * mask
 
         self.max_rings = max_rings
         Imin, powder = self.min_intensity(Imin, powder)
