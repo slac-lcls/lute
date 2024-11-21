@@ -790,8 +790,8 @@ class BayesGeomOpt:
             row, col = np.ogrid[:powder.shape[0], :powder.shape[1]]
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius ** 2
-            powder = powder * mask
-        res = ai.integrate1d(powder, 1000)
+            masked_powder = powder * mask
+        res = ai.integrate1d(masked_powder, 1000)
         self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
         icol += 1
 
