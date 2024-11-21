@@ -73,7 +73,7 @@ class BayesGeomOpt:
     ):
         self.exp = exp
         self.run = run
-        self.det_type = det_type.lower()
+        self.det_type = det_type
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
