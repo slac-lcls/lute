@@ -42,6 +42,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from scipy.stats import norm
+from scipy.signal import find_peaks
 from mpi4py import MPI
 
 
@@ -635,6 +636,7 @@ class BayesGeomOpt:
         mean = np.mean(scores[non_zero_scores])
         std_dev = np.std(scores[non_zero_scores])
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
+        peaks, _ = find_peaks(scores, distance=5)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
@@ -653,6 +655,7 @@ class BayesGeomOpt:
             linewidth=1.5,
             label=f"Mean - 1 Std ({mean - std_dev:.2f})",
         )
+        ax.plot(distances[peaks], scores[peaks], "x")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
