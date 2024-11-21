@@ -487,12 +487,12 @@ class BayesGeomOpt:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zero_scores = np.where(self.scan["score"] > 0)[0]
-            percentile_10 = np.percentile(self.scan["score"][non_zero_scores], 10)
+            percentile_12 = np.percentile(self.scan["score"][non_zero_scores], 12)
             mean = np.mean(self.scan["score"][non_zero_scores])
             std = np.std(self.scan["score"][non_zero_scores])
-            threshold = mean - std
+            threshold = mean - 2 * std
             logger.info(f"Threshold Score: {threshold:.2e}")
-            logger.info(f"10th Score Percentile: {percentile_10:.2e}")
+            logger.info(f"12th Score Percentile: {percentile_12:.2e}")
             valid_indices = np.where(self.scan["score"] > threshold)[0]
             shift_index = np.argmin(self.scan["residual"][valid_indices])
             index = valid_indices[shift_index]
@@ -603,15 +603,15 @@ class BayesGeomOpt:
         non_zero_scores = np.where(scores > 0)[0]
         mean = np.mean(scores[non_zero_scores])
         std = np.std(scores[non_zero_scores])
-        threshold = mean - std
-        percentile_10 = np.percentile(scores[non_zero_scores], 10)
+        threshold = mean - 2 * std
+        percentile_12 = np.percentile(scores[non_zero_scores], 12)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
-            percentile_10,
+            percentile_12,
             color="red",
             linestyle="--",
-            label=f"10th Percentile: {percentile_10:.2e}",
+            label=f"12th Percentile: {percentile_12:.2e}",
         )
         ax.axhline(threshold, color="orange", linestyle="--", label=f"Threshold: {threshold:.2e}")
         ax.set_xlabel("Distance (m)")
