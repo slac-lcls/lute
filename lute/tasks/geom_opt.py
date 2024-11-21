@@ -613,7 +613,12 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"10th Percentile: {percentile_10:.2e}",
         )
-        ax.axhline(threshold, color="orange", linestyle="--", label=f"Threshold: {threshold:.2e}")
+        ax.axhline(
+            threshold,
+            color="orange",
+            linestyle="--",
+            label=f"Threshold: {threshold:.2e}",
+        )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
