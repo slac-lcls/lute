@@ -596,7 +596,8 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        percentile_10 = np.percentile(scores, 10)
+        non_zero_scores = np.where(scores > 0)[0]
+        percentile_10 = np.percentile(scores[non_zero_scores], 10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
@@ -607,6 +608,7 @@ class BayesGeomOpt:
         )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
+        ax.legend(fontsize="x-small")
         ax.set_title("Number of Control Points vs Distance")
 
     def residual_distance_scan(self, bounds, ax):
@@ -630,6 +632,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Best distance: {best_dist:.2e}",
         )
+        ax.legend(fontsize="x-small")
         ax.set_yscale("log")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Residual")
