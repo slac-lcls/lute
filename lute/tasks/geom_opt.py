@@ -490,10 +490,10 @@ class BayesGeomOpt:
             percentile_12 = np.percentile(self.scan["score"][non_zero_scores], 12)
             mean = np.mean(self.scan["score"][non_zero_scores])
             std = np.std(self.scan["score"][non_zero_scores])
-            threshold = mean - 2 * std
+            threshold = mean - std
             logger.info(f"Threshold Score: {threshold:.2e}")
             logger.info(f"12th Score Percentile: {percentile_12:.2e}")
-            valid_indices = np.where(self.scan["score"] > threshold)[0]
+            valid_indices = np.where(self.scan["score"] > percentile_12)[0]
             shift_index = np.argmin(self.scan["residual"][valid_indices])
             index = valid_indices[shift_index]
             self.index = index
@@ -602,22 +602,39 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
         mean = np.mean(scores[non_zero_scores])
-        std = np.std(scores[non_zero_scores])
-        threshold = mean - 2 * std
+        mini = np.min(scores[non_zero_scores])
+        std_dev = np.std(scores[non_zero_scores])
         percentile_12 = np.percentile(scores[non_zero_scores], 12)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
             percentile_12,
-            color="red",
+            color="purple",
             linestyle="--",
             label=f"12th Percentile: {percentile_12:.2e}",
         )
-        ax.axhline(
-            threshold,
+        ax.axvline(
+            mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
+        )
+        ax.axvline(
+            mean - std_dev,
             color="orange",
             linestyle="--",
-            label=f"Threshold: {threshold:.2e}",
+            linewidth=1.5,
+            label=f"Mean - 1 Std ({mean - std_dev:.2f})",
+        )
+        ax.axvline(
+            mean - 2 * std_dev,
+            color="green",
+            linestyle="--",
+            linewidth=1.5,
+            label=f"Mean - 2 Std ({mean - 2 * std_dev:.2f})",
+        )
+        ax.axhline(
+            mini+std_dev,
+            color="yellow",
+            linestyle="--",
+            label=f"Minimum + 1 Std: {mini + std_dev:.2e}",
         )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
