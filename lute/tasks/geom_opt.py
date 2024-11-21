@@ -525,7 +525,7 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            peaks, _ = find_peaks(self.scan["score"], distance=2)
+            peaks, _ = find_peaks(self.scan["score"], distance=10, height=2*percentile_10, threshold=percentile_10)
             shift_index = np.argmin(self.scan["residual"][peaks])
             index = peaks[shift_index]
             self.index = index
@@ -636,7 +636,7 @@ class BayesGeomOpt:
         mean = np.mean(scores[non_zero_scores])
         std_dev = np.std(scores[non_zero_scores])
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
-        peaks, _ = find_peaks(scores, distance=2)
+        peaks, _ = find_peaks(scores, distance=10, height=2*percentile_10, threshold=percentile_10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
@@ -644,9 +644,6 @@ class BayesGeomOpt:
             color="purple",
             linestyle="--",
             label=f"10th Percentile: {percentile_10:.2e}",
-        )
-        ax.axhline(
-            mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
         )
         ax.plot(distances[peaks], scores[peaks], "x")
         ax.set_xlabel("Distance (m)")
