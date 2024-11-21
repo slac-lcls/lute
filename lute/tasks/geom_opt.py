@@ -613,17 +613,17 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"12th Percentile: {percentile_12:.2e}",
         )
-        ax.axvline(
+        ax.axhline(
             mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
         )
-        ax.axvline(
+        ax.axhline(
             mean - std_dev,
             color="orange",
             linestyle="--",
             linewidth=1.5,
             label=f"Mean - 1 Std ({mean - std_dev:.2f})",
         )
-        ax.axvline(
+        ax.axhline(
             mean - 2 * std_dev,
             color="green",
             linestyle="--",
