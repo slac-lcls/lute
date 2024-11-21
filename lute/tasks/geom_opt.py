@@ -151,7 +151,10 @@ class BayesGeomOpt:
         ds_args = f"exp={self.exp}:run={self.run}:idx"
         ds = psana.DataSource(ds_args)
         det = psana.Detector(self.det_type, ds.env())
-        mask = det.mask_v2(par=self.run, central=central, edges=edges)
+        runner = next(ds.runs())
+        evt = runner.event(self.times[0])
+        runnum = evt.run()
+        mask = det.mask_v2(par=runnum, central=central, edges=edges)
         if len(mask.shape) != 2:
             mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
         return mask
