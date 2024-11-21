@@ -282,7 +282,9 @@ class BayesGeomOpt:
                 "score": 0,
                 "best_idx": 0,
             }
-            logger.warning(f"All samples have score 0 for dist={dist}. Skipping Bayesian Optimization.")
+            logger.warning(
+                f"All samples have score 0 for dist={dist}. Skipping Bayesian Optimization."
+            )
             return result
         y_norm = (y - np.mean(y)) / np.std(y)
         best_score = np.max(y_norm)
