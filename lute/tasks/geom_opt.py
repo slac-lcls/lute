@@ -631,7 +631,7 @@ class BayesGeomOpt:
             label=f"Mean - 2 Std ({mean - 2 * std_dev:.2f})",
         )
         ax.axhline(
-            mini+std_dev,
+            mini + std_dev,
             color="yellow",
             linestyle="--",
             label=f"Minimum + 1 Std: {mini + std_dev:.2e}",
