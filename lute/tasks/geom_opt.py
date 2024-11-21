@@ -788,6 +788,7 @@ class BayesGeomOpt:
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
+        masked_powder = powder
         if self.det_type.lower() == "rayonix":
             radius = powder.shape[0] / 4
             row, col = np.ogrid[: powder.shape[0], : powder.shape[1]]
