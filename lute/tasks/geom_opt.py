@@ -175,12 +175,12 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        non_zero = powder > 0
-        mean = np.mean(powder[non_zero])
-        std = np.std(powder[non_zero])
+        masked_powder = np.ma.masked_array(powder, 0)
+        mean = np.mean(masked_powder)
+        std = np.std(masked_powder)
         threshold = mean + 3 * std
-        nice_pix = powder[non_zero] < threshold
-        Imin = np.percentile(powder.flatten()[nice_pix], Imin)
+        nice_pix = masked_powder < threshold
+        Imin = np.percentile(masked_powder[nice_pix], Imin)
         self.Imin = Imin
         self.powder = powder
         return Imin, powder
@@ -523,7 +523,7 @@ class BayesGeomOpt:
             std_dev = np.std(self.scan["score"][non_zero_scores])
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
-            logger.info(f"12th Score Percentile: {percentile_10:.2e}")
+            logger.info(f"10th Score Percentile: {percentile_10:.2e}")
             valid_indices = np.where(self.scan["score"] > percentile_10)[0]
             shift_index = np.argmin(self.scan["residual"][valid_indices])
             index = valid_indices[shift_index]
