@@ -527,9 +527,8 @@ class BayesGeomOpt:
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
             peaks, _ = find_peaks(
                 self.scan["score"],
-                distance=10,
-                height=2 * percentile_10,
-                threshold=percentile_10,
+                distance=5,
+                height=percentile_10,
             )
             shift_index = np.argmin(self.scan["residual"][peaks])
             index = peaks[shift_index]
