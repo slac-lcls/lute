@@ -528,6 +528,7 @@ class BayesGeomOpt:
             peaks, _ = find_peaks(
                 self.scan["score"],
                 distance=5,
+                height=percentile_10,
             )
             shift_index = np.argmin(self.scan["residual"][peaks])
             index = peaks[shift_index]
