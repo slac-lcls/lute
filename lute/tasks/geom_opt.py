@@ -179,7 +179,7 @@ class BayesGeomOpt:
         masked_powder = np.ma.masked_array(powder, 0)
         mean = np.mean(masked_powder)
         std = np.std(masked_powder)
-        threshold = mean + 3 * std
+        threshold = mean + 5 * std
         nice_pix = masked_powder < threshold
         Imin = np.percentile(masked_powder[nice_pix], Imin)
         self.Imin = Imin
