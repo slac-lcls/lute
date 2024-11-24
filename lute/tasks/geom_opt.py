@@ -164,27 +164,38 @@ class BayesGeomOpt:
                 mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
         return mask
 
-    def min_intensity(self, Imin, powder):
+    def min_intensity(self, powder):
         """
         Define minimal intensity for control point extraction
-        Note: this is a heuristic that has been found to work well but may need some tuning.
+        
+        The minimal intensity is chosen so that the Signal to Noise Ratio (SNR) is maximized
+        Signal is defined as the standard deviation of the pixels above the threshold
+        Noise is defined as the standard deviation of the pixels below the threshold
 
         Parameters
         ----------
-        Imin : float
-            Minimum intensity to use for control point extraction based on intensity distribution
         powder : np.ndarray
             Powder image
         """
-        masked_powder = np.ma.masked_array(powder, 0)
+        masked_powder = powder[powder > 0]
         mean = np.mean(masked_powder)
         std = np.std(masked_powder)
         threshold = mean + 5 * std
         nice_pix = masked_powder < threshold
-        Imin = np.percentile(masked_powder[nice_pix], Imin)
+        self.hist = masked_powder[nice_pix]
+        SNRs= []
+        Imins = np.arange(90, 100, 0.1)
+        for Imin in Imins:
+            threshold = np.percentile(masked_powder[nice_pix], Imin)
+            signal_pixels = masked_powder[nice_pix][masked_powder[nice_pix] > threshold]
+            signal = np.std(signal_pixels)
+            noise_pixels = masked_powder[nice_pix][masked_powder[nice_pix] <= threshold]
+            noise = np.std(noise_pixels)
+            SNRs.append(signal / noise)
+        self.q = round(Imins[np.argmax(SNRs)], 1)
+        Imin = np.percentile(masked_powder[nice_pix], self.q)
         self.Imin = Imin
         self.powder = powder
-        return Imin, powder
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -479,7 +490,7 @@ class BayesGeomOpt:
             powder = powder * mask
 
         self.max_rings = max_rings
-        Imin, powder = self.min_intensity(Imin, powder)
+        self.min_intensity(powder)
 
         if self.rank == 0:
             logger.info(f"Number of distances to scan: {self.size}")
@@ -527,7 +538,7 @@ class BayesGeomOpt:
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
             peaks, _ = find_peaks(
                 self.scan["score"],
-                distance=5,
+                distance=2,
                 height=percentile_10,
             )
             shift_index = np.argmin(self.scan["residual"][peaks])
@@ -637,12 +648,8 @@ class BayesGeomOpt:
         """
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
-        mean = np.mean(scores[non_zero_scores])
-        std_dev = np.std(scores[non_zero_scores])
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
-        peaks, _ = find_peaks(
-            scores, distance=10, height=2 * percentile_10, threshold=percentile_10
-        )
+        peaks, _ = find_peaks(scores, distance=5, height=percentile_10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
@@ -684,7 +691,7 @@ class BayesGeomOpt:
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
 
-    def hist_and_compute_stats(self, powder, exp, run, ax):
+    def hist_and_compute_stats(self, exp, run, ax):
         """
         Plot histogram of pixel intensities and compute statistics
 
@@ -699,14 +706,10 @@ class BayesGeomOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        mean = np.mean(powder)
-        threshold = np.mean(powder) + 2 * np.std(powder)
-        nice_pix = powder < threshold
-        mean = np.mean(powder[nice_pix])
-        std_dev = np.std(powder[nice_pix])
-        percentile_99 = np.percentile(powder[nice_pix], 99)
+        mean = np.mean(self.hist)
+        std_dev = np.std(self.hist)
         _ = ax.hist(
-            powder[nice_pix],
+            self.hist,
             bins=1000,
             color="skyblue",
             edgecolor="black",
@@ -714,37 +717,13 @@ class BayesGeomOpt:
             label="Pixel Intensities",
         )
         ax.axvline(
-            mean, color="red", linestyle="--", linewidth=1.5, label=f"Mean ({mean:.2f})"
-        )
-        ax.axvline(
-            mean + std_dev,
-            color="orange",
-            linestyle="--",
-            linewidth=1.5,
-            label=f"Mean + 1 Std ({mean + std_dev:.2f})",
-        )
-        ax.axvline(
-            mean + 2 * std_dev,
-            color="green",
-            linestyle="--",
-            linewidth=1.5,
-            label=f"Mean + 2 Std ({mean + 2 * std_dev:.2f})",
-        )
-        ax.axvline(
-            mean + 3 * std_dev,
-            color="blue",
-            linestyle="--",
-            linewidth=1.5,
-            label=f"Mean + 3 Std ({mean + 3 * std_dev:.2f})",
-        )
-        ax.axvline(
-            percentile_99,
+            self.imin,
             color="purple",
             linestyle=":",
             linewidth=1.5,
-            label=f"99th Percentile ({percentile_99:.2f})",
+            label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_xlim(0, mean + 5 * std_dev)
+        ax.set_xlim([0, mean + 5 * std_dev])
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
