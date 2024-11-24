@@ -536,7 +536,9 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            index = np.argmin(self.scan["residual"])
+            nice_scores = self.scan["score"] > percentile_10
+            shift_index = np.argmin(self.scan["residual"][nice_scores])
+            index = np.where(nice_scores)[0][shift_index]
             self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
