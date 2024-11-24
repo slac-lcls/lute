@@ -167,7 +167,7 @@ class BayesGeomOpt:
     def min_intensity(self, powder):
         """
         Define minimal intensity for control point extraction
-        
+
         The minimal intensity is chosen so that the Signal to Noise Ratio (SNR) is maximized
         Signal is defined as the standard deviation of the pixels above the threshold
         Noise is defined as the standard deviation of the pixels below the threshold
@@ -183,7 +183,7 @@ class BayesGeomOpt:
         threshold = mean + 5 * std
         nice_pix = masked_powder < threshold
         self.hist = masked_powder[nice_pix]
-        SNRs= []
+        SNRs = []
         Imins = np.arange(90, 100, 0.1)
         for Imin in Imins:
             threshold = np.percentile(masked_powder[nice_pix], Imin)
