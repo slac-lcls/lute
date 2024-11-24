@@ -762,7 +762,7 @@ class BayesGeomOpt:
 
         # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.hist_and_compute_stats(powder, self.exp, self.run, ax2)
+        self.hist_and_compute_stats(self.exp, self.run, ax2)
         irow += 1
         icol = 0
 
