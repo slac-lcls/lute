@@ -717,7 +717,7 @@ class BayesGeomOpt:
             label="Pixel Intensities",
         )
         ax.axvline(
-            self.imin,
+            self.Imin,
             color="purple",
             linestyle=":",
             linewidth=1.5,
