@@ -195,6 +195,7 @@ class BayesGeomOpt:
         Imin = np.percentile(powder[nice_pix], self.q)
         self.Imin = Imin
         self.powder = powder
+        return Imin
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -489,11 +490,11 @@ class BayesGeomOpt:
             powder = powder * mask
 
         self.max_rings = max_rings
-        self.min_intensity(powder)
+        Imin = self.min_intensity(powder)
 
         if self.rank == 0:
             logger.info(
-                f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector"
+                f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
             )
             logger.info(f"Number of distances to scan: {self.size}")
             self.bounds = bounds
