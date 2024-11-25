@@ -534,8 +534,8 @@ class BayesGeomOpt:
                 self.scan[key] = np.array([item for item in self.scan[key]])
             peaks, _ = find_peaks(self.scan["score"], height=100)
             for peak in peaks:
-                close_peaks = np.insert(peaks, peak, peak-1)
-                close_peaks = np.insert(close_peaks, peak+1, peak+1)
+                close_peaks = np.insert(peaks, peak, peak - 1)
+                close_peaks = np.insert(close_peaks, peak + 1, peak + 1)
             close_peaks = np.unique(close_peaks)
             min_idx = np.argmin(self.scan["residual"][close_peaks])
             index = close_peaks[min_idx]
