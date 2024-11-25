@@ -532,14 +532,7 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            non_zero_scores = np.where(self.scan["score"] > 0)[0]
-            percentile_10 = np.percentile(self.scan["score"][non_zero_scores], 10)
-            mean = np.mean(self.scan["score"][non_zero_scores])
-            std_dev = np.std(self.scan["score"][non_zero_scores])
-            logger.info(f"Mean Score: {mean:.2e}")
-            logger.info(f"Score Std Dev: {std_dev:.2e}")
-            logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            peaks, _ = find_peaks(self.scan["score"])
+            peaks, _ = find_peaks(self.scan["score"], height=np.mean(self.scan["score"]))
             min_idx = np.argmin(self.scan["residual"][peaks])
             index = peaks[min_idx]
             self.index = index
@@ -646,7 +639,7 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        peaks, _ = find_peaks(self.scan["score"])
+        peaks, _ = find_peaks(self.scan["score"], height=np.mean(scores))
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.plot(distances[peaks], scores[peaks], "x", label="Local Maxima")
