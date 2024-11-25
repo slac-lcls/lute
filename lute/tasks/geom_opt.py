@@ -177,24 +177,22 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        masked_powder = powder[powder > 0]
-        mean = np.mean(masked_powder)
-        std = np.std(masked_powder)
-        threshold = mean + 3 * std
+        mean = np.mean(powder)
+        std = np.std(powder)
+        threshold = mean + 5 * std
         logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
-        nice_pix = masked_powder < threshold
-        self.hist = masked_powder[nice_pix]
+        nice_pix = powder < threshold
         SNRs = []
         Imins = np.arange(90, 100, 0.1)
         for Imin in Imins:
-            threshold = np.percentile(masked_powder[nice_pix], Imin)
-            signal_pixels = masked_powder[nice_pix][masked_powder[nice_pix] > threshold]
+            threshold = np.percentile(powder[nice_pix], Imin)
+            signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
             signal = np.std(signal_pixels)
-            noise_pixels = masked_powder[nice_pix][masked_powder[nice_pix] <= threshold]
+            noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
             noise = np.std(noise_pixels)
             SNRs.append(signal / noise)
         self.q = round(Imins[np.argmax(SNRs)], 1)
-        Imin = np.percentile(masked_powder[nice_pix], self.q)
+        Imin = np.percentile(powder[nice_pix], self.q)
         self.Imin = Imin
         self.powder = powder
 
@@ -646,6 +644,7 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
+        mean = np.mean(scores[non_zero_scores])
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
         ax.axhline(
@@ -654,6 +653,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"10th Percentile: {percentile_10:.2e}",
         )
+        ax.axhline(mean, color="red", linestyle="--", label=f"Mean: {mean:.2e}")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
@@ -686,7 +686,7 @@ class BayesGeomOpt:
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
 
-    def hist_and_compute_stats(self, exp, run, ax):
+    def hist_and_compute_stats(self, powder, exp, run, ax):
         """
         Plot histogram of pixel intensities and compute statistics
 
@@ -701,10 +701,14 @@ class BayesGeomOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        mean = np.mean(self.hist)
-        std_dev = np.std(self.hist)
+        mean = np.mean(powder)
+        threshold = np.mean(powder) + 3 * np.std(powder)
+        nice_pix = powder < threshold
+        mean = np.mean(powder[nice_pix])
+        std_dev = np.std(powder[nice_pix])
+        nice_pix = powder < threshold
         _ = ax.hist(
-            self.hist,
+            powder[nice_pix],
             bins=1000,
             color="skyblue",
             edgecolor="black",
@@ -736,7 +740,7 @@ class BayesGeomOpt:
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_xlim([0, mean + 3 * std_dev])
+        ax.set_xlim([0, mean + 5 * std_dev])
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
@@ -775,7 +779,7 @@ class BayesGeomOpt:
 
         # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.hist_and_compute_stats(self.exp, self.run, ax2)
+        self.hist_and_compute_stats(powder, self.exp, self.run, ax2)
         irow += 1
         icol = 0
 
