@@ -440,7 +440,7 @@ class BayesGeomOpt:
         powder,
         bounds,
         res,
-        Imin=90,
+        Imin=99,
         max_rings=5,
         n_samples=50,
         n_iterations=50,
@@ -539,10 +539,10 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            nice_scores = np.where(self.scan["score"] > percentile_10)[0]
-            min_idx = np.argmin(self.scan["residual"][nice_scores])
-            index = nice_scores[min_idx]
-            self.index = nice_scores[min_idx]
+            peaks, _ = find_peaks(self.scan["score"])
+            min_idx = np.argmin(self.scan["residual"][peaks])
+            index = peaks[min_idx]
+            self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
@@ -646,16 +646,10 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        non_zero_scores = np.where(scores > 0)[0]
-        percentile_10 = np.percentile(scores[non_zero_scores], 10)
+        peaks, _ = find_peaks(self.scan["score"])
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.axhline(
-            percentile_10,
-            color="purple",
-            linestyle="--",
-            label=f"10th Percentile: {percentile_10:.2e}",
-        )
+        ax.plot(distances[peaks], scores[peaks], "x", label="Local Maxima")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
