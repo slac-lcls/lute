@@ -539,10 +539,10 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            peaks, _ = find_peaks(self.scan["score"], height=percentile_10)
-            min_idx = np.argmin(self.scan["residual"][peaks])
-            index = peaks[min_idx]
-            self.index = peaks[min_idx]
+            nice_scores = self.scan["score"] > percentile_10
+            min_idx = np.argmin(self.scan["residual"][nice_scores])
+            index = nice_scores[min_idx]
+            self.index = nice_scores[min_idx]
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
@@ -648,10 +648,8 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
-        peaks, _ = find_peaks(scores, height=percentile_10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.plot(distances[peaks], scores[peaks], "x", color="red")
         ax.axhline(
             percentile_10,
             color="purple",
