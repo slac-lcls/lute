@@ -492,7 +492,9 @@ class BayesGeomOpt:
         self.min_intensity(powder)
 
         if self.rank == 0:
-            logger.info(f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector")
+            logger.info(
+                f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector"
+            )
             logger.info(f"Number of distances to scan: {self.size}")
             self.bounds = bounds
             distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
@@ -537,7 +539,7 @@ class BayesGeomOpt:
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
             peaks, _ = find_peaks(self.scan["score"], height=percentile_10)
-            min_idx  = np.argmin(self.scan["residual"][peaks])
+            min_idx = np.argmin(self.scan["residual"][peaks])
             index = peaks[min_idx]
             self.index = peaks[min_idx]
             self.bo_history = self.scan["bo_history"][index]
