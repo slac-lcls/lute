@@ -180,11 +180,11 @@ class BayesGeomOpt:
         masked_powder = powder[powder > 0]
         mean = np.mean(masked_powder)
         std = np.std(masked_powder)
-        threshold = mean + 5 * std
+        threshold = mean + 3 * std
         nice_pix = masked_powder < threshold
-        self.hist = masked_powder[nice_pix]
+        self.hist = masked_powder
         SNRs = []
-        Imins = np.arange(99, 100, 0.1)
+        Imins = np.arange(90, 100, 0.1)
         for Imin in Imins:
             threshold = np.percentile(masked_powder[nice_pix], Imin)
             signal_pixels = masked_powder[nice_pix][masked_powder[nice_pix] > threshold]
