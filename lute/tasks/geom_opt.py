@@ -645,16 +645,16 @@ class BayesGeomOpt:
         scores = self.scan["score"]
         non_zero_scores = np.where(scores > 0)[0]
         percentile_10 = np.percentile(scores[non_zero_scores], 10)
-        mean = np.mean(scores[non_zero_scores])
+        peaks, _ = find_peaks(scores, height=percentile_10)
         distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
+        ax.plot(distances[peaks], scores[peaks], "x", color="red")
         ax.axhline(
             percentile_10,
             color="purple",
             linestyle="--",
             label=f"10th Percentile: {percentile_10:.2e}",
         )
-        ax.axhline(mean, color="red", linestyle="--", label=f"Mean: {mean:.2e}")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
