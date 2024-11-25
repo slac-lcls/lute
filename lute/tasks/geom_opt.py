@@ -492,6 +492,7 @@ class BayesGeomOpt:
         self.min_intensity(powder)
 
         if self.rank == 0:
+            logger.info(f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector")
             logger.info(f"Number of distances to scan: {self.size}")
             self.bounds = bounds
             distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
@@ -535,10 +536,10 @@ class BayesGeomOpt:
             logger.info(f"Mean Score: {mean:.2e}")
             logger.info(f"Score Std Dev: {std_dev:.2e}")
             logger.info(f"10th Score Percentile: {percentile_10:.2e}")
-            nice_scores = self.scan["score"] > percentile_10
-            shift_index = np.argmin(self.scan["residual"][nice_scores])
-            index = np.where(nice_scores)[0][shift_index]
-            self.index = index
+            peaks, _ = find_peaks(self.scan["score"], height=percentile_10)
+            min_idx  = np.argmin(self.scan["residual"][peaks])
+            index = peaks[min_idx]
+            self.index = peaks[min_idx]
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
@@ -702,7 +703,7 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         mean = np.mean(powder)
-        threshold = np.mean(powder) + 3 * np.std(powder)
+        threshold = np.mean(powder) + 5 * np.std(powder)
         nice_pix = powder < threshold
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
@@ -729,7 +730,7 @@ class BayesGeomOpt:
         )
         ax.axvline(
             mean + 2 * std_dev,
-            color="yellow",
+            color="green",
             linestyle="--",
             label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
         )
