@@ -532,7 +532,9 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            peaks, _ = find_peaks(self.scan["score"], height=np.mean(self.scan["score"]))
+            peaks, _ = find_peaks(
+                self.scan["score"], height=np.mean(self.scan["score"])
+            )
             min_idx = np.argmin(self.scan["residual"][peaks])
             index = peaks[min_idx]
             self.index = index
