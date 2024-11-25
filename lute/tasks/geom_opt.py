@@ -181,6 +181,7 @@ class BayesGeomOpt:
         mean = np.mean(masked_powder)
         std = np.std(masked_powder)
         threshold = mean + 3 * std
+        logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = masked_powder < threshold
         self.hist = masked_powder[nice_pix]
         SNRs = []
@@ -711,13 +712,31 @@ class BayesGeomOpt:
             label="Pixel Intensities",
         )
         ax.axvline(
+            mean,
+            color="red",
+            linestyle="--",
+            label=f"Mean ({mean:.2f})",
+        )
+        ax.axvline(
+            mean + std_dev,
+            color="orange",
+            linestyle="--",
+            label=f"Mean + Std Dev ({mean + std_dev:.2f})",
+        )
+        ax.axvline(
+            mean + 2 * std_dev,
+            color="yellow",
+            linestyle="--",
+            label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
+        )
+        ax.axvline(
             self.Imin,
             color="purple",
             linestyle=":",
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_xlim([0, mean + 5 * std_dev])
+        ax.set_xlim([0, mean + 3 * std_dev])
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
