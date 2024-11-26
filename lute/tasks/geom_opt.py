@@ -497,8 +497,11 @@ class BayesGeomOpt:
                 f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
             )
             logger.info(f"Number of distances to scan: {self.size}")
-            self.bounds = bounds
-            distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
+            if isinstance(bounds['dist'], float):
+                distances = np.linspace(bounds["dist"]-0.5, bounds["dist"]+0.5, self.size)
+            else:
+                distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
+            self.distances = distances
         else:
             distances = None
 
@@ -532,14 +535,7 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            peaks, _ = find_peaks(self.scan["score"], height=100)
-            close_peaks = set(peaks)
-            for peak in peaks:
-                close_peaks.add(peak - 1)
-                close_peaks.add(peak + 1)
-            peaks = sorted(list(close_peaks))
-            min_idx = np.argmin(self.scan["residual"][peaks])
-            index = peaks[min_idx]
+            index = np.argmin(self.scan["residual"])
             self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
@@ -632,40 +628,36 @@ class BayesGeomOpt:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
 
-    def score_distance_scan(self, bounds, ax):
+    def score_distance_scan(self, distances, ax):
         """
         Plot the score scan over distance
 
         Parameters
         ----------
-        bounds : dict
-            Dictionary of bounds for each parameter
+        distances : np.array
+            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
         scores = self.scan["score"]
-        peaks, _ = find_peaks(self.scan["score"], height=100)
-        distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(scores))
         ax.plot(distances, scores)
-        ax.plot(distances[peaks], scores[peaks], "x", label="Local Maxima")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.legend(fontsize="x-small")
         ax.set_title("Number of Control Points vs Distance")
 
-    def residual_distance_scan(self, bounds, ax):
+    def residual_distance_scan(self, distances, ax):
         """
         Plot the residual scan over distance
 
         Parameters
         ----------
-        bounds : dict
-            Dictionary of bounds for each parameter
+        distances : np.array
+            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
         residuals = self.scan["residual"]
-        distances = np.linspace(bounds["dist"][0], bounds["dist"][1], len(residuals))
         ax.plot(distances, residuals)
         best_dist = distances[self.index]
         ax.axvline(
@@ -810,12 +802,12 @@ class BayesGeomOpt:
 
         # Plotting score scan over distance
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.score_distance_scan(self.bounds, ax5)
+        self.score_distance_scan(self.distances, ax5)
         icol += 1
 
         # Plotting residual scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.residual_distance_scan(self.bounds, ax6)
+        self.residual_distance_scan(self.distances, ax6)
 
         if plot != "":
             fig.savefig(plot, dpi=180)

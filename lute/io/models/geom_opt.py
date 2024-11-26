@@ -35,7 +35,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
         bounds: Dict[str, Tuple[float, float]] = Field(
             {
-                "dist": (0.05, 0.5),
+                "dist": (0.02, 0.6),
                 "poni1": (-0.01, 0.01),
                 "poni2": (-0.01, 0.01),
             },
