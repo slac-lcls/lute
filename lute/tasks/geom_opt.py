@@ -499,7 +499,7 @@ class BayesGeomOpt:
             logger.info(f"Number of distances to scan: {self.size}")
             if isinstance(bounds["dist"], float):
                 distances = np.linspace(
-                    bounds["dist"] - 0.5, bounds["dist"] + 0.5, self.size
+                    bounds["dist"] - 0.05, bounds["dist"] + 0.05, self.size
                 )
             else:
                 distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
