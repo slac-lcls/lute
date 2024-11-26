@@ -33,7 +33,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     class BayesGeomOptParameters(BaseModel):
         """Bayesian optimization hyperparameters."""
 
-        bounds: Dict[str, Tuple[float, float]] = Field(
+        bounds: Dict[str] = Field(
             {
                 "dist": (0.02, 0.6),
                 "poni1": (-0.01, 0.01),
