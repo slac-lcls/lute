@@ -497,8 +497,10 @@ class BayesGeomOpt:
                 f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
             )
             logger.info(f"Number of distances to scan: {self.size}")
-            if isinstance(bounds['dist'], float):
-                distances = np.linspace(bounds["dist"]-0.5, bounds["dist"]+0.5, self.size)
+            if isinstance(bounds["dist"], float):
+                distances = np.linspace(
+                    bounds["dist"] - 0.5, bounds["dist"] + 0.5, self.size
+                )
             else:
                 distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
             self.distances = distances
