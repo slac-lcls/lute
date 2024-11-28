@@ -1012,7 +1012,9 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Final Residuals: {optimizer.residual:.2e}")
             fig_folder = self._task_parameters.work_dir / "figs"
             fig_folder.mkdir(parents=True, exist_ok=True)
-            plot = f"{fig_folder}/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = (
+                f"{fig_folder}/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            )
             calib_detector = self._update_geometry(optimizer)
             optimizer.visualize_results(
                 powder=optimizer.powder,
