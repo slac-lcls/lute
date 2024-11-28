@@ -13,9 +13,12 @@ from lute.execution.ipc import Message
 from lute.io.models.geom_opt import *
 from lute.tasks.task import *
 from lute.tasks.dataclasses import *
+from lute.execution.logging import get_logger
 
 import psana
-
+import os
+import logging
+from typing import List, Optional, Tuple, Union, Any, cast
 import sys
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
@@ -26,12 +29,9 @@ from LCLSGeom.swap_geom import (
     get_beam_center,
 )
 
-import logging
-from lute.execution.logging import get_logger
-
-logger: logging.Logger = get_logger(__name__)
-
+import h5py  # type: ignore
 import numpy as np
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 from pyFAI.geometry import Geometry
 from pyFAI.goniometer import SingleGeometry
@@ -45,6 +45,7 @@ from scipy.stats import norm
 from scipy.signal import find_peaks
 from mpi4py import MPI
 
+logger: logging.Logger = get_logger(__name__)
 
 class BayesGeomOpt:
     """
@@ -814,7 +815,6 @@ class BayesGeomOpt:
         if plot != "":
             fig.savefig(plot, dpi=180)
 
-
 class OptimizePyFAIGeometry(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
@@ -823,50 +823,7 @@ class OptimizePyFAIGeometry(Task):
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
 
-    def _run(self) -> None:
-        detector = self.build_pyFAI_detector()
-        optimizer = BayesGeomOpt(
-            exp=self._task_parameters.exp,
-            run=self._task_parameters.run,
-            det_type=self._task_parameters.det_type,
-            detector=detector,
-            calibrant=self._task_parameters.calibrant,
-        )
-        optimizer.bayes_opt_geom(
-            powder=self._task_parameters.powder,
-            bounds=self._task_parameters.bo_params.bounds,
-            res=self._task_parameters.bo_params.res,
-            Imin=self._task_parameters.bo_params.Imin,
-            max_rings=self._task_parameters.bo_params.max_rings,
-            n_samples=self._task_parameters.bo_params.n_samples,
-            n_iterations=self._task_parameters.bo_params.n_iterations,
-            af=self._task_parameters.bo_params.af,
-            hyperparam=self._task_parameters.bo_params.hyperparams,
-            prior=self._task_parameters.bo_params.prior,
-            seed=self._task_parameters.bo_params.seed,
-        )
-        if optimizer.rank == 0:
-            logger.info("Optimization complete")
-            distance, cx, cy = get_beam_center(optimizer.params)
-            logger.info(f"Detector Distance to Sample: {distance:.2e}")
-            logger.info(f"Beam center: ({cx:.2e}, {cy:.2e})")
-            logger.info(
-                f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
-            )
-            logger.info(f"Final Residuals: {optimizer.residual:.2e}")
-            plot = f"{self._task_parameters.work_dir}/figs/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
-            detector = self.update_geometry(optimizer)
-            optimizer.visualize_results(
-                powder=optimizer.powder,
-                bo_history=optimizer.bo_history,
-                detector=detector,
-                params=optimizer.params,
-                plot=plot,
-            )
-            self._result.payload = plot
-            self._result.task_status = TaskStatus.COMPLETED
-
-    def build_pyFAI_detector(self):
+    def _build_pyFAI_detector(self):
         """
         Fetch the geometry data and build a pyFAI detector object.
         """
@@ -891,9 +848,96 @@ class OptimizePyFAIGeometry(Task):
         detector = psana_to_pyfai.detector
         return detector
 
-    def update_geometry(self, optimizer):
+    def _check_if_path_and_type(self, string: str) -> Tuple[bool, Optional[str]]:
+        """
+        Check if a string is a valid path and determine the filetype.
+
+        Parameters
+        ----------
+        string : str
+            String that may be a file path.
+
+        Returns
+        -------
+        is_valid_path : bool 
+            If it is a valid path.
+
+        powder_type : Optional[str] 
+            If is_valid_path, the file type.
+        """
+        is_valid_path: bool = False
+        powder_type: Optional[str] = None
+        if os.path.exists(string):
+            is_valid_path = True
+        else:
+            return is_valid_path, powder_type
+        try:
+            with h5py.File(string):
+                powder_type = "smd"
+                is_valid_path = True
+
+            return is_valid_path, powder_type
+        except Exception:
+            ...
+
+        try:
+            np.load(string)
+            powder_type = "numpy"
+            is_valid_path = True
+            return is_valid_path, powder_type
+        except ValueError:
+            ...
+
+        return is_valid_path, powder_type
+    
+    def _extract_powder(self, powder_path: str, shape: Tuple) -> Optional[npt.NDArray[np.float64]]:
+        """
+        Extract a powder image from either a smalldata file or numpy array.
+
+        Parameters
+        ----------
+        powder_path : str
+            Path to the object containing the powder image.
+        shape : Tuple
+            Stacked shape of the detector. Powder image has to be reshaped to match detector shape.
+
+        Returns
+        -------
+        powder : Optional[npt.NDArray[np.float64]]
+            The extracted powder image.
+            Returns None if no powder could be extracted and no specific error was encountered.
+        """
+        powder = None
+        if isinstance(powder_path, str):
+            is_valid: bool
+            dtype: Optional[str]
+            is_valid, dtype = self._check_if_path_and_type(powder_path)
+            if is_valid and dtype == "numpy":
+                powder = np.load(powder_path)
+                if powder.shape != shape:
+                    powder = np.reshape(powder, shape)
+            elif is_valid and dtype == "smd":
+                h5: h5py.File
+                with h5py.File(powder_path) as h5:
+                    if self._task_parameters.det_type.lower() == "rayonix":
+                        try:
+                            powder: npt.NDArray[np.float64] = h5[f"Sums/Rayonix_calib_skipFirst_max"]
+                        except:
+                            powder: npt.NDArray[np.float64] = h5[f"Sums/Rayonix_calib_max"]
+                    else:
+                        powder: npt.NDArray[np.float64] = h5[f"Sums/{self._task_parameters.det_type}_calib_max"]
+                        if powder.shape != shape:
+                            powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
+        return powder
+
+    def _update_geometry(self, optimizer):
         """
         Update the geometry and write a new .geom file and .data file
+
+        Parameters
+        ----------
+        optimizer : BayesGeomOpt
+            Optimizer object
         """
         PyFAIToCrystFEL(
             detector=optimizer.detector,
@@ -922,3 +966,48 @@ class OptimizePyFAIGeometry(Task):
         )
         detector = psana_to_pyfai.detector
         return detector
+
+    def _run(self) -> None:
+        detector = self._build_pyFAI_detector()
+        powder = self._extract_powder(self._task_parameters.powder, detector.shape)
+        if powder is None:
+            raise RuntimeError("Unable to extract powder. Cannot continue.")
+        optimizer = BayesGeomOpt(
+            exp=self._task_parameters.exp,
+            run=self._task_parameters.run,
+            det_type=self._task_parameters.det_type,
+            detector=detector,
+            calibrant=self._task_parameters.calibrant,
+        )
+        optimizer.bayes_opt_geom(
+            powder=powder,
+            bounds=self._task_parameters.bo_params.bounds,
+            res=self._task_parameters.bo_params.res,
+            max_rings=self._task_parameters.bo_params.max_rings,
+            n_samples=self._task_parameters.bo_params.n_samples,
+            n_iterations=self._task_parameters.bo_params.n_iterations,
+            af=self._task_parameters.bo_params.af,
+            hyperparam=self._task_parameters.bo_params.hyperparams,
+            prior=self._task_parameters.bo_params.prior,
+            seed=self._task_parameters.bo_params.seed,
+        )
+        if optimizer.rank == 0:
+            logger.info("Optimization complete")
+            distance, cx, cy = get_beam_center(optimizer.params)
+            logger.info(f"Detector Distance to Sample: {distance:.2e}")
+            logger.info(f"Beam center: ({cx:.2e}, {cy:.2e})")
+            logger.info(
+                f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
+            )
+            logger.info(f"Final Residuals: {optimizer.residual:.2e}")
+            plot = f"{self._task_parameters.work_dir}/figs/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            calib_detector = self._update_geometry(optimizer)
+            optimizer.visualize_results(
+                powder=optimizer.powder,
+                bo_history=optimizer.bo_history,
+                detector=calib_detector,
+                params=optimizer.params,
+                plot=plot,
+            )
+            self._result.summary.append(ElogSummaryPlots(f"Geometry_Fit/r{optimizer.run:0>4}", plot))
+            self._result.task_status = TaskStatus.COMPLETED

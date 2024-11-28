@@ -14,9 +14,10 @@ from typing import Any, Dict, Optional, Union, Tuple
 
 from pydantic import BaseModel, Field
 
-from .base import TaskParameters, validator
-from ..db import read_latest_db_entry
+from lute.io.models.base import TaskParameters
+from lute.io.models.validators import validate_smd_path
 
+import psana
 from PSCalib.CalibFileFinder import CalibFileFinder
 
 
@@ -47,13 +48,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Resolution of the grid used to discretize the parameter search space.",
         )
 
-        Imin: float = Field(
-            99,
-            description="Minimum intensity threshold for the Bayesian optimization based on intensity distribution percentile.",
-        )
-
         max_rings: int = Field(
-            10,
+            5,
             description="Maximum number of rings to be used for the Bayesian optimization.",
         )
 
@@ -89,6 +85,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             None,
             description="Seed for the random number generator for potential reproducibility.",
         )
+    
+    _find_smd_path = validate_smd_path("powder")
 
     exp: str = Field(
         "",
@@ -173,20 +171,14 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             exp = values["exp"]
             run = values["run"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            src = "MfxEndstation.0:Epix10ka2M.0"
+            dsname = f"exp={exp}:run={run}"
+            ds = psana.DataSource(dsname)
+            det = psana.Detector(values["det_type"], ds.env())
+            src = det.name
             type = "geometry"
             cff = CalibFileFinder(cdir)
             in_file = cff.findCalibFile(src, type, run)
         return in_file
-
-    @validator("powder", always=True)
-    def validate_powder(cls, powder: str, values: Dict[str, Any]) -> str:
-        if powder == "":
-            work_dir = values["work_dir"]
-            powder: str = read_latest_db_entry(
-                f"{work_dir}/powder", "ComputePowder", "out_file"
-            )
-        return powder
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
