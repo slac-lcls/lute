@@ -34,7 +34,7 @@ dag: DAG = DAG(
 
 smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
 
-geom_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=128, task_id="PyFAIGeometryOptimizer", dag=dag)
+geom_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer", dag=dag)
 
 
 # Powder production and geometry optimization
