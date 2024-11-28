@@ -141,7 +141,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     @validator("exp", always=True)
     def validate_exp(cls, exp: str, values: Dict[str, Any]) -> str:
-        if exp == "":
+        if not exp:
             exp: str = values["lute_config"].experiment
         return exp
 
@@ -149,25 +149,25 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     def validate_run(
         cls, run: Union[str, int], values: Dict[str, Any]
     ) -> Union[str, int]:
-        if run is None:
+        if not run:
             run: Union[str, int] = values["lute_config"].run
         return run
 
     @validator("date", always=True)
     def validate_date(cls, date: str, values: Dict[str, Any]) -> str:
-        if date == "":
+        if not date:
             date: str = values["lute_config"].date
         return date
 
     @validator("work_dir", always=True)
     def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
-        if work_dir == "":
+        if not work_dir:
             work_dir: str = values["lute_config"].work_dir
         return work_dir
 
     @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
-        if in_file == "":
+        if not in_file:
             exp = values["exp"]
             run = values["run"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
@@ -182,7 +182,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
-        if out_file == "":
+        if not out_file:
             in_file = values["in_file"]
             run = values["run"]
             out_file: str = in_file.replace("0-end.data", f"{run}-end.data")
