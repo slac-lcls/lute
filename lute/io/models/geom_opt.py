@@ -85,7 +85,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             None,
             description="Seed for the random number generator for potential reproducibility.",
         )
-    
+
     _find_smd_path = validate_smd_path("powder")
 
     exp: str = Field(
