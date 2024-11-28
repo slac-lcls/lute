@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path
