@@ -47,6 +47,7 @@ from mpi4py import MPI
 
 logger: logging.Logger = get_logger(__name__)
 
+
 class BayesGeomOpt:
     """
     Class to perform Geometry Optimization using Bayesian Optimization on pyFAI
@@ -815,6 +816,7 @@ class BayesGeomOpt:
         if plot != "":
             fig.savefig(plot, dpi=180)
 
+
 class OptimizePyFAIGeometry(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
@@ -859,10 +861,10 @@ class OptimizePyFAIGeometry(Task):
 
         Returns
         -------
-        is_valid_path : bool 
+        is_valid_path : bool
             If it is a valid path.
 
-        powder_type : Optional[str] 
+        powder_type : Optional[str]
             If is_valid_path, the file type.
         """
         is_valid_path: bool = False
@@ -889,8 +891,10 @@ class OptimizePyFAIGeometry(Task):
             ...
 
         return is_valid_path, powder_type
-    
-    def _extract_powder(self, powder_path: str, shape: Tuple) -> Optional[npt.NDArray[np.float64]]:
+
+    def _extract_powder(
+        self, powder_path: str, shape: Tuple
+    ) -> Optional[npt.NDArray[np.float64]]:
         """
         Extract a powder image from either a smalldata file or numpy array.
 
@@ -921,11 +925,17 @@ class OptimizePyFAIGeometry(Task):
                 with h5py.File(powder_path) as h5:
                     if self._task_parameters.det_type.lower() == "rayonix":
                         try:
-                            powder: npt.NDArray[np.float64] = h5[f"Sums/Rayonix_calib_skipFirst_max"]
+                            powder: npt.NDArray[np.float64] = h5[
+                                f"Sums/Rayonix_calib_skipFirst_max"
+                            ]
                         except:
-                            powder: npt.NDArray[np.float64] = h5[f"Sums/Rayonix_calib_max"]
+                            powder: npt.NDArray[np.float64] = h5[
+                                f"Sums/Rayonix_calib_max"
+                            ]
                     else:
-                        powder: npt.NDArray[np.float64] = h5[f"Sums/{self._task_parameters.det_type}_calib_max"]
+                        powder: npt.NDArray[np.float64] = h5[
+                            f"Sums/{self._task_parameters.det_type}_calib_max"
+                        ]
                         if powder.shape != shape:
                             powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
         return powder
@@ -1009,5 +1019,7 @@ class OptimizePyFAIGeometry(Task):
                 params=optimizer.params,
                 plot=plot,
             )
-            self._result.summary.append(ElogSummaryPlots(f"Geometry_Fit/r{optimizer.run:0>4}", plot))
+            self._result.summary.append(
+                ElogSummaryPlots(f"Geometry_Fit/r{optimizer.run:0>4}", plot)
+            )
             self._result.task_status = TaskStatus.COMPLETED
