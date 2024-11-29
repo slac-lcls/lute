@@ -483,8 +483,6 @@ class BayesGeomOpt:
         if seed is not None:
             np.random.seed(seed)
 
-        powder = np.load(powder)
-
         self.build_calibrant()
 
         mask = self.build_mask()
