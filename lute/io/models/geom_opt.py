@@ -142,8 +142,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     @validator("exp", always=True)
     def validate_exp(cls, exp: str, values: Dict[str, Any]) -> str:
         if not exp:
-            print("exp")
-            print(values.keys())
             exp: str = values["lute_config"].experiment
         return exp
 
@@ -152,50 +150,39 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         cls, run: Union[str, int], values: Dict[str, Any]
     ) -> Union[str, int]:
         if not run:
-            print("run")
-            print(values.keys())
             run: Union[str, int] = values["lute_config"].run
         return run
 
     @validator("date", always=True)
     def validate_date(cls, date: str, values: Dict[str, Any]) -> str:
         if not date:
-            print("date")
-            print(values.keys())
             date: str = values["lute_config"].date
         return date
 
     @validator("work_dir", always=True)
     def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
         if not work_dir:
-            print("work_dir")
-            print(values.keys())
             work_dir: str = values["lute_config"].work_dir
         return work_dir
 
     @validator("in_file", always=True)
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if not in_file:
-            print("in_file")
-            print(values.keys())
             exp = values["exp"]
             run = values["run"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             dsname = f"exp={exp}:run={run}:idx"
             ds = psana.DataSource(dsname)
             det = psana.Detector(values["det_type"], ds.env())
-            src = det.name
+            src = str(det.name)
             type = "geometry"
             cff = CalibFileFinder(cdir)
             in_file: str = cff.findCalibFile(src, type, run)
-            print("in_file", in_file)
         return in_file
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if not out_file:
-            print("out_file")
-            print(values.keys())
             in_file = values["in_file"]
             run = values["run"]
             out_file: str = in_file.replace("0-end.data", f"{run}-end.data")
