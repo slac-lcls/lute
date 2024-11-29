@@ -923,21 +923,11 @@ class OptimizePyFAIGeometry(Task):
             elif is_valid and dtype == "smd":
                 h5: h5py.File
                 with h5py.File(powder_path) as h5:
-                    if self._task_parameters.det_type.lower() == "rayonix":
-                        try:
-                            powder: npt.NDArray[np.float64] = h5[
-                                f"Sums/Rayonix_calib_skipFirst_max"
-                            ]
-                        except:
-                            powder: npt.NDArray[np.float64] = h5[
-                                f"Sums/Rayonix_calib_max"
-                            ]
-                    else:
-                        powder: npt.NDArray[np.float64] = h5[
-                            f"Sums/{self._task_parameters.det_type}_calib_max"
-                        ]
-                        if powder.shape != shape:
-                            powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
+                    powder: npt.NDArray[np.float64] = h5[
+                        f"Sums/{self._task_parameters.det_type}_calib"
+                    ]
+                    if powder.shape != shape:
+                        powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
         return powder
 
     def _update_geometry(self, optimizer):
