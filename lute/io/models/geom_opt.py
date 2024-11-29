@@ -181,7 +181,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             exp = values["exp"]
             run = values["run"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            dsname = f"exp={exp}:run={run}"
+            dsname = f"exp={exp}:run={run}:idx"
             ds = psana.DataSource(dsname)
             det = psana.Detector(values["det_type"], ds.env())
             src = det.name
