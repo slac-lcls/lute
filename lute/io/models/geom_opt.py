@@ -171,7 +171,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             exp = values["exp"]
             run = values["run"]
             det_type = values["det_type"]
-            cdir = f'/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib'
+            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             print(cdir)
             ds_args = f"exp={exp}:run={run}:idx"
             print(ds_args)
