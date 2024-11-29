@@ -188,6 +188,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             type = "geometry"
             cff = CalibFileFinder(cdir)
             in_file: str = cff.findCalibFile(src, type, run)
+            print('in_file', in_file)
         return in_file
 
     @validator("out_file", always=True)
