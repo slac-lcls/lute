@@ -174,12 +174,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             print(run)
             det_type = values["det_type"]
             print(det_type)
-            cdir = f'/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib'
+            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             ds_args = f"exp={exp}:run={run}:idx"
             ds = psana.DataSource(ds_args)
             det = psana.Detector(det_type, ds.env())
             src = str(det.name)
-            type = 'geometry'
+            type = "geometry"
             in_file = find_calib_file(cdir, src, type, run, pbits=1)
             print(in_file)
         return in_file
