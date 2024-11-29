@@ -169,21 +169,17 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if not in_file:
             exp = values["exp"]
-            print(exp)
             run = values["run"]
-            print(run)
             det_type = values["det_type"]
-            print(det_type)
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             dsname = f"exp={exp}:run={run}:idx"
             ds = psana.DataSource(dsname)
             det = psana.Detector(det_type, ds.env())
             src = str(det.name)
-            print(src)
             type = "geometry"
-            print(type)
             cff = CalibFileFinder(cdir)
             in_file: str = cff.findCalibFile(src, type, run)
+            print(in_file)
         return in_file
 
     @validator("out_file", always=True)
