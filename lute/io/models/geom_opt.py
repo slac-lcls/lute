@@ -187,12 +187,14 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             src = det.name
             type = "geometry"
             cff = CalibFileFinder(cdir)
-            in_file = cff.findCalibFile(src, type, run)
+            in_file: str = cff.findCalibFile(src, type, run)
         return in_file
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if not out_file:
+            print("out_file")
+            print(values.keys())    
             in_file = values["in_file"]
             run = values["run"]
             out_file: str = in_file.replace("0-end.data", f"{run}-end.data")
