@@ -923,7 +923,7 @@ class OptimizePyFAIGeometry(Task):
                 with h5py.File(powder_path) as h5:
                     powder: npt.NDArray[np.float64] = h5[
                         f"Sums/{self._task_parameters.det_type}_calib"
-                    ]
+                    ][()]
                     if powder.shape != shape:
                         powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
         return powder
