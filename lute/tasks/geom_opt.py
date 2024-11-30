@@ -137,7 +137,10 @@ class BayesGeomOpt:
         det = psana.Detector(self.det_type, ds.env())
         runner = next(ds.runs())
         evt = runner.event(runner.times()[0])
-        photon_energy = det('EBeam').get(evt).ebeamPhotonEnergy()
+        try:
+            photon_energy = psana.Detector('EBeam').get(evt).ebeamPhotonEnergy()
+        except AttributeError as e:
+            logger.warning("Event lacking an ebeamPhotonEnergy value.")
         if photon_energy is None or np.isinf(photon_energy):
             self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         else:
