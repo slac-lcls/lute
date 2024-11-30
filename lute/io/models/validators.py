@@ -18,6 +18,7 @@ from lute.io.db import read_latest_db_entry
 import psana
 from PSCalib.CalibFileFinder import find_calib_file
 
+
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
 
@@ -95,4 +96,6 @@ def validate_calib_path(calib_path_name: str):
 
         return calib_path
 
-    return validator(calib_path_name, always=True, allow_reuse=True)(_validate_calib_path)
+    return validator(calib_path_name, always=True, allow_reuse=True)(
+        _validate_calib_path
+    )
