@@ -121,9 +121,9 @@ class BayesGeomOpt:
         ci = y_pred - best_y * norm.cdf(z) + y_std * norm.pdf(z)
         return ci
 
-    def build_calibrant(self):
+    def set_wavelength_calibrant(self):
         """
-        Define calibrant for optimization
+        Define calibrant for optimization with appropriate wavelength
 
         Parameters
         ----------
@@ -134,8 +134,14 @@ class BayesGeomOpt:
         calibrant = CALIBRANT_FACTORY(self.calibrant)
         ds_args = f"exp={self.exp}:run={self.run}:idx"
         ds = psana.DataSource(ds_args)
-        self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
-        photon_energy = 1.23984197386209e-09 / self.wavelength
+        det = psana.Detector(self.det_type, ds.env())
+        runner = next(ds.runs())
+        evt = runner.event(runner.times()[0])
+        photon_energy = det('EBeam').get(evt).ebeamPhotonEnergy()
+        if photon_energy is None or np.isinf(photon_energy):
+            self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
+        else:
+            self.wavelength = 1.23984197386209e-09 / photon_energy
         self.photon_energy = photon_energy
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
@@ -483,7 +489,7 @@ class BayesGeomOpt:
         if seed is not None:
             np.random.seed(seed)
 
-        self.build_calibrant()
+        self.set_wavelength_calibrant()
 
         mask = self.build_mask()
         if mask is not None:

@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional, Union, Tuple
 from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
-from lute.io.models.validators import validate_smd_path
+from lute.io.models.validators import validate_smd_path, validate_calib_path
 
 import psana
 from PSCalib.CalibFileFinder import find_calib_file
@@ -87,6 +87,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         )
 
     _find_smd_path = validate_smd_path("powder")
+
+    _find_in_file_path = validate_calib_path("in_file")
 
     exp: str = Field(
         "",
@@ -164,29 +166,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         if not work_dir:
             work_dir: str = values["lute_config"].work_dir
         return work_dir
-
-    @validator("in_file", always=True)
-    def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
-        if not in_file:
-            exp = values["exp"]
-            run = values["run"]
-            det_type = values["det_type"]
-            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            print(cdir)
-            ds_args = f"exp={exp}:run={run}:idx"
-            print(ds_args)
-            ds = psana.DataSource(ds_args)
-            print(ds)
-            print(ds.env())
-            det = psana.Detector(det_type, ds.env())
-            print(det)
-            print(det.name)
-            src = str(det.name)
-            print(src)
-            type = "geometry"
-            print(find_calib_file(cdir, src, type, run, pbits=1))
-            in_file: str = find_calib_file(cdir, src, type, run, pbits=1)
-        return in_file
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:

@@ -5,8 +5,8 @@ Functions:
         parameters for validation.
 """
 
-__all__ = ["template_parameter_validator", "validate_smd_path"]
-__author__ = "Gabriel Dorlhiac"
+__all__ = ["template_parameter_validator", "validate_smd_path", "validate_calib_path"]
+__author__ = ["Gabriel Dorlhiac", "Louis Conreux"]
 
 import os
 from typing import Dict, Any, Optional
@@ -15,6 +15,8 @@ from pydantic import validator
 
 from lute.io.db import read_latest_db_entry
 
+import psana
+from PSCalib.CalibFileFinder import find_calib_file
 
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
@@ -68,3 +70,29 @@ def validate_smd_path(smd_path_name: str):
         return smd_path
 
     return validator(smd_path_name, always=True, allow_reuse=True)(_validate_smd_path)
+
+
+def validate_calib_path(calib_path_name: str):
+    """Finds the path to a valid calibration file or raises an error."""
+
+    def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
+        if calib_path == "":
+            exp: str = values["lute_config"].experiment
+            run: int = int(values["lute_config"].run)
+            try:
+                det_type: str = values["det_type"]
+            except:
+                det_type: str = values["detname"]
+            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
+            ds_args = f"exp={exp}:run={run}:idx"
+            ds = psana.DataSource(ds_args)
+            det = psana.Detector(det_type, ds.env())
+            src = str(det.name)
+            type = "geometry"
+            calib_path = find_calib_file(cdir, src, type, run, pbits=1)
+            if calib_path is None:
+                raise ValueError(f"No calibration file found for {det_type} in {cdir}")
+
+        return calib_path
+
+    return validator(calib_path_name, always=True, allow_reuse=True)(_validate_calib_path)
