@@ -138,7 +138,7 @@ class BayesGeomOpt:
         runner = next(ds.runs())
         evt = runner.event(runner.times()[0])
         try:
-            photon_energy = psana.Detector('EBeam').get(evt).ebeamPhotonEnergy()
+            photon_energy = psana.Detector("EBeam").get(evt).ebeamPhotonEnergy()
         except AttributeError as e:
             logger.warning("Event lacking an ebeamPhotonEnergy value.")
         if photon_energy is None or np.isinf(photon_energy):
