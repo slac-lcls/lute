@@ -188,7 +188,7 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        threshold = np.percentile(powder, 95)
+        threshold = np.percentile(powder, 99)
         logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
