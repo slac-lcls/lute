@@ -934,14 +934,17 @@ class OptimizePyFAIGeometry(Task):
                         if self._task_parameters.det_type == "Rayonix":
                             powder: npt.NDArray[np.float64] = h5[
                                 f"Sums/{self._task_parameters.det_type}_calib_skipFirst_max"
-                            ][()]   
+                            ][()]
                         powder: npt.NDArray[np.float64] = h5[
                             f"Sums/{self._task_parameters.det_type}_calib_max"
                         ][()]
                     except KeyError:
-                        logger.warning('No "Max" powder found in SmallData. Using "Sum" powder.')
+                        logger.warning(
+                            'No "Max" powder found in SmallData. Using "Sum" powder.'
+                        )
                         powder: npt.NDArray[np.float64] = h5[
-                            f"Sums/{self._task_parameters.det_type}_calib"][()]
+                            f"Sums/{self._task_parameters.det_type}_calib"
+                        ][()]
                     if powder.shape != shape:
                         powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
         return powder
