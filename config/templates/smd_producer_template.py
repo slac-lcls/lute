@@ -431,7 +431,24 @@ def define_dets(run):
             if detname in svd:
                 det.addFunc(svdFit(**svd[detname]))
 
+            {%- if detSumAlgos is defined %}
+              {%- for detector, det_algos in detSumAlgos.items() %}
+                {%- if detector == "all" %}
+                  {%- for algo in det_algos %}
+            det.storeSum(sumAlgo='{{ algo }}')
+                  {% endfor %}
+                {% else %}
+            if detname.find("{{ detector }}") >= 0:
+                  {% for algo in det_algos %}
+                det.storeSum(sumAlgo='{{ algo }}')
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% else %}
             det.storeSum(sumAlgo='calib')
+            det.storeSum(sumAlgo='calib_dropped')
+            det.storeSum(sumAlgo='calib_dropped_square')
+            {% endif %}
             #det.storeSum(sumAlgo='calib_img')
             dets.append(det)
     return dets
