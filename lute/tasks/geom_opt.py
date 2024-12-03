@@ -189,11 +189,11 @@ class BayesGeomOpt:
             Powder image
         """
         mean = np.mean(powder)
-        threshold = mean + 10 * np.std(powder)
+        threshold = mean + 5 * np.std(powder)
         logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
-        Imins = np.arange(95, 100, 0.1)
+        Imins = np.arange(95, 100, 0.01)
         for Imin in Imins:
             threshold = np.percentile(powder[nice_pix], Imin)
             signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
@@ -653,7 +653,6 @@ class BayesGeomOpt:
         ax.plot(distances, scores)
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
-        ax.legend(fontsize="x-small")
         ax.set_title("Number of Control Points vs Distance")
 
     def residual_distance_scan(self, distances, ax):
