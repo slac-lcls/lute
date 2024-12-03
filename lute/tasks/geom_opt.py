@@ -188,11 +188,12 @@ class BayesGeomOpt:
         powder : np.ndarray
             Powder image
         """
-        threshold = np.percentile(powder, 99.9)
+        mean = np.mean(powder)
+        threshold = mean + 10 * np.std(powder)
         logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
-        Imins = np.arange(98, 100, 0.1)
+        Imins = np.arange(95, 100, 0.1)
         for Imin in Imins:
             threshold = np.percentile(powder[nice_pix], Imin)
             signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
@@ -696,8 +697,7 @@ class BayesGeomOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        mean = np.mean(powder)
-        threshold = np.mean(powder) + 5 * np.std(powder)
+        threshold = np.mean(powder) + 10 * np.std(powder)
         nice_pix = powder < threshold
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
