@@ -144,7 +144,7 @@ class BayesGeomOpt:
         if photon_energy is None or np.isinf(photon_energy):
             self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         else:
-            self.wavelength = 1.23984197386209e-09 / photon_energy
+            self.wavelength = 1.23984197386209e-06 / photon_energy
         self.photon_energy = photon_energy
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
