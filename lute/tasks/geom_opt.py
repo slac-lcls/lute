@@ -189,7 +189,7 @@ class BayesGeomOpt:
             Powder image
         """
         mean = np.mean(powder)
-        threshold = mean + 6 * np.std(powder)
+        threshold = mean + 5 * np.std(powder)
         logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
@@ -201,7 +201,7 @@ class BayesGeomOpt:
             noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
             noise = np.std(noise_pixels)
             SNRs.append(signal / noise)
-        self.q = round(Imins[np.argmax(SNRs)], 1)
+        self.q = round(Imins[np.argmax(SNRs)], 2)
         Imin = np.percentile(powder[nice_pix], self.q)
         self.Imin = Imin
         self.powder = powder
