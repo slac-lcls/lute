@@ -9,12 +9,31 @@ __all__ = ["DimpleSolveParameters", "RunSHELXCParameters"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any, ClassVar
 
-from pydantic import Field, validator, PositiveFloat, PositiveInt, root_validator
+from pydantic import PositiveFloat, PositiveInt
 
-from lute.io.models.base import ThirdPartyParameters
+from lute.io.models.base import (
+    ThirdPartyParameters,
+    ThirdPartyParametersConfig,
+    PYDANTIC_V2,
+    Field,
+)
 from lute.io.db import read_latest_db_entry
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import model_validator, field_validator  # type: ignore
+else:
+    from pydantic import root_validator, validator
+
+
+class DimpleSolveParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""
 
 
 class DimpleSolveParameters(ThirdPartyParameters):
@@ -25,14 +44,20 @@ class DimpleSolveParameters(ThirdPartyParameters):
     https://ccp4.github.io/dimple/
     """
 
-    class Config(ThirdPartyParameters.Config):
-        """Identical to super-class Config but includes a result."""
+    if PYDANTIC_V2:
+        model_config = DimpleSolveParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = DimpleSolveParametersConfig
 
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
-
-        result_from_params: str = ""
-        """Defines a result from the parameters. Use a validator to do so."""
+    if PYDANTIC_V2:
+        in_file_validator = field_validator("in_file")
+        out_dir_validator = field_validator("out_dir")
+        result_validator = model_validator(mode="after")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        out_dir_validator = validator("out_dir", always=True)
+        result_validator = root_validator(pre=False)
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/dimple",
@@ -40,13 +65,26 @@ class DimpleSolveParameters(ThirdPartyParameters):
         flag_type="",
     )
     # Positional requirements - all required.
-    in_file: str = Field(
-        "",
-        description="Path to input mtz.",
-        flag_type="",
+    in_file: str = (
+        Field(
+            "",
+            description="Path to input mtz.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to input mtz.",
+            flag_type="",
+        )
     )
     pdb: str = Field("", description="Path to a PDB.", flag_type="")
-    out_dir: str = Field("", description="Output DIRECTORY.", flag_type="")
+    out_dir: str = (
+        Field("", description="Output DIRECTORY.", flag_type="", validate_default=True)
+        if PYDANTIC_V2
+        else Field("", description="Output DIRECTORY.", flag_type="")
+    )
     # Most used options
     mr_thresh: PositiveFloat = Field(
         0.4,
@@ -187,7 +225,8 @@ class DimpleSolveParameters(ThirdPartyParameters):
         rename_param="ItoF-prog",
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             get_hkl_file: Optional[str] = read_latest_db_entry(
@@ -197,7 +236,8 @@ class DimpleSolveParameters(ThirdPartyParameters):
                 return get_hkl_file
         return in_file
 
-    @validator("out_dir", always=True)
+    @out_dir_validator
+    @classmethod
     def validate_out_dir(cls, out_dir: str, values: Dict[str, Any]) -> str:
         if out_dir == "":
             get_hkl_file: Optional[str] = read_latest_db_entry(
@@ -207,7 +247,7 @@ class DimpleSolveParameters(ThirdPartyParameters):
                 return os.path.dirname(get_hkl_file)
         return out_dir
 
-    @root_validator(pre=False)
+    @result_validator
     def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         out_dir: str = values["out_dir"]
         result: str
@@ -228,6 +268,11 @@ class RunSHELXCParameters(ThirdPartyParameters):
     https://www.ccp4.ac.uk/html/crank.html
     """
 
+    if PYDANTIC_V2:
+        in_file_validator = field_validator("in_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/shelxc",
         description="CCP4 SHELXC. Generates input files for SHELXD/SHELXE.",
@@ -236,13 +281,23 @@ class RunSHELXCParameters(ThirdPartyParameters):
     placeholder: str = Field(
         "xx", description="Placeholder filename stem.", flag_type=""
     )
-    in_file: str = Field(
-        "",
-        description="Input file for SHELXC with reflections AND proper records.",
-        flag_type="",
+    in_file: str = (
+        Field(
+            "",
+            description="Input file for SHELXC with reflections AND proper records.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Input file for SHELXC with reflections AND proper records.",
+            flag_type="",
+        )
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             # get_hkl needed to be run to produce an XDS format file...

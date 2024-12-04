@@ -26,33 +26,52 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, List, Optional, Dict, Any, Tuple
+from typing import Union, List, Optional, Dict, Any, Tuple, ClassVar
 
-from pydantic import (
-    BaseModel,
-    HttpUrl,
-    PositiveInt,
-    NonNegativeInt,
+from pydantic import BaseModel, HttpUrl, PositiveInt, NonNegativeInt
+
+from lute.io.models.base import (
+    TaskParameters,
+    ThirdPartyParameters,
+    TemplateConfig,
+    ThirdPartyParametersConfig,
+    PYDANTIC_V2,
     Field,
-    root_validator,
-    validator,
 )
-
-from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
 from lute.io.models.validators import validate_smd_path, template_parameter_validator
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import model_validator, field_validator  # type: ignore
+else:
+    from pydantic import root_validator, validator
+
+
+class SubmitSMDParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
     """Parameters for running smalldata to produce reduced HDF5 files."""
 
-    class Config(ThirdPartyParameters.Config):
-        """Identical to super-class Config but includes a result."""
+    if PYDANTIC_V2:
+        model_config = SubmitSMDParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = SubmitSMDParametersConfig
 
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
-
-        result_from_params: str = ""
-        """Defines a result from the parameters. Use a validator to do so."""
+    if PYDANTIC_V2:
+        producer_validator = field_validator("producer")
+        producer_template_validator = field_validator("lute_template_cfg")
+        result_validator = model_validator(mode="after")
+    else:
+        producer_validator = validator("producer", always=True)
+        producer_template_validator = validator("lute_template_cfg", always=True)
+        result_validator = root_validator(pre=False)
 
     class ProducerParameters(BaseModel):
         class ROIParams(BaseModel):
@@ -315,8 +334,19 @@ class SubmitSMDParameters(ThirdPartyParameters):
         description="Python option to execute a module's contents as __main__ module.",
         flag_type="-",
     )
-    producer: str = Field(
-        "", description="Path to the SmallData producer Python script.", flag_type=""
+    producer: str = (
+        Field(
+            "",
+            description="Path to the SmallData producer Python script.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to the SmallData producer Python script.",
+            flag_type="",
+        )
     )
     run: str = Field(
         os.environ.get("RUN_NUM", ""), description="DAQ Run Number.", flag_type="--"
@@ -399,17 +429,32 @@ class SubmitSMDParameters(ThirdPartyParameters):
         False, description="Whether to not use archiver data.", flag_type="--"
     )
 
-    lute_template_cfg: TemplateConfig = TemplateConfig(
-        template_name="smd_producer_template.py", output_path=""
+    lute_template_cfg: TemplateConfig = (
+        Field(
+            TemplateConfig(template_name="smd_producer_template.py", output_path=""),
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else TemplateConfig(template_name="smd_producer_template.py", output_path="")
     )
 
-    producer_parameters: Optional[ProducerParameters] = Field(
-        None,
-        description="Optional parameters to fill in a producer file.",
-        flag_type="",  # Does nothing since always None by time it's seen by Task
+    producer_parameters: Optional[ProducerParameters] = (
+        Field(
+            None,
+            description="Optional parameters to fill in a producer file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            None,
+            description="Optional parameters to fill in a producer file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+        )
     )
 
-    @validator("producer", always=True)
+    @producer_validator
+    @classmethod
     def validate_producer_path(cls, producer: str, values: Dict[str, Any]) -> str:
         if producer == "":
             exp: str = values["lute_config"].experiment
@@ -423,7 +468,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
             return path
         return producer
 
-    @validator("lute_template_cfg", always=True)
+    @producer_template_validator
+    @classmethod
     def use_producer(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
@@ -431,7 +477,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
             lute_template_cfg.output_path = values["producer"]
         return lute_template_cfg
 
-    @root_validator(pre=False)
+    @result_validator
+    @classmethod
     def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         exp: str = values["lute_config"].experiment
         hutch: str = exp[:3]
