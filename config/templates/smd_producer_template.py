@@ -1002,7 +1002,7 @@ dets_time_start = (start_setup_dets-start_job)/60
 dets_time_end = (end_setup_dets-start_job)/60
 evt_time_start = (start_evt_loop-start_job)/60
 evt_time_end = (end_evt_loop-start_job)/60
-logger.debug(f"##### Timing benchmarks core {ds.rank}: ##### """)
+logger.debug(f"##### Timing benchmarks core {ds.rank}: #####")
 logger.debug(f'Setup dets: \n\tStart: {dets_time_start:.2f} min\n\tEnd: {dets_time_end:.2f} min')
 logger.debug(f'\tDuration:{dets_time_end-dets_time_start:.2f}')
 logger.debug(f'Event loop: \n\tStart: {evt_time_start:.2f} min\n\tEnd: {evt_time_end:.2f} min')
@@ -1018,6 +1018,7 @@ if ds.rank==0:
 #finishing up here....
 logger.debug('rank {0} on {1} is finished'.format(ds.rank, hostname))
 small_data.save()
+small_data.close()
 if os.environ.get('ARP_JOB_ID', None) is not None:
     if ds.size > 1:
         if ds.rank == 0:
@@ -1053,7 +1054,7 @@ if args.postRuntable and ds.rank==0:
     else:
         with open('/cds/home/opr/%s/forElogPost.txt'%user,'r') as reader:
             answer = reader.readline()
-    r = requests.post(ws_url, params={"run_num": args.run}, json=runtable_data, 
+    r = requests.post(ws_url, params={"run_num": args.run}, json=runtable_data,
                       auth=HTTPBasicAuth(args.experiment[:3]+'opr', answer[:-1]))
     print(r)
     if det_presence!={}:
