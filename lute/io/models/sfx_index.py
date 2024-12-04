@@ -621,7 +621,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
 
         if PYDANTIC_V2:
             model_config = PhilParametersConfig()
-            Config: ClassVar = model_config # type: ignore
+            Config: ClassVar = model_config  # type: ignore
         else:
             Config = PhilParametersConfig
 
