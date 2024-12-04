@@ -27,7 +27,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union, Optional, ClassVar, Callable, no_type_check
+from typing import Dict, Any, Union, Optional, ClassVar, no_type_check
 
 import pydantic
 from pydantic import BaseModel, PositiveInt, PrivateAttr
@@ -46,7 +46,7 @@ if PYDANTIC_V2:
     def Field(
         default: "Any" = PydanticUndefined,
         *,
-        default_factory: "Callable[[], Any] | Callable[[dict[str, Any]], Any] | None" = PydanticUndefined,
+        default_factory: "Callable[[], Any] | Callable[[dict[str, Any]], Any] | None" = PydanticUndefined,  # noqa: F821
         alias: "str | None" = PydanticUndefined,
         alias_priority: "int | None" = PydanticUndefined,
         validation_alias: "str | AliasPath | AliasChoices | None" = PydanticUndefined,  # noqa: F821
@@ -160,10 +160,6 @@ class AnalysisHeader(BaseModel):
         else Field("", description="Main working directory for LUTE.")
     )
 
-    # Widen type for validators due to version issues
-    work_dir_validator: Callable
-    run_validator: Callable
-    experiment_validator: Callable
     if PYDANTIC_V2:
         work_dir_validator = field_validator("work_dir")
         run_validator = field_validator("run")
@@ -415,7 +411,6 @@ class ThirdPartyParameters(TaskParameters):
     _unknown_template_params: Dict[str, Any] = PrivateAttr()
     # lute_template_cfg: TemplateConfig
 
-    extra_fields_validator: Callable
     if PYDANTIC_V2:
         extra_fields_validator = model_validator(mode="after")
     else:
@@ -435,8 +430,14 @@ class ThirdPartyParameters(TaskParameters):
             },
         }
         new_values: Dict[str, Any] = {}
+        fields: Dict[str, Any]
+        if PYDANTIC_V2:
+            fields = cls.model_fields
+            # fields = cls.__fields__
+        else:
+            fields = cls.__fields__
         for key in values:
-            if key not in cls.__fields__:
+            if key not in fields:
                 new_values[key] = TemplateParameters(params=values[key])
                 param_schema: Dict[str, Any] = param_schema_template.copy()
                 param_schema["title"] = key

@@ -11,9 +11,14 @@ __author__ = "Gabriel Dorlhiac"
 import os
 from typing import Dict, Any, Optional
 
-from pydantic import validator
-
 from lute.io.db import read_latest_db_entry
+from lute.io.models.base import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import field_validator # type: ignore
+else:
+    from pydantic import validator
 
 
 def template_parameter_validator(template_params_name: str):
@@ -40,9 +45,12 @@ def template_parameter_validator(template_params_name: str):
                 values[param] = value
         return None
 
-    return validator(template_params_name, always=True, allow_reuse=True)(
-        _template_parameter_validator
-    )
+    if PYDANTIC_V2:
+        return field_validator(template_params_name)(_template_parameter_validator)
+    else:
+        return validator(template_params_name, always=True, allow_reuse=True)(
+            _template_parameter_validator
+        )
 
 
 def validate_smd_path(smd_path_name: str):
@@ -67,4 +75,9 @@ def validate_smd_path(smd_path_name: str):
 
         return smd_path
 
-    return validator(smd_path_name, always=True, allow_reuse=True)(_validate_smd_path)
+    if PYDANTIC_V2:
+        return field_validator(smd_path_name)(_validate_smd_path)
+    else:
+        return validator(smd_path_name, always=True, allow_reuse=True)(
+            _validate_smd_path
+        )
