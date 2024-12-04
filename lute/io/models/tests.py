@@ -27,16 +27,24 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, ClassVar
 
-from pydantic import (
-    BaseModel,
+from pydantic import BaseModel
+
+from lute.io.models.base import (
+    TaskParameters,
+    ThirdPartyParameters,
+    TaskParametersConfig,
+    PYDANTIC_V2,
     Field,
-    validator,
 )
+from lute.io.db import read_latest_db_entry
 
-from .base import TaskParameters, ThirdPartyParameters
-from ..db import read_latest_db_entry
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import field_validator  # type: ignore
+else:
+    from pydantic import validator
 
 
 class TestParameters(TaskParameters):
@@ -65,7 +73,7 @@ class TestBinaryParameters(ThirdPartyParameters):
         "/sdf/home/d/dorlhiac/test_tasks/test_threads",
         description="Multi-threaded test binary.",
     )
-    p_arg1: int = Field(1, descriptions="Number of threads.")
+    p_arg1: int = Field(1, description="Number of threads.")
 
 
 class TestBinaryErrParameters(ThirdPartyParameters):
@@ -85,20 +93,37 @@ class TestSocketParameters(TaskParameters):
     num_arrays: int = Field(10, description="Number of arrays to send via socket.")
 
 
+class TestWriteOutputParametersConfig(TaskParametersConfig):
+    set_result: bool = True
+
+
 class TestWriteOutputParameters(TaskParameters):
-    class Config(TaskParameters.Config):
-        set_result: bool = True
+
+    if PYDANTIC_V2:
+        model_config = TestWriteOutputParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = TestWriteOutputParametersConfig
 
     outfile_name: str = Field(
-        "test_output.txt", description="Outfile name without full path.", is_result=True
+        "test_output.txt",
+        description="Outfile name without full path.",
+        is_result=True,
     )
+
     num_vals: int = Field(100, description='Number of values to "process"')
 
 
 class TestReadOutputParameters(TaskParameters):
     in_file: str = Field("", description="File to read in. (Full path)")
 
-    @validator("in_file", always=True)
+    if PYDANTIC_V2:
+        in_file_validator = field_validator("in_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             filename: Optional[str] = read_latest_db_entry(
