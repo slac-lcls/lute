@@ -20,13 +20,33 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any, ClassVar
 
-from pydantic import Field, validator, BaseModel
+from pydantic import BaseModel
 
 from lute.io.db import read_latest_db_entry
-from lute.io.models.base import ThirdPartyParameters, TemplateConfig
+from lute.io.models.base import (
+    ThirdPartyParameters,
+    TemplateConfig,
+    ThirdPartyParametersConfig,
+    Field,
+    PYDANTIC_V2,
+)
 from lute.io.models.validators import template_parameter_validator
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import field_validator # type: ignore
+else:
+    from pydantic import validator
+
+
+class MergePartialatorParametersConfig(ThirdPartyParametersConfig):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
 
 
 class MergePartialatorParameters(ThirdPartyParameters):
@@ -37,27 +57,47 @@ class MergePartialatorParameters(ThirdPartyParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(ThirdPartyParameters.Config):
-        long_flags_use_eq: bool = True
-        """Whether long command-line arguments are passed like `--long=arg`."""
+    if PYDANTIC_V2:
+        model_config = MergePartialatorParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = MergePartialatorParametersConfig
 
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        in_file_validator = field_validator("in_file")
+        out_file_validator = field_validator("out_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        out_file_validator = validator("out_file", always=True)
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/partialator",
         description="CrystFEL's Partialator binary.",
         flag_type="",
     )
-    in_file: Optional[str] = Field(
-        "", description="Path to input stream.", flag_type="-", rename_param="i"
+    in_file: Optional[str] = (
+        Field("", description="Path to input stream.", flag_type="-", rename_param="i")
+        if PYDANTIC_V2
+        else Field(
+            "", description="Path to input stream.", flag_type="-", rename_param="i"
+        )
     )
-    out_file: str = Field(
-        "",
-        description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
-        is_result=True,
+    out_file: str = (
+        Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
     )
     symmetry: str = Field(description="Point group symmetry.", flag_type="--")
     niter: Optional[int] = Field(
@@ -191,7 +231,8 @@ class MergePartialatorParameters(ThirdPartyParameters):
         rename_param="harvest-file",
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             stream_file: Optional[str] = read_latest_db_entry(
@@ -203,7 +244,8 @@ class MergePartialatorParameters(ThirdPartyParameters):
                 return stream_file
         return in_file
 
-    @validator("out_file", always=True)
+    @out_file_validator
+    @classmethod
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             in_file: str = values["in_file"]
@@ -215,18 +257,32 @@ class MergePartialatorParameters(ThirdPartyParameters):
         return out_file
 
 
+class MergeCCTBXXFELParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = False
+    """Whether the Executor should mark a specified parameter as a result."""
+
+
+class PhilParametersConfig(dict):
+    extra: ClassVar[str] = "allow"
+
+
 class MergeCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for merging with cctbx.xfel."""
 
-    class Config(ThirdPartyParameters.Config):
-        set_result: bool = False
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config: ClassVar = MergeCCTBXXFELParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = MergeCCTBXXFELParametersConfig
 
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        class Config(BaseModel.Config):  # type: ignore
-            extra: str = "allow"
+        if PYDANTIC_V2:
+            model_config = PhilParametersConfig()
+            Config: ClassVar = model_config  # type: ignore
+        else:
+            Config = PhilParametersConfig
 
         # Generic input settings: input_
         input_path: str = Field(
@@ -344,37 +400,83 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         description="CCTBX merge program.",
         flag_type="",
     )
-    phil_file: str = Field(
-        "",
-        description="Location of the input settings ('phil') file.",
-        flag_type="",
+    phil_file: str = (
+        Field(
+            "",
+            description="Location of the input settings ('phil') file.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Location of the input settings ('phil') file.",
+            flag_type="",
+        )
     )
-    phil_parameters: Optional[PhilParameters] = Field(
-        None,
-        description="Optional template parameters to fill in a CCTBX phil file.",
-        flag_type="",  # Does nothing since always None by time it's seen by Task
+    phil_parameters: Optional[PhilParameters] = (
+        Field(
+            None,
+            description="Optional template parameters to fill in a CCTBX phil file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            None,
+            description="Optional template parameters to fill in a CCTBX phil file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+        )
     )
-    lute_template_cfg: TemplateConfig = Field(
-        TemplateConfig(
-            template_name="cctbx_merge.phil",
-            output_path="",
-        ),
-        description="Template information for the cctbx_merge file.",
+    lute_template_cfg: TemplateConfig = (
+        Field(
+            TemplateConfig(
+                template_name="cctbx_merge.phil",
+                output_path="",
+            ),
+            description="Template information for the cctbx_merge file.",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            TemplateConfig(
+                template_name="cctbx_merge.phil",
+                output_path="",
+            ),
+            description="Template information for the cctbx_merge file.",
+        )
     )
 
-    @validator("phil_file", always=True)
+    if PYDANTIC_V2:
+        phil_file_validator = field_validator("phil_file")
+        phil_template_validator = field_validator("lute_template_cfg")
+    else:
+        phil_file_validator = validator("phil_file", always=True)
+        phil_template_validator = validator("lute_template_cfg", always=True)
+
+    @phil_file_validator
+    @classmethod
     def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
         if phil_file == "":
             return f"{values['lute_config'].work_dir}/cctbx_merge.phil"
         return phil_file
 
-    @validator("lute_template_cfg", always=True)
+    @phil_template_validator
+    @classmethod
     def set_phil_template_path(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
         if lute_template_cfg.output_path == "":
             lute_template_cfg.output_path = values["phil_file"]
         return lute_template_cfg
+
+
+class CompareHKLParametersConfig(ThirdPartyParametersConfig):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
 
 
 class CompareHKLParameters(ThirdPartyParameters):
@@ -385,30 +487,68 @@ class CompareHKLParameters(ThirdPartyParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(ThirdPartyParameters.Config):
-        long_flags_use_eq: bool = True
-        """Whether long command-line arguments are passed like `--long=arg`."""
+    if PYDANTIC_V2:
+        model_config = CompareHKLParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = CompareHKLParametersConfig
 
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        in_files_validator = field_validator("in_files")
+        cell_file_validator = field_validator("cell_file")
+        symmetry_validator = field_validator("symmetry")
+        shell_file_validator = field_validator("shell_file")
+    else:
+        in_files_validator = validator("in_files", always=True)
+        cell_file_validator = validator("cell_file", always=True)
+        symmetry_validator = validator("symmetry", always=True)
+        shell_file_validator = validator("shell_file", always=True)
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/compare_hkl",
         description="CrystFEL's reflection comparison binary.",
         flag_type="",
     )
-    in_files: Optional[str] = Field(
-        "",
-        description="Path to input HKLs. Space-separated list of 2. Use output of partialator e.g.",
-        flag_type="",
+    in_files: Optional[str] = (
+        Field(
+            "",
+            description="Path to input HKLs. Space-separated list of 2. Use output of partialator e.g.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to input HKLs. Space-separated list of 2. Use output of partialator e.g.",
+            flag_type="",
+        )
     )
     ## Need mechanism to set is_result=True ...
-    symmetry: str = Field("", description="Point group symmetry.", flag_type="--")
-    cell_file: str = Field(
-        "",
-        description="Path to a file containing unit cell information (PDB or CrystFEL format).",
-        flag_type="-",
-        rename_param="p",
+    symmetry: str = (
+        Field(
+            "",
+            description="Point group symmetry.",
+            flag_type="--",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field("", description="Point group symmetry.", flag_type="--")
+    )
+    cell_file: str = (
+        Field(
+            "",
+            description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+            flag_type="-",
+            rename_param="p",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+            flag_type="-",
+            rename_param="p",
+        )
     )
     fom: str = Field(
         "Rsplit", description="Specify figure of merit to calculate.", flag_type="--"
@@ -421,12 +561,23 @@ class CompareHKLParameters(ThirdPartyParameters):
     #    flag_type="-",
     #    rename_param="u",
     # )
-    shell_file: str = Field(
-        "",
-        description="Write the statistics in resolution shells to a file.",
-        flag_type="--",
-        rename_param="shell-file",
-        is_result=True,
+    shell_file: str = (
+        Field(
+            "",
+            description="Write the statistics in resolution shells to a file.",
+            flag_type="--",
+            rename_param="shell-file",
+            is_result=True,
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Write the statistics in resolution shells to a file.",
+            flag_type="--",
+            rename_param="shell-file",
+            is_result=True,
+        )
     )
     ignore_negs: bool = Field(
         False,
@@ -463,7 +614,8 @@ class CompareHKLParameters(ThirdPartyParameters):
         flag_type="--",
     )
 
-    @validator("in_files", always=True)
+    @in_files_validator
+    @classmethod
     def validate_in_files(cls, in_files: str, values: Dict[str, Any]) -> str:
         if in_files == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -474,7 +626,8 @@ class CompareHKLParameters(ThirdPartyParameters):
                 return hkls
         return in_files
 
-    @validator("cell_file", always=True)
+    @cell_file_validator
+    @classmethod
     def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -> str:
         if cell_file == "":
             idx_cell_file: Optional[str] = read_latest_db_entry(
@@ -487,7 +640,8 @@ class CompareHKLParameters(ThirdPartyParameters):
                 return idx_cell_file
         return cell_file
 
-    @validator("symmetry", always=True)
+    @symmetry_validator
+    @classmethod
     def validate_symmetry(cls, symmetry: str, values: Dict[str, Any]) -> str:
         if symmetry == "":
             partialator_sym: Optional[str] = read_latest_db_entry(
@@ -497,7 +651,8 @@ class CompareHKLParameters(ThirdPartyParameters):
                 return partialator_sym
         return symmetry
 
-    @validator("shell_file", always=True)
+    @shell_file_validator
+    @classmethod
     def validate_shell_file(cls, shell_file: str, values: Dict[str, Any]) -> str:
         if shell_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -510,6 +665,14 @@ class CompareHKLParameters(ThirdPartyParameters):
         return shell_file
 
 
+class ManipulateHKLParametersConfig(ThirdPartyParametersConfig):
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
+
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+
 class ManipulateHKLParameters(ThirdPartyParameters):
     """Parameters for CrystFEL's `get_hkl` for manipulating lists of reflections.
 
@@ -520,36 +683,72 @@ class ManipulateHKLParameters(ThirdPartyParameters):
     https://www.desy.de/~twhite/crystfel/manual-partialator.html
     """
 
-    class Config(ThirdPartyParameters.Config):
-        long_flags_use_eq: bool = True
-        """Whether long command-line arguments are passed like `--long=arg`."""
+    if PYDANTIC_V2:
+        model_config = ManipulateHKLParametersConfig()
+        Config: ClassVar = model_config
+    else:
+        Config = ManipulateHKLParametersConfig
 
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        in_file_validator = field_validator("in_file")
+        out_file_validator = field_validator("out_file")
+        cell_file_validator = field_validator("cell_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        out_file_validator = validator("out_file", always=True)
+        cell_file_validator = validator("cell_file", always=True)
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/get_hkl",
         description="CrystFEL's reflection manipulation binary.",
         flag_type="",
     )
-    in_file: str = Field(
-        "",
-        description="Path to input HKL file.",
-        flag_type="-",
-        rename_param="i",
+    in_file: str = (
+        Field(
+            "",
+            description="Path to input HKL file.",
+            flag_type="-",
+            rename_param="i",
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to input HKL file.",
+            flag_type="-",
+            rename_param="i",
+        )
     )
-    out_file: str = Field(
-        "",
-        description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
-        is_result=True,
+    out_file: str = (
+        Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
     )
-    cell_file: str = Field(
-        "",
-        description="Path to a file containing unit cell information (PDB or CrystFEL format).",
-        flag_type="-",
-        rename_param="p",
+    cell_file: str = (
+        Field(
+            "",
+            description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+            flag_type="-",
+            rename_param="p",
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to a file containing unit cell information (PDB or CrystFEL format).",
+            flag_type="-",
+            rename_param="p",
+        )
     )
     output_format: str = Field(
         "mtz",
@@ -625,7 +824,8 @@ class ManipulateHKLParameters(ThirdPartyParameters):
         flag_type="--",
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -635,7 +835,8 @@ class ManipulateHKLParameters(ThirdPartyParameters):
                 return partialator_file
         return in_file
 
-    @validator("out_file", always=True)
+    @out_file_validator
+    @classmethod
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             partialator_file: Optional[str] = read_latest_db_entry(
@@ -647,7 +848,8 @@ class ManipulateHKLParameters(ThirdPartyParameters):
                 return mtz_out
         return out_file
 
-    @validator("cell_file", always=True)
+    @cell_file_validator
+    @classmethod
     def validate_cell_file(cls, cell_file: str, values: Dict[str, Any]) -> str:
         if cell_file == "":
             idx_cell_file: Optional[str] = read_latest_db_entry(
