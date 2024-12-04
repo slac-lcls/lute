@@ -36,7 +36,7 @@ from lute.io.models.validators import template_parameter_validator
 
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
-    from pydantic import field_validator # type: ignore
+    from pydantic import field_validator  # type: ignore
 else:
     from pydantic import validator
 
