@@ -1,8 +1,4 @@
-"""Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
-
-This script is submitted by the ARP to the batch nodes. It triggers Airflow to
-begin running the tasks of the specified directed acyclic graph (DAG).
-"""
+"""Script to run functional tests of various LUTE workflows."""
 
 __author__ = "Gabriel Dorlhiac"
 
@@ -25,7 +21,7 @@ from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
 # Requests, urllib have lots of debug statements. Only set level for this logger
-logger: logging.Logger = logging.getLogger("Launch_Airflow")
+logger: logging.Logger = logging.getLogger("Launch_Func_Tests")
 handler: logging.Handler = logging.StreamHandler()
 formatter: logging.Formatter = logging.Formatter(logging.BASIC_FORMAT)
 handler.setFormatter(formatter)
@@ -389,10 +385,6 @@ def run_workflow(
         auth=auth,
     )
     resp.raise_for_status()
-    dag_run_id: str = dag_run_data["dag_run_id"]
-    logger.info(f"Submitted DAG (Workflow): {wf_name}\nDAG_RUN_ID: {dag_run_id}")
-    dag_state: str = resp.json()["state"]
-    logger.info(f"DAG is {dag_state}")
 
     # Get Task information
     task_ids: List[str]
@@ -411,6 +403,18 @@ def run_workflow(
         f"Contains Managed Tasks (alphabetical, not execution order):\n\t- {task_id_str}"
     )
 
+    # Submit again... hack around Airflow not liking these dynamic DAGs
+    dag_run_data["dag_run_id"] = str(uuid.uuid4())
+    resp = requests.post(
+        f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
+        json=dag_run_data,
+        auth=auth,
+    )
+    resp.raise_for_status()
+    dag_run_id: str = dag_run_data["dag_run_id"]
+    logger.info(f"Submitted DAG (Workflow): {wf_name}\nDAG_RUN_ID: {dag_run_id}")
+    dag_state: str = resp.json()["state"]
+    logger.info(f"DAG is {dag_state}")
     # Enter loop for checking status
     time.sleep(1)
     # Same as run_dag endpoint, but needs to include the dag_run_id on the end

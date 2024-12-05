@@ -12,7 +12,7 @@ work_dir: "/path/to/work/dir"
 SubmitSMD:
   SubmitSMD:
   # Command line arguments
-  producer: "{{ work_dir }}/smalldata_tools/producers/smd_producer.py"
+  producer: "{{ work_dir }}/smalldata_tools/lcls1_producers/smd_producer.py"
   run: "{{ run }}"
   experiment: "{{ experiment }}"
   #stn: 0
