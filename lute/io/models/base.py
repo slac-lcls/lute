@@ -27,7 +27,18 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union, Optional, ClassVar, no_type_check
+from typing import (
+    Set,
+    Dict,
+    Any,
+    Union,
+    Optional,
+    ClassVar,
+    no_type_check,
+    Callable,
+    cast,
+    Literal,
+)
 
 import pydantic
 from pydantic import BaseModel, PositiveInt, PrivateAttr
@@ -40,7 +51,8 @@ if PYDANTIC_V2:
     # Ignore mypy and ruff for now since type checking against pydantic 1.10
     from pydantic import model_validator, field_validator  # type: ignore
     from pydantic_core import PydanticUndefined  # type: ignore
-    from pydantic_settings import BaseSettings  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
+    from pydantic_settings import BaseSettings
 
     @no_type_check  # This function causes many headaches with mypy... Ignore
     def Field(
@@ -121,9 +133,20 @@ if PYDANTIC_V2:
         )
 
 else:
-    from pydantic import BaseSettings, root_validator, validator
+    from pydantic import root_validator, validator
+    from pydantic import BaseSettings  # type: ignore[no-redef]
 
     Field = PydanticField
+
+LUTE_PARAMETER_CONFIG_KEYS: Set[str] = {
+    "run_directory",
+    "set_result",
+    "result_from_params",
+    "result_summary",
+    "impl_schemas",
+    "short_flags_use_eq",
+    "long_flags_use_eq",
+}
 
 
 class AnalysisHeader(BaseModel):
@@ -161,9 +184,9 @@ class AnalysisHeader(BaseModel):
     )
 
     if PYDANTIC_V2:
-        work_dir_validator = field_validator("work_dir")
-        run_validator = field_validator("run")
-        experiment_validator = field_validator("experiment")
+        work_dir_validator: ClassVar = field_validator("work_dir")
+        run_validator: ClassVar = field_validator("run")
+        experiment_validator: ClassVar = field_validator("experiment")
     else:
         work_dir_validator = validator("work_dir", always=True)
         run_validator = validator("run", always=True)
@@ -368,8 +391,14 @@ class TaskParameters(BaseSettings):
     """
 
     if PYDANTIC_V2:
-        model_config: ClassVar[dict] = TaskParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in TaskParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = TaskParametersConfig()
     else:
         Config = TaskParametersConfig
 
@@ -403,8 +432,14 @@ class ThirdPartyParameters(TaskParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = ThirdPartyParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in ThirdPartyParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = ThirdPartyParametersConfig()
     else:
         Config = ThirdPartyParametersConfig
 
@@ -412,9 +447,14 @@ class ThirdPartyParameters(TaskParameters):
     # lute_template_cfg: TemplateConfig
 
     if PYDANTIC_V2:
-        extra_fields_validator = model_validator(mode="after")
+        extra_fields_validator: ClassVar = model_validator(mode="after")
     else:
-        extra_fields_validator = root_validator(pre=False)
+        # Strictly only need pre=False for running, but it doesn't match overload
+        # variants so mypy complains when using pydantic v2. This is functionally
+        # the same for our purposes
+        extra_fields_validator = root_validator(
+            pre=False, skip_on_failure=True, allow_reuse=True
+        )
 
     @extra_fields_validator
     @classmethod
@@ -433,9 +473,10 @@ class ThirdPartyParameters(TaskParameters):
         fields: Dict[str, Any]
         if PYDANTIC_V2:
             fields = cls.model_fields
-            # fields = cls.__fields__
         else:
-            fields = cls.__fields__
+            # For pydantic v2 mypy reports cls.__fields__ as callable it is dict
+            # for both versions of pydantic (deprecated in v2)
+            fields = cast(dict, cls.__fields__)
         for key in values:
             if key not in fields:
                 new_values[key] = TemplateParameters(params=values[key])

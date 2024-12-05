@@ -31,12 +31,14 @@ from lute.io.models.base import (
     ThirdPartyParametersConfig,
     Field,
     PYDANTIC_V2,
+    LUTE_PARAMETER_CONFIG_KEYS,
 )
 from lute.io.models.validators import template_parameter_validator
 
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
-    from pydantic import field_validator  # type: ignore
+    from pydantic import field_validator, ConfigDict  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
 else:
     from pydantic import validator
 
@@ -58,8 +60,14 @@ class MergePartialatorParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = MergePartialatorParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in MergePartialatorParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = MergePartialatorParametersConfig()
     else:
         Config = MergePartialatorParametersConfig
 
@@ -270,8 +278,14 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for merging with cctbx.xfel."""
 
     if PYDANTIC_V2:
-        model_config: ClassVar = MergeCCTBXXFELParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in MergeCCTBXXFELParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = MergeCCTBXXFELParametersConfig()
     else:
         Config = MergeCCTBXXFELParametersConfig
 
@@ -279,8 +293,8 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         """Template parameters for CCTBX phil file."""
 
         if PYDANTIC_V2:
-            model_config = PhilParametersConfig()
-            Config: ClassVar = model_config  # type: ignore
+            model_config = ConfigDict(**PhilParametersConfig())
+            Config: ClassVar = PhilParametersConfig()  # type: ignore
         else:
             Config = PhilParametersConfig
 
@@ -488,8 +502,14 @@ class CompareHKLParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = CompareHKLParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in CompareHKLParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = CompareHKLParametersConfig()
     else:
         Config = CompareHKLParametersConfig
 
@@ -684,8 +704,14 @@ class ManipulateHKLParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = ManipulateHKLParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in ManipulateHKLParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = ManipulateHKLParametersConfig()
     else:
         Config = ManipulateHKLParametersConfig
 

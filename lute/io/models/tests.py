@@ -37,12 +37,14 @@ from lute.io.models.base import (
     TaskParametersConfig,
     PYDANTIC_V2,
     Field,
+    LUTE_PARAMETER_CONFIG_KEYS,
 )
 from lute.io.db import read_latest_db_entry
 
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
     from pydantic import field_validator  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
 else:
     from pydantic import validator
 
@@ -100,8 +102,14 @@ class TestWriteOutputParametersConfig(TaskParametersConfig):
 class TestWriteOutputParameters(TaskParameters):
 
     if PYDANTIC_V2:
-        model_config = TestWriteOutputParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in TestWriteOutputParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = TestWriteOutputParametersConfig()
     else:
         Config = TestWriteOutputParametersConfig
 

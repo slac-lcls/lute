@@ -17,6 +17,7 @@ from lute.io.models.base import (
     ThirdPartyParameters,
     ThirdPartyParametersConfig,
     PYDANTIC_V2,
+    LUTE_PARAMETER_CONFIG_KEYS,
     Field,
 )
 from lute.io.db import read_latest_db_entry
@@ -24,6 +25,7 @@ from lute.io.db import read_latest_db_entry
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
     from pydantic import model_validator, field_validator  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
 else:
     from pydantic import root_validator, validator
 
@@ -45,8 +47,14 @@ class DimpleSolveParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = DimpleSolveParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in DimpleSolveParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = DimpleSolveParametersConfig()
     else:
         Config = DimpleSolveParametersConfig
 

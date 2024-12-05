@@ -12,11 +12,13 @@ from lute.io.models.base import (
     ThirdPartyParametersConfig,
     PYDANTIC_V2,
     Field,
+    LUTE_PARAMETER_CONFIG_KEYS,
 )
 
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
     from pydantic import model_validator, field_validator  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
 else:
     from pydantic import root_validator, validator
 
@@ -34,8 +36,14 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = FindPeaksPyAlgosParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in FindPeaksPyAlgosParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = FindPeaksPyAlgosParametersConfig()
     else:
         Config = FindPeaksPyAlgosParametersConfig
 
@@ -189,8 +197,14 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = FindPeaksPsocakeParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in FindPeaksPsocakeParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = FindPeaksPsocakeParametersConfig()
     else:
         Config = FindPeaksPsocakeParametersConfig
 

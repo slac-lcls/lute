@@ -34,12 +34,14 @@ from lute.io.models.base import (
     TaskParametersConfig,
     PYDANTIC_V2,
     Field,
+    LUTE_PARAMETER_CONFIG_KEYS,
 )
 from lute.io.models.validators import template_parameter_validator
 
 if PYDANTIC_V2:
     # Ignore mypy for now since type checking against pydantic 1.10
-    from pydantic import field_validator  # type: ignore
+    from pydantic import field_validator, ConfigDict  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
 else:
     from pydantic import validator
 
@@ -61,8 +63,14 @@ class IndexCrystFELParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = IndexCrystFELParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in IndexCrystFELParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = IndexCrystFELParametersConfig()
     else:
         Config = IndexCrystFELParametersConfig
 
@@ -512,8 +520,14 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     """
 
     if PYDANTIC_V2:
-        model_config = ConcatenateStreamFilesParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in ConcatenateStreamFilesParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = ConcatenateStreamFilesParametersConfig()
     else:
         Config = ConcatenateStreamFilesParametersConfig
 
@@ -611,8 +625,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for indexing with cctbx.xfel."""
 
     if PYDANTIC_V2:
-        model_config = IndexCCTBXXFELParametersConfig()
-        Config: ClassVar = model_config
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in IndexCCTBXXFELParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = IndexCCTBXXFELParametersConfig()
     else:
         Config = IndexCCTBXXFELParametersConfig
 
@@ -620,8 +640,8 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         """Template parameters for CCTBX phil file."""
 
         if PYDANTIC_V2:
-            model_config = PhilParametersConfig()
-            Config: ClassVar = model_config  # type: ignore
+            model_config = ConfigDict(**PhilParametersConfig())
+            Config: ClassVar = PhilParametersConfig()  # type: ignore
         else:
             Config = PhilParametersConfig
 
