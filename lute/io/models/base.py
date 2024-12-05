@@ -35,9 +35,7 @@ from typing import (
     Optional,
     ClassVar,
     no_type_check,
-    Callable,
     cast,
-    Literal,
 )
 
 import pydantic
@@ -51,8 +49,7 @@ if PYDANTIC_V2:
     # Ignore mypy and ruff for now since type checking against pydantic 1.10
     from pydantic import model_validator, field_validator  # type: ignore
     from pydantic_core import PydanticUndefined  # type: ignore
-    from pydantic_settings import SettingsConfigDict  # type: ignore
-    from pydantic_settings import BaseSettings
+    from pydantic_settings import SettingsConfigDict, BaseSettings  # type: ignore
 
     @no_type_check  # This function causes many headaches with mypy... Ignore
     def Field(

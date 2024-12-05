@@ -73,13 +73,18 @@ class SubmitSMDParameters(ThirdPartyParameters):
         Config = SubmitSMDParametersConfig
 
     if PYDANTIC_V2:
-        producer_validator = field_validator("producer")
-        producer_template_validator = field_validator("lute_template_cfg")
-        result_validator = model_validator(mode="after")
+        producer_validator: ClassVar = field_validator("producer")
+        producer_template_validator: ClassVar = field_validator("lute_template_cfg")
+        result_validator: ClassVar = model_validator(mode="after")
     else:
         producer_validator = validator("producer", always=True)
         producer_template_validator = validator("lute_template_cfg", always=True)
-        result_validator = root_validator(pre=False)
+        # Strictly only need pre=False for running, but it doesn't match overload
+        # variants so mypy complains when using pydantic v2. This is functionally
+        # the same for our purposes
+        result_validator = root_validator(
+            pre=False, skip_on_failure=True, allow_reuse=True
+        )
 
     class ProducerParameters(BaseModel):
         class ROIParams(BaseModel):

@@ -48,7 +48,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         Config = FindPeaksPyAlgosParametersConfig
 
     if PYDANTIC_V2:
-        out_file_validator = field_validator("out_file")
+        out_file_validator: ClassVar = field_validator("out_file")
     else:
         out_file_validator = validator("out_file", always=True)
 
@@ -209,17 +209,22 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
         Config = FindPeaksPsocakeParametersConfig
 
     if PYDANTIC_V2:
-        e_validator = field_validator("e")
-        r_validator = field_validator("r")
-        set_output_path_validator = field_validator("lute_template_cfg")
-        sz_parameters_validator = field_validator("sz_parameters")
-        result_validator = model_validator(mode="after")
+        e_validator: ClassVar = field_validator("e")
+        r_validator: ClassVar = field_validator("r")
+        set_output_path_validator: ClassVar = field_validator("lute_template_cfg")
+        sz_parameters_validator: ClassVar = field_validator("sz_parameters")
+        result_validator: ClassVar = model_validator(mode="after")
     else:
         e_validator = validator("e", always=True)
         r_validator = validator("r", always=True)
         set_output_path_validator = validator("lute_template_cfg", always=True)
         sz_parameters_validator = validator("sz_parameters", always=True)
-        result_validator = root_validator(pre=False)
+        # Strictly only need pre=False for running, but it doesn't match overload
+        # variants so mypy complains when using pydantic v2. This is functionally
+        # the same for our purposes
+        result_validator = root_validator(
+            pre=False, skip_on_failure=True, allow_reuse=True
+        )
 
     class SZParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(

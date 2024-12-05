@@ -75,8 +75,8 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         Config = IndexCrystFELParametersConfig
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
-        out_file_validator = field_validator("out_file")
+        in_file_validator: ClassVar = field_validator("in_file")
+        out_file_validator: ClassVar = field_validator("out_file")
     else:
         in_file_validator = validator("in_file", always=True)
         out_file_validator = validator("out_file", always=True)
@@ -531,6 +531,15 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     else:
         Config = ConcatenateStreamFilesParametersConfig
 
+    if PYDANTIC_V2:
+        in_file_validator: ClassVar = field_validator("in_file")
+        tag_validator: ClassVar = field_validator("tag")
+        out_file_validator: ClassVar = field_validator("out_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        tag_validator = validator("tag", always=True)
+        out_file_validator = validator("out_file", always=True)
+
     in_file: str = (
         Field(
             "",
@@ -567,15 +576,6 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         if PYDANTIC_V2
         else Field("", description="Path to merged output stream file.", is_result=True)
     )
-
-    if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
-        tag_validator = field_validator("tag")
-        out_file_validator = field_validator("out_file")
-    else:
-        in_file_validator = validator("in_file", always=True)
-        tag_validator = validator("tag", always=True)
-        out_file_validator = validator("out_file", always=True)
 
     @in_file_validator
     @classmethod
@@ -636,6 +636,17 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     else:
         Config = IndexCCTBXXFELParametersConfig
 
+    if PYDANTIC_V2:
+        phil_path_validator: ClassVar = field_validator("phil_file")
+        phil_template_validator: ClassVar = field_validator("lute_template_cfg")
+        in_file_validator: ClassVar = field_validator("in_file")
+        data_spec_validator: ClassVar = field_validator("data_spec")
+    else:
+        phil_path_validator = validator("phil_file", always=True)
+        phil_template_validator = validator("lute_template_cfg", always=True)
+        in_file_validator = validator("in_file", always=True)
+        data_spec_validator = validator("data_spec", always=True)
+
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
@@ -646,8 +657,10 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             Config = PhilParametersConfig
 
         if PYDANTIC_V2:
-            output_output_dir_validator = field_validator("output_output_dir")
-            output_logging_dir_validator = field_validator("output_logging_dir")
+            output_output_dir_validator: ClassVar = field_validator("output_output_dir")
+            output_logging_dir_validator: ClassVar = field_validator(
+                "output_logging_dir"
+            )
         else:
             output_output_dir_validator = validator("output_output_dir", always=True)
             output_logging_dir_validator = validator("output_logging_dir", always=True)
@@ -946,17 +959,6 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             description="Template information for the cctbx_index file.",
         )
     )
-
-    if PYDANTIC_V2:
-        phil_path_validator = field_validator("phil_file")
-        phil_template_validator = field_validator("lute_template_cfg")
-        in_file_validator = field_validator("in_file")
-        data_spec_validator = field_validator("data_spec")
-    else:
-        phil_path_validator = validator("phil_file", always=True)
-        phil_template_validator = validator("lute_template_cfg", always=True)
-        in_file_validator = validator("in_file", always=True)
-        data_spec_validator = validator("data_spec", always=True)
 
     @phil_path_validator
     @classmethod

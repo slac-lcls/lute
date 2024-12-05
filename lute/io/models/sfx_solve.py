@@ -59,13 +59,18 @@ class DimpleSolveParameters(ThirdPartyParameters):
         Config = DimpleSolveParametersConfig
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
-        out_dir_validator = field_validator("out_dir")
-        result_validator = model_validator(mode="after")
+        in_file_validator: ClassVar = field_validator("in_file")
+        out_dir_validator: ClassVar = field_validator("out_dir")
+        result_validator: ClassVar = model_validator(mode="after")
     else:
         in_file_validator = validator("in_file", always=True)
         out_dir_validator = validator("out_dir", always=True)
-        result_validator = root_validator(pre=False)
+        # Strictly only need pre=False for running, but it doesn't match overload
+        # variants so mypy complains when using pydantic v2. This is functionally
+        # the same for our purposes
+        result_validator = root_validator(
+            pre=False, skip_on_failure=True, allow_reuse=True
+        )
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/ccp4-8.0/bin/dimple",
@@ -277,7 +282,7 @@ class RunSHELXCParameters(ThirdPartyParameters):
     """
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
+        in_file_validator: ClassVar = field_validator("in_file")
     else:
         in_file_validator = validator("in_file", always=True)
 

@@ -72,8 +72,8 @@ class MergePartialatorParameters(ThirdPartyParameters):
         Config = MergePartialatorParametersConfig
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
-        out_file_validator = field_validator("out_file")
+        in_file_validator: ClassVar = field_validator("in_file")
+        out_file_validator: ClassVar = field_validator("out_file")
     else:
         in_file_validator = validator("in_file", always=True)
         out_file_validator = validator("out_file", always=True)
@@ -289,6 +289,13 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
     else:
         Config = MergeCCTBXXFELParametersConfig
 
+    if PYDANTIC_V2:
+        phil_file_validator: ClassVar = field_validator("phil_file")
+        phil_template_validator: ClassVar = field_validator("lute_template_cfg")
+    else:
+        phil_file_validator = validator("phil_file", always=True)
+        phil_template_validator = validator("lute_template_cfg", always=True)
+
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
@@ -461,13 +468,6 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         )
     )
 
-    if PYDANTIC_V2:
-        phil_file_validator = field_validator("phil_file")
-        phil_template_validator = field_validator("lute_template_cfg")
-    else:
-        phil_file_validator = validator("phil_file", always=True)
-        phil_template_validator = validator("lute_template_cfg", always=True)
-
     @phil_file_validator
     @classmethod
     def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
@@ -514,10 +514,10 @@ class CompareHKLParameters(ThirdPartyParameters):
         Config = CompareHKLParametersConfig
 
     if PYDANTIC_V2:
-        in_files_validator = field_validator("in_files")
-        cell_file_validator = field_validator("cell_file")
-        symmetry_validator = field_validator("symmetry")
-        shell_file_validator = field_validator("shell_file")
+        in_files_validator: ClassVar = field_validator("in_files")
+        cell_file_validator: ClassVar = field_validator("cell_file")
+        symmetry_validator: ClassVar = field_validator("symmetry")
+        shell_file_validator: ClassVar = field_validator("shell_file")
     else:
         in_files_validator = validator("in_files", always=True)
         cell_file_validator = validator("cell_file", always=True)
@@ -716,9 +716,9 @@ class ManipulateHKLParameters(ThirdPartyParameters):
         Config = ManipulateHKLParametersConfig
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
-        out_file_validator = field_validator("out_file")
-        cell_file_validator = field_validator("cell_file")
+        in_file_validator: ClassVar = field_validator("in_file")
+        out_file_validator: ClassVar = field_validator("out_file")
+        cell_file_validator: ClassVar = field_validator("cell_file")
     else:
         in_file_validator = validator("in_file", always=True)
         out_file_validator = validator("out_file", always=True)

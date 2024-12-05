@@ -126,7 +126,7 @@ class TestReadOutputParameters(TaskParameters):
     in_file: str = Field("", description="File to read in. (Full path)")
 
     if PYDANTIC_V2:
-        in_file_validator = field_validator("in_file")
+        in_file_validator: ClassVar = field_validator("in_file")
     else:
         in_file_validator = validator("in_file", always=True)
 
