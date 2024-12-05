@@ -542,13 +542,13 @@ if __name__ == "__main__":
             "Provided both a git tag and git ID to use. Will default to using the ID."
         )
         logger.info(f"Switching to PR branch ID {args.git_pr_id}")
-        git_fetch_pr_branch(args.run_dir, args.git_pr_id)
+        git_fetch_pr_branch(f"{args.run_dir}/lute", args.git_pr_id)
     elif args.git_tag is not None:
         logger.info(f"Switching to tag {args.git_tag}")
-        git_checkout_branch(args.run_dir, args.git_tag)
+        git_checkout_branch(f"{args.run_dir}/lute", args.git_tag)
     elif args.git_pr_id is not None:
         logger.info(f"Switching to PR branch ID {args.git_pr_id}")
-        git_fetch_pr_branch(args.run_dir, args.git_pr_id)
+        git_fetch_pr_branch(f"{args.run_dir}/lute", args.git_pr_id)
     else:
         logger.info("Running LUTE from dev branch.")
 
