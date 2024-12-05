@@ -433,8 +433,10 @@ class BayesGeomOpt:
         )
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
-        residual = sg.geometry_refinement.refine3(fix=["wavelength"])
         score = len(sg.geometry_refinement.data)
+        residual = 0
+        if score != 0:
+            residual = sg.geometry_refinement.refine3(fix=["wavelength"])
         params = sg.geometry_refinement.param
         result = {
             "bo_history": bo_history,
