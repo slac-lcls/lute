@@ -83,7 +83,7 @@ class DBView(App):
         return table
 
     def action_toggle_dark(self) -> None:
-        self.dark = not self.dark
+        self.dark: bool = not self.dark
 
 
 if __name__ == "__main__":

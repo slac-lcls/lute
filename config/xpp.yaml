@@ -106,6 +106,23 @@ SubmitSMD:
   #detnames: []
   #epicsPV: []
   #ttCalib: []
+  # Provide detector image sum algorithms.
+  # If detSumAlgos is not defined, it will default to calib, calib_dropped and
+  # calib_dropped_square for every detector. You can add processing algorithms for
+  # single detectors (e.g. epix10k2M or Rayonix) as below, or add algorithms which
+  # will apply to every detector defined in detnames by placing them under "all"
+  #detSumAlgos:
+  #  all:
+  #    - "calib"
+  #    - "calib_dropped"
+  #    - "calib_dropped_square"
+  #    - "calib_thresADU1"
+  #  epix10k2M:
+  #    - "calib_thresADU5"
+  #    - "calib_max"
+  #  Rayonix:
+  #    - "calib_skipFirst_thresADU1"
+  #    - "calib_skipFirst_max"
   #getROIs:
   #  jungfrau1M:   # Change to detector name
   #    ROIs: [[[1, 2], [157, 487], [294, 598]]]
