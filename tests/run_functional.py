@@ -605,14 +605,20 @@ if __name__ == "__main__":
             )
 
             if is_successful:
-                num_successful += 1
-                logger.info(f"Test workflow {test_name} completed successfully.")
+                if should_fail:
+                    num_unsuccessful += 1
+                    logger.info(
+                        f"Test workflow {test_name} completed successfully but should fail!"
+                    )
+                else:
+                    num_successful += 1
+                    logger.info(f"Test workflow {test_name} completed successfully.")
             else:
                 if should_fail:
+                    num_successful += 1
                     logger.info(
                         f"Test workflow {test_name} was unsuccessful but this is marked as intentional."
                     )
-                    num_successful += 1
                 else:
                     num_unsuccessful += 1
                     logger.error(f"Test workflow {test_name} was unsuccessfull!")
