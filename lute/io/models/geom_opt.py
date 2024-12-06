@@ -8,18 +8,12 @@ Classes:
 __all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
-import os
-from pathlib import Path
 from typing import Any, Dict, Optional, Union, Tuple
 
 from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path, validate_calib_path
-
-import psana
-from PSCalib.CalibFileFinder import find_calib_file
-
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.

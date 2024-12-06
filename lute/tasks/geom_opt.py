@@ -9,16 +9,15 @@ Classes:
 __all__ = ["OptimizePyFAIGeometry"]
 __author__ = "Louis Conreux"
 
-from lute.execution.ipc import Message
-from lute.io.models.geom_opt import *
-from lute.tasks.task import *
-from lute.tasks.dataclasses import *
+from lute.io.models.geom_opt import OptimizePyFAIGeometryParameters
+from lute.tasks.task import Task
+from lute.tasks.dataclasses import TaskStatus
 from lute.execution.logging import get_logger
 
 import psana
 import os
 import logging
-from typing import List, Optional, Tuple, Union, Any, cast
+from typing import Optional, Tuple
 import sys
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
@@ -42,7 +41,6 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from scipy.stats import norm
-from scipy.signal import find_peaks
 from mpi4py import MPI
 
 logger: logging.Logger = get_logger(__name__)
@@ -134,12 +132,11 @@ class BayesGeomOpt:
         calibrant = CALIBRANT_FACTORY(self.calibrant)
         ds_args = f"exp={self.exp}:run={self.run}:idx"
         ds = psana.DataSource(ds_args)
-        det = psana.Detector(self.det_type, ds.env())
         runner = next(ds.runs())
         evt = runner.event(runner.times()[0])
         try:
             photon_energy = psana.Detector("EBeam").get(evt).ebeamPhotonEnergy()
-        except AttributeError as e:
+        except AttributeError:
             logger.warning("Event lacking an ebeamPhotonEnergy value.")
         if photon_energy is None or np.isinf(photon_energy):
             self.wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
@@ -168,7 +165,7 @@ class BayesGeomOpt:
         runnum = evt.run()
         try:
             mask = det.mask_v2(par=runnum, central=central, edges=edges)
-        except:
+        except AttributeError:
             mask = None
         if mask is not None:
             if len(mask.shape) != 2:
@@ -613,7 +610,7 @@ class BayesGeomOpt:
 
         try:
             unit = result.unit
-        except:
+        except AttributeError:
             unit = None
         if len(result) == 3:
             ax.errorbar(*result, label=label)

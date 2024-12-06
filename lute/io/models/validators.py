@@ -82,7 +82,7 @@ def validate_calib_path(calib_path_name: str):
             run: int = int(values["lute_config"].run)
             try:
                 det_type: str = values["det_type"]
-            except:
+            except KeyError:
                 det_type: str = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             ds_args = f"exp={exp}:run={run}:idx"
