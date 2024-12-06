@@ -4,21 +4,34 @@
 usage()
 {
     cat << EOF
-run_functional.py:
+run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] -r RUN_DIR [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests]
     Run a series of functional tests for LUTE.
     Options:
         -a|--admin
           Use an administrator account for Airflow authentication. Default: False
-        --git_pr_id
+
+        --git_pr_id GIT_PR_ID
           Checkout a PR branch to run LUTE against based on GitHub ID. (Optional)
-        --git_tag
+
+        --git_tag GIT_TAG
           Checkout a specific tag (e.g. release) of LUTE. (Optional)
+
         -h|--help
           Display this message.
-        --run_dir
+
+        -r|--run_dir RUN_DIR
           Directory to install LUTE in, and setup the output folder. (Required)
-        --test
+
+        --tests_dir TESTS_DIR
+          Specify an alternative path to tests than those from the LUTE clone. Must have the same directory structure:
+          $DIR/test1/... $DIR/test2/... If this flag and --use_local_tests are both passed, this one is used.
+
+        --test_airflow
           Use the test Airflow instance.
+
+        --use_local_tests
+          Use the tests from the installation of LUTE where this script is called, rather than those from the clone of LUTE which is run against,
+          or another directory if passed. If this flag and --tests_dir are both passed, --tests_dir is used.
 EOF
 }
 

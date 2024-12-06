@@ -518,7 +518,10 @@ if __name__ == "__main__":
         epilog="Refer to https://github.com/slac-lcls/lute for more information.",
     )
     parser.add_argument(
-        "-a", "--admin", help="Run as admin. Requires permissions.", action="store_true"
+        "-a",
+        "--admin",
+        help="Run as Airflow admin. Requires permissions.",
+        action="store_true",
     )
     # Options for running specific versions of LUTE
     parser.add_argument(
@@ -535,7 +538,26 @@ if __name__ == "__main__":
         "-r", "--run_dir", help="Directory to install LUTE to.", type=str, required=True
     )
     parser.add_argument(
-        "--test", help="Use test Airflow instance.", action="store_true"
+        "--tests_dir",
+        help=(
+            "Specify an alternative path to tests than those from the LUTE clone.\n"
+            "Must have the same directory structure: $DIR/test1/... $DIR/test2/...\n"
+            "If this flag and --use_local_tests are both passed, this one is used."
+        ),
+        type=str,
+    )
+    parser.add_argument(
+        "--test_airflow", help="Use test Airflow instance.", action="store_true"
+    )
+    parser.add_argument(
+        "--use_local_tests",
+        help=(
+            "Use the tests from the installation of LUTE where this script is called,\n"
+            "rather than those from the clone of LUTE which is run against, or another\n"
+            "directory if passed. If this flag and --tests_dir are both passed, "
+            "--tests_dir is used."
+        ),
+        action="store_true",
     )
 
     args: argparse.Namespace
@@ -571,7 +593,17 @@ if __name__ == "__main__":
     os.makedirs(output_location, mode=0o777)
     os.chmod(output_location, mode=0o777)
 
-    func_tests_dir: str = f"{lute_location}/tests/functional"
+    func_tests_dir: str
+    if args.tests_dir is not None:
+        if args.use_local_tests:
+            logger.warning(
+                "Provided both `--tests_dir` and `--use_local_tests`. Will use `--tests_dir`."
+            )
+        func_tests_dir = args.tests_dir
+    elif args.use_local_tests:
+        func_tests_dir = f"{os.path.dirname(__file__)}/functional"
+    else:
+        func_tests_dir = f"{lute_location}/tests/functional"
     test_dirs: List[str] = [
         x[0] for x in os.walk(func_tests_dir) if x[0] != func_tests_dir
     ]
@@ -607,7 +639,7 @@ if __name__ == "__main__":
                 lute_location=lute_location,
                 config_file=config_file,
                 workflow_file=wf_file,
-                use_test_inst=args.test,
+                use_test_inst=args.test_airflow,
                 is_admin=args.admin,
             )
 
