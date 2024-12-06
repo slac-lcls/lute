@@ -4,7 +4,7 @@
 usage()
 {
     cat << EOF
-run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] -r RUN_DIR [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests]
+run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] [--no_delete] -r RUN_DIR [--run_tests RUN_TESTS] [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests]
     Run a series of functional tests for LUTE.
 
     Options:
@@ -25,6 +25,12 @@ run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] -r RUN_D
 
         -r|--run_dir RUN_DIR
           Directory to install LUTE in, and setup the output folder. (Required)
+
+        --run_tests RUN_TESTS
+          Provide a comma-separated string of tests to run. If provided, this script
+          will only run those, rather than the default behaviour of running all tests.
+          E.g: --run_these_tests test2,test5. Tests that do not exist are silently ignored.
+
 
         --tests_dir TESTS_DIR
           Specify an alternative path to tests than those from the LUTE clone. Must have the same directory structure:

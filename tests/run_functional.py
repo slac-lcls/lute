@@ -12,7 +12,17 @@ import argparse
 import subprocess
 import shutil
 import time
-from typing import Dict, Union, List, Optional, Any, cast, TypedDict, overload, Literal
+from typing import (
+    Dict,
+    Union,
+    List,
+    Optional,
+    Any,
+    cast,
+    TypedDict,
+    overload,
+    Literal,
+)
 
 import yaml
 import json
@@ -543,6 +553,15 @@ if __name__ == "__main__":
         "-r", "--run_dir", help="Directory to install LUTE to.", type=str, required=True
     )
     parser.add_argument(
+        "--run_tests",
+        help=(
+            "Provide a comma-separated string of tests to run.  If provided, this "
+            "script will only run those, rather than the default behaviour of "
+            "running all tests. E.g: --run_these_tests test2,test5. Tests that do not "
+            "exist are silently ignored."
+        ),
+    )
+    parser.add_argument(
         "--tests_dir",
         help=(
             "Specify an alternative path to tests than those from the LUTE clone.\n"
@@ -566,8 +585,13 @@ if __name__ == "__main__":
     )
 
     args: argparse.Namespace
-    extra_args: List[str]  # Should contain all SLURM arguments!
+    extra_args: List[str]
     args, extra_args = parser.parse_known_args()
+
+    cache_file: Optional[str] = os.getenv("KRB5CCNAME")
+    if cache_file is None:
+        logger.error("No Kerberos cache. Try running `kinit` and resubmitting.")
+        sys.exit(-1)
 
     logger.debug(f"Cloning LUTE to {args.run_dir}")
     git_clone("slac-lcls/lute", args.run_dir, 0o777)
@@ -585,11 +609,6 @@ if __name__ == "__main__":
         git_fetch_pr_branch(f"{args.run_dir}/lute", args.git_pr_id)
     else:
         logger.info("Running LUTE from dev branch.")
-
-    cache_file: Optional[str] = os.getenv("KRB5CCNAME")
-    if cache_file is None:
-        logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
-        sys.exit(-1)
 
     lute_location: str = f"{args.run_dir}/lute"
 
@@ -609,8 +628,22 @@ if __name__ == "__main__":
         func_tests_dir = f"{os.path.dirname(__file__)}/functional"
     else:
         func_tests_dir = f"{lute_location}/tests/functional"
+
+    def use_test(
+        test_dir: str, func_tests_dir: str, usable_tests_str: Optional[str] = None
+    ) -> bool:
+        if usable_tests_str is not None:
+            usable_dirs: List[str] = [
+                f"{func_tests_dir}/{d}" for d in usable_tests_str.split(",")
+            ]
+            return test_dir in usable_dirs
+        else:
+            return test_dir != func_tests_dir
+
     test_dirs: List[str] = [
-        x[0] for x in os.walk(func_tests_dir) if x[0] != func_tests_dir
+        x[0]
+        for x in os.walk(func_tests_dir)
+        if use_test(x[0], func_tests_dir, args.run_tests)
     ]
     logger.info(f"Will attempt running {len(test_dirs)} tests")
 
