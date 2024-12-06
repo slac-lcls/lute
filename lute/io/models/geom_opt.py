@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, validator
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path, validate_calib_path
 
+
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
