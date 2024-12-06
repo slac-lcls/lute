@@ -20,6 +20,7 @@ from airflow import configuration
 from airflow.decorators import dag, task, task_group
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.models import Variable, DagBag, TaskInstance
+from airflow.models.taskmixin import DAGNode
 
 from lute.operators.jidoperators import JIDSlurmOperator
 
