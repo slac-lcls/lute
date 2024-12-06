@@ -535,6 +535,11 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
+        "--no_delete",
+        help="If passed, do not delete output files when tests are finished.",
+        action="store_true",
+    )
+    parser.add_argument(
         "-r", "--run_dir", help="Directory to install LUTE to.", type=str, required=True
     )
     parser.add_argument(
@@ -663,8 +668,10 @@ if __name__ == "__main__":
                     logger.error(f"Test workflow {test_name} was unsuccessfull!")
     except Exception as e:
         logger.error(f"Error in testing framework: {e}")
-        clean_up(cache_file, lute_location, output_location)
+        if not args.no_delete:
+            clean_up(cache_file, lute_location, output_location)
         sys.exit(-1)
 
     logger.info(f"Ran {len(test_dirs)} tests. {num_successful} were successful.")
-    clean_up(cache_file, lute_location, output_location)
+    if not args.no_delete:
+        clean_up(cache_file, lute_location, output_location)

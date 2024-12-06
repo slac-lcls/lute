@@ -6,6 +6,7 @@ usage()
     cat << EOF
 run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] -r RUN_DIR [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests]
     Run a series of functional tests for LUTE.
+
     Options:
         -a|--admin
           Use an administrator account for Airflow authentication. Default: False
@@ -18,6 +19,9 @@ run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] -r RUN_D
 
         -h|--help
           Display this message.
+
+        --no_delete
+          If passed, do not delete output files when tests are finished.
 
         -r|--run_dir RUN_DIR
           Directory to install LUTE in, and setup the output folder. (Required)
