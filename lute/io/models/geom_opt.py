@@ -151,7 +151,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         return run
 
     @validator("date", always=True)
-    def validate_date(cls, date: str, values: Dict[str, Any]) -> str:
+    def validate_date(cls, date, values: Dict[str, Any]) -> str:
         if not date:
             date: str = values["lute_config"].date
         return date
