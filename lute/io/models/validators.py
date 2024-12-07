@@ -15,8 +15,8 @@ from pydantic import validator
 
 from lute.io.db import read_latest_db_entry
 
-import psana # type: ignore
-from PSCalib.CalibFileFinder import find_calib_file # type: ignore
+import psana  # type: ignore
+from PSCalib.CalibFileFinder import find_calib_file  # type: ignore
 
 
 def template_parameter_validator(template_params_name: str):
