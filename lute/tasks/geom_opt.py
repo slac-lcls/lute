@@ -915,7 +915,7 @@ class OptimizePyFAIGeometry(Task):
             The extracted powder image.
             Returns None if no powder could be extracted and no specific error was encountered.
         """
-        powder = None
+        powder: Optional[npt.NDArray[np.float64]] = None
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         if isinstance(powder_path, str):
             is_valid: bool
@@ -930,22 +930,22 @@ class OptimizePyFAIGeometry(Task):
                 with h5py.File(powder_path) as h5:
                     try:
                         if self._task_parameters.det_type == "Rayonix":
-                            powder: npt.NDArray[np.float64] = h5[
+                            powder = h5[
                                 f"Sums/{self._task_parameters.det_type}_calib_skipFirst_max"
                             ][()]
                         else:
-                            powder: npt.NDArray[np.float64] = h5[
+                            powder = h5[
                                 f"Sums/{self._task_parameters.det_type}_calib_max"
                             ][()]
                     except KeyError:
                         logger.warning(
                             'No "Max" powder found in SmallData. Using "Sum" powder.'
                         )
-                        powder: npt.NDArray[np.float64] = h5[
+                        powder = h5[
                             f"Sums/{self._task_parameters.det_type}_calib"
                         ][()]
-                    if powder.shape != shape:
-                        powder: npt.NDArray[np.float64] = np.reshape(powder, shape)
+                    if powder is not None and powder.shape != shape:
+                        powder = np.reshape(powder, shape)
         return powder
 
     def _update_geometry(self, optimizer):
@@ -1019,7 +1019,7 @@ class OptimizePyFAIGeometry(Task):
             logger.info(
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
-            logger.info(f"Final Residuals: {optimizer.residual:.2e}")
+            logger.info(f"Final Residual: {optimizer.residual:.2e}")
             fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
             os.makedirs(fig_folder, exist_ok=True)
             plot = (

@@ -100,11 +100,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
     )
 
-    date: str = Field(
-        "",
-        description="Start date of analysis",
-    )
-
     work_dir: str = Field(
         "",
         description="Main working directory for LUTE.",
@@ -139,33 +134,27 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     @validator("exp", always=True)
     def validate_exp(cls, exp: str, values: Dict[str, Any]) -> str:
         if not exp:
-            exp: str = values["lute_config"].experiment
-        return exp
+            exp_config: str = values["lute_config"].experiment
+        return exp_config
 
     @validator("run", always=True)
     def validate_run(
         cls, run: Union[str, int], values: Dict[str, Any]
     ) -> Union[str, int]:
         if not run:
-            run: Union[str, int] = values["lute_config"].run
-        return run
-
-    @validator("date", always=True)
-    def validate_date(cls, date, values: Dict[str, Any]) -> str:
-        if not date:
-            date: str = values["lute_config"].date
-        return date
+            run_config: Union[str, int] = values["lute_config"].run
+        return run_config
 
     @validator("work_dir", always=True)
     def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
         if not work_dir:
-            work_dir: str = values["lute_config"].work_dir
-        return work_dir
+            work_dir_config: str = values["lute_config"].work_dir
+        return work_dir_config
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if not out_file:
             in_file = values["in_file"]
             run = values["run"]
-            out_file: str = in_file.replace("0-end.data", f"{run}-end.data")
-        return out_file
+            out_file_config: str = in_file.replace("0-end.data", f"{run}-end.data")
+        return out_file_config
