@@ -14,14 +14,14 @@ from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus
 from lute.execution.logging import get_logger
 
-import psana # type: ignore
+import psana  # type: ignore
 import os
 import logging
 from typing import Optional, Tuple
 import sys
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
-from LCLSGeom.swap_geom import ( # type: ignore
+from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,
     CrystFELToPsana,
@@ -31,16 +31,16 @@ from LCLSGeom.swap_geom import ( # type: ignore
 import h5py  # type: ignore
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt # type: ignore
-from pyFAI.geometry import Geometry # type: ignore
-from pyFAI.goniometer import SingleGeometry # type: ignore
-from pyFAI.azimuthalIntegrator import AzimuthalIntegrator # type: ignore
-from pyFAI.calibrant import CALIBRANT_FACTORY # type: ignore
-from sklearn.gaussian_process import GaussianProcessRegressor # type: ignore
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel # type: ignore
-from sklearn.utils._testing import ignore_warnings # type: ignore
-from sklearn.exceptions import ConvergenceWarning # type: ignore
-from scipy.stats import norm # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+from pyFAI.geometry import Geometry  # type: ignore
+from pyFAI.goniometer import SingleGeometry  # type: ignore
+from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
+from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
+from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
+from sklearn.utils._testing import ignore_warnings  # type: ignore
+from sklearn.exceptions import ConvergenceWarning  # type: ignore
+from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
 
 logger: logging.Logger = get_logger(__name__)
