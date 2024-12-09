@@ -832,6 +832,7 @@ class OptimizePyFAIGeometry(Task):
         """
         Fetch the geometry data and build a pyFAI detector object.
         """
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         in_file = self._task_parameters.in_file
         det_type = self._task_parameters.det_type
         ds_args = f"exp={self._task_parameters.exp}:run={self._task_parameters.run}:idx"
@@ -915,6 +916,7 @@ class OptimizePyFAIGeometry(Task):
             Returns None if no powder could be extracted and no specific error was encountered.
         """
         powder = None
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         if isinstance(powder_path, str):
             is_valid: bool
             dtype: Optional[str]
@@ -955,6 +957,7 @@ class OptimizePyFAIGeometry(Task):
         optimizer : BayesGeomOpt
             Optimizer object
         """
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         PyFAIToCrystFEL(
             detector=optimizer.detector,
             params=optimizer.params,
@@ -984,6 +987,7 @@ class OptimizePyFAIGeometry(Task):
         return detector
 
     def _run(self) -> None:
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         detector = self._build_pyFAI_detector()
         powder = self._extract_powder(self._task_parameters.powder, detector.shape)
         if powder is None:
