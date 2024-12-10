@@ -398,12 +398,9 @@ class BayesGeomOpt:
             sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
             score = len(sg.geometry_refinement.data)
             y = np.append(y, [score], axis=0)
-            ypred = gp_model.predict(X_norm, return_std=False)
             bo_history[f"iteration_{i+1}"] = {
                 "param": X[new_idx],
                 "score": score,
-                "pred": ypred,
-                "af": af_values,
             }
             X_samples = np.append(X_samples, [X[new_idx]], axis=0)
             X_norm_samples = np.append(X_norm_samples, [X_norm[new_idx]], axis=0)
