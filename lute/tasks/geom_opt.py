@@ -32,8 +32,9 @@ import h5py  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
-import pyFAI # type: ignore
-pyFAI.use_opencl = False # type: ignore
+import pyFAI  # type: ignore
+
+pyFAI.use_opencl = False  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
