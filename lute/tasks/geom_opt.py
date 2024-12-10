@@ -43,6 +43,7 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
+
 pyFAI.use_opencl = False  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
