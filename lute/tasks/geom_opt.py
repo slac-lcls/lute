@@ -33,8 +33,6 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 import pyFAI  # type: ignore
-
-pyFAI.use_opencl = False  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
@@ -45,6 +43,7 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
+pyFAI.use_opencl = False  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
