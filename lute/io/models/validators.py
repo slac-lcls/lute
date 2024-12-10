@@ -83,7 +83,7 @@ def validate_calib_path(calib_path_name: str):
             try:
                 det_type: str = values["det_type"]
             except KeyError:
-                det_type: str = values["detname"]
+                det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             ds_args = f"exp={exp}:run={run}:idx"
             ds = psana.DataSource(ds_args)

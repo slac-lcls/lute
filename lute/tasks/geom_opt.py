@@ -923,7 +923,7 @@ class OptimizePyFAIGeometry(Task):
             is_valid, dtype = self._check_if_path_and_type(powder_path)
             if is_valid and dtype == "numpy":
                 powder = np.load(powder_path)
-                if powder.shape != shape:
+                if powder is not None and powder.shape != shape:
                     powder = np.reshape(powder, shape)
             elif is_valid and dtype == "smd":
                 h5: h5py.File
