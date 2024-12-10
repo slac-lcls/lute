@@ -106,6 +106,10 @@ def get_logger(name: str, is_task: bool = True) -> logging.Logger:
             other_logger, logging.PlaceHolder
         ):
             other_logger.setLevel(logging.CRITICAL)
+        elif "numexpr.utils" in other_name and not isinstance(
+            other_logger, logging.PlaceHolder
+        ):
+            other_logger.setLevel(logging.WARNING)
     logger: logging.Logger = logging.getLogger(name)
     logger.propagate = False
     handler: logging.Handler

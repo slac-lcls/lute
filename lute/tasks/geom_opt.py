@@ -32,6 +32,8 @@ import h5py  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
+import pyFAI # type: ignore
+pyFAI.use_opencl = False # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
@@ -187,7 +189,8 @@ class BayesGeomOpt:
         """
         mean = np.mean(powder)
         threshold = mean + 5 * np.std(powder)
-        logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
+        if self.rank == 0:
+            logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
         Imins = np.arange(95, 100, 0.01)
