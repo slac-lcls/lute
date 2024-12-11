@@ -749,7 +749,9 @@ class BayesGeomOpt:
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
 
-    def visualize_results(self, powder, bo_history, detector, params, refined_dist, plot=""):
+    def visualize_results(
+        self, powder, bo_history, detector, params, refined_dist, plot=""
+    ):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
 
