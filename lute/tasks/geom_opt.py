@@ -29,6 +29,7 @@ from LCLSGeom.swap_geom import (  # type: ignore
 )
 
 import h5py  # type: ignore
+import panel as pn # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
@@ -1047,6 +1048,7 @@ class OptimizePyFAIGeometry(Task):
                 refined_dist=distance,
                 plot=plot,
             )
+            plots = pn.Tabs(fig)
             p1, p2, _ = calib_detector.calc_cartesian_positions()
             cx_pix = np.abs(cx - np.min(p1)) / calib_detector.pixel1
             cy_pix = np.abs(cy - np.min(p2)) / calib_detector.pixel2
@@ -1055,7 +1057,6 @@ class OptimizePyFAIGeometry(Task):
                 2.0 * np.sin(theta / 2.0) / (optimizer.calibrant.wavelength * 1e10)
             )
             edge_resolution: float = 1.0 / q
-            self._result.payload = plot
             self._result.summary = []
             self._result.summary.append(
                 {
@@ -1067,6 +1068,6 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Beam center (pixels): ({cx_pix}, {cy_pix})")
             logger.info(f"Detector edge resolution (A): {edge_resolution}")
             self._result.summary.append(
-                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", fig)
+                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots)
             )
             self._result.task_status = TaskStatus.COMPLETED
