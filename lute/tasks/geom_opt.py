@@ -11,7 +11,7 @@ __author__ = "Louis Conreux"
 
 from lute.io.models.geom_opt import OptimizePyFAIGeometryParameters
 from lute.tasks.task import Task
-from lute.tasks.dataclasses import TaskStatus
+from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger
 
 import psana  # type: ignore
@@ -1031,5 +1031,24 @@ class OptimizePyFAIGeometry(Task):
                 params=optimizer.params,
                 plot=plot,
             )
+            p1, p2, _ = calib_detector.calc_cartesian_positions()
+            cx_pix = np.abs(cx - np.min(p1))/ calib_detector.pixel1
+            cy_pix = np.abs(cy - np.min(p2)) / calib_detector.pixel2
+            theta: float = np.arctan(cx / distance)
+            q: float = 2.0 * np.sin(theta / 2.0) / (optimizer.calibrant.wavelength * 1e10)
+            edge_resolution: float = 1.0 / q
             self._result.payload = plot
+            self._result.summary = []
+            self._result.summary.append(
+                {
+                    "Detector distance (m)": distance,
+                    "Detector center (pixels)": (cx_pix, cy_pix),
+                    "Detector edge resolution (A)": edge_resolution,
+                }
+            )
+            logger.info(f"Beam center (pixels): ({cx_pix}, {cy_pix})")
+            logger.info(f"Detector edge resolution (A): {edge_resolution}")
+            self._result.summary.append(
+                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", plot)
+            )
             self._result.task_status = TaskStatus.COMPLETED
