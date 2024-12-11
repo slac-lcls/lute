@@ -832,6 +832,7 @@ class BayesGeomOpt:
 
         if plot != "":
             fig.savefig(plot, dpi=180)
+        return fig
 
 
 class OptimizePyFAIGeometry(Task):
@@ -1038,7 +1039,7 @@ class OptimizePyFAIGeometry(Task):
                 f"{fig_folder}/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
             calib_detector = self._update_geometry(optimizer)
-            optimizer.visualize_results(
+            fig = optimizer.visualize_results(
                 powder=optimizer.powder,
                 bo_history=optimizer.bo_history,
                 detector=calib_detector,
@@ -1066,6 +1067,6 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Beam center (pixels): ({cx_pix}, {cy_pix})")
             logger.info(f"Detector edge resolution (A): {edge_resolution}")
             self._result.summary.append(
-                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", plot)
+                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", fig)
             )
             self._result.task_status = TaskStatus.COMPLETED
