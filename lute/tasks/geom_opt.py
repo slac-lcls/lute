@@ -656,7 +656,7 @@ class BayesGeomOpt:
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
 
-    def residual_distance_scan(self, distances, ax):
+    def residual_distance_scan(self, distances, refined_dist, ax):
         """
         Plot the residual scan over distance
 
@@ -664,6 +664,8 @@ class BayesGeomOpt:
         ----------
         distances : np.array
             Array of distances
+        refined_dist : float
+            Refined distance
         ax : plt.Axes
             Matplotlib axes
         """
@@ -674,7 +676,13 @@ class BayesGeomOpt:
             best_dist,
             color="green",
             linestyle="--",
-            label=f"Best distance: {best_dist:.2e}",
+            label=f"Best distance (m): {best_dist:.2e}",
+        )
+        ax.axvline(
+            refined_dist,
+            color="red",
+            linestyle="--",
+            label=f"Refined distance (m): {refined_dist:.2e}",
         )
         ax.legend(fontsize="x-small")
         ax.set_yscale("log")
@@ -741,7 +749,7 @@ class BayesGeomOpt:
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
 
-    def visualize_results(self, powder, bo_history, detector, params, plot=""):
+    def visualize_results(self, powder, bo_history, detector, params, refined_dist, plot=""):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
 
@@ -755,6 +763,8 @@ class BayesGeomOpt:
             Corrected PyFAI detector object
         params : list
             List of parameters for the best fit
+        refined_dist : float
+            Refined distance
         plot : str
             Path to save plot
         """
@@ -816,7 +826,7 @@ class BayesGeomOpt:
 
         # Plotting residual scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.residual_distance_scan(self.distances, ax6)
+        self.residual_distance_scan(self.distances, refined_dist, ax6)
 
         if plot != "":
             fig.savefig(plot, dpi=180)
@@ -1031,6 +1041,7 @@ class OptimizePyFAIGeometry(Task):
                 bo_history=optimizer.bo_history,
                 detector=calib_detector,
                 params=optimizer.params,
+                refined_dist=distance,
                 plot=plot,
             )
             p1, p2, _ = calib_detector.calc_cartesian_positions()
