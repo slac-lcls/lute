@@ -1033,10 +1033,12 @@ class OptimizePyFAIGeometry(Task):
                 plot=plot,
             )
             p1, p2, _ = calib_detector.calc_cartesian_positions()
-            cx_pix = np.abs(cx - np.min(p1))/ calib_detector.pixel1
+            cx_pix = np.abs(cx - np.min(p1)) / calib_detector.pixel1
             cy_pix = np.abs(cy - np.min(p2)) / calib_detector.pixel2
             theta: float = np.arctan(cx / distance)
-            q: float = 2.0 * np.sin(theta / 2.0) / (optimizer.calibrant.wavelength * 1e10)
+            q: float = (
+                2.0 * np.sin(theta / 2.0) / (optimizer.calibrant.wavelength * 1e10)
+            )
             edge_resolution: float = 1.0 / q
             self._result.payload = plot
             self._result.summary = []
