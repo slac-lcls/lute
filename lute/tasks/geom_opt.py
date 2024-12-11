@@ -1058,9 +1058,9 @@ class OptimizePyFAIGeometry(Task):
             self._result.summary = []
             self._result.summary.append(
                 {
-                    "Detector distance (m)": distance,
-                    "Detector center (m)": (cx, cy),
-                    "Detector edge resolution (A)": edge_resolution,
+                    "Detector distance (m)": f"{distance:.3f}",
+                    "Detector center (m)": (f"{cx:.6f}", f"{cy:.6f}"),
+                    "Detector edge resolution (A)": f"{edge_resolution:.3f}",
                 }
             )
             logger.info(f"Beam center (pixels): ({cx_pix}, {cy_pix})")
