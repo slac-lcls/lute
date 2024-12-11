@@ -194,7 +194,7 @@ class BayesGeomOpt:
             logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
-        Imins = np.arange(99, 100, 0.01)
+        Imins = np.arange(99.5, 100, 0.01)
         for Imin in Imins:
             threshold = np.percentile(powder[nice_pix], Imin)
             signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
