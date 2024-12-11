@@ -194,7 +194,7 @@ class BayesGeomOpt:
             logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
         nice_pix = powder < threshold
         SNRs = []
-        Imins = np.arange(95, 100, 0.01)
+        Imins = np.arange(95, 100, 0.1)
         for Imin in Imins:
             threshold = np.percentile(powder[nice_pix], Imin)
             signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
@@ -204,7 +204,7 @@ class BayesGeomOpt:
             SNRs.append(signal / noise)
         q = Imins[np.argmax(SNRs)]
         Imin = np.percentile(powder[nice_pix], q)
-        self.q = round(q, 2)
+        self.q = round(q, 1)
         self.Imin = Imin
         self.powder = powder
         return Imin
@@ -779,7 +779,7 @@ class BayesGeomOpt:
         ax1.set_xticks(np.arange(len(scores), step=20))
         ax1.set_xlabel("Iteration")
         ax1.set_ylabel("Best score so far")
-        ax1.set_title(f"Convergence Plot, best score: {int(self.score)}")
+        ax1.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
         icol += 1
 
         # Plotting histogram of pixel intensities
@@ -1057,7 +1057,7 @@ class OptimizePyFAIGeometry(Task):
             self._result.summary.append(
                 {
                     "Detector distance (m)": distance,
-                    "Detector center (pixels)": (cx_pix, cy_pix),
+                    "Detector center (m)": (cx, cy),
                     "Detector edge resolution (A)": edge_resolution,
                 }
             )
