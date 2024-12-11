@@ -202,8 +202,8 @@ class BayesGeomOpt:
             noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
             noise = np.std(noise_pixels)
             SNRs.append(signal / noise)
-        self.q = round(Imins[np.argmax(SNRs)], 2)
         Imin = np.percentile(powder[nice_pix], self.q)
+        self.q = round(Imins[np.argmax(SNRs)], 2)
         self.Imin = Imin
         self.powder = powder
         return Imin
