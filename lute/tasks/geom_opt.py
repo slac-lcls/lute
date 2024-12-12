@@ -436,7 +436,9 @@ class BayesGeomOpt:
         score = len(sg.geometry_refinement.data)
         residual = 0
         if score != 0:
-            residual = sg.geometry_refinement.refine3(fix=["rot1", "rot2", "rot3", "wavelength"])
+            residual = sg.geometry_refinement.refine3(
+                fix=["rot1", "rot2", "rot3", "wavelength"]
+            )
         params = sg.geometry_refinement.param
         result = {
             "bo_history": bo_history,
