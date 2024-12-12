@@ -29,7 +29,7 @@ from LCLSGeom.swap_geom import (  # type: ignore
 )
 
 import h5py  # type: ignore
-import panel as pn # type: ignore
+import panel as pn  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
@@ -1068,6 +1068,8 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Beam center (pixels): ({cx_pix}, {cy_pix})")
             logger.info(f"Detector edge resolution (A): {edge_resolution}")
             self._result.summary.append(
-                ElogSummaryPlots(f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots)
+                ElogSummaryPlots(
+                    f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots
+                )
             )
             self._result.task_status = TaskStatus.COMPLETED
