@@ -437,7 +437,7 @@ class BayesGeomOpt:
         residual = 0
         if score != 0:
             residual = sg.geometry_refinement.refine3(
-                fix=["rot1", "rot2", "rot3", "wavelength"]
+                fix=["wavelength"]
             )
         params = sg.geometry_refinement.param
         result = {
@@ -543,7 +543,9 @@ class BayesGeomOpt:
         self.scan["residual"] = self.comm.gather(results["residual"], root=0)
         self.scan["score"] = self.comm.gather(results["score"], root=0)
         self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.finalize()
 
+    def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
@@ -554,33 +556,6 @@ class BayesGeomOpt:
             self.residual = self.scan["residual"][index]
             self.score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
-            dist, poni1, poni2, rot1, rot2, rot3 = self.params
-            geom_initial = Geometry(
-                dist=dist,
-                poni1=poni1,
-                poni2=poni2,
-                rot1=rot1,
-                rot2=rot2,
-                rot3=rot3,
-                detector=self.detector,
-                wavelength=self.calibrant.wavelength,
-            )
-            sg = SingleGeometry(
-                "extract_cp",
-                powder,
-                calibrant=self.calibrant,
-                detector=self.detector,
-                geometry=geom_initial,
-            )
-            sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
-            self.sg = sg
-            score = len(sg.geometry_refinement.data)
-            residual = 0
-            if score != 0:
-                residual = sg.geometry_refinement.refine3(fix=["wavelength"])
-            params = sg.geometry_refinement.param
-            self.params = params
-            self.residual = residual
 
     def display(self, powder=None, cp=None, ai=None, label=None, sg=None, ax=None):
         """
