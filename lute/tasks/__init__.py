@@ -87,7 +87,7 @@ def import_task(task_name: str) -> Type[Task]:
         return TestMultiNodeCommunication
 
     if task_name == "OptimizePyFAIGeometry":
-        from .geom_opt import OptimizePyFAIGeometry
+        from .bayfai import OptimizePyFAIGeometry
 
         return OptimizePyFAIGeometry
 

@@ -9,7 +9,7 @@ Classes:
 __all__ = ["OptimizePyFAIGeometry"]
 __author__ = "Louis Conreux"
 
-from lute.io.models.geom_opt import OptimizePyFAIGeometryParameters
+from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger

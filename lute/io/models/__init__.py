@@ -11,4 +11,4 @@ from .smd import *
 from .tests import *
 from .mpi_tests import *
 from .geometry import *
-from .geom_opt import *
+from .bayfai import *
