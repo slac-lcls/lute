@@ -661,9 +661,9 @@ class BayesGeomOpt:
         ax.plot(distances, scores)
         ax.axhline(
             percentile_10,
-            color='red',
+            color="red",
             linestyle="--",
-            label=f"Minimal score: {percentile_10}"
+            label=f"Minimal score: {percentile_10}",
         )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
