@@ -596,28 +596,17 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
-        tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
             y = np.reshape(y, detector.raw_shape)
             z = np.reshape(z, detector.raw_shape)
-            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
-            for i in range(x.shape[0]):
-                ax.contour(
-                    x[i],
-                    y[i],
-                    ttha[i],
-                    levels=tth,
-                    cmap="autumn",
-                    linewidths=0.5,
-                    linestyles="dashed",
-                )
-        else:
-            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
+        tth = cp.calibrant.get_2th()
+        ttha = np.arctan2(np.sqrt(x * x + y * y), z)
+        for i in range(detector.n_modules):
             ax.contour(
-                x,
-                y,
-                ttha,
+                x[i],
+                y[i],
+                ttha[i],
                 levels=tth,
                 cmap="autumn",
                 linewidths=0.5,
@@ -625,6 +614,7 @@ class BayesGeomOpt:
             )
         ax.set_xlabel("X-axis (m)")
         ax.set_ylabel("Y-axis (m)")
+        ax.set_title(label)
         return ax
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
@@ -900,7 +890,6 @@ class OptimizePyFAIGeometry(Task):
         self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
         if det_type.lower() == "rayonix":
-            self.shape = (1, self.shape[0], self.shape[1])
             env = self.ds.env()
             cfg = env.configStore()
             self.pixel_size = cfg.get(psana.Rayonix.ConfigV2).pixelWidth() * 1e-6
