@@ -194,7 +194,7 @@ class BayesGeomOpt:
         mean = np.mean(powder)
         threshold = mean + 5 * np.std(powder)
         if self.rank == 0:
-            logger.info(f"Threshold for pixel outliers: {threshold:.2e}")
+            logger.info(f"Threshold for pixel outliers: {threshold}")
         nice_pix = powder < threshold
         SNRs = []
         Imins = np.arange(95, 100, 0.1)
@@ -206,8 +206,8 @@ class BayesGeomOpt:
             noise = np.std(noise_pixels)
             SNRs.append(signal / noise)
         q = Imins[np.argmax(SNRs)]
-        Imin = np.percentile(powder[nice_pix], q)
-        self.q = round(q, 1)
+        Imin = np.percentile(powder[nice_pix], 95)
+        self.q = 95
         self.Imin = Imin
         self.powder = powder
         return Imin
@@ -579,20 +579,20 @@ class BayesGeomOpt:
                 ai = sg.geometry_refinement
             if label is None:
                 label = sg.label
-        img = ax.imshow(
-            powder.T,
-            origin="lower",
-            cmap="viridis",
-            vmin=np.percentile(powder, 5),
-            vmax=np.percentile(powder, 95),
-        )
+        detector = sg.detector
+        y, x, z = detector.calc_cartesian_positions()
+        img = ax.scatter(x.flatten(), y.flatten(), c=powder.flatten(), s=1, edgecolors=None, linewidth=0, vmin=np.percentile(powder, 5), vmax=np.percentile(powder, 95))
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
-        if ai is not None and cp.calibrant is not None:
-            tth = cp.calibrant.get_2th()
-            ttha = ai.twoThetaArray()
+        x = np.reshape(x, detector.raw_shape)
+        y = np.reshape(y, detector.raw_shape)
+        z = np.reshape(z, detector.raw_shape)
+        z += ai.dist
+        ttha = np.arctan2(np.sqrt(x*x+y*y), z)
+        tth = cp.calibrant.get_2th() 
+        for i in range(x.shape[0]):
             ax.contour(
-                ttha.T, levels=tth, cmap="autumn", linewidths=0.5, linestyles="dashed"
+                x[i], y[i], ttha[i], levels=tth, cmap="autumn", linewidths=1, linestyles="dashed"
             )
         return ax
 
@@ -665,6 +665,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Minimal score: {percentile_10}"
         )
+        ax.legend()
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
