@@ -1022,10 +1022,6 @@ class OptimizePyFAIGeometry(Task):
                 Available preprocessing: gradient "magnitude" powder, "gradient" sigmoid powder,
                 "high-pass" filtering, "CAE" convolutional autoencoding (later)
         """
-
-        def sigmoid(x):
-            return 1 / (1 + np.exp(-x))
-
         if preprocess == None:
             return powder
         elif preprocess == "magnitude":
@@ -1053,12 +1049,10 @@ class OptimizePyFAIGeometry(Task):
                 calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
             ) / 2
             powder = gradx_calib + grady_calib
-            powder = sigmoid(powder)
             return powder
         elif preprocess == "high-pass":
             kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
             powder = convolve2d(powder, kernel, mode="same", boundary="symm")
-            powder = sigmoid(powder)
             return powder
 
     def _update_geometry(self, optimizer):
