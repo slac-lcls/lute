@@ -609,6 +609,8 @@ class BayesGeomOpt:
                 linewidths=1,
                 linestyles="dashed",
             )
+        ax.set_xlabel('X-axis (m)')
+        ax.set_ylabel('Y-axis (m)')
         return ax
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
