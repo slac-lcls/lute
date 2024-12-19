@@ -596,17 +596,28 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
+        tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
             y = np.reshape(y, detector.raw_shape)
             z = np.reshape(z, detector.raw_shape)
-        tth = cp.calibrant.get_2th()
-        ttha = np.arctan2(np.sqrt(x * x + y * y), z)
-        for i in range(detector.n_modules):
+            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
+            for i in range(detector.n_modules):
+                ax.contour(
+                    x[i],
+                    y[i],
+                    ttha[i],
+                    levels=tth,
+                    cmap="autumn",
+                    linewidths=0.5,
+                    linestyles="dashed",
+                )
+        else:
+            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             ax.contour(
-                x[i],
-                y[i],
-                ttha[i],
+                x,
+                y,
+                ttha,
                 levels=tth,
                 cmap="autumn",
                 linewidths=0.5,
