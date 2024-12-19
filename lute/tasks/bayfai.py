@@ -1008,8 +1008,8 @@ class OptimizePyFAIGeometry(Task):
         return powder
 
     def _preprocess_powder(
-        self, powder: npt.NDArray[np.float64], preprocess: str = None
-    ) -> npt.NDArray[np.float64]:
+        self, powder: Optional[npt.NDArray[np.float64]], preprocess: Optional[str] = None
+    ) -> Optional[npt.NDArray[np.float64]]:
         """
         Preprocess extracted powder for  enhancing optimization
 
@@ -1054,6 +1054,9 @@ class OptimizePyFAIGeometry(Task):
             kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
             powder = convolve2d(powder, kernel, mode="same", boundary="symm")
             return powder
+        else:
+            logger.warning(f"Preprocessing technique {preprocess} not recognized.")
+            return None
 
     def _update_geometry(self, optimizer):
         """
