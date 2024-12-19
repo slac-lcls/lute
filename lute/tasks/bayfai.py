@@ -657,7 +657,14 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
+        percentile_10 = np.percentile(scores, 10)
         ax.plot(distances, scores)
+        ax.axhline(
+            percentile_10,
+            color='red',
+            linestyle="--",
+            label=f"Minimal score: {percentile_10}"
+        )
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
