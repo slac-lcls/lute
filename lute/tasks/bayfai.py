@@ -869,6 +869,7 @@ class OptimizePyFAIGeometry(Task):
         self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
         if det_type.lower() == "rayonix":
+            self.shape = (1, self.shape[0], self.shape[1])
             env = self.ds.env()
             cfg = env.configStore()
             self.pixel_size = cfg.get(psana.Rayonix.ConfigV2).pixelWidth() * 1e-6
