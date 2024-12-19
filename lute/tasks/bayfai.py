@@ -581,6 +581,8 @@ class BayesGeomOpt:
                 label = sg.label
         detector = sg.detector
         y, x, z = detector.calc_cartesian_positions()
+        if z is None:
+            z = np.zeros_like(x)
         z += ai.dist
         img = ax.scatter(
             x.flatten(),
