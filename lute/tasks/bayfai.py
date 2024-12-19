@@ -43,8 +43,8 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  #
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
-from scipy.ndimage import gaussian_filter # type: ignore
-from scipy.signal import convolve2d # type: ignore
+from scipy.ndimage import gaussian_filter  # type: ignore
+from scipy.signal import convolve2d  # type: ignore
 from mpi4py import MPI
 
 pyFAI.use_opencl = False  # type: ignore
@@ -967,7 +967,9 @@ class OptimizePyFAIGeometry(Task):
                         powder = np.reshape(powder, shape)
         return powder
 
-    def _preprocess_powder(self, powder: npt.NDArray[np.float64], preprocess: str = None) -> npt.NDArray[np.float64]:
+    def _preprocess_powder(
+        self, powder: npt.NDArray[np.float64], preprocess: str = None
+    ) -> npt.NDArray[np.float64]:
         """
         Preprocess extracted powder for  enhancing optimization
 
@@ -978,8 +980,9 @@ class OptimizePyFAIGeometry(Task):
         preprocess : str
             Type of preprocessing technique
                 Available preprocessing: gradient "magnitude" powder, "gradient" sigmoid powder,
-                "high-pass" filtering, "CAE" convolutional autoencoding (later) 
+                "high-pass" filtering, "CAE" convolutional autoencoding (later)
         """
+
         def sigmoid(x):
             return 1 / (1 + np.exp(-x))
 
@@ -990,8 +993,12 @@ class OptimizePyFAIGeometry(Task):
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:-1, :-1] = (calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]) / 2 
-            grady_calib[:-1, :-1] = (calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]) / 2
+            gradx_calib[:-1, :-1] = (
+                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
+            ) / 2
+            grady_calib[:-1, :-1] = (
+                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
+            ) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "gradient":
@@ -999,18 +1006,18 @@ class OptimizePyFAIGeometry(Task):
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:-1, :-1] = (calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]) / 2 
-            grady_calib[:-1, :-1] = (calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]) / 2
+            gradx_calib[:-1, :-1] = (
+                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
+            ) / 2
+            grady_calib[:-1, :-1] = (
+                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
+            ) / 2
             powder = gradx_calib + grady_calib
             powder = sigmoid(powder)
             return powder
         elif preprocess == "high-pass":
-            kernel = np.array([
-                            [-1, -1, -1],
-                            [-1,  8, -1],
-                            [-1, -1, -1]
-                            ])
-            powder = convolve2d(powder, kernel, mode='same', boundary='symm')
+            kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+            powder = convolve2d(powder, kernel, mode="same", boundary="symm")
             powder = sigmoid(powder)
             return powder
 
