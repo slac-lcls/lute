@@ -115,6 +115,11 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Powder diffraction pattern to be used for the calibration.",
     )
 
+    preprocess: Optional[str] = Field(
+        None,
+        description="Preprocessing method to be used for the calibration.",
+    )
+
     calibrant: str = Field(
         "",
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration",
