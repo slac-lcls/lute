@@ -581,6 +581,7 @@ class BayesGeomOpt:
                 label = sg.label
         detector = sg.detector
         y, x, z = detector.calc_cartesian_positions()
+        z += ai.dist
         img = ax.scatter(
             x.flatten(),
             y.flatten(),
@@ -593,22 +594,33 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
-        x = np.reshape(x, detector.raw_shape)
-        y = np.reshape(y, detector.raw_shape)
-        z = np.reshape(z, detector.raw_shape)
-        z += ai.dist
-        ttha = np.arctan2(np.sqrt(x * x + y * y), z)
-        tth = cp.calibrant.get_2th()
-        for i in range(x.shape[0]):
+        if self.det_type.lower() != 'rayonix':
+            x = np.reshape(x, detector.raw_shape)
+            y = np.reshape(y, detector.raw_shape)
+            z = np.reshape(z, detector.raw_shape)
+            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
+            tth = cp.calibrant.get_2th()
+            for i in range(x.shape[0]):
+                ax.contour(
+                    x[i],
+                    y[i],
+                    ttha[i],
+                    levels=tth,
+                    cmap="autumn",
+                    linewidths=0.5,
+                    linestyles="dashed",
+                )
+        else:
+            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             ax.contour(
-                x[i],
-                y[i],
-                ttha[i],
-                levels=tth,
-                cmap="autumn",
-                linewidths=1,
-                linestyles="dashed",
-            )
+                    x,
+                    y,
+                    ttha,
+                    levels=tth,
+                    cmap="autumn",
+                    linewidths=0.5,
+                    linestyles="dashed",
+                )
         ax.set_xlabel('X-axis (m)')
         ax.set_ylabel('Y-axis (m)')
         return ax
