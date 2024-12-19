@@ -549,7 +549,10 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            index = np.argmin(self.scan["residual"])
+            percentile_10 = np.percentile(self.scan["score"], 10)
+            score_indices= np.where(self.scan["score"] > percentile_10)[0] 
+            shift_index = np.argmin(self.scan["residual"][score_indices])
+            index = score_indices[shift_index]
             self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
@@ -872,7 +875,7 @@ class OptimizePyFAIGeometry(Task):
         detector = psana_to_pyfai.detector
         return detector
 
-    def _check_if_path_and_type(self, string: str) -> Tuple[bool, Optional[str]]:
+    def _check_path_and_type(self, string: str) -> Tuple[bool, Optional[str]]:
         """
         Check if a string is a valid path and determine the filetype.
 
@@ -938,7 +941,7 @@ class OptimizePyFAIGeometry(Task):
         if isinstance(powder_path, str):
             is_valid: bool
             dtype: Optional[str]
-            is_valid, dtype = self._check_if_path_and_type(powder_path)
+            is_valid, dtype = self._check_path_and_type(powder_path)
             if is_valid and dtype == "numpy":
                 powder = np.load(powder_path)
                 if powder is not None and powder.shape != shape:
