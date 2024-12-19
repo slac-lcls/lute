@@ -594,7 +594,7 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity")
-        if self.det_type.lower() != 'rayonix':
+        if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
             y = np.reshape(y, detector.raw_shape)
             z = np.reshape(z, detector.raw_shape)
@@ -613,16 +613,16 @@ class BayesGeomOpt:
         else:
             ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             ax.contour(
-                    x,
-                    y,
-                    ttha,
-                    levels=tth,
-                    cmap="autumn",
-                    linewidths=0.5,
-                    linestyles="dashed",
-                )
-        ax.set_xlabel('X-axis (m)')
-        ax.set_ylabel('Y-axis (m)')
+                x,
+                y,
+                ttha,
+                levels=tth,
+                cmap="autumn",
+                linewidths=0.5,
+                linestyles="dashed",
+            )
+        ax.set_xlabel("X-axis (m)")
+        ax.set_ylabel("Y-axis (m)")
         return ax
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
