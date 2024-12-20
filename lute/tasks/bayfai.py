@@ -581,9 +581,11 @@ class BayesGeomOpt:
             bo_history[f"init_sample_{i+1}"]["param"] for i in range(num_frames)
         ]
 
+        pred = bo_history["iteration_1"]["pred"]
+        pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
         score_plot = ax.pcolormesh(
-            X, Y, bo_history["iteration_1"]["pred"], cmap="viridis", shading="auto"
+            X, Y, pred, cmap="viridis", shading="auto"
         )
         colorbar = plt.colorbar(score_plot, ax=ax)
         first_point = bo_history["iteration_1"]["param"]
@@ -602,7 +604,7 @@ class BayesGeomOpt:
         def update(frame):
             iteration_key = f"iteration_{frame + 1}"
 
-            pred = bo_history[iteration_key]["pred"]
+            pred = np.reshape(bo_history[iteration_key]["pred"], X.shape)
             score_plot.set_array(pred.ravel())
             score_plot.set_clim(vmin=pred.min(), vmax=pred.max())
             colorbar.update_normal(score_plot)
