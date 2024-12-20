@@ -585,7 +585,8 @@ class BayesGeomOpt:
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
         score_plot = ax.pcolormesh(X, Y, pred, cmap="viridis", shading="auto")
-        colorbar = plt.colorbar(score_plot, ax=ax)
+        colorbar = plt.colorbar(score_plot, ax=ax, orientation='vertical')
+        colorbar.set_label("Normalized Score")
         first_point = bo_history["iteration_1"]["param"]
         (points_red,) = ax.scatter(
             [first_point[2]], [first_point[1]], "ro", s=2, label="Next Sampled Point"
@@ -626,7 +627,7 @@ class BayesGeomOpt:
             return score_plot, points_red, points_orange
 
         anim = FuncAnimation(fig, update, frames=num_frames, interval=500, blit=True)
-        filename = f"bayes_opt_{self.exp}_r{self.run}_dist_{int(dist * 1000):03d}mm.gif"
+        filename = f"../tests/animation/bayes_opt_{self.exp}_r{self.run}_dist_{int(dist * 1000):03d}mm.gif"
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
 
