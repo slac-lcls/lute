@@ -589,18 +589,18 @@ class BayesGeomOpt:
         colorbar.set_label("Normalized Score")
         first_point = bo_history["iteration_1"]["param"]
         (points_red,) = ax.plot(
-            [first_point[2]], [first_point[1]], marker=".", color="red", markersize=2, label="Next Sampled Point"
+            [first_point[2]], [first_point[1]], marker="o", color="red", markersize=2, label="Next Sampled Point"
         )
         (points_blue,) = ax.plot(
             [p[2] for p in sample_points],
             [p[1] for p in sample_points],
-            marker = ".",
+            marker = "o",
             color = "green",
             markersize=1,
             label="Sampled Points",
         )
         (points_orange,) = ax.plot(
-            [], [], marker=".", color="orange", markersize=1, label="Previous Points"
+            [], [], marker="o", color="orange", markersize=1, label="Previous Points"
         )
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
