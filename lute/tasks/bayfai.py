@@ -584,9 +584,7 @@ class BayesGeomOpt:
         pred = bo_history["iteration_1"]["pred"]
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
-        score_plot = ax.pcolormesh(
-            X, Y, pred, cmap="viridis", shading="auto"
-        )
+        score_plot = ax.pcolormesh(X, Y, pred, cmap="viridis", shading="auto")
         colorbar = plt.colorbar(score_plot, ax=ax)
         first_point = bo_history["iteration_1"]["param"]
         (points_red,) = ax.scatter(
