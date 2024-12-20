@@ -539,6 +539,10 @@ class BayesGeomOpt:
         )
         self.comm.Barrier()
 
+        self.bayes_opt_animation(results["bo_history"], bounds, res, dist)
+
+        self.comm.Barrier()
+
         self.scan = {}
         self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
         self.scan["params"] = self.comm.gather(results["params"], root=0)
