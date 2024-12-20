@@ -598,10 +598,14 @@ class BayesGeomOpt:
             color="green",
             label="Sampled Points",
         )
-        (points_orange,) = ax.scatter([], [], "o", s=1, color="orange", label="Previous Points")
-        ax.set_title(f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m")
-        ax.set_xlabel('Y-axis (m)')
-        ax.set_ylabel('X-axis (m)')
+        (points_orange,) = ax.scatter(
+            [], [], "o", s=1, color="orange", label="Previous Points"
+        )
+        ax.set_title(
+            f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
+        )
+        ax.set_xlabel("Y-axis (m)")
+        ax.set_ylabel("X-axis (m)")
         ax.legend()
 
         def update(frame):
