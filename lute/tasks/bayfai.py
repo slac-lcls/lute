@@ -571,7 +571,7 @@ class BayesGeomOpt:
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
 
-        num_frames = len(bo_history) // 2 
+        num_frames = len(bo_history) // 2
 
         poni1 = np.arange(bounds["poni1"][0], bounds["poni1"][1] + res, res)
         poni2 = np.arange(bounds["poni2"][0], bounds["poni2"][1] + res, res)
