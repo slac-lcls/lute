@@ -573,39 +573,50 @@ class BayesGeomOpt:
         poni2 = np.arange(bounds["poni2"][0], bounds["poni2"][1] + res, res)
         X, Y = np.meshgrid(poni2, poni1)
 
-        sample_points = [bo_history[f"init_sample_{i+1}"]["param"] for i in range(num_frames)]
+        sample_points = [
+            bo_history[f"init_sample_{i+1}"]["param"] for i in range(num_frames)
+        ]
 
         fig, ax = plt.subplots()
-        score_plot = ax.pcolormesh(X, Y, bo_history['iteration_1']['pred'], cmap='viridis', shading='auto')
+        score_plot = ax.pcolormesh(
+            X, Y, bo_history["iteration_1"]["pred"], cmap="viridis", shading="auto"
+        )
         colorbar = plt.colorbar(score_plot, ax=ax)
-        first_point = bo_history['iteration_1']['param']
-        points_red, = ax.plot([first_point[2]], [first_point[1]], 'ro', label='Next Sampled Point')
-        points_green, = ax.plot([p[2] for p in sample_points], [p[1] for p in sample_points], 'o', color='green', label='Sampled Points')
-        points_orange, = ax.plot([], [], 'o', color='green', label='Sampled Points')
+        first_point = bo_history["iteration_1"]["param"]
+        (points_red,) = ax.plot(
+            [first_point[2]], [first_point[1]], "ro", label="Next Sampled Point"
+        )
+        (points_green,) = ax.plot(
+            [p[2] for p in sample_points],
+            [p[1] for p in sample_points],
+            "o",
+            color="green",
+            label="Sampled Points",
+        )
+        (points_orange,) = ax.plot([], [], "o", color="green", label="Sampled Points")
 
         def update(frame):
             iteration_key = f"iteration_{frame + 1}"
 
-            pred = bo_history[iteration_key]['pred']
+            pred = bo_history[iteration_key]["pred"]
             score_plot.set_array(pred.ravel())
             score_plot.set_clim(vmin=pred.min(), vmax=pred.max())
             colorbar.update_normal(score_plot)
 
-            current_point = bo_history[iteration_key]['param']
-            previous_points = [bo_history[f"iteration_{i + 1}"]['param'] for i in range(frame)]
+            current_point = bo_history[iteration_key]["param"]
+            previous_points = [
+                bo_history[f"iteration_{i + 1}"]["param"] for i in range(frame)
+            ]
 
             points_red.set_data([current_point[2]], [current_point[1]])
             if previous_points:
                 points_orange.set_data(
-                    [p[2] for p in previous_points],
-                    [p[1] for p in previous_points]
+                    [p[2] for p in previous_points], [p[1] for p in previous_points]
                 )
 
             return score_plot, points_red, points_orange
-        
-        anim = FuncAnimation(
-            fig, update, frames=num_frames, interval=500, blit=True
-        )
+
+        anim = FuncAnimation(fig, update, frames=num_frames, interval=500, blit=True)
         filename = f"bayes_opt_{self.exp}_r{self.run}_dist_{int(dist * 1000):03d}mm.gif"
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
