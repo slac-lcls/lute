@@ -715,8 +715,8 @@ class BayesGeomOpt:
             )
         ax.set_xlabel("X-axis (m)")
         ax.set_ylabel("Y-axis (m)")
-        ax.tick_params(axis='x', labelsize=8)
-        ax.tick_params(axis='y', labelsize=8)
+        ax.tick_params(axis="x", labelsize=8)
+        ax.tick_params(axis="y", labelsize=8)
         ax.set_title(label)
         return ax
 
