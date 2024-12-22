@@ -536,7 +536,9 @@ class BayesGeomOpt:
         )
         self.comm.Barrier()
 
-        self.bayes_opt_animation(results["bo_history"], n_samples, n_iterations, bounds, res, dist)
+        self.bayes_opt_animation(
+            results["bo_history"], n_samples, n_iterations, bounds, res, dist
+        )
 
         self.comm.Barrier()
 
@@ -563,7 +565,9 @@ class BayesGeomOpt:
             self.score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
 
-    def bayes_opt_animation(self, bo_history, n_samples, n_iterations, bounds, res, dist):
+    def bayes_opt_animation(
+        self, bo_history, n_samples, n_iterations, bounds, res, dist
+    ):
         import numpy as np
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
