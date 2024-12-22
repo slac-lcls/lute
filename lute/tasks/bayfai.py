@@ -721,14 +721,14 @@ class BayesGeomOpt:
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
         closest_q = (
-            4 * np.pi * np.sin(np.arctan2(closest_pixel / distance)) / self.wavelength
+            4 * np.pi * np.sin(np.arctan2(closest_pixel, distance)) / self.wavelength
         ) * 1e10
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(d)
         furthest_pixel = d.flatten()[furthest_pixel_index]
         furthest_q = (
-            4 * np.pi * np.sin(np.arctan2(furthest_pixel / distance)) / self.wavelength
+            4 * np.pi * np.sin(np.arctan2(furthest_pixel, distance)) / self.wavelength
         ) * 1e10
         furthest_resol = 2 * np.pi / furthest_q
 
@@ -741,13 +741,13 @@ class BayesGeomOpt:
         border_distances = [d_left, d_right, d_bottom, d_top]
         border_pixel = min(border_distances)
         border_q = (
-            4 * np.pi * np.sin(np.arctan2(border_pixel / distance)) / self.wavelength
+            4 * np.pi * np.sin(np.arctan2(border_pixel, distance)) / self.wavelength
         ) * 1e10
         border_resol = 2 * np.pi / border_q
         border_2_q = (
             4
             * np.pi
-            * np.sin(np.arctan2(border_pixel / 2 * distance))
+            * np.sin(np.arctan2(border_pixel / 2, distance))
             / self.wavelength
         ) * 1e10
         border_2_resol = 2 * np.pi / border_2_q
