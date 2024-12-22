@@ -911,10 +911,16 @@ class BayesGeomOpt:
         # Plotting BO convergence
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
         scores = [bo_history[key]["score"] for key in bo_history.keys()]
-        ax1.plot(np.maximum.accumulate(scores))
+        ax1.plot(scores)
         ax1.set_xticks(np.arange(len(scores), step=20))
+        ax1.axvline(
+            self.index,
+            color="green",
+            linestyle="--",
+            label=f"Best score reached at iteration {self.index}",
+        )
         ax1.set_xlabel("Iteration")
-        ax1.set_ylabel("Best score so far")
+        ax1.set_ylabel("Number of Control Points")
         ax1.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
         icol += 1
 
