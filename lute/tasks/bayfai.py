@@ -602,7 +602,14 @@ class BayesGeomOpt:
             linestyle="",
         )
         (points_orange,) = ax.plot(
-            [], [], marker="o", color="orange", markersize=2, alpha=0.5, label="Previous Points", linestyle="",
+            [],
+            [],
+            marker="o",
+            color="orange",
+            markersize=2,
+            alpha=0.5,
+            label="Previous Points",
+            linestyle="",
         )
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
