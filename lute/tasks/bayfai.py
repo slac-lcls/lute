@@ -745,10 +745,7 @@ class BayesGeomOpt:
         )
         border_resol = 2 * np.pi / border_q
         border_2_q = (
-            4
-            * np.pi
-            * np.sin(np.arctan2(border_pixel / 2, distance))
-            / self.wavelength
+            4 * np.pi * np.sin(np.arctan2(border_pixel / 2, distance)) / self.wavelength
         )
         border_2_resol = 2 * np.pi / border_2_q
 
