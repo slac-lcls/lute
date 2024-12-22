@@ -678,8 +678,8 @@ class BayesGeomOpt:
 
         xmin, xmax = x.min(), x.max()
         ymin, ymax = y.min(), y.max()
-        ax.set_xlim(xmin * np.sqrt(2), xmax * np.sqrt(2))
-        ax.set_ylim(ymin * np.sqrt(2), ymax * np.sqrt(2))
+        ax.set_xlim(xmin * 1.1, xmax * 1.1)
+        ax.set_ylim(ymin * 1.1, ymax * 1.1)
 
         img = ax.scatter(
             x.flatten(),
@@ -706,7 +706,7 @@ class BayesGeomOpt:
                     ttha[i],
                     levels=tth,
                     cmap="autumn",
-                    linewidths=0.5,
+                    linewidths=1,
                     linestyles="dashed",
                 )
         else:
@@ -717,7 +717,7 @@ class BayesGeomOpt:
                 ttha,
                 levels=tth,
                 cmap="autumn",
-                linewidths=0.5,
+                linewidths=1,
                 linestyles="dashed",
             )
 
@@ -1034,7 +1034,7 @@ class BayesGeomOpt:
             self.scan["best_idx"][self.index],
             color="green",
             linestyle="--",
-            label=f"Best score reached at iteration {self.scan['best_idx'][self.index]}",
+            label=f"Best score at n={self.scan['best_idx'][self.index]}",
         )
         ax1.set_xlabel("Iteration")
         ax1.set_ylabel("Number of Control Points")
