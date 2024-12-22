@@ -602,7 +602,7 @@ class BayesGeomOpt:
             color="green",
             markersize=5,
             label="Sampled Points",
-            alpha=0.2,
+            alpha=0.3,
             linestyle="",
         )
         (points_orange,) = ax.plot(
@@ -611,7 +611,7 @@ class BayesGeomOpt:
             marker="o",
             color="orange",
             markersize=5,
-            alpha=0.2,
+            alpha=0.3,
             label="Previous Points",
             linestyle="",
         )
@@ -621,6 +621,8 @@ class BayesGeomOpt:
         ax.set_xlabel("Y-axis (m)")
         ax.set_ylabel("X-axis (m)")
         ax.legend()
+        ax.tick_params(axis='x', labelrotation=45, labelsize=8)
+        ax.tick_params(axis='y', labelrotation=45, labelsize=8)
 
         def update(frame):
             iteration_key = f"iteration_{frame + 1}"
