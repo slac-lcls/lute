@@ -722,14 +722,14 @@ class BayesGeomOpt:
         closest_pixel = d.flatten()[closest_pixel_index]
         closest_q = (
             4 * np.pi * np.sin(np.arctan2(closest_pixel, distance)) / self.wavelength
-        ) * 1e10
+        )
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(d)
         furthest_pixel = d.flatten()[furthest_pixel_index]
         furthest_q = (
             4 * np.pi * np.sin(np.arctan2(furthest_pixel, distance)) / self.wavelength
-        ) * 1e10
+        )
         furthest_resol = 2 * np.pi / furthest_q
 
         xmin, xmax = x.min(), x.max()
@@ -742,14 +742,14 @@ class BayesGeomOpt:
         border_pixel = min(border_distances)
         border_q = (
             4 * np.pi * np.sin(np.arctan2(border_pixel, distance)) / self.wavelength
-        ) * 1e10
+        )
         border_resol = 2 * np.pi / border_q
         border_2_q = (
             4
             * np.pi
             * np.sin(np.arctan2(border_pixel / 2, distance))
             / self.wavelength
-        ) * 1e10
+        )
         border_2_resol = 2 * np.pi / border_2_q
 
         circle_closest = plt.Circle(
@@ -760,7 +760,7 @@ class BayesGeomOpt:
             cx + closest_pixel / np.sqrt(2),
             cy + closest_pixel / np.sqrt(2),
             f"{closest_resol:.2f} \u00c5",
-            fontsize=10,
+            fontsize=4,
             ha="center",
         )
 
@@ -772,7 +772,7 @@ class BayesGeomOpt:
             cx + furthest_pixel / np.sqrt(2),
             cy + furthest_pixel / np.sqrt(2),
             f"{furthest_resol:.2f} \u00c5",
-            fontsize=10,
+            fontsize=4,
             ha="center",
         )
 
@@ -784,7 +784,7 @@ class BayesGeomOpt:
             cx + border_pixel / np.sqrt(2),
             cy + border_pixel / np.sqrt(2),
             f"{border_resol} \u00c5",
-            fontsize=10,
+            fontsize=4,
             ha="center",
         )
 
@@ -796,7 +796,7 @@ class BayesGeomOpt:
             cx + border_pixel / 2 * np.sqrt(2),
             cy + border_pixel / 2 * np.sqrt(2),
             f"{border_2_resol} \u00c5",
-            fontsize=10,
+            fontsize=4,
             ha="center",
         )
 
