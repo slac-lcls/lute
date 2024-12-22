@@ -593,7 +593,7 @@ class BayesGeomOpt:
             [first_point[2]],
             [first_point[1]],
             "ro",
-            label="Next Sampled",
+            label="Next",
         )
         (points_green,) = ax.plot(
             [p[2] for p in sample_points],
