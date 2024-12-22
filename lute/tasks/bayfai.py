@@ -596,9 +596,9 @@ class BayesGeomOpt:
             [p[1] for p in sample_points],
             marker="o",
             color="green",
-            markersize=2,
+            markersize=5,
             label="Sampled Points",
-            alpha=0.5,
+            alpha=0.2,
             linestyle="",
         )
         (points_orange,) = ax.plot(
@@ -606,8 +606,8 @@ class BayesGeomOpt:
             [],
             marker="o",
             color="orange",
-            markersize=2,
-            alpha=0.5,
+            markersize=5,
+            alpha=0.2,
             label="Previous Points",
             linestyle="",
         )
