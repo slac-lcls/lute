@@ -593,7 +593,7 @@ class BayesGeomOpt:
             [first_point[2]],
             [first_point[1]],
             "ro",
-            label="Next Sampled Point",
+            label="Next Sampled",
         )
         (points_green,) = ax.plot(
             [p[2] for p in sample_points],
@@ -601,7 +601,7 @@ class BayesGeomOpt:
             marker="o",
             color="green",
             markersize=5,
-            label="Sampled Points",
+            label="Sampled",
             alpha=0.3,
             linestyle="",
         )
@@ -612,7 +612,7 @@ class BayesGeomOpt:
             color="orange",
             markersize=5,
             alpha=0.3,
-            label="Previous Points",
+            label="Visited",
             linestyle="",
         )
         ax.set_title(
@@ -620,7 +620,7 @@ class BayesGeomOpt:
         )
         ax.set_xlabel("X-axis (m)")
         ax.set_ylabel("Y-axis (m)")
-        ax.legend()
+        ax.legend(loc='upper right')
         ax.tick_params(axis="x", labelsize=8)
         ax.tick_params(axis="y", labelsize=8)
 
