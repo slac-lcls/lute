@@ -576,7 +576,7 @@ class BayesGeomOpt:
 
         poni1 = np.arange(bounds["poni1"][0], bounds["poni1"][1] + res, res)
         poni2 = np.arange(bounds["poni2"][0], bounds["poni2"][1] + res, res)
-        X, Y = np.meshgrid(poni2, poni1, indexing='ij')
+        X, Y = np.meshgrid(poni2, poni1, indexing="ij")
 
         sample_points = [
             bo_history[f"init_sample_{i+1}"]["param"] for i in range(n_samples)
