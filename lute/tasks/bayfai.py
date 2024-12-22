@@ -763,7 +763,7 @@ class BayesGeomOpt:
             f"{closest_resol:.2f} \u00c5",
             color="red",
             fontsize=6,
-            ha="right",
+            ha="left",
         )
 
         circle_furthest = plt.Circle(
@@ -776,7 +776,7 @@ class BayesGeomOpt:
             f"{furthest_resol:.2f} \u00c5",
             color="red",
             fontsize=6,
-            ha="right",
+            ha="left",
         )
 
         circle_border = plt.Circle(
@@ -786,10 +786,10 @@ class BayesGeomOpt:
         ax.text(
             cx + border_pixel / np.sqrt(2),
             cy + border_pixel / np.sqrt(2),
-            f"{border_resol} \u00c5",
+            f"{border_resol:.2f} \u00c5",
             color="red",
             fontsize=6,
-            ha="right",
+            ha="left",
         )
 
         circle_border_2 = plt.Circle(
@@ -797,12 +797,12 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_border_2)
         ax.text(
-            cx + border_pixel / 2 * np.sqrt(2),
-            cy + border_pixel / 2 * np.sqrt(2),
-            f"{border_2_resol} \u00c5",
+            cx + (border_pixel / 2) / np.sqrt(2),
+            cy + (border_pixel / 2) / np.sqrt(2),
+            f"{border_2_resol:.2f} \u00c5",
             color="red",
             fontsize=6,
-            ha="right",
+            ha="left",
         )
 
         ax.set_xlabel("X-axis (m)")
