@@ -616,7 +616,7 @@ class BayesGeomOpt:
             linestyle="",
         )
         ax.set_title(
-            f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
+            f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.3f}m"
         )
         ax.set_xlabel("X-axis (m)")
         ax.set_ylabel("Y-axis (m)")
