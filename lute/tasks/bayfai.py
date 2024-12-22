@@ -576,7 +576,7 @@ class BayesGeomOpt:
 
         poni1 = np.arange(bounds["poni1"][0], bounds["poni1"][1] + res, res)
         poni2 = np.arange(bounds["poni2"][0], bounds["poni2"][1] + res, res)
-        X, Y = np.meshgrid(poni2, poni1)
+        X, Y = np.meshgrid(poni2, poni1, indexing='ij')
 
         sample_points = [
             bo_history[f"init_sample_{i+1}"]["param"] for i in range(n_samples)
@@ -618,8 +618,8 @@ class BayesGeomOpt:
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
         )
-        ax.set_xlabel("Y-axis (m)")
-        ax.set_ylabel("X-axis (m)")
+        ax.set_xlabel("X-axis (m)")
+        ax.set_ylabel("Y-axis (m)")
         ax.legend()
         ax.tick_params(axis="x", labelsize=8)
         ax.tick_params(axis="y", labelsize=8)
@@ -640,7 +640,7 @@ class BayesGeomOpt:
             points_red.set_data([current_point[2]], [current_point[1]])
             if previous_points:
                 points_orange.set_data(
-                    [p[2] for p in previous_points], [p[1] for p in previous_points]
+                    [p[1] for p in previous_points], [p[2] for p in previous_points]
                 )
 
             return score_plot, points_red, points_orange
