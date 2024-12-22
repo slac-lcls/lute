@@ -918,13 +918,14 @@ class BayesGeomOpt:
         ax1.plot(scores)
         ax1.set_xticks(np.arange(len(scores), step=20))
         ax1.axvline(
-            self.index,
+            self.scan["best_idx"][self.index],
             color="green",
             linestyle="--",
-            label=f"Best score reached at iteration {self.index}",
+            label=f"Best score reached at iteration {self.scan["best_idx"][self.index]}",
         )
         ax1.set_xlabel("Iteration")
         ax1.set_ylabel("Number of Control Points")
+        ax1.legend()
         ax1.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
         icol += 1
 
