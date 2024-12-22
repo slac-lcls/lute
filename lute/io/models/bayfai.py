@@ -49,12 +49,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         )
 
         n_samples: Optional[int] = Field(
-            50,
+            20,
             description="Number of random starts to initialize the Bayesian optimization.",
         )
 
         n_iterations: Optional[int] = Field(
-            50,
+            80,
             description="Number of iterations to run the Bayesian optimization.",
         )
 

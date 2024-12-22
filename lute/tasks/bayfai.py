@@ -219,10 +219,10 @@ class BayesGeomOpt:
         dist,
         bounds,
         res,
-        Imin=90,
+        Imin,
         max_rings=5,
-        n_samples=50,
-        n_iterations=50,
+        n_samples=20,
+        n_iterations=80,
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -456,10 +456,9 @@ class BayesGeomOpt:
         powder,
         bounds,
         res,
-        Imin=99,
         max_rings=5,
-        n_samples=50,
-        n_iterations=50,
+        n_samples=20,
+        n_iterations=80,
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -476,8 +475,6 @@ class BayesGeomOpt:
             Dictionary of bounds and resolution for search parameters
         res : float
             Resolution of the grid used to discretize the parameter search space
-        Imin : float
-            Minimum intensity threshold for control point extraction based on intensity distribution percentile
         max_rings : int
             Maximum number of rings to use for control point extraction
         n_samples : int
@@ -539,7 +536,7 @@ class BayesGeomOpt:
         )
         self.comm.Barrier()
 
-        self.bayes_opt_animation(results["bo_history"], bounds, res, dist)
+        self.bayes_opt_animation(results["bo_history"], n_samples, n_iterations, bounds, res, dist)
 
         self.comm.Barrier()
 
@@ -566,19 +563,19 @@ class BayesGeomOpt:
             self.score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
 
-    def bayes_opt_animation(self, bo_history, bounds, res, dist):
+    def bayes_opt_animation(self, bo_history, n_samples, n_iterations, bounds, res, dist):
         import numpy as np
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
 
-        num_frames = len(bo_history) // 2
+        num_frames = n_iterations
 
         poni1 = np.arange(bounds["poni1"][0], bounds["poni1"][1] + res, res)
         poni2 = np.arange(bounds["poni2"][0], bounds["poni2"][1] + res, res)
         X, Y = np.meshgrid(poni2, poni1)
 
         sample_points = [
-            bo_history[f"init_sample_{i+1}"]["param"] for i in range(num_frames)
+            bo_history[f"init_sample_{i+1}"]["param"] for i in range(n_samples)
         ]
 
         pred = bo_history["iteration_1"]["pred"]
@@ -594,16 +591,18 @@ class BayesGeomOpt:
             "ro",
             label="Next Sampled Point",
         )
-        (points_blue,) = ax.plot(
+        (points_green,) = ax.plot(
             [p[2] for p in sample_points],
             [p[1] for p in sample_points],
-            "bo",
+            marker="o",
+            color="green",
+            markersize=2,
             label="Sampled Points",
-            alpha=0.7,
-            linestyle=None,
+            alpha=0.5,
+            linestyle="",
         )
         (points_orange,) = ax.plot(
-            [], [], marker="o", color="orange", markersize=1, alpha=0.7, label="Previous Points", linestyle=None
+            [], [], marker="o", color="orange", markersize=2, alpha=0.5, label="Previous Points", linestyle="",
         )
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.2f}m"
