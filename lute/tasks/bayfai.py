@@ -772,7 +772,7 @@ class BayesGeomOpt:
         ax.text(
             cx + closest_pixel / np.sqrt(2),
             cy + closest_pixel / np.sqrt(2),
-            f"{closest_resol:.2f} \u00c5",
+            f"{closest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
             ha="left",
@@ -785,7 +785,7 @@ class BayesGeomOpt:
         ax.text(
             cx + furthest_pixel / np.sqrt(2),
             cy + furthest_pixel / np.sqrt(2),
-            f"{furthest_resol:.2f} \u00c5",
+            f"{furthest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
             ha="left",
@@ -798,7 +798,7 @@ class BayesGeomOpt:
         ax.text(
             cx + border_pixel / np.sqrt(2),
             cy + border_pixel / np.sqrt(2),
-            f"{border_resol:.2f} \u00c5",
+            f"{border_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
             ha="left",
@@ -811,7 +811,7 @@ class BayesGeomOpt:
         ax.text(
             cx + (border_pixel / 2) / np.sqrt(2),
             cy + (border_pixel / 2) / np.sqrt(2),
-            f"{border_2_resol:.2f} \u00c5",
+            f"{border_2_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
             ha="left",
@@ -925,13 +925,13 @@ class BayesGeomOpt:
             best_dist,
             color="green",
             linestyle="--",
-            label=f"Best distance (m): {best_dist:.2e}",
+            label=f"Best distance (m): {best_dist:.3f}",
         )
         ax.axvline(
             refined_dist,
             color="red",
             linestyle="--",
-            label=f"Refined distance (m): {refined_dist:.2e}",
+            label=f"Refined distance (m): {refined_dist:.3f}",
         )
         ax.legend(fontsize="x-small")
         ax.set_yscale("log")
@@ -1343,8 +1343,8 @@ class OptimizePyFAIGeometry(Task):
         if optimizer.rank == 0:
             logger.info("Optimization complete")
             distance, cx, cy = get_beam_center(optimizer.params)
-            logger.info(f"Detector Distance to Sample: {distance:.2e}")
-            logger.info(f"Beam center: ({cx:.2e}, {cy:.2e})")
+            logger.info(f"Detector Distance to Sample: {distance:.6f}")
+            logger.info(f"Beam center: ({cx:.6f}, {cy:.6f})")
             logger.info(
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
@@ -1370,19 +1370,19 @@ class OptimizePyFAIGeometry(Task):
             self._result.summary = []
             self._result.summary.append(
                 {
-                    "Detector distance (m)": f"{distance:.3f}",
+                    "Detector distance (m)": f"{distance:.6f}",
                     "Detector center (m)": (f"{cx:.6f}", f"{cy:.6f}"),
-                    "Low q": f"{low_q:.2f} \u00c5-1 | {low_res:.2f} \u00c5",
-                    "High q": f"{border_q:.2f} \u00c5-1 | {border_res:.2f} \u00c5 (detector edge)",
-                    "Highest q": f"{high_q:.2f} \u00c5-1 | {high_res:.2f} \u00c5 (detector corner)",
+                    "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
+                    "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
+                    "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
                 }
             )
-            logger.info(f">>> Low q : {low_q:.2f} \u00c5-1 | {low_res:.2f} \u00c5")
+            logger.info(f">>> Low q : {low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5")
             logger.info(
-                f">>> High q : {border_q:.2f} \u00c5-1 | {border_res:.2f} \u00c5 (detector edge)"
+                f">>> High q : {border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)"
             )
             logger.info(
-                f">>> Highest q : {high_q:.2f} \u00c5-1 | {high_res:.2f} \u00c5 (detector corner)"
+                f">>> Highest q : {high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)"
             )
             self._result.summary.append(
                 ElogSummaryPlots(
