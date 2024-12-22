@@ -720,14 +720,18 @@ class BayesGeomOpt:
 
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
-        closest_q = (4 * np.pi * np.sin(np.arctan2(closest_pixel / distance)) / self.wavelength) * 1e10
+        closest_q = (
+            4 * np.pi * np.sin(np.arctan2(closest_pixel / distance)) / self.wavelength
+        ) * 1e10
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(d)
         furthest_pixel = d.flatten()[furthest_pixel_index]
-        furthest_q = (4 * np.pi * np.sin(np.arctan2(furthest_pixel / distance)) / self.wavelength) * 1e10
+        furthest_q = (
+            4 * np.pi * np.sin(np.arctan2(furthest_pixel / distance)) / self.wavelength
+        ) * 1e10
         furthest_resol = 2 * np.pi / furthest_q
-        
+
         xmin, xmax = x.min(), x.max()
         ymin, ymax = y.min(), y.max()
         d_left = abs(cx - xmin)
@@ -736,33 +740,79 @@ class BayesGeomOpt:
         d_top = abs(cy - ymax)
         border_distances = [d_left, d_right, d_bottom, d_top]
         border_pixel = min(border_distances)
-        border_q = (4 * np.pi * np.sin(np.arctan2(border_pixel / distance)) / self.wavelength) * 1e10
+        border_q = (
+            4 * np.pi * np.sin(np.arctan2(border_pixel / distance)) / self.wavelength
+        ) * 1e10
         border_resol = 2 * np.pi / border_q
-        border_2_q = (4 * np.pi * np.sin(np.arctan2(border_pixel / 2 * distance)) / self.wavelength) * 1e10
+        border_2_q = (
+            4
+            * np.pi
+            * np.sin(np.arctan2(border_pixel / 2 * distance))
+            / self.wavelength
+        ) * 1e10
         border_2_resol = 2 * np.pi / border_2_q
 
-        circle_closest = plt.Circle((cx, cy), closest_pixel, color='green', linestyle='dashed', fill=False)
+        circle_closest = plt.Circle(
+            (cx, cy), closest_pixel, color="green", linestyle="dashed", fill=False
+        )
         ax.add_artist(circle_closest)
-        ax.text(cx + closest_pixel / np.sqrt(2), cy + closest_pixel / np.sqrt(2), f'{closest_resol:.2f} \u00c5', fontsize=10, ha='center')
+        ax.text(
+            cx + closest_pixel / np.sqrt(2),
+            cy + closest_pixel / np.sqrt(2),
+            f"{closest_resol:.2f} \u00c5",
+            fontsize=10,
+            ha="center",
+        )
 
-        circle_furthest = plt.Circle((cx, cy), furthest_pixel, color='green', linestyle='dashed', fill=False)
+        circle_furthest = plt.Circle(
+            (cx, cy), furthest_pixel, color="green", linestyle="dashed", fill=False
+        )
         ax.add_artist(circle_furthest)
-        ax.text(cx + furthest_pixel / np.sqrt(2), cy + furthest_pixel / np.sqrt(2), f'{furthest_resol:.2f} \u00c5', fontsize=10, ha='center')
+        ax.text(
+            cx + furthest_pixel / np.sqrt(2),
+            cy + furthest_pixel / np.sqrt(2),
+            f"{furthest_resol:.2f} \u00c5",
+            fontsize=10,
+            ha="center",
+        )
 
-        circle_border = plt.Circle((cx, cy), border_pixel, color='green', linestyle='dashed', fill=False)
+        circle_border = plt.Circle(
+            (cx, cy), border_pixel, color="green", linestyle="dashed", fill=False
+        )
         ax.add_artist(circle_border)
-        ax.text(cx + border_pixel / np.sqrt(2), cy + border_pixel / np.sqrt(2), f'{border_resol} \u00c5', fontsize=10, ha='center')
+        ax.text(
+            cx + border_pixel / np.sqrt(2),
+            cy + border_pixel / np.sqrt(2),
+            f"{border_resol} \u00c5",
+            fontsize=10,
+            ha="center",
+        )
 
-        circle_border_2 = plt.Circle((cx, cy), border_pixel / 2, color='green', linestyle='dashed', fill=False)
+        circle_border_2 = plt.Circle(
+            (cx, cy), border_pixel / 2, color="green", linestyle="dashed", fill=False
+        )
         ax.add_artist(circle_border_2)
-        ax.text(cx + border_pixel / 2 * np.sqrt(2), cy + border_pixel / 2 * np.sqrt(2), f'{border_2_resol} \u00c5', fontsize=10, ha='center')
+        ax.text(
+            cx + border_pixel / 2 * np.sqrt(2),
+            cy + border_pixel / 2 * np.sqrt(2),
+            f"{border_2_resol} \u00c5",
+            fontsize=10,
+            ha="center",
+        )
 
         ax.set_xlabel("X-axis (m)")
         ax.set_ylabel("Y-axis (m)")
         ax.tick_params(axis="x", labelsize=8)
         ax.tick_params(axis="y", labelsize=8)
         ax.set_title(label)
-        return closest_q, closest_resol, furthest_q, furthest_resol, border_q, border_resol
+        return (
+            closest_q,
+            closest_resol,
+            furthest_q,
+            furthest_resol,
+            border_q,
+            border_resol,
+        )
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
         """
@@ -1008,7 +1058,11 @@ class BayesGeomOpt:
             geometry=geometry,
         )
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
-        low_q, low_res, high_q, high_res, border_q, border_res = self.powder_and_resolution(sg=sg, distance=distance, beam_center=beam_center, ax=ax4)
+        low_q, low_res, high_q, high_res, border_q, border_res = (
+            self.powder_and_resolution(
+                sg=sg, distance=distance, beam_center=beam_center, ax=ax4
+            )
+        )
         irow += 1
         icol = 0
 
@@ -1284,14 +1338,16 @@ class OptimizePyFAIGeometry(Task):
                 f"{fig_folder}/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
             calib_detector = self._update_geometry(optimizer)
-            fig, low_q, low_res, high_q, high_res, border_q, border_res = optimizer.visualize_results(
-                powder=optimizer.powder,
-                bo_history=optimizer.bo_history,
-                detector=calib_detector,
-                params=optimizer.params,
-                distance=distance,
-                beam_center=(cx, cy),
-                plot=plot,
+            fig, low_q, low_res, high_q, high_res, border_q, border_res = (
+                optimizer.visualize_results(
+                    powder=optimizer.powder,
+                    bo_history=optimizer.bo_history,
+                    detector=calib_detector,
+                    params=optimizer.params,
+                    distance=distance,
+                    beam_center=(cx, cy),
+                    plot=plot,
+                )
             )
             plots = pn.Tabs(fig)
             self._result.summary = []
@@ -1305,8 +1361,12 @@ class OptimizePyFAIGeometry(Task):
                 }
             )
             logger.info(f">>> Low q : {low_q:.2f} \u00c5-1 | {low_res:.2f} \u00c5")
-            logger.info(f">>> High q : {border_q:.2f} \u00c5-1 | {border_res:.2f} \u00c5 (detector edge)")
-            logger.info(f">>> Highest q : {high_q:.2f} \u00c5-1 | {high_res:.2f} \u00c5 (detector corner)")
+            logger.info(
+                f">>> High q : {border_q:.2f} \u00c5-1 | {border_res:.2f} \u00c5 (detector edge)"
+            )
+            logger.info(
+                f">>> Highest q : {high_q:.2f} \u00c5-1 | {high_res:.2f} \u00c5 (detector corner)"
+            )
             self._result.summary.append(
                 ElogSummaryPlots(
                     f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots
