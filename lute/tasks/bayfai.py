@@ -640,7 +640,7 @@ class BayesGeomOpt:
             points_red.set_data([current_point[2]], [current_point[1]])
             if previous_points:
                 points_orange.set_data(
-                    [p[1] for p in previous_points], [p[2] for p in previous_points]
+                    [p[2] for p in previous_points], [p[1] for p in previous_points]
                 )
 
             return score_plot, points_red, points_orange
