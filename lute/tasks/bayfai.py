@@ -585,12 +585,20 @@ class BayesGeomOpt:
         pred = bo_history["iteration_1"]["pred"]
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
-        vmin = min(
-            np.min(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)
-        ) / 2
-        vmax = max(
-            np.max(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)
-        ) / 2
+        vmin = (
+            min(
+                np.min(bo_history[f"iteration_{i+1}"]["pred"])
+                for i in range(num_frames)
+            )
+            / 2
+        )
+        vmax = (
+            max(
+                np.max(bo_history[f"iteration_{i+1}"]["pred"])
+                for i in range(num_frames)
+            )
+            / 2
+        )
         score_plot = ax.pcolormesh(
             X, Y, pred, cmap="viridis", shading="auto", vmin=vmin, vmax=vmax
         )
