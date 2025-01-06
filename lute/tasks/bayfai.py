@@ -536,12 +536,6 @@ class BayesGeomOpt:
         )
         self.comm.Barrier()
 
-        self.bayes_opt_animation(
-            results["bo_history"], n_samples, n_iterations, bounds, res, dist
-        )
-
-        self.comm.Barrier()
-
         self.scan = {}
         self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
         self.scan["params"] = self.comm.gather(results["params"], root=0)
@@ -570,7 +564,7 @@ class BayesGeomOpt:
     ):
         import numpy as np
         import matplotlib.pyplot as plt
-        from matplotlib.animation import FuncAnimation
+        from matplotlib.animation import FuncAnimation # type: ignore
 
         num_frames = n_iterations
 
@@ -585,7 +579,9 @@ class BayesGeomOpt:
         pred = bo_history["iteration_1"]["pred"]
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
-        score_plot = ax.pcolormesh(X, Y, pred, cmap="viridis", shading="auto")
+        vmin = min(np.min(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames))
+        vmax = max(np.max(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames))
+        score_plot = ax.pcolormesh(X, Y, pred, cmap="viridis", shading="auto", vmin=vmin, vmax=vmax)
         colorbar = plt.colorbar(score_plot, ax=ax, orientation="vertical")
         colorbar.set_label("Normalized Score")
         first_point = bo_history["iteration_1"]["param"]
@@ -601,7 +597,7 @@ class BayesGeomOpt:
             marker="o",
             color="green",
             markersize=5,
-            label="Sampled",
+            label="Start",
             alpha=0.3,
             linestyle="",
         )
@@ -612,7 +608,7 @@ class BayesGeomOpt:
             color="orange",
             markersize=5,
             alpha=0.3,
-            label="Visited",
+            label="Sampled",
             linestyle="",
         )
         ax.set_title(
@@ -629,8 +625,6 @@ class BayesGeomOpt:
 
             pred = np.reshape(bo_history[iteration_key]["pred"], X.shape)
             score_plot.set_array(pred.ravel())
-            score_plot.set_clim(vmin=pred.min(), vmax=pred.max())
-            colorbar.update_normal(score_plot)
 
             current_point = bo_history[iteration_key]["param"]
             previous_points = [
@@ -668,7 +662,7 @@ class BayesGeomOpt:
         if sg is not None:
             powder = sg.image
             cp = sg.control_points
-            ai = sg.geometry_refinement
+            #ai = sg.geometry_refinement
             label = sg.label
         detector = sg.detector
         y, x, z = detector.calc_cartesian_positions()
