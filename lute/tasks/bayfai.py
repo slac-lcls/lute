@@ -977,25 +977,25 @@ class BayesGeomOpt:
             label="Pixel Intensities",
             orientation="horizontal",
         )
-        ax.axvline(
+        ax.axhline(
             mean,
             color="red",
             linestyle="--",
             label=f"Mean ({mean:.2f})",
         )
-        ax.axvline(
+        ax.axhline(
             mean + std_dev,
             color="orange",
             linestyle="--",
             label=f"Mean + Std Dev ({mean + std_dev:.2f})",
         )
-        ax.axvline(
+        ax.axhline(
             mean + 2 * std_dev,
             color="green",
             linestyle="--",
             label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
         )
-        ax.axvline(
+        ax.axhline(
             self.Imin,
             color="purple",
             linestyle=":",
@@ -1034,7 +1034,6 @@ class BayesGeomOpt:
         fig = plt.figure(figsize=(12, 16), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
-        plt.subplots_adjust(hspace=0.3, wspace=0.3)
 
         # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
