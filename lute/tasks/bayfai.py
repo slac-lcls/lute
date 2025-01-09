@@ -583,20 +583,8 @@ class BayesGeomOpt:
         pred = bo_history["iteration_1"]["pred"]
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
-        vmin = (
-            min(
-                np.min(bo_history[f"iteration_{i+1}"]["pred"])
-                for i in range(num_frames)
-            )
-            / 2
-        )
-        vmax = (
-            max(
-                np.max(bo_history[f"iteration_{i+1}"]["pred"])
-                for i in range(num_frames)
-            )
-            / 2
-        )
+        vmin = np.percentile([np.min(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)], 25)
+        vmax = np.percentile([np.max(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)], 75)
         score_plot = ax.pcolormesh(
             X, Y, pred, cmap="viridis", shading="auto", vmin=vmin, vmax=vmax
         )
@@ -1009,6 +997,10 @@ class BayesGeomOpt:
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
+        from matplotlib.transforms import Affine2D # type: ignore
+        rotation = Affine2D().rotate_deg(90)
+        ax.set_transform(rotation + ax.transAxes)
+
 
     def visualize_results(
         self, powder, bo_history, detector, params, distance, beam_center, plot=""
@@ -1034,34 +1026,20 @@ class BayesGeomOpt:
             Path to save plot
         """
         fig = plt.figure(figsize=(12, 16), dpi=180)
-        nrow, ncol = 3, 2
+        nrow, ncol = 4, 3
         irow, icol = 0, 0
 
-        # Plotting BO convergence
+        # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        scores = [bo_history[key]["score"] for key in bo_history.keys()]
-        ax1.plot(scores)
-        ax1.set_xticks(np.arange(len(scores), step=20))
-        ax1.axvline(
-            self.scan["best_idx"][self.index],
-            color="green",
-            linestyle="--",
-            label=f"Best score at n={self.scan['best_idx'][self.index]}",
-        )
-        ax1.set_xlabel("Iteration")
-        ax1.set_ylabel("Number of Control Points")
-        ax1.legend()
-        ax1.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
+        ax1.text(0.5, 0.8, f"Experiment Number: {self.exp}", ha="center", va="center", fontsize=12)
+        ax1.text(0.5, 0.6, f"Run : {self.run}", ha="center", va="center", fontsize=12)
+        ax1.text(0.5, 0.4, f"Calibrant: {self.calibrant_name}", ha="center", va="center", fontsize=12)
+        ax1.text(0.5, 0.2, f"{self.det_type} Distance: {distance:.3f} m", ha="center", va="center", fontsize=12)
+        ax1.axis("off")
         icol += 1
 
-        # Plotting histogram of pixel intensities
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.hist_and_compute_stats(powder, self.exp, self.run, ax2)
-        irow += 1
-        icol = 0
-
         # Plotting radial profiles with peaks
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
         ai = AzimuthalIntegrator(
             dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
         )
@@ -1073,14 +1051,15 @@ class BayesGeomOpt:
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
         res = ai.integrate1d(masked_powder, 1000)
-        self.radial_integration(res, calibrant=self.calibrant, ax=ax3)
-        icol += 1
+        self.radial_integration(res, calibrant=self.calibrant, ax=ax2)
+        irow += 1
+        icol = 0
 
         # Plotting assembled powder with resolutions
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2, colspan=2)
         geometry = Geometry(dist=distance)
         sg = SingleGeometry(
-            f"Max {self.calibrant_name}",
+            f"Run {self.run} {self.calibrant_name}",
             powder,
             calibrant=self.calibrant,
             detector=detector,
@@ -1089,20 +1068,42 @@ class BayesGeomOpt:
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
         low_q, low_res, high_q, high_res, border_q, border_res = (
             self.powder_and_resolution(
-                sg=sg, distance=distance, beam_center=beam_center, ax=ax4
+                sg=sg, distance=distance, beam_center=beam_center, ax=ax3
             )
         )
-        irow += 1
+        icol = +2
+
+        # Plotting histogram of pixel intensities
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
+        self.hist_and_compute_stats(powder, self.exp, self.run, ax4)
+        irow += 2
         icol = 0
 
-        # Plotting score scan over distance
+        # Plotting BO convergence
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.score_distance_scan(self.distances, ax5)
+        scores = [bo_history[key]["score"] for key in bo_history.keys()]
+        ax5.plot(scores)
+        ax5.set_xticks(np.arange(len(scores), step=20))
+        ax5.axvline(
+            self.scan["best_idx"][self.index],
+            color="green",
+            linestyle="--",
+            label=f"Best score at n={self.scan['best_idx'][self.index]}",
+        )
+        ax5.set_xlabel("Iteration")
+        ax5.set_ylabel("Number of Control Points")
+        ax5.legend()
+        ax5.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
+        icol += 1
+
+        # Plotting score scan over distance
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.score_distance_scan(self.distances, ax6)
         icol += 1
 
         # Plotting residual scan over distance
-        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.residual_distance_scan(self.distances, distance, ax6)
+        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.residual_distance_scan(self.distances, distance, ax7)
 
         if plot != "":
             fig.savefig(plot, dpi=180)
