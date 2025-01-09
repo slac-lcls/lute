@@ -1056,7 +1056,9 @@ class BayesGeomOpt:
             fontsize=12,
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=12)
-        ax1.text(0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=12)
+        ax1.text(
+            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=12
+        )
         ax1.text(
             0.05,
             0.6,
