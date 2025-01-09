@@ -830,6 +830,7 @@ class BayesGeomOpt:
         ax.tick_params(axis="x", labelsize=8)
         ax.tick_params(axis="y", labelsize=8)
         ax.set_title(label)
+        ax.set_aspect("equal")
         return (
             closest_q,
             closest_resol,
@@ -838,7 +839,6 @@ class BayesGeomOpt:
             border_q,
             border_resol,
         )
-        ax.set_aspect("equal")
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
         """
@@ -968,16 +968,14 @@ class BayesGeomOpt:
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
         nice_pix = powder < threshold
-        base = plt.gca().transData
-        rot = Affine2D().rotate_deg(90)
-        hist = ax.hist(
+        _ = ax.hist(
             powder[nice_pix],
             bins=1000,
             color="skyblue",
             edgecolor="black",
             alpha=0.7,
             label="Pixel Intensities",
-            transform=rot + base,
+            orientation="vertical",
         )
         ax.axvline(
             mean,
@@ -990,14 +988,12 @@ class BayesGeomOpt:
             color="orange",
             linestyle="--",
             label=f"Mean + Std Dev ({mean + std_dev:.2f})",
-            transform=rot + base,
         )
         ax.axvline(
             mean + 2 * std_dev,
             color="green",
             linestyle="--",
             label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
-            transform=rot + base,
         )
         ax.axvline(
             self.Imin,
@@ -1005,7 +1001,6 @@ class BayesGeomOpt:
             linestyle=":",
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
-            transform=rot + base,
         )
         ax.set_xlim([0, mean + 5 * std_dev])
         ax.set_xlabel("Pixel Intensity")
