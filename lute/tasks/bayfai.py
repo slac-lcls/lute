@@ -34,7 +34,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.transforms import Affine2D  # type: ignore
-import matplotlib.patches as patches # type: ignore
+import matplotlib.patches as patches  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -1039,11 +1039,12 @@ class BayesGeomOpt:
         # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
         rect = patches.Rectangle(
-            (0, 0),       
-            1, 1,         
-            transform=ax1.transAxes,  
-            color="lightgrey",        
-            alpha=0.3,                
+            (0, 0),
+            1,
+            1,
+            transform=ax1.transAxes,
+            color="lightgrey",
+            alpha=0.3,
         )
         ax1.add_patch(rect)
         ax1.text(
