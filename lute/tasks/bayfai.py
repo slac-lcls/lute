@@ -1002,9 +1002,9 @@ class BayesGeomOpt:
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_xlim([0, mean + 5 * std_dev])
-        ax.set_xlabel("Pixel Intensity")
-        ax.set_ylabel("Frequency")
+        ax.set_ylim([0, mean + 5 * std_dev])
+        ax.set_ylabel("Pixel Intensity")
+        ax.set_xlabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
 
