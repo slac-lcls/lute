@@ -33,6 +33,8 @@ import panel as pn  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.transforms import Affine2D  # type: ignore
+import matplotlib.patches as patches # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -836,6 +838,7 @@ class BayesGeomOpt:
             border_q,
             border_resol,
         )
+        ax.set_aspect("equal")
 
     def radial_integration(self, result, calibrant=None, label=None, ax=None):
         """
@@ -965,13 +968,16 @@ class BayesGeomOpt:
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
         nice_pix = powder < threshold
-        _ = ax.hist(
+        base = plt.gca().transData
+        rot = Affine2D().rotate_deg(90)
+        hist = ax.hist(
             powder[nice_pix],
             bins=1000,
             color="skyblue",
             edgecolor="black",
             alpha=0.7,
             label="Pixel Intensities",
+            transform=rot + base,
         )
         ax.axvline(
             mean,
@@ -984,12 +990,14 @@ class BayesGeomOpt:
             color="orange",
             linestyle="--",
             label=f"Mean + Std Dev ({mean + std_dev:.2f})",
+            transform=rot + base,
         )
         ax.axvline(
             mean + 2 * std_dev,
             color="green",
             linestyle="--",
             label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
+            transform=rot + base,
         )
         ax.axvline(
             self.Imin,
@@ -997,16 +1005,13 @@ class BayesGeomOpt:
             linestyle=":",
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
+            transform=rot + base,
         )
         ax.set_xlim([0, mean + 5 * std_dev])
         ax.set_xlabel("Pixel Intensity")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
-        from matplotlib.transforms import Affine2D  # type: ignore
-
-        rotation = Affine2D().rotate_deg(90)
-        ax.set_transform(rotation + ax.transAxes)
 
     def visualize_results(
         self, powder, bo_history, detector, params, distance, beam_center, plot=""
@@ -1034,30 +1039,39 @@ class BayesGeomOpt:
         fig = plt.figure(figsize=(12, 16), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
+        plt.subplots_adjust(hspace=0.5, wspace=0.4)
 
         # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        rect = patches.Rectangle(
+            (0, 0),       
+            1, 1,         
+            transform=ax1.transAxes,  
+            color="lightgrey",        
+            alpha=0.3,                
+        )
+        ax1.add_patch(rect)
         ax1.text(
-            0.5,
-            0.8,
-            f"Experiment Number: {self.exp}",
-            ha="center",
+            0.05,
+            0.9,
+            f"Experiment {self.exp}",
+            ha="left",
             va="center",
             fontsize=12,
         )
-        ax1.text(0.5, 0.6, f"Run : {self.run}", ha="center", va="center", fontsize=12)
+        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=12)
         ax1.text(
-            0.5,
-            0.4,
-            f"Calibrant: {self.calibrant_name}",
-            ha="center",
+            0.05,
+            0.7,
+            f"Calibrant {self.calibrant_name}",
+            ha="left",
             va="center",
             fontsize=12,
         )
         ax1.text(
-            0.5,
-            0.2,
-            f"{self.det_type} Distance: {distance:.3f} m",
+            0.05,
+            0.6,
+            f"{self.det_type} distance = {distance:.4f} m",
             ha="center",
             va="center",
             fontsize=12,
@@ -1131,6 +1145,8 @@ class BayesGeomOpt:
         # Plotting residual scan over distance
         ax7 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
         self.residual_distance_scan(self.distances, distance, ax7)
+
+        fig.tight_layout()
 
         if plot != "":
             fig.savefig(plot, dpi=180)
