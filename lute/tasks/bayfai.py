@@ -975,7 +975,7 @@ class BayesGeomOpt:
             edgecolor="black",
             alpha=0.7,
             label="Pixel Intensities",
-            orientation="vertical",
+            orientation="horizontal",
         )
         ax.axvline(
             mean,
@@ -1034,7 +1034,7 @@ class BayesGeomOpt:
         fig = plt.figure(figsize=(12, 16), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
-        plt.subplots_adjust(hspace=0.5, wspace=0.4)
+        plt.subplots_adjust(hspace=0.3, wspace=0.3)
 
         # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
@@ -1056,9 +1056,10 @@ class BayesGeomOpt:
             fontsize=12,
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=12)
+        ax1.text(0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=12)
         ax1.text(
             0.05,
-            0.7,
+            0.6,
             f"Calibrant {self.calibrant_name}",
             ha="left",
             va="center",
@@ -1066,9 +1067,9 @@ class BayesGeomOpt:
         )
         ax1.text(
             0.05,
-            0.6,
-            f"{self.det_type} distance = {distance:.4f} m",
-            ha="center",
+            0.5,
+            f"Distance = {distance:.4f} m",
+            ha="left",
             va="center",
             fontsize=12,
         )
