@@ -583,8 +583,14 @@ class BayesGeomOpt:
         pred = bo_history["iteration_1"]["pred"]
         pred = np.reshape(pred, X.shape)
         fig, ax = plt.subplots()
-        vmin = np.percentile([np.min(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)], 25)
-        vmax = np.percentile([np.max(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)], 75)
+        vmin = np.percentile(
+            [np.min(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)],
+            25,
+        )
+        vmax = np.percentile(
+            [np.max(bo_history[f"iteration_{i+1}"]["pred"]) for i in range(num_frames)],
+            75,
+        )
         score_plot = ax.pcolormesh(
             X, Y, pred, cmap="viridis", shading="auto", vmin=vmin, vmax=vmax
         )
@@ -997,10 +1003,10 @@ class BayesGeomOpt:
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
-        from matplotlib.transforms import Affine2D # type: ignore
+        from matplotlib.transforms import Affine2D  # type: ignore
+
         rotation = Affine2D().rotate_deg(90)
         ax.set_transform(rotation + ax.transAxes)
-
 
     def visualize_results(
         self, powder, bo_history, detector, params, distance, beam_center, plot=""
@@ -1031,10 +1037,31 @@ class BayesGeomOpt:
 
         # Labelling experiment and run number
         ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        ax1.text(0.5, 0.8, f"Experiment Number: {self.exp}", ha="center", va="center", fontsize=12)
+        ax1.text(
+            0.5,
+            0.8,
+            f"Experiment Number: {self.exp}",
+            ha="center",
+            va="center",
+            fontsize=12,
+        )
         ax1.text(0.5, 0.6, f"Run : {self.run}", ha="center", va="center", fontsize=12)
-        ax1.text(0.5, 0.4, f"Calibrant: {self.calibrant_name}", ha="center", va="center", fontsize=12)
-        ax1.text(0.5, 0.2, f"{self.det_type} Distance: {distance:.3f} m", ha="center", va="center", fontsize=12)
+        ax1.text(
+            0.5,
+            0.4,
+            f"Calibrant: {self.calibrant_name}",
+            ha="center",
+            va="center",
+            fontsize=12,
+        )
+        ax1.text(
+            0.5,
+            0.2,
+            f"{self.det_type} Distance: {distance:.3f} m",
+            ha="center",
+            va="center",
+            fontsize=12,
+        )
         ax1.axis("off")
         icol += 1
 
