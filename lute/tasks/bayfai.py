@@ -33,7 +33,6 @@ import panel as pn  # type: ignore
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
-from matplotlib.transforms import Affine2D  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
@@ -1005,6 +1004,8 @@ class BayesGeomOpt:
         ax.set_ylim([0, mean + 5 * std_dev])
         ax.set_ylabel("Pixel Intensity")
         ax.set_xlabel("Frequency")
+        ax.set_xticks([]) 
+        ax.set_xticklabels([])
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
 
