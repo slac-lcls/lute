@@ -1004,7 +1004,7 @@ class BayesGeomOpt:
         ax.set_ylim([0, mean + 5 * std_dev])
         ax.set_ylabel("Pixel Intensity")
         ax.set_xlabel("Frequency")
-        ax.set_xticks([]) 
+        ax.set_xticks([])
         ax.set_xticklabels([])
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
