@@ -536,10 +536,6 @@ class BayesGeomOpt:
             seed,
         )
 
-        self.bayes_opt_animation(
-            results["bo_history"], n_samples, n_iterations, bounds, res, dist
-        )
-        
         self.comm.Barrier()
 
         self.scan = {}
