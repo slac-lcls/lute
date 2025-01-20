@@ -1007,7 +1007,7 @@ class BayesGeomOpt:
         ax.legend(fontsize="x-small")
 
     def visualize_results(
-        self, powder, bo_history, detector, params, distance, beam_center, plot=""
+        self, powder, bo_history, detector, params, distance, plot=""
     ):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
@@ -1024,8 +1024,6 @@ class BayesGeomOpt:
             List of parameters for the best fit
         distance : float
             Refined distance
-        beam_center : Tuple(float)
-            Refined beam center
         plot : str
             Path to save plot
         """
@@ -1105,7 +1103,7 @@ class BayesGeomOpt:
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
         low_q, low_res, high_q, high_res, border_q, border_res = (
             self.powder_and_resolution(
-                sg=sg, distance=distance, beam_center=beam_center, ax=ax3
+                sg=sg, distance=distance, ax=ax3
             )
         )
         icol = +2
@@ -1414,7 +1412,6 @@ class OptimizePyFAIGeometry(Task):
                     detector=calib_detector,
                     params=optimizer.params,
                     distance=distance,
-                    beam_center=(cx, cy),
                     plot=plot,
                 )
             )
