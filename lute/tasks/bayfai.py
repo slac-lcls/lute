@@ -675,19 +675,19 @@ class BayesGeomOpt:
             # ai = sg.geometry_refinement
             label = sg.label
         detector = sg.detector
-        p1, p2, p3 = detector.calc_cartesian_positions()
-        if p3 is None:
-            p3 = np.zeros_like(p1)
-        p3 += distance
+        y, x, z = detector.calc_cartesian_positions()
+        if z is None:
+            z = np.zeros_like(x)
+        z += distance
 
-        xmin, xmax = p2.min(), p2.max()
-        ymin, ymax = p1.min(), p1.max()
+        xmin, xmax = x.min(), x.max()
+        ymin, ymax = y.min(), y.max()
         ax.set_xlim(xmin * 1.1, xmax * 1.1)
         ax.set_ylim(ymin * 1.1, ymax * 1.1)
 
         img = ax.scatter(
-            p2.flatten(),
-            p1.flatten(),
+            x.flatten(),
+            y.flatten(),
             c=powder.flatten(),
             s=1,
             edgecolors=None,
@@ -699,9 +699,9 @@ class BayesGeomOpt:
         cbar.set_label("Intensity")
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
-            x = np.reshape(p2, detector.raw_shape)
-            y = np.reshape(p1, detector.raw_shape)
-            z = np.reshape(p3, detector.raw_shape)
+            x = np.reshape(x, detector.raw_shape)
+            y = np.reshape(y, detector.raw_shape)
+            z = np.reshape(z, detector.raw_shape)
             ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             for i in range(detector.n_modules):
                 ax.contour(
