@@ -654,7 +654,7 @@ class BayesGeomOpt:
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
 
-    def powder_and_resolution(self, sg, distance, beam_center, ax=None):
+    def powder_and_resolution(self, sg, distance, ax=None):
         """
         Display an image with the control points and the calibrated rings as well as detector resolutions
 
@@ -681,13 +681,13 @@ class BayesGeomOpt:
         z += distance
 
         xmin, xmax = x.min(), x.max()
-        ymin, ymax = y.min(), y.max()
+        ymin, ymax = -y.max(), -y.min()
         ax.set_xlim(xmin * 1.1, xmax * 1.1)
         ax.set_ylim(ymin * 1.1, ymax * 1.1)
 
         img = ax.scatter(
             x.flatten(),
-            y.flatten(),
+            -y.flatten(),
             c=powder.flatten(),
             s=1,
             edgecolors=None,
@@ -706,7 +706,7 @@ class BayesGeomOpt:
             for i in range(detector.n_modules):
                 ax.contour(
                     x[i],
-                    y[i],
+                    -y[i],
                     ttha[i],
                     levels=tth,
                     cmap="autumn",
@@ -717,7 +717,7 @@ class BayesGeomOpt:
             ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             ax.contour(
                 x,
-                y,
+                -y,
                 ttha,
                 levels=tth,
                 cmap="autumn",
@@ -725,7 +725,7 @@ class BayesGeomOpt:
                 linestyles="dashed",
             )
 
-        cy, cx = beam_center
+        cx, cy = np.mean(x), np.mean(y)
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
 
         closest_pixel_index = np.argmin(d)
@@ -770,12 +770,12 @@ class BayesGeomOpt:
         border_2_resol = 2 * np.pi / border_2_q
 
         circle_closest = plt.Circle(
-            (cx, cy), closest_pixel, color="green", linestyle="dashed", fill=False
+            (cx, -cy), closest_pixel, color="green", linestyle="dashed", fill=False
         )
         ax.add_artist(circle_closest)
         ax.text(
             cx + closest_pixel / np.sqrt(2),
-            cy + closest_pixel / np.sqrt(2),
+            -cy + closest_pixel / np.sqrt(2),
             f"{closest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -783,12 +783,12 @@ class BayesGeomOpt:
         )
 
         circle_furthest = plt.Circle(
-            (cx, cy), furthest_pixel, color="green", linestyle="dashed", fill=False
+            (cx, -cy), furthest_pixel, color="green", linestyle="dashed", fill=False
         )
         ax.add_artist(circle_furthest)
         ax.text(
             cx + furthest_pixel / np.sqrt(2),
-            cy + furthest_pixel / np.sqrt(2),
+            -cy + furthest_pixel / np.sqrt(2),
             f"{furthest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -796,12 +796,12 @@ class BayesGeomOpt:
         )
 
         circle_border = plt.Circle(
-            (cx, cy), border_pixel, color="green", linestyle="dashed", fill=False
+            (cx, -cy), border_pixel, color="green", linestyle="dashed", fill=False
         )
         ax.add_artist(circle_border)
         ax.text(
             cx + border_pixel / np.sqrt(2),
-            cy + border_pixel / np.sqrt(2),
+            -cy + border_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -809,12 +809,12 @@ class BayesGeomOpt:
         )
 
         circle_border_2 = plt.Circle(
-            (cx, cy), border_pixel / 2, color="green", linestyle="dashed", fill=False
+            (cx, -cy), border_pixel / 2, color="green", linestyle="dashed", fill=False
         )
         ax.add_artist(circle_border_2)
         ax.text(
             cx + (border_pixel / 2) / np.sqrt(2),
-            cy + (border_pixel / 2) / np.sqrt(2),
+            -cy + (border_pixel / 2) / np.sqrt(2),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
