@@ -725,7 +725,7 @@ class BayesGeomOpt:
                 linestyles="dashed",
             )
 
-        cx, cy = np.mean(x), np.mean(y)
+        cx, cy = 0, 0
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
 
         closest_pixel_index = np.argmin(d)
