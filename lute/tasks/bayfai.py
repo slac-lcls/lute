@@ -675,19 +675,19 @@ class BayesGeomOpt:
             # ai = sg.geometry_refinement
             label = sg.label
         detector = sg.detector
-        x, y, z = detector.calc_cartesian_positions()
-        if z is None:
-            z = np.zeros_like(x)
-        z += distance
+        p1, p2, p3 = detector.calc_cartesian_positions()
+        if p3 is None:
+            p3 = np.zeros_like(p1)
+        p3 += distance
 
-        xmin, xmax = x.min(), x.max()
-        ymin, ymax = y.min(), y.max()
+        xmin, xmax = p2.min(), p2.max()
+        ymin, ymax = p1.min(), p1.max()
         ax.set_xlim(xmin * 1.1, xmax * 1.1)
         ax.set_ylim(ymin * 1.1, ymax * 1.1)
 
         img = ax.scatter(
-            x.flatten(),
-            y.flatten(),
+            p2.flatten(),
+            p1.flatten(),
             c=powder.flatten(),
             s=1,
             edgecolors=None,
@@ -699,9 +699,9 @@ class BayesGeomOpt:
         cbar.set_label("Intensity")
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
-            x = np.reshape(x, detector.raw_shape)
-            y = np.reshape(y, detector.raw_shape)
-            z = np.reshape(z, detector.raw_shape)
+            x = np.reshape(p2, detector.raw_shape)
+            y = np.reshape(p1, detector.raw_shape)
+            z = np.reshape(p3, detector.raw_shape)
             ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             for i in range(detector.n_modules):
                 ax.contour(
@@ -725,7 +725,7 @@ class BayesGeomOpt:
                 linestyles="dashed",
             )
 
-        cx, cy = beam_center
+        cy, cx = beam_center
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
 
         closest_pixel_index = np.argmin(d)
@@ -748,10 +748,10 @@ class BayesGeomOpt:
         )
         furthest_resol = 2 * np.pi / furthest_q
 
-        d_left = abs(cy - ymin)
-        d_right = abs(cy - ymax)
-        d_bottom = abs(cx - xmax)
-        d_top = abs(cx - xmin)
+        d_left = abs(cx - xmin)
+        d_right = abs(cx - xmax)
+        d_bottom = abs(cy - ymin)
+        d_top = abs(cy - ymax)
         border_distances = [d_left, d_right, d_bottom, d_top]
         border_pixel = min(border_distances)
         border_q = (
@@ -774,8 +774,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_closest)
         ax.text(
+            cx + closest_pixel / np.sqrt(2),
             cy + closest_pixel / np.sqrt(2),
-            -cx + closest_pixel / np.sqrt(2),
             f"{closest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -787,8 +787,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_furthest)
         ax.text(
+            cx + furthest_pixel / np.sqrt(2),
             cy + furthest_pixel / np.sqrt(2),
-            -cx + furthest_pixel / np.sqrt(2),
             f"{furthest_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -800,8 +800,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_border)
         ax.text(
+            cx + border_pixel / np.sqrt(2),
             cy + border_pixel / np.sqrt(2),
-            -cx + border_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
@@ -809,12 +809,12 @@ class BayesGeomOpt:
         )
 
         circle_border_2 = plt.Circle(
-            (cy, cx), border_pixel / 2, color="green", linestyle="dashed", fill=False
+            (cx, cy), border_pixel / 2, color="green", linestyle="dashed", fill=False
         )
         ax.add_artist(circle_border_2)
         ax.text(
+            cx + (border_pixel / 2) / np.sqrt(2),
             cy + (border_pixel / 2) / np.sqrt(2),
-            -cx + (border_pixel / 2) / np.sqrt(2),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
             fontsize=6,
