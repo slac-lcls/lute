@@ -1102,9 +1102,7 @@ class BayesGeomOpt:
         )
         sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
         low_q, low_res, high_q, high_res, border_q, border_res = (
-            self.powder_and_resolution(
-                sg=sg, distance=distance, ax=ax3
-            )
+            self.powder_and_resolution(sg=sg, distance=distance, ax=ax3)
         )
         icol = +2
 
