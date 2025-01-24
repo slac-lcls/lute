@@ -1298,12 +1298,13 @@ class OptimizePyFAIGeometry(Task):
             Powder image to use for calibration
         preprocess : str
             Type of preprocessing technique
-                Available preprocessing: gradient "magnitude" powder, "gradient" sigmoid powder,
-                "high-pass" filtering, "CAE" convolutional autoencoding (later)
+                Available preprocessing: 
+                "canny": Canny Edge Detection preprocessing
+                "PyPCA": Principal Component Analysis preprocessing
         """
         if preprocess is None:
             return powder
-        elif preprocess == "magnitude":
+        elif preprocess == "canny":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
@@ -1315,23 +1316,6 @@ class OptimizePyFAIGeometry(Task):
                 calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
             ) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
-            return powder
-        elif preprocess == "gradient":
-            sigma = 1
-            calib = gaussian_filter(powder, sigma=sigma)
-            gradx_calib = np.zeros_like(powder)
-            grady_calib = np.zeros_like(powder)
-            gradx_calib[:-1, :-1] = (
-                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
-            ) / 2
-            grady_calib[:-1, :-1] = (
-                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
-            ) / 2
-            powder = gradx_calib + grady_calib
-            return powder
-        elif preprocess == "high-pass":
-            kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
-            powder = convolve2d(powder, kernel, mode="same", boundary="symm")
             return powder
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
