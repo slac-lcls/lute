@@ -1178,7 +1178,9 @@ class OptimizePyFAIGeometry(Task):
                     f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}",
                 )
                 src = str(self.det.name)
-                in_file = pick_template(self._task_parameters.exp, det_type, src, pixel_size_um, self.shape)
+                in_file = pick_template(
+                    self._task_parameters.exp, det_type, src, pixel_size_um, self.shape
+                )
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
         psana_to_pyfai = PsanaToPyFAI(
