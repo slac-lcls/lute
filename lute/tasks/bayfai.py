@@ -1183,7 +1183,6 @@ class OptimizePyFAIGeometry(Task):
                 )
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
-        logger.info(f"Using default geometry file {in_file}")
         psana_to_pyfai = PsanaToPyFAI(
             in_file=in_file,
             det_type=det_type,
