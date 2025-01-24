@@ -1171,8 +1171,12 @@ class OptimizePyFAIGeometry(Task):
             pixel_size_um = cfg.get(psana.Rayonix.ConfigV2).pixelWidth()
             self.pixel_size = pixel_size_um * 1e-6
             if in_file == "":
-                logger.info(f"No geometry file found for exp {self._task_parameters.exp}")
-                logger.info(f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}")
+                logger.info(
+                    f"No geometry file found for exp {self._task_parameters.exp}",
+                )
+                logger.info(
+                    f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}",
+                )
                 src = str(self.det.name)
                 in_file = pick_template(self._task_parameters.exp, det_type, src, pixel_size_um, self.shape)
         else:
