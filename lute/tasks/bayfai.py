@@ -1298,7 +1298,7 @@ class OptimizePyFAIGeometry(Task):
             Powder image to use for calibration
         preprocess : str
             Type of preprocessing technique
-                Available preprocessing: 
+                Available preprocessing:
                 "canny": Canny Edge Detection preprocessing
                 "PyPCA": Principal Component Analysis preprocessing
         """
