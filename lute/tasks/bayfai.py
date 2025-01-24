@@ -1173,13 +1173,8 @@ class OptimizePyFAIGeometry(Task):
             if in_file == "":
                 logger.info(f"No geometry file found for exp {self._task_parameters.exp}")
                 logger.info(f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}")
-                content, group = pick_template(det_type, pixel_size_um, self.shape)
-                cdir = f"/sdf/data/lcls/ds/{self._task_parameters.exp[:3]}/{self._task_parameters.exp}/calib"
                 src = str(self.det.name)
-                type = "geometry"
-                in_file = os.path.join(cdir, group, src, type, "0-end.data")
-                with open(in_file, "w") as f:
-                    f.write(content)
+                in_file = pick_template(self._task_parameters.exp, det_type, src, pixel_size_um, self.shape)
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
         psana_to_pyfai = PsanaToPyFAI(
