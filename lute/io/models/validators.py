@@ -91,9 +91,6 @@ def validate_calib_path(calib_path_name: str):
             src = str(det.name)
             type = "geometry"
             calib_path = find_calib_file(cdir, src, type, run, pbits=1)
-            if calib_path is None:
-                raise ValueError(f"No calibration file found for {det_type} in {cdir}")
-
         return calib_path
 
     return validator(calib_path_name, always=True, allow_reuse=True)(
