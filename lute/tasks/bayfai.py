@@ -45,8 +45,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  #
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
-from scipy.ndimage import gaussian_filter  # type: ignore
-from scipy.signal import convolve2d  # type: ignore
+from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 from mpi4py import MPI
 
 pyFAI.use_opencl = False  # type: ignore
@@ -1299,23 +1298,48 @@ class OptimizePyFAIGeometry(Task):
         preprocess : str
             Type of preprocessing technique
                 Available preprocessing: 
-                "canny": Canny Edge Detection preprocessing
+                "Finite": Gradient Computation using Finite Differences
+                "Central": Gradient Computation using Central Differences
+                "Laplacian": Gradient Computation using Laplacian of Gaussian
+                "Sobel": Gradient Computation using Sobel filter
                 "PyPCA": Principal Component Analysis preprocessing
         """
         if preprocess is None:
             return powder
-        elif preprocess == "canny":
-            sigma = 1
+        elif preprocess == "Finite":
+            sigma = 5
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:-1, :-1] = (
-                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
-            ) / 2
-            grady_calib[:-1, :-1] = (
-                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
-            ) / 2
+            gradx_calib[:, 1:] = calib[:, 1:] - calib[:, :-1]
+            grady_calib[1:, :] = calib[1:, :] - calib[:-1, :]
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
+            return powder
+        elif preprocess == "Central":
+            sigma = 5
+            calib = gaussian_filter(powder, sigma=sigma)
+            gradx_calib = np.zeros_like(powder)
+            grady_calib = np.zeros_like(powder)
+            gradx_calib[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2
+            grady_calib[1:-1, :] = (calib[2:, :] - calib[:-2, :]) / 2
+            powder = np.sqrt(gradx_calib**2 + grady_calib**2)
+            return powder
+        elif preprocess == "Sobel":
+            sigma = 5
+            calib = gaussian_filter(powder, sigma=sigma)
+            sobel_x = np.array([[-1, 0, 1],
+                                [-2, 0, 2],
+                                [-1, 0, 1]])
+            sobel_y = np.array([[-1, -2, -1],
+                                [ 0,  0,  0],
+                                [ 1,  2,  1]])
+            gradx_calib = convolve(calib, sobel_x, mode='reflect')
+            grady_calib = convolve(calib, sobel_y, mode='reflect')
+            powder = np.sqrt(gradx_calib**2 + grady_calib**2)
+            return powder
+        elif preprocess == "Laplacian":
+            sigma = 5
+            powder = gaussian_laplace(powder, sigma=sigma)
             return powder
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
