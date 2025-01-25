@@ -1297,7 +1297,7 @@ class OptimizePyFAIGeometry(Task):
             Powder image to use for calibration
         preprocess : str
             Type of preprocessing technique
-                Available preprocessing: 
+                Available preprocessing:
                 "Finite": Gradient Computation using Finite Differences
                 "Central": Gradient Computation using Central Differences
                 "Laplacian": Gradient Computation using Laplacian of Gaussian
@@ -1327,14 +1327,10 @@ class OptimizePyFAIGeometry(Task):
         elif preprocess == "Sobel":
             sigma = 5
             calib = gaussian_filter(powder, sigma=sigma)
-            sobel_x = np.array([[-1, 0, 1],
-                                [-2, 0, 2],
-                                [-1, 0, 1]])
-            sobel_y = np.array([[-1, -2, -1],
-                                [ 0,  0,  0],
-                                [ 1,  2,  1]])
-            gradx_calib = convolve(calib, sobel_x, mode='reflect')
-            grady_calib = convolve(calib, sobel_y, mode='reflect')
+            sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+            sobel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+            gradx_calib = convolve(calib, sobel_x, mode="reflect")
+            grady_calib = convolve(calib, sobel_y, mode="reflect")
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Laplacian":
