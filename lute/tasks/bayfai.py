@@ -1007,7 +1007,7 @@ class BayesGeomOpt:
         ax.legend(fontsize="x-small")
 
     def visualize_results(
-        self, powder, bo_history, detector, params, distance, plot=""
+        self, powder, preprocessed_powder, bo_history, detector, params, distance, plot=""
     ):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
@@ -1016,6 +1016,8 @@ class BayesGeomOpt:
         ----------
         powder : np.ndarray
             Powder image
+        preprocessed_powder : np.ndarray
+            Preprocessed powder image
         bo_history : dict
             Dictionary containing the history of optimization
         detector : PyFAI(Detector)
@@ -1095,7 +1097,7 @@ class BayesGeomOpt:
         geometry = Geometry(dist=distance)
         sg = SingleGeometry(
             f"Run {self.run} {self.calibrant_name}",
-            powder,
+            preprocessed_powder,
             calibrant=self.calibrant,
             detector=detector,
             geometry=geometry,
@@ -1108,7 +1110,7 @@ class BayesGeomOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.hist_and_compute_stats(powder, self.exp, self.run, ax4)
+        self.hist_and_compute_stats(preprocessed_powder, self.exp, self.run, ax4)
         irow += 2
         icol = 0
 
@@ -1304,6 +1306,7 @@ class OptimizePyFAIGeometry(Task):
                 "Sobel": Gradient Computation using Sobel filter
                 "PyPCA": Principal Component Analysis preprocessing
         """
+        self.raw_powder = powder
         if preprocess is None:
             return powder
         elif preprocess == "Finite":
@@ -1422,7 +1425,8 @@ class OptimizePyFAIGeometry(Task):
             calib_detector = self._update_geometry(optimizer)
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.visualize_results(
-                    powder=optimizer.powder,
+                    powder=self.raw_powder,
+                    preprocess_powder=optimizer.powder,
                     bo_history=optimizer.bo_history,
                     detector=calib_detector,
                     params=optimizer.params,
