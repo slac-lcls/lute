@@ -1007,7 +1007,14 @@ class BayesGeomOpt:
         ax.legend(fontsize="x-small")
 
     def visualize_results(
-        self, powder, preprocessed_powder, bo_history, detector, params, distance, plot=""
+        self,
+        powder,
+        preprocessed_powder,
+        bo_history,
+        detector,
+        params,
+        distance,
+        plot="",
     ):
         """
         Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
