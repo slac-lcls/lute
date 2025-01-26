@@ -1307,7 +1307,7 @@ class OptimizePyFAIGeometry(Task):
         if preprocess is None:
             return powder
         elif preprocess == "Finite":
-            sigma = 5
+            sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
@@ -1316,7 +1316,7 @@ class OptimizePyFAIGeometry(Task):
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Central":
-            sigma = 5
+            sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
@@ -1325,7 +1325,7 @@ class OptimizePyFAIGeometry(Task):
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Sobel":
-            sigma = 5
+            sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
             sobel_x = np.array([[-1, 0, 1],
                                 [-2, 0, 2],
@@ -1338,7 +1338,7 @@ class OptimizePyFAIGeometry(Task):
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Laplacian":
-            sigma = 5
+            sigma = 1
             powder = gaussian_laplace(powder, sigma=sigma)
             return powder
         else:
