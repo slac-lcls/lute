@@ -1426,7 +1426,7 @@ class OptimizePyFAIGeometry(Task):
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.visualize_results(
                     powder=self.raw_powder,
-                    preprocess_powder=optimizer.powder,
+                    preprocessed_powder=optimizer.powder,
                     bo_history=optimizer.bo_history,
                     detector=calib_detector,
                     params=optimizer.params,
