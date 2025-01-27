@@ -1426,9 +1426,7 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Final Residual: {optimizer.residual:.2e}")
             fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
             os.makedirs(fig_folder, exist_ok=True)
-            plot = (
-                f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
-            )
+            plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.visualize_results(
