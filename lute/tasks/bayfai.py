@@ -966,7 +966,7 @@ class BayesGeomOpt:
         nice_pix = powder < threshold
         _ = ax.hist(
             powder[nice_pix],
-            bins=1000,
+            bins=100,
             color="skyblue",
             edgecolor="black",
             alpha=0.7,
@@ -1321,8 +1321,8 @@ class OptimizePyFAIGeometry(Task):
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:, 1:] = calib[:, 1:] - calib[:, :-1]
-            grady_calib[1:, :] = calib[1:, :] - calib[:-1, :]
+            gradx_calib[:-1, :] = calib[1:, :] - calib[-1:, :]
+            grady_calib[:, :-1] = calib[:, 1:] - calib[:, :-1]
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Central":
@@ -1330,15 +1330,15 @@ class OptimizePyFAIGeometry(Task):
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2
-            grady_calib[1:-1, :] = (calib[2:, :] - calib[:-2, :]) / 2
+            gradx_calib[1:-1, :] = (calib[2:, :] - calib[:-2, :]) / 2
+            grady_calib[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
         elif preprocess == "Sobel":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
-            sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
-            sobel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+            sobel_x = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+            sobel_y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
             gradx_calib = convolve(calib, sobel_x, mode="reflect")
             grady_calib = convolve(calib, sobel_y, mode="reflect")
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
@@ -1427,7 +1427,7 @@ class OptimizePyFAIGeometry(Task):
             fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
             os.makedirs(fig_folder, exist_ok=True)
             plot = (
-                f"{fig_folder}/bayes_opt_geom_{optimizer.exp}_r{optimizer.run:0>4}.png"
+                f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
             calib_detector = self._update_geometry(optimizer)
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
