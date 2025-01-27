@@ -1321,7 +1321,7 @@ class OptimizePyFAIGeometry(Task):
             calib = gaussian_filter(powder, sigma=sigma)
             gradx_calib = np.zeros_like(powder)
             grady_calib = np.zeros_like(powder)
-            gradx_calib[:-1, :] = calib[1:, :] - calib[-1:, :]
+            gradx_calib[:-1, :] = calib[1:, :] - calib[:-1, :]
             grady_calib[:, :-1] = calib[:, 1:] - calib[:, :-1]
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
