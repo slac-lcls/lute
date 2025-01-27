@@ -1334,6 +1334,14 @@ class OptimizePyFAIGeometry(Task):
             grady_calib[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
             return powder
+        elif preprocess == "Diagonal":
+            sigma = 1
+            calib = gaussian_filter(powder, sigma=sigma)
+            gradx_calib = np.zeros_like(powder)
+            grady_calib = np.zeros_like(powder)
+            gradx_calib[:-1, :-1] = (calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]) / 2
+            grady_calib[:-1, :-1] = (calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]) / 2
+            powder = np.sqrt(gradx_calib**2 + grady_calib**2)
         elif preprocess == "Sobel":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
