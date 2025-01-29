@@ -959,11 +959,10 @@ class BayesGeomOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        threshold = np.mean(powder) + 3 * np.std(powder)
+        threshold = np.mean(powder) + 5 * np.std(powder)
         nice_pix = powder < threshold
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
-        nice_pix = powder < threshold
         _ = ax.hist(
             powder[nice_pix],
             bins=500,
