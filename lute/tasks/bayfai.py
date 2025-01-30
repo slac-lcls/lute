@@ -687,7 +687,7 @@ class BayesGeomOpt:
 
         img = ax.scatter(
             x.flatten(),
-            y.flatten(),
+            -y.flatten(),
             c=powder.flatten(),
             s=1,
             edgecolors=None,
@@ -706,7 +706,7 @@ class BayesGeomOpt:
             for i in range(detector.n_modules):
                 ax.contour(
                     x[i],
-                    y[i],
+                    -y[i],
                     ttha[i],
                     levels=tth,
                     cmap="autumn",
@@ -717,7 +717,7 @@ class BayesGeomOpt:
             ttha = np.arctan2(np.sqrt(x * x + y * y), z)
             ax.contour(
                 x,
-                y,
+                -y,
                 ttha,
                 levels=tth,
                 cmap="autumn",
