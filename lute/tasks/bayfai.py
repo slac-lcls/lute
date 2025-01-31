@@ -883,6 +883,7 @@ class BayesGeomOpt:
         ax.set_title("Radial Profile")
         if unit:
             ax.set_xlabel(unit.label)
+        ax.set_ylim([0, None])
         ax.set_ylabel("Intensity")
 
     def score_distance_scan(self, distances, ax):
