@@ -515,7 +515,9 @@ class BayesGeomOpt:
                 score = len(sg.geometry_refinement.data)
                 data = sg.geometry_refinement.data
                 if score != 0:
-                    residual = sg.geometry_refinement.residu3(d1=data[:, 0], d2=data[:, 1], rings=data[:, 2])
+                    residual = sg.geometry_refinement.residu3(
+                        d1=data[:, 0], d2=data[:, 1], rings=data[:, 2]
+                    )
                 else:
                     residual = np.inf
                 scores[i, j] = score
