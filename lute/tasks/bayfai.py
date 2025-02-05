@@ -35,7 +35,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
-from pathlib import Path # type: ignore
+from pathlib import Path  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -521,7 +521,7 @@ class BayesGeomOpt:
                 residuals[i, j] = residual
         result = {"scores": scores, "residuals": residuals}
         return result
-    
+
     def grid_search_geom(
         self,
         powder,
@@ -1431,7 +1431,7 @@ class OptimizePyFAIGeometry(Task):
                     if powder is not None and powder.shape != shape:
                         powder = np.reshape(powder, shape)
         return powder
-    
+
     def _reconstruct_powder(self, pypca_path: str) -> Optional[npt.NDArray[np.float64]]:
         """
         Reconstruct powder from PyPCA.
@@ -1441,8 +1441,10 @@ class OptimizePyFAIGeometry(Task):
         pypca_path : str
             Path to the PyPCA folder containing the model and the projections.
         """
-        model = f'{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5'
-        projections = f'{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5'
+        model = f"{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5"
+        projections = (
+            f"{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5"
+        )
 
         model = list(Path(f"{pypca_path}/models").glob(model))
         projections = list(Path(f"{pypca_path}/projections").glob(projections))
@@ -1451,16 +1453,17 @@ class OptimizePyFAIGeometry(Task):
             model_h5 = str(model[0])
             projections_h5 = str(projections[0])
         else:
-            raise ValueError(f"Expected one file, but found {len(model)}: {model} and {len(projections)}: {projections}")
-        
+            raise ValueError(
+                f"Expected one file, but found {len(model)}: {model} and {len(projections)}: {projections}"
+            )
+
         with h5py.File(model_h5, "r") as h5:
-            V = np.array(h5['V'])
-        
+            V = np.array(h5["V"])
+
         with h5py.File(projections_h5, "r") as h5:
-            U = np.array(h5['projected_images'])
+            U = np.array(h5["projected_images"])
 
         pass
-
 
     def _preprocess_powder(
         self,
