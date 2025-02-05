@@ -591,7 +591,7 @@ class BayesGeomOpt:
             for key in self.scan.keys():
                 for i in range(len(self.scan[key])):
                     self.scan[key][i] = np.array(self.scan[key][i])
-                    np.save(f"{key}_{self.distances[i]}.npy", self.scan[key][i])
+                    np.save(f"/sdf/home/l/lconreux/exp/prjlute22/results/benchmarks/geom_opt/tests/Grid_Search/{key}_{self.distances[i]}.npy", self.scan[key][i])
 
     def bayes_opt_geom(
         self,
