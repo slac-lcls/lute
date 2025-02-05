@@ -35,6 +35,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
+from pathlib import Path # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -221,7 +222,7 @@ class BayesGeomOpt:
         bounds,
         res,
         Imin,
-        max_rings=5,
+        max_rings=6,
         n_samples=20,
         n_iterations=80,
         af="ucb",
@@ -452,14 +453,154 @@ class BayesGeomOpt:
         }
         return result
 
+    def grid_search_center(
+        self,
+        powder,
+        dist,
+        bounds,
+        res,
+        Imin,
+        max_rings=6,
+    ):
+        """
+        From guessed initial geometry, optimize the geometry using grid search on pyFAI package
+
+        Parameters
+        ----------
+        powder : str
+            Path to powder image to use for calibration
+        bounds : dict
+            Dictionary of bounds and resolution for search parameters
+        res : float
+            Resolution of the grid used to discretize the parameter search space
+        max_rings : int
+            Maximum number of rings to use for control point extraction
+        """
+        self.values["dist"] = dist
+        if res is None:
+            res = self.detector.pixel_size
+
+        inputs = {}
+        for p in self.order:
+            if p in self.space:
+                inputs[p] = np.arange(bounds[p][0], bounds[p][1] + res, res)
+            else:
+                inputs[p] = np.array([self.values[p]])
+        X, Y = np.array(np.meshgrid(*[inputs[p] for p in self.space], indexing="ij"))
+        scores = np.zeros_like(X)
+        residuals = np.zeros_like(X)
+
+        for i in range(X.shape[0]):
+            for j in range(X.shape[1]):
+                poni1 = X[i, j]
+                poni2 = Y[i, j]
+                geom_initial = Geometry(
+                    dist=dist,
+                    poni1=poni1,
+                    poni2=poni2,
+                    rot1=0,
+                    rot2=0,
+                    rot3=0,
+                    detector=self.detector,
+                    wavelength=self.calibrant.wavelength,
+                )
+                sg = SingleGeometry(
+                    "extract_cp",
+                    powder,
+                    calibrant=self.calibrant,
+                    detector=self.detector,
+                    geometry=geom_initial,
+                )
+                sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
+                score = len(sg.geometry_refinement.data)
+                if score != 0:
+                    residual = sg.geometry_refinement.residu3()
+                else:
+                    residual = np.inf
+                scores[i, j] = score
+                residuals[i, j] = residual
+        result = {"scores": scores, "residuals": residuals}
+        return result
+    
+    def grid_search_geom(
+        self,
+        powder,
+        bounds,
+        res,
+        max_rings=6,
+    ):
+        """
+        From guessed initial geometry, optimize the geometry using grid search on pyFAI package
+
+        Parameters
+        ----------
+        powder : str
+            Path to powder image to use for calibration
+        bounds : dict
+            Dictionary of bounds and resolution for search parameters
+        res : float
+            Resolution of the grid used to discretize the parameter search space
+        max_rings : int
+            Maximum number of rings to use for control point extraction
+        """
+
+        self.set_wavelength_calibrant()
+
+        mask = self.build_mask()
+        if mask is not None:
+            powder = powder * mask
+
+        self.max_rings = max_rings
+        Imin = self.min_intensity(powder)
+
+        if self.rank == 0:
+            logger.info(
+                f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
+            )
+            logger.info(f"Number of distances to scan: {self.size}")
+            if isinstance(bounds["dist"], float):
+                distances = np.linspace(
+                    bounds["dist"] - 0.05, bounds["dist"] + 0.05, self.size
+                )
+            else:
+                distances = np.linspace(bounds["dist"][0], bounds["dist"][1], self.size)
+            self.distances = distances
+        else:
+            distances = None
+
+        dist = self.comm.scatter(distances, root=0)
+
+        results = self.grid_search_center(
+            powder,
+            dist,
+            bounds,
+            res,
+            Imin,
+            max_rings,
+        )
+
+        self.comm.Barrier()
+
+        self.scan = {}
+        self.scan["scores_dist"] = self.comm.gather(results["scores"], root=0)
+        self.scan["residuals_dist"] = self.comm.gather(results["residuals"], root=0)
+        self.finalize_grid_search()
+
+    def finalize_grid_search(self):
+        if self.rank == 0:
+            for key in self.scan.keys():
+                for i in range(len(self.scan[key])):
+                    self.scan[key][i] = np.array(self.scan[key][i])
+                    np.save(f"{key}_{self.distances[i]}.npy", self.scan[key][i])
+
     def bayes_opt_geom(
         self,
         powder,
         bounds,
         res,
-        max_rings=5,
+        max_rings=6,
         n_samples=20,
-        n_iterations=80,
+        n_iterations=40,
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -1290,6 +1431,36 @@ class OptimizePyFAIGeometry(Task):
                     if powder is not None and powder.shape != shape:
                         powder = np.reshape(powder, shape)
         return powder
+    
+    def _reconstruct_powder(self, pypca_path: str) -> Optional[npt.NDArray[np.float64]]:
+        """
+        Reconstruct powder from PyPCA.
+
+        Parameters
+        ----------
+        pypca_path : str
+            Path to the PyPCA folder containing the model and the projections.
+        """
+        model = f'{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5'
+        projections = f'{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5'
+
+        model = list(Path(f"{pypca_path}/models").glob(model))
+        projections = list(Path(f"{pypca_path}/projections").glob(projections))
+
+        if len(model) == 1 and len(projections) == 1:
+            model_h5 = str(model[0])
+            projections_h5 = str(projections[0])
+        else:
+            raise ValueError(f"Expected one file, but found {len(model)}: {model} and {len(projections)}: {projections}")
+        
+        with h5py.File(model_h5, "r") as h5:
+            V = np.array(h5['V'])
+        
+        with h5py.File(projections_h5, "r") as h5:
+            U = np.array(h5['projected_images'])
+
+        pass
+
 
     def _preprocess_powder(
         self,
@@ -1297,7 +1468,7 @@ class OptimizePyFAIGeometry(Task):
         preprocess: Optional[str] = None,
     ) -> Optional[npt.NDArray[np.float64]]:
         """
-        Preprocess extracted powder for  enhancing optimization
+        Preprocess extracted powder for enhancing optimization
 
         Parameters
         ----------
@@ -1359,6 +1530,8 @@ class OptimizePyFAIGeometry(Task):
             sigma = 1
             powder = gaussian_laplace(powder, sigma=sigma)
             return powder
+        elif preprocess == "PyPCA":
+            powder = self._reconstruct_powder()
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             return None
@@ -1415,63 +1588,57 @@ class OptimizePyFAIGeometry(Task):
             detector=detector,
             calibrant=self._task_parameters.calibrant,
         )
-        optimizer.bayes_opt_geom(
+        optimizer.grid_search_geom(
             powder=powder,
             bounds=self._task_parameters.bo_params.bounds,
             res=self._task_parameters.bo_params.res,
             max_rings=self._task_parameters.bo_params.max_rings,
-            n_samples=self._task_parameters.bo_params.n_samples,
-            n_iterations=self._task_parameters.bo_params.n_iterations,
-            af=self._task_parameters.bo_params.af,
-            hyperparam=self._task_parameters.bo_params.hyperparams,
-            prior=self._task_parameters.bo_params.prior,
-            seed=self._task_parameters.bo_params.seed,
         )
         if optimizer.rank == 0:
             logger.info("Optimization complete")
-            distance, cx, cy = get_beam_center(optimizer.params)
-            logger.info(f"Detector Distance to Sample: {distance:.6f}")
-            logger.info(f"Beam center: ({cx:.6f}, {cy:.6f})")
-            logger.info(
-                f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
-            )
-            logger.info(f"Final Residual: {optimizer.residual:.2e}")
-            fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
-            os.makedirs(fig_folder, exist_ok=True)
-            plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
-            calib_detector = self._update_geometry(optimizer)
-            fig, low_q, low_res, high_q, high_res, border_q, border_res = (
-                optimizer.visualize_results(
-                    powder=self.raw_powder,
-                    preprocessed_powder=optimizer.powder,
-                    bo_history=optimizer.bo_history,
-                    detector=calib_detector,
-                    params=optimizer.params,
-                    distance=distance,
-                    plot=plot,
-                )
-            )
-            plots = pn.Tabs(fig)
-            self._result.summary = []
-            self._result.summary.append(
-                {
-                    "Detector distance (m)": f"{distance:.6f}",
-                    "Detector center (m)": (f"{cx:.6f}", f"{cy:.6f}"),
-                    "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
-                    "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
-                    "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
-                }
-            )
-            logger.info(f">>> Low q : {low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5")
-            logger.info(
-                f">>> High q : {border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)"
-            )
-            logger.info(
-                f">>> Highest q : {high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)"
-            )
-            self._result.summary.append(
-                ElogSummaryPlots(
-                    f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots
-                )
-            )
+            # distance, cx, cy = get_beam_center(optimizer.params)
+            # logger.info(f"Detector Distance to Sample: {distance:.6f}")
+            # logger.info(f"Beam center: ({cx:.6f}, {cy:.6f})")
+            # logger.info(
+            #     f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
+            # )
+            # logger.info(f"Final Residual: {optimizer.residual:.2e}")
+            # fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
+            # os.makedirs(fig_folder, exist_ok=True)
+            # plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            # calib_detector = self._update_geometry(optimizer)
+            # fig, low_q, low_res, high_q, high_res, border_q, border_res = (
+            #     optimizer.visualize_results(
+            #         powder=self.raw_powder,
+            #         preprocessed_powder=optimizer.powder,
+            #         bo_history=optimizer.bo_history,
+            #         detector=calib_detector,
+            #         params=optimizer.params,
+            #         distance=distance,
+            #         plot=plot,
+            #     )
+            # )
+            # plots = pn.Tabs(fig)
+            # self._result.summary = []
+            # self._result.summary.append(
+            #     {
+            #         "Detector distance (m)": f"{distance:.6f}",
+            #         "Detector center (m)": (f"{cx:.6f}", f"{cy:.6f}"),
+            #         "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
+            #         "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
+            #         "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
+            #     }
+            # )
+            # logger.info(f">>> Low q : {low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5")
+            # logger.info(
+            #     f">>> High q : {border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)"
+            # )
+            # logger.info(
+            #     f">>> Highest q : {high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)"
+            # )
+            # self._result.summary.append(
+            #     ElogSummaryPlots(
+            #         f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots
+            #     )
+            # )
             self._result.task_status = TaskStatus.COMPLETED

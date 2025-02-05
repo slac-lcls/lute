@@ -44,7 +44,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         )
 
         max_rings: int = Field(
-            5,
+            6,
             description="Maximum number of rings to be used for the Bayesian optimization.",
         )
 
