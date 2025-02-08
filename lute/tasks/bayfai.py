@@ -36,6 +36,7 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from pathlib import Path  # type: ignore
+import time # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -460,7 +461,7 @@ class BayesGeomOpt:
         res,
         max_rings=6,
         n_samples=20,
-        n_iterations=40,
+        n_iterations=80,
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -1582,6 +1583,7 @@ class OptimizePyFAIGeometry(Task):
         return detector
 
     def _run(self) -> None:
+        start_time = time.time()
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         detector = self._build_pyFAI_detector()
         powder = self._extract_powder(self._task_parameters.powder, detector.shape)
@@ -1609,6 +1611,7 @@ class OptimizePyFAIGeometry(Task):
         )
         if optimizer.rank == 0:
             logger.info("Optimization complete")
+            logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
             distance, cx, cy = get_beam_center(optimizer.params)
             logger.info(f"Detector Distance to Sample: {distance:.6f}")
             logger.info(f"Beam center: ({cx:.6f}, {cy:.6f})")
