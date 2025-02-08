@@ -36,7 +36,7 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from pathlib import Path  # type: ignore
-import time # type: ignore
+import time  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
