@@ -718,7 +718,14 @@ class BayesGeomOpt:
                 score = len(sg.geometry_refinement.data)
                 data = sg.geometry_refinement.data
                 if score != 0:
-                    residual = sg.geometry_refinement.residu3(param=[dist, poni1, poni2, 0, 0, 0], free=['dist', 'poni1', 'poni2', 'rot1', 'rot2', 'rot3'], const={'wavelength':self.wavelength}, d1=data[:, 0], d2=data[:, 1], rings=data[:, 2])
+                    residual = sg.geometry_refinement.residu3(
+                        param=[dist, poni1, poni2, 0, 0, 0],
+                        free=["dist", "poni1", "poni2", "rot1", "rot2", "rot3"],
+                        const={"wavelength": self.wavelength},
+                        d1=data[:, 0],
+                        d2=data[:, 1],
+                        rings=data[:, 2],
+                    )
                 else:
                     residual = np.inf
                 scores[i, j] = score
