@@ -43,7 +43,7 @@ from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern # type: ignore
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
@@ -352,13 +352,21 @@ class BayesGeomOpt:
         best_score = np.max(y_norm)
 
         if kernel == "RBF":
-            kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
+            kernel = RBF(
+                length_scale=0.3, length_scale_bounds=(0.2, 0.4)
+            ) * ConstantKernel(
                 constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-            ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+            ) + WhiteKernel(
+                noise_level=0.001, noise_level_bounds="fixed"
+            )
         elif kernel == "Matern":
-            kernel = Matern(length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5) * ConstantKernel(
+            kernel = Matern(
+                length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5
+            ) * ConstantKernel(
                 constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-            ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+            ) + WhiteKernel(
+                noise_level=0.001, noise_level_bounds="fixed"
+            )
         gp_model = GaussianProcessRegressor(
             kernel=kernel, n_restarts_optimizer=10, random_state=0
         )
