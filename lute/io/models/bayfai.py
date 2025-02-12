@@ -58,6 +58,11 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Number of iterations to run the Bayesian optimization.",
         )
 
+        kernel: Optional[str] = Field(
+            "RBF",
+            description="Kernel to be used by the Gaussian Process for the Bayesian optimization.",
+        )
+
         prior: Optional[bool] = Field(
             True,
             description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",

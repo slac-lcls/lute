@@ -43,7 +43,7 @@ from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
@@ -226,6 +226,7 @@ class BayesGeomOpt:
         max_rings=6,
         n_samples=20,
         n_iterations=80,
+        kernel="RBF",
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -252,6 +253,10 @@ class BayesGeomOpt:
             Number of samples to initialize the GP model
         n_iterations : int
             Number of iterations for optimization
+        kernel : str
+            Kernel to use for the Gaussian Process Regressor
+            'RBF' for Radial Basis Function kernel
+            'Matern' for Matern kernel
         af : str
             Acquisition function to use for optimization
         hyperparam : dict
@@ -346,11 +351,16 @@ class BayesGeomOpt:
         y_norm = (y - np.mean(y)) / np.std(y)
         best_score = np.max(y_norm)
 
-        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
-            constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+        if kernel == "RBF":
+            kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
+                constant_value=1.0, constant_value_bounds=(0.5, 1.5)
+            ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+        elif kernel == "Matern":
+            kernel = Matern(length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5) * ConstantKernel(
+                constant_value=1.0, constant_value_bounds=(0.5, 1.5)
+            ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
         gp_model = GaussianProcessRegressor(
-            kernel=kernel, n_restarts_optimizer=10, random_state=42
+            kernel=kernel, n_restarts_optimizer=10, random_state=0
         )
         gp_model.fit(X_norm_samples, y_norm)
         visited_idx = list([])
@@ -462,6 +472,7 @@ class BayesGeomOpt:
         max_rings=6,
         n_samples=20,
         n_iterations=80,
+        kernel="RBF",
         af="ucb",
         hyperparam=None,
         prior=True,
@@ -484,6 +495,8 @@ class BayesGeomOpt:
             Number of samples to initialize the GP model
         n_iterations : int
             Number of iterations for optimization
+        kernel : str
+            Kernel to use for the Gaussian Process Regressor
         af : str
             Acquisition function to use for optimization
         hyperparam : dict
@@ -532,6 +545,7 @@ class BayesGeomOpt:
             max_rings,
             n_samples,
             n_iterations,
+            kernel,
             af,
             hyperparam,
             prior,
@@ -1611,6 +1625,7 @@ class OptimizePyFAIGeometry(Task):
             max_rings=self._task_parameters.bo_params.max_rings,
             n_samples=self._task_parameters.bo_params.n_samples,
             n_iterations=self._task_parameters.bo_params.n_iterations,
+            kernel=self._task_parameters.bo_params.kernel,
             af=self._task_parameters.bo_params.af,
             hyperparam=self._task_parameters.bo_params.hyperparams,
             prior=self._task_parameters.bo_params.prior,
