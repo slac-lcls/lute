@@ -20,6 +20,9 @@ import logging
 from typing import Optional, Tuple
 import sys
 
+os.environ["NUMEXPR_MAX_THREADS"] = "16"
+os.environ["NUMEXPR_NUM_THREADS"] = "16"
+
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
