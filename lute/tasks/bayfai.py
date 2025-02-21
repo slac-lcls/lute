@@ -1315,7 +1315,7 @@ class OptimizePyFAIGeometry(Task):
                         powder = np.reshape(powder, shape)
         return powder
 
-    def _reconstruct_powder(self, pypca_path: str) -> Optional[npt.NDArray[np.float64]]:
+    def _reconstruct_powder(self, pypca_path: Optional[str] = None) -> Optional[npt.NDArray[np.float64]]:
         """
         Reconstruct powder from PyPCA.
 
@@ -1324,28 +1324,35 @@ class OptimizePyFAIGeometry(Task):
         pypca_path : str
             Path to the PyPCA folder containing the model and the projections.
         """
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+
+        if pypca_path is None:
+            logger.warning("No PyPCA path provided.")
+            logger.warning("Using raw powder instead.")
+            return None
+        
         model = f"{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5"
         projections = (
             f"{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5"
         )
 
-        model = list(Path(f"{pypca_path}/models").glob(model))
-        projections = list(Path(f"{pypca_path}/projections").glob(projections))
+        model_list = list(Path(f"{pypca_path}/models").glob(model))
+        projections_list = list(Path(f"{pypca_path}/projections").glob(projections))
 
-        if len(model) == 1 and len(projections) == 1:
-            model_h5 = str(model[0])
-            projections_h5 = str(projections[0])
+        if len(model_list) == 1 and len(projections_list) == 1:
+            model_h5 = str(model_list[0])
+            projections_h5 = str(projections_list[0])
         else:
             raise ValueError(
-                f"Expected one file, but found {len(model)}: {model} and {len(projections)}: {projections}"
+                f"Expected one file, but found {len(model_list)} models in {model} and {len(projections_list)} projections in {projections}."
             )
 
         with h5py.File(model_h5, "r") as h5:
-            V = np.array(h5["V"])
+            _= np.array(h5["V"]) # V is the PCA model
 
         with h5py.File(projections_h5, "r") as h5:
-            U = np.array(h5["projected_images"])
-        return U, V
+            _ = np.array(h5["projected_images"]) # U are the projections
+        return None
 
     def _preprocess_powder(
         self,
@@ -1416,13 +1423,14 @@ class OptimizePyFAIGeometry(Task):
             powder = gaussian_laplace(powder, sigma=sigma)
             return powder
         elif preprocess == "PyPCA":
-            _, _ = self._reconstruct_powder()
+            powder = self._reconstruct_powder(pypca_path=None)
             logger.warning("PyPCA preprocessing not implemented yet.")
             logger.warning("Using raw powder instead.")
             return powder
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
-            return None
+            logger.warning("Using raw powder instead.")
+            return powder
 
     def _update_geometry(self, optimizer):
         """
