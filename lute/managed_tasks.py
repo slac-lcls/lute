@@ -135,3 +135,7 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 #######
 PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
 """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
+PyFAIGeometryOptimizer.update_environment({
+    "NUMEXPR_MAX_THREADS":16,
+    "NUMEXPR_NUM_THREADS":16,
+})

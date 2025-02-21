@@ -20,9 +20,6 @@ import logging
 from typing import Optional, Tuple
 import sys
 
-os.environ["NUMEXPR_MAX_THREADS"] = "16"
-os.environ["NUMEXPR_NUM_THREADS"] = "16"
-
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
@@ -41,6 +38,7 @@ import matplotlib.patches as patches  # type: ignore
 from pathlib import Path  # type: ignore
 import time  # type: ignore
 import pyFAI  # type: ignore
+pyFAI.use_opencl = False
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
@@ -52,8 +50,6 @@ from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 from mpi4py import MPI
-
-pyFAI.use_opencl = False
 
 logger: logging.Logger = get_logger(__name__)
 
