@@ -1345,8 +1345,7 @@ class OptimizePyFAIGeometry(Task):
 
         with h5py.File(projections_h5, "r") as h5:
             U = np.array(h5["projected_images"])
-
-        pass
+        return U, V 
 
     def _preprocess_powder(
         self,
@@ -1417,7 +1416,10 @@ class OptimizePyFAIGeometry(Task):
             powder = gaussian_laplace(powder, sigma=sigma)
             return powder
         elif preprocess == "PyPCA":
-            powder = self._reconstruct_powder()
+            _, _ = self._reconstruct_powder()
+            logger.warning("PyPCA preprocessing not implemented yet.")
+            logger.warning("Using raw powder instead.")
+            return powder
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             return None
