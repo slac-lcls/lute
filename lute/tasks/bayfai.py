@@ -38,6 +38,7 @@ import matplotlib.patches as patches  # type: ignore
 from pathlib import Path  # type: ignore
 import time  # type: ignore
 import pyFAI  # type: ignore
+
 pyFAI.use_opencl = False
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
