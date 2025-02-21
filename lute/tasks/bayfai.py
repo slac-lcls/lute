@@ -1345,7 +1345,7 @@ class OptimizePyFAIGeometry(Task):
 
         with h5py.File(projections_h5, "r") as h5:
             U = np.array(h5["projected_images"])
-        return U, V 
+        return U, V
 
     def _preprocess_powder(
         self,
