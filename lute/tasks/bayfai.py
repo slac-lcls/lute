@@ -1315,7 +1315,9 @@ class OptimizePyFAIGeometry(Task):
                         powder = np.reshape(powder, shape)
         return powder
 
-    def _reconstruct_powder(self, pypca_path: Optional[str] = None) -> Optional[npt.NDArray[np.float64]]:
+    def _reconstruct_powder(
+        self, pypca_path: Optional[str] = None
+    ) -> Optional[npt.NDArray[np.float64]]:
         """
         Reconstruct powder from PyPCA.
 
@@ -1330,7 +1332,7 @@ class OptimizePyFAIGeometry(Task):
             logger.warning("No PyPCA path provided.")
             logger.warning("Using raw powder instead.")
             return None
-        
+
         model = f"{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5"
         projections = (
             f"{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5"
@@ -1348,10 +1350,10 @@ class OptimizePyFAIGeometry(Task):
             )
 
         with h5py.File(model_h5, "r") as h5:
-            _= np.array(h5["V"]) # V is the PCA model
+            _ = np.array(h5["V"])  # V is the PCA model
 
         with h5py.File(projections_h5, "r") as h5:
-            _ = np.array(h5["projected_images"]) # U are the projections
+            _ = np.array(h5["projected_images"])  # U are the projections
         return None
 
     def _preprocess_powder(
