@@ -53,6 +53,7 @@ from mpi4py import MPI
 
 logger: logging.Logger = get_logger(__name__)
 
+
 class BayesGeomOpt:
     """
     Class to perform Geometry Optimization using Bayesian Optimization on pyFAI
