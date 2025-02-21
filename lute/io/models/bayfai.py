@@ -121,7 +121,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     )
 
     preprocess: Optional[str] = Field(
-        None,
+        "Diagonal",
         description="Preprocessing method to be used for the calibration.",
     )
 
