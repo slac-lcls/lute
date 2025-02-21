@@ -527,6 +527,7 @@ class BayesGeomOpt:
         self.max_rings = max_rings
         Imin = self.min_intensity(powder)
 
+        self.bounds = bounds
         if self.rank == 0:
             logger.info(
                 f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
@@ -574,7 +575,11 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            percentile_10 = np.percentile(self.scan["score"], 10)
+            if len(self.bounds["dist"]) == 2:
+                non_zeros = np.where(self.scan["score"] > 0)[0]
+                percentile_10 = np.percentile(self.scan["score"][non_zeros], 10)
+            else:
+                percentile_10 = np.percentile(self.scan["score"], 10)
             score_indices = np.where(self.scan["score"] > percentile_10)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])
             index = score_indices[shift_index]
