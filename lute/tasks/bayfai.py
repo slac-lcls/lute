@@ -52,11 +52,7 @@ from mpi4py import MPI
 
 pyFAI.use_opencl = False
 
-os.environ['NUMEXPR_MAX_THREADS'] = '16'
-os.environ['NUMEXPR_NUM_THREADS'] = '16'
-
 logger: logging.Logger = get_logger(__name__)
-
 
 class BayesGeomOpt:
     """

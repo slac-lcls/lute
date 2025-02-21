@@ -98,6 +98,10 @@ def get_logger(name: str, is_task: bool = True) -> logging.Logger:
             other_logger, logging.PlaceHolder
         ):
             other_logger.disabled = True
+        elif "pyFAI.opencl.common" in other_name and not isinstance(
+            other_logger, logging.PlaceHolder
+        ):
+            other_logger.setLevel(logging.CRITICAL)
         elif "goniometer" in other_name and not isinstance(
             other_logger, logging.PlaceHolder
         ):
@@ -106,10 +110,10 @@ def get_logger(name: str, is_task: bool = True) -> logging.Logger:
             other_logger, logging.PlaceHolder
         ):
             other_logger.setLevel(logging.CRITICAL)
-        elif "numexpr.utils" in other_name and not isinstance(
+        elif "numexpr" in other_name and not isinstance(
             other_logger, logging.PlaceHolder
         ):
-            other_logger.setLevel(logging.WARNING)
+            other_logger.disabled = True
     logger: logging.Logger = logging.getLogger(name)
     logger.propagate = False
     handler: logging.Handler
