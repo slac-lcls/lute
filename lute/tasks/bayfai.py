@@ -576,11 +576,11 @@ class BayesGeomOpt:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             if isinstance(self.bounds["dist"], float):
-                percentile_10 = np.percentile(self.scan["score"], 10)
+                thrsh = np.percentile(self.scan["score"], 10)
             else:
                 non_zeros = np.where(self.scan["score"] > 0)[0]
-                percentile_10 = np.percentile(self.scan["score"][non_zeros], 10)
-            score_indices = np.where(self.scan["score"] > percentile_10)[0]
+                thrsh = np.percentile(self.scan["score"][non_zeros], 10)
+            score_indices = np.where(self.scan["score"] > thrsh)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])
             index = score_indices[shift_index]
             self.index = index
@@ -926,13 +926,17 @@ class BayesGeomOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        percentile_10 = np.percentile(scores, 10)
+        if isinstance(self.bounds["dist"], float):
+                thrsh = np.percentile(self.scan["score"], 10)
+        else:
+            non_zeros = np.where(self.scan["score"] > 0)[0]
+            thrsh = np.percentile(self.scan["score"][non_zeros], 25)
         ax.plot(distances, scores)
         ax.axhline(
-            percentile_10,
+            thrsh,
             color="red",
             linestyle="--",
-            label=f"Minimal score: {percentile_10}",
+            label=f"Minimal score: {thrsh}",
         )
         ax.legend()
         ax.set_xlabel("Distance (m)")
