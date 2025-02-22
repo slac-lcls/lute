@@ -927,7 +927,7 @@ class BayesGeomOpt:
         """
         scores = self.scan["score"]
         if isinstance(self.bounds["dist"], float):
-                thrsh = np.percentile(self.scan["score"], 10)
+            thrsh = np.percentile(self.scan["score"], 10)
         else:
             non_zeros = np.where(self.scan["score"] > 0)[0]
             thrsh = np.percentile(self.scan["score"][non_zeros], 25)
