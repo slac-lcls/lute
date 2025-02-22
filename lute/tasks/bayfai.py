@@ -579,7 +579,7 @@ class BayesGeomOpt:
                 thrsh = np.percentile(self.scan["score"], 10)
             else:
                 non_zeros = np.where(self.scan["score"] > 0)[0]
-                thrsh = np.percentile(self.scan["score"][non_zeros], 25)
+                thrsh = np.percentile(self.scan["score"][non_zeros], 50)
             self.thrsh = thrsh
             score_indices = np.where(self.scan["score"] > thrsh)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])
