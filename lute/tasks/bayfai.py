@@ -575,11 +575,11 @@ class BayesGeomOpt:
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            if len(self.bounds["dist"]) == 2:
+            if isinstance(self.bounds["dist"], float):
+                percentile_10 = np.percentile(self.scan["score"], 10)
+            else:
                 non_zeros = np.where(self.scan["score"] > 0)[0]
                 percentile_10 = np.percentile(self.scan["score"][non_zeros], 10)
-            else:
-                percentile_10 = np.percentile(self.scan["score"], 10)
             score_indices = np.where(self.scan["score"] > percentile_10)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])
             index = score_indices[shift_index]
