@@ -16,7 +16,7 @@ from pydantic import validator
 from lute.io.db import read_latest_db_entry
 from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 
-from lute.logging import get_logger
+from lute.execution.logging import get_logger
 
 logger = get_logger(__name__)
 

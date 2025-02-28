@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, validator
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path, validate_calib_path
 
-from lute.logging import get_logger
+from lute.execution.logging import get_logger
 
 logger = get_logger(__name__)
 
