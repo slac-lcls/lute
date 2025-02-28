@@ -88,6 +88,7 @@ def validate_calib_path(calib_path_name: str):
             type = "geometry"
             calib_dir = f"{cdir}/{group}/{src}/{type}/"
             calib_path = select_calib_file(calib_dir, run)
+            print(f"Calibration file: {calib_path}")
             if not os.path.exists(calib_path):
                 raise ValueError(f"Calibration file not found: {calib_path}")
         return calib_path
