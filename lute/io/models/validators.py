@@ -18,6 +18,7 @@ from lute.io.calib import group_from_det_type, source_from_det_info, select_cali
 
 from lute.execution.logging import get_logger
 
+
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
 
