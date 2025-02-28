@@ -124,10 +124,7 @@ det_names_lower = tuple(name.lower() for name in det_names)
 det_lower_to_name = dict(zip(det_names_lower, det_names))
 det_to_group = dict(zip(det_names, calib_groups))
 det_to_group_lower = dict(zip(det_names_lower, calib_groups))
-
-hutches_lower = tuple(hutch.lower() for hutch in hutches)
 hutch_to_station = dict(zip(hutches, stations))
-hutch_to_station_lower = dict(zip(hutches_lower, stations))
 
 
 def group_from_det_type(det_type: str) -> str:
@@ -142,7 +139,7 @@ def group_from_det_type(det_type: str) -> str:
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
     hutch_upper = hutch.upper()
-    source_begin = hutch_to_station_lower.get(hutch_upper, "NOT IMPLEMENTED")
+    source_begin = hutch_to_station.get(hutch_upper, "NOT IMPLEMENTED")
     if source_begin == "NOT IMPLEMENTED":
         raise ValueError(f"Unknown hutch: {hutch}")
     if "." in det_type and det_type.split(".")[-1].isdigit():
