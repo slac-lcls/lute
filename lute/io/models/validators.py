@@ -91,9 +91,7 @@ def validate_calib_path(calib_path_name: str):
             if os.path.exists(calib_path):
                 return calib_run_path
             raise ValueError(f"Calibration file not found at {calib_run_path}")
-        
+
         return calib_path
 
-    return validator(calib_path_name, always=True)(
-        _validate_calib_path
-    )
+    return validator(calib_path_name, always=True)(_validate_calib_path)
