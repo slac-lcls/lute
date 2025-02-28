@@ -172,6 +172,7 @@ det_to_group = dict(zip(calib_det_names, calib_groups))
 
 hutch_to_station = dict(zip(hutches, stations))
 
+
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
@@ -180,6 +181,7 @@ def group_from_det_type(det_type: str) -> str:
     if group == "NOT IMPLEMENTED":
         raise ValueError(f"Unknown detector type: {det_type}")
     return group
+
 
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
