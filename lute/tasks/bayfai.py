@@ -1215,7 +1215,11 @@ class OptimizePyFAIGeometry(Task):
                 )
                 src = str(self.det.name)
                 in_file = pick_template(
-                    self._task_parameters.lute_config.exp, det_type, src, pixel_size_um, self.shape
+                    self._task_parameters.lute_config.exp,
+                    det_type,
+                    src,
+                    pixel_size_um,
+                    self.shape,
                 )
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
@@ -1339,9 +1343,7 @@ class OptimizePyFAIGeometry(Task):
             return None
 
         model = f"{pypca_path}/models/pypca_model_{self._task_parameters.lute_config.run}_*.h5"
-        projections = (
-            f"{pypca_path}/projections/projections_{self._task_parameters.lute_config.run}_*.h5"
-        )
+        projections = f"{pypca_path}/projections/projections_{self._task_parameters.lute_config.run}_*.h5"
 
         model_list = list(Path(f"{pypca_path}/models").glob(model))
         projections_list = list(Path(f"{pypca_path}/projections").glob(projections))
@@ -1515,7 +1517,9 @@ class OptimizePyFAIGeometry(Task):
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
             logger.info(f"Final Residual: {optimizer.residual:.2e}")
-            fig_folder = os.path.join(self._task_parameters.lute_config.work_dir, "figs")
+            fig_folder = os.path.join(
+                self._task_parameters.lute_config.work_dir, "figs"
+            )
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
