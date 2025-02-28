@@ -1197,7 +1197,7 @@ class OptimizePyFAIGeometry(Task):
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         in_file = self._task_parameters.in_file
         det_type = self._task_parameters.det_type
-        ds_args = f"exp={self._task_parameters.exp}:run={self._task_parameters.run}:idx"
+        ds_args = f"exp={self._task_parameters.lute_config.exp}:run={self._task_parameters.lute_config.run}:idx"
         self.ds = psana.DataSource(ds_args)
         self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
@@ -1208,14 +1208,14 @@ class OptimizePyFAIGeometry(Task):
             self.pixel_size = pixel_size_um * 1e-6
             if in_file == "":
                 logger.info(
-                    f"No geometry file found for exp {self._task_parameters.exp}",
+                    f"No geometry file found for exp {self._task_parameters.lute_config.exp}",
                 )
                 logger.info(
                     f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}",
                 )
                 src = str(self.det.name)
                 in_file = pick_template(
-                    self._task_parameters.exp, det_type, src, pixel_size_um, self.shape
+                    self._task_parameters.lute_config.exp, det_type, src, pixel_size_um, self.shape
                 )
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
@@ -1338,9 +1338,9 @@ class OptimizePyFAIGeometry(Task):
             logger.warning("Using raw powder instead.")
             return None
 
-        model = f"{pypca_path}/models/pypca_model_{self._task_parameters.run}_*.h5"
+        model = f"{pypca_path}/models/pypca_model_{self._task_parameters.lute_config.run}_*.h5"
         projections = (
-            f"{pypca_path}/projections/projections_{self._task_parameters.run}_*.h5"
+            f"{pypca_path}/projections/projections_{self._task_parameters.lute_config.run}_*.h5"
         )
 
         model_list = list(Path(f"{pypca_path}/models").glob(model))
@@ -1454,14 +1454,14 @@ class OptimizePyFAIGeometry(Task):
             params=optimizer.params,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file.replace(
-                f"{self._task_parameters.run}-end.data",
-                f"r{self._task_parameters.run:0>4}.geom",
+                f"{self._task_parameters.lute_config.run}-end.data",
+                f"r{self._task_parameters.lute_config.run:0>4}.geom",
             ),
         )
         CrystFELToPsana(
             in_file=self._task_parameters.out_file.replace(
-                f"{self._task_parameters.run}-end.data",
-                f"r{self._task_parameters.run:0>4}.geom",
+                f"{self._task_parameters.lute_config.run}-end.data",
+                f"r{self._task_parameters.lute_config.run:0>4}.geom",
             ),
             det_type=optimizer.det_type,
             out_file=self._task_parameters.out_file,
@@ -1486,8 +1486,8 @@ class OptimizePyFAIGeometry(Task):
         if powder is None:
             raise RuntimeError("Unable to extract powder. Cannot continue.")
         optimizer = BayesGeomOpt(
-            exp=self._task_parameters.exp,
-            run=self._task_parameters.run,
+            exp=self._task_parameters.lute_config.exp,
+            run=self._task_parameters.lute_config.run,
             det_type=self._task_parameters.det_type,
             detector=detector,
             calibrant=self._task_parameters.calibrant,
@@ -1515,7 +1515,7 @@ class OptimizePyFAIGeometry(Task):
                 f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
             )
             logger.info(f"Final Residual: {optimizer.residual:.2e}")
-            fig_folder = os.path.join(self._task_parameters.work_dir, "figs")
+            fig_folder = os.path.join(self._task_parameters.lute_config.work_dir, "figs")
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
@@ -1550,7 +1550,7 @@ class OptimizePyFAIGeometry(Task):
             )
             self._result.summary.append(
                 ElogSummaryPlots(
-                    f"Geometry_Fit/r{self._task_parameters.run:0>4}", plots
+                    f"Geometry_Fit/r{self._task_parameters.lute_config.run:0>4}", plots
                 )
             )
             self._result.task_status = TaskStatus.COMPLETED

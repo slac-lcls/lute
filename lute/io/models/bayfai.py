@@ -35,12 +35,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
                 "poni1": (-0.01, 0.01),
                 "poni2": (-0.01, 0.01),
             },
-            description="Bounds defining the parameter search space for the Bayesian optimization.",
+            description="Bounds defining the parameter search space for the Bayesian optimization. All bound values are in meters.",
         )
 
         res: float = Field(
             None,
-            description="Resolution of the grid used to discretize the parameter search space.",
+            description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters.",
         )
 
         max_rings: int = Field(
@@ -60,17 +60,17 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
         kernel: Optional[str] = Field(
             "RBF",
-            description="Kernel to be used by the Gaussian Process for the Bayesian optimization.",
+            description="Kernel to be used by the Gaussian Process for the Bayesian optimization. Currently supported: 'RBF', 'Matern'",
         )
 
         prior: Optional[bool] = Field(
             True,
-            description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples.",
+            description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
         )
 
         af: Optional[str] = Field(
             "ucb",
-            description="Acquisition function to be used by the Bayesian optimization.",
+            description="Acquisition function to be used by the Bayesian optimization. Currently supported: Upper Confidence Bound 'ucb', Expected Improvement 'ei', Probability of Improvement 'poi'",
         )
 
         hyperparams: Optional[Dict[str, float]] = Field(
@@ -78,36 +78,21 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
                 "beta": 1.96,
                 "epsilon": 0.01,
             },
-            description="Hyperparameters for the acquisition function.",
+            description="Hyperparameters for the acquisition function. beta is the exploration parameter for the Upper Confidence Bound acquisition function. epsilon is the exploration parameter for the Expected Improvement and Probability of Improvement acquisition functions.",
         )
 
         seed: Optional[int] = Field(
             None,
-            description="Seed for the random number generator for potential reproducibility.",
+            description="Seed for the random number generator for reproducibility.",
         )
 
     _find_smd_path = validate_smd_path("powder")
 
     _find_in_file_path = validate_calib_path("in_file")
 
-    exp: str = Field(
-        "",
-        description="Experiment name.",
-    )
-
-    run: Union[str, int] = Field(
-        None,
-        description="Run number.",
-    )
-
     det_type: str = Field(
         "",
         description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
-    )
-
-    work_dir: str = Field(
-        "",
-        description="Main working directory for LUTE.",
     )
 
     in_file: str = Field(
@@ -140,26 +125,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         BayesGeomOptParameters(),
         description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
     )
-
-    @validator("exp", always=True)
-    def validate_exp(cls, exp: str, values: Dict[str, Any]) -> str:
-        if not exp:
-            exp = values["lute_config"].experiment
-        return exp
-
-    @validator("run", always=True)
-    def validate_run(
-        cls, run: Union[str, int], values: Dict[str, Any]
-    ) -> Union[str, int]:
-        if not run:
-            run = values["lute_config"].run
-        return run
-
-    @validator("work_dir", always=True)
-    def validate_work_dir(cls, work_dir: str, values: Dict[str, Any]) -> str:
-        if not work_dir:
-            work_dir = values["lute_config"].work_dir
-        return work_dir
 
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:

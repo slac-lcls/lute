@@ -14,10 +14,7 @@ from typing import Dict, Any, Optional
 from pydantic import validator
 
 from lute.io.db import read_latest_db_entry
-
-import psana  # type: ignore
-from PSCalib.CalibFileFinder import find_calib_file  # type: ignore
-
+from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
@@ -85,12 +82,13 @@ def validate_calib_path(calib_path_name: str):
             except KeyError:
                 det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            ds_args = f"exp={exp}:run={run}:idx"
-            ds = psana.DataSource(ds_args)
-            det = psana.Detector(det_type, ds.env())
-            src = str(det.name)
+            src = source_from_det_info(det_type, exp[:3])
+            group = group_from_det_type(det_type)
             type = "geometry"
-            calib_path = find_calib_file(cdir, src, type, run, pbits=1)
+            calib_dir = f"{cdir}/{group}/{src}/{type}/"
+            calib_path = select_calib_file(calib_dir, run)
+            if not os.path.exists(calib_path):
+                raise ValueError(f"Calibration file not found: {calib_path}")
         return calib_path
 
     return validator(calib_path_name, always=True, allow_reuse=True)(
