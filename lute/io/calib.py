@@ -240,7 +240,6 @@ def select_calib_file(calib_dir: str, run: int) -> str:
         run_files.append((begin, end, file))
     run_files.sort(key=lambda x: int(x[0]))
 
-
     for run_file in run_files[::-1]:
         if run_file[0] <= run <= run_file[1]:
             return run_file[2]

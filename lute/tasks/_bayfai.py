@@ -78,7 +78,6 @@ class BayesGeomOpt:
             "rot3": 0,
         }
 
-
     @staticmethod
     def expected_improvement(X, gp_model, best_y, epsilon=0):
         y_pred, y_std = gp_model.predict(X, return_std=True)
@@ -86,13 +85,11 @@ class BayesGeomOpt:
         ei = y_pred - best_y * norm.cdf(z) + y_std * norm.pdf(z)
         return ei
 
-
     @staticmethod
     def upper_confidence_bound(X, gp_model, best_y=None, beta=1.96):
         y_pred, y_std = gp_model.predict(X, return_std=True)
         ucb = y_pred + beta * y_std
         return ucb
-
 
     @staticmethod
     def probability_of_improvement(X, gp_model, best_y, epsilon=0):
@@ -101,7 +98,6 @@ class BayesGeomOpt:
         pi = norm.cdf(z)
         return pi
 
-
     @staticmethod
     def contextual_improvement(X, gp_model, best_y, hyperparam=None):
         y_pred, y_std = gp_model.predict(X, return_std=True)
@@ -109,7 +105,6 @@ class BayesGeomOpt:
         z = (y_pred - best_y + cv) / y_std
         ci = y_pred - best_y * norm.cdf(z) + y_std * norm.pdf(z)
         return ci
-
 
     def set_wavelength_calibrant(self):
         """
@@ -138,7 +133,6 @@ class BayesGeomOpt:
         calibrant.wavelength = self.wavelength
         self.calibrant = calibrant
 
-
     def build_mask(self, central=True, edges=True):
         """
         Mask pixels marked as false status, edges and central pixels of panels
@@ -164,7 +158,6 @@ class BayesGeomOpt:
             if len(mask.shape) != 2:
                 mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
         return mask
-
 
     def min_intensity(self, powder):
         """
@@ -199,7 +192,6 @@ class BayesGeomOpt:
         self.Imin = Imin
         self.powder = powder
         return Imin
-
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_center(
@@ -458,7 +450,6 @@ class BayesGeomOpt:
         }
         return result
 
-
     def bayes_opt_geom(
         self,
         powder,
@@ -558,7 +549,6 @@ class BayesGeomOpt:
         self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
         self.finalize()
 
-
     def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
@@ -578,7 +568,6 @@ class BayesGeomOpt:
             self.residual = self.scan["residual"][index]
             self.score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
-
 
     def bayes_opt_animation(
         self, bo_history, n_samples, n_iterations, bounds, res, dist
@@ -672,7 +661,6 @@ class BayesGeomOpt:
         filename = f"../tests/animation/bayes_opt_{self.exp}_r{self.run}_dist_{int(dist * 1000):03d}mm.gif"
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
-
 
     def plot_powder_and_resolution(self, sg, distance, ax=None):
         """
@@ -856,7 +844,6 @@ class BayesGeomOpt:
             border_resol,
         )
 
-
     def plot_radial_integration(self, result, calibrant=None, label=None, ax=None):
         """
         Display the powder diffraction pattern
@@ -906,7 +893,6 @@ class BayesGeomOpt:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
 
-
     def plot_score_distance_scan(self, distances, ax):
         """
         Plot the score scan over distance
@@ -930,7 +916,6 @@ class BayesGeomOpt:
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
         ax.set_title("Number of Control Points vs Distance")
-
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
         """
@@ -965,7 +950,6 @@ class BayesGeomOpt:
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Residual")
         ax.set_title("Residual vs Distance")
-
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
         """
@@ -1027,7 +1011,6 @@ class BayesGeomOpt:
         ax.set_xticklabels([])
         ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
         ax.legend(fontsize="x-small")
-
 
     def visualize_results(
         self,
