@@ -40,7 +40,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
         res: float = Field(
             None,
-            description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters.",
+            description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters. If None, set to the detector pixel size.",
         )
 
         max_rings: int = Field(
@@ -65,12 +65,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
         prior: Optional[bool] = Field(
             True,
-            description="Whether to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
+            description="Flag to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
         )
 
         af: Optional[str] = Field(
             "ucb",
-            description="Acquisition function to be used by the Bayesian optimization. Currently supported: Upper Confidence Bound 'ucb', Expected Improvement 'ei', Probability of Improvement 'poi'",
+            description="Acquisition function to be used by the Bayesian optimization. \n Currently supported: Upper Confidence Bound 'ucb', \n Expected Improvement 'ei', \n Probability of Improvement 'poi'",
         )
 
         hyperparams: Optional[Dict[str, float]] = Field(
@@ -78,7 +78,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
                 "beta": 1.96,
                 "epsilon": 0.01,
             },
-            description="Hyperparameters for the acquisition function. beta is the exploration parameter for the Upper Confidence Bound acquisition function. epsilon is the exploration parameter for the Expected Improvement and Probability of Improvement acquisition functions.",
+            description="Hyperparameters for the acquisition function. \n beta is the exploration parameter for the Upper Confidence Bound acquisition function. \n epsilon is the exploration parameter for the Expected Improvement and Probability of Improvement acquisition functions.",
         )
 
         seed: Optional[int] = Field(
@@ -107,12 +107,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     preprocess: Optional[str] = Field(
         "Diagonal",
-        description="Preprocessing method to be used for the calibration.",
+        description="Preprocessing method to be used for the calibration. \nAvailable methods: Finite Differences Gradient Computation 'Finite', \n Diagonal Differences Gradient Computation 'Diagonal', \n Central Differences Gradient Computation 'Central', \n Laplacian of Gaussian Filtering 'Laplacian', \n No Preprocessing 'None', \n PyPCA Filtering yet to be implemented",
     )
 
     calibrant: str = Field(
         "",
-        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration",
+        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'LaB6', etc.",
     )
 
     out_file: str = Field(
