@@ -19,6 +19,7 @@ from lute.execution.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
