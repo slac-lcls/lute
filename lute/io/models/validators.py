@@ -75,7 +75,7 @@ def validate_calib_path(calib_path_name: str):
     """Finds the path to a valid calibration file or raises an error."""
 
     def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
-        if calib_path == "":
+        if not calib_path:
             exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             try:
@@ -94,4 +94,4 @@ def validate_calib_path(calib_path_name: str):
 
         return calib_path
 
-    return validator(calib_path_name, always=True)(_validate_calib_path)
+    return validator(calib_path_name, always=True, pre=True)(_validate_calib_path)
