@@ -237,7 +237,7 @@ def select_calib_file(calib_dir: str, run: int) -> str:
         elif end == "end":
             end_int = run_max
 
-        run_files.append((begin, end, file))
+        run_files.append((begin_int, end_int, file))
     run_files.sort(key=lambda x: int(x[0]))
 
 
