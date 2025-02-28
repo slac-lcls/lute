@@ -15,6 +15,9 @@ from pydantic import BaseModel, Field, validator
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path, validate_calib_path
 
+from lute.logging import get_logger
+
+logger = get_logger(__name__)
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
@@ -129,6 +132,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if not out_file:
+            logger.info("No output file provided.")
+            logger.info(f"{values}")
             run = values["lute_config"].run
             in_file = values["in_file"]
             out_file = in_file.replace("0-end.data", f"{run}-end.data")

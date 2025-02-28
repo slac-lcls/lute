@@ -16,6 +16,10 @@ from pydantic import validator
 from lute.io.db import read_latest_db_entry
 from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 
+from lute.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
@@ -88,10 +92,12 @@ def validate_calib_path(calib_path_name: str):
             type = "geometry"
             calib_dir = f"{cdir}/{group}/{src}/{type}/"
             calib_run_path = select_calib_file(calib_dir, run)
+            logger.info(f"Calibration found: {calib_run_path}")
             if os.path.exists(calib_path):
                 return calib_run_path
+            logger.info(f"Calibration not found at {calib_run_path}")
             raise ValueError(f"Calibration file not found at {calib_run_path}")
 
         return calib_path
 
-    return validator(calib_path_name, always=True, pre=True)(_validate_calib_path)
+    return validator(calib_path_name, always=True)(_validate_calib_path)
