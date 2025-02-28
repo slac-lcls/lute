@@ -41,6 +41,7 @@ from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: i
 
 logger: logging.Logger = get_logger(__name__)
 
+
 class OptimizePyFAIGeometry(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
