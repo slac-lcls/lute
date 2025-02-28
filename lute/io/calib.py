@@ -172,6 +172,7 @@ det_to_group = dict(zip(calib_det_names, calib_groups))
 
 hutch_to_station = dict(zip(hutches, stations))
 
+
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
@@ -180,6 +181,7 @@ def group_from_det_type(det_type: str) -> str:
     if group == "NOT IMPLEMENTED":
         raise ValueError(f"Unknown detector type: {det_type}")
     return group
+
 
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
@@ -236,9 +238,10 @@ def select_calib_file(calib_dir: str, run: int) -> str:
             end_int = run_max
 
         run_files.append((begin, end, file))
-    sorted_list = sorted(list, key=lambda x: int(x[0]))
+    run_files.sort(key=lambda x: int(x[0]))
 
-    for run_file in sorted_list[::-1]:
+
+    for run_file in run_files[::-1]:
         if run_file[0] <= run <= run_file[1]:
             return run_file[2]
 
