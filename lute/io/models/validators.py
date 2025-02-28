@@ -16,6 +16,7 @@ from pydantic import validator
 from lute.io.db import read_latest_db_entry
 from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 
+
 def template_parameter_validator(template_params_name: str):
     """Populates a TaskParameters model with a set of validated TemplateParameters.
 

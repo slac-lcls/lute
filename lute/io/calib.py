@@ -125,6 +125,7 @@ hutches_lower = tuple(hutch.lower() for hutch in hutches)
 hutch_to_station = dict(zip(hutches, stations))
 hutch_to_station_lower = dict(zip(hutches_lower, stations))
 
+
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
@@ -132,6 +133,7 @@ def group_from_det_type(det_type: str) -> str:
     if group == "NOT IMPLEMENTED":
         raise ValueError(f"Unknown detector type: {det_type}")
     return group
+
 
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
@@ -153,6 +155,7 @@ def source_from_det_info(det_type: str, hutch: str) -> str:
             raise ValueError(f"Unknown detector type: {det_type}")
         return f"{source_begin}:{det}.0"
 
+
 def select_calib_file(calib_dir: str, run: int) -> str:
     """Select the calibration file from the calibration directory and run number."""
     fnames = os.listdir(calib_dir)
@@ -167,27 +170,30 @@ def select_calib_file(calib_dir: str, run: int) -> str:
         if os.path.splitext(f)[1] != ".data":
             continue
         basename = os.path.splitext(f)[0]
-        fields = basename.split('-')
+        fields = basename.split("-")
         begin, end = fields
 
         if begin.isdigit():
             begin_int = int(begin)
             if begin_int >= run_max:
-                raise ValueError(f"Begin run number {run} is too high for calibration directory {calib_dir}")
-        
+                raise ValueError(
+                    f"Begin run number {run} is too high for calibration directory {calib_dir}"
+                )
+
         if end.isdigit():
             end_int = int(end)
             if end_int >= run_max:
-                raise ValueError(f"End run number {run} is too high for calibration directory {calib_dir}")
+                raise ValueError(
+                    f"End run number {run} is too high for calibration directory {calib_dir}"
+                )
         elif end == "end":
             end_int = run_max
-        
+
         run_files.append((begin, end, file))
     sorted_list = sorted(list, key=lambda x: int(x[0]))
 
     for run_file in sorted_list[::-1]:
         if run_file[0] <= run <= run_file[1]:
             return run_file[2]
-    
+
     return ""
-    
