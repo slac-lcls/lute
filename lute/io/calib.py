@@ -186,22 +186,14 @@ def group_from_det_type(det_type: str) -> str:
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
     hutch_upper = hutch.upper()
-    source_begin = hutch_to_station.get(hutch_upper, "NOT IMPLEMENTED")
-    if source_begin == "NOT IMPLEMENTED":
+    station = hutch_to_station.get(hutch_upper, "NOT IMPLEMENTED")
+    if station == "NOT IMPLEMENTED":
         raise ValueError(f"Unknown hutch: {hutch}")
-    if "." in det_type and det_type.split(".")[-1].isdigit():
-        det_type, det_id = det_type.rsplit(".", 1)
-        det_type_lower = det_type.lower()
-        det_name = psana_to_calib_det_name.get(det_type_lower, "NOT IMPLEMENTED")
-        if det_name == "NOT IMPLEMENTED":
-            raise ValueError(f"Unknown detector type: {det_type}")
-        return f"{source_begin}:{det_name}.{det_id}"
-    else:
-        det_type_lower = det_type.lower()
-        det_name = psana_to_calib_det_name.get(det_type_lower, "NOT IMPLEMENTED")
-        if det_name == "NOT IMPLEMENTED":
-            raise ValueError(f"Unknown detector type: {det_type}")
-        return f"{source_begin}:{det_name}.0"
+    det_type_lower = det_type.lower()
+    det_name = psana_to_calib_det_name.get(det_type_lower, "NOT IMPLEMENTED")
+    if det_name == "NOT IMPLEMENTED":
+        raise ValueError(f"Unknown detector type: {det_type}")
+    return f"{station}:{det_name}.0"
 
 
 def select_calib_file(calib_dir: str, run: int) -> str:
