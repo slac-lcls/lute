@@ -164,7 +164,7 @@ stations = (
 )
 
 
-psana_det_names_lower = tuple(name.lower() for name in psana_det_names)
+psana_det_names_lower = [name.lower() for name in psana_det_names]
 
 psana_to_calib_det_name = dict(zip(psana_det_names_lower, calib_det_names))
 
