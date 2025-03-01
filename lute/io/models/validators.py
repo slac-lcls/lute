@@ -100,6 +100,7 @@ def validate_calib_path(calib_path_name: str):
 
     return validator(calib_path_name, always=True)(_validate_calib_path)
 
+
 def validate_output_path(output_path_name: str):
     """Finds the path to a valid output file or raises an error."""
 

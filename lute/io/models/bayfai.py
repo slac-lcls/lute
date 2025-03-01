@@ -13,7 +13,11 @@ from typing import Any, Dict, Optional, Union, Tuple
 from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
-from lute.io.models.validators import validate_smd_path, validate_calib_path, validate_output_path
+from lute.io.models.validators import (
+    validate_smd_path,
+    validate_calib_path,
+    validate_output_path,
+)
 
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
