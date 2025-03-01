@@ -217,23 +217,17 @@ hutch_to_station = dict(zip(hutches, stations))
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
-    det_name = psana_to_calib_det_name.get(det_type_lower, "NOT IMPLEMENTED")
-    group = det_to_group.get(det_name, "NOT IMPLEMENTED")
-    if group == "NOT IMPLEMENTED":
-        raise ValueError(f"Unknown detector type: {det_type}")
+    det_name = psana_to_calib_det_name.get(det_type_lower)
+    group = det_to_group.get(det_name)
     return group
 
 
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
     hutch_upper = hutch.upper()
-    station = hutch_to_station.get(hutch_upper, "NOT IMPLEMENTED")
-    if station == "NOT IMPLEMENTED":
-        raise ValueError(f"Unknown hutch: {hutch}")
+    station = hutch_to_station.get(hutch_upper)
     det_type_lower = det_type.lower()
-    det_name = psana_to_calib_det_name.get(det_type_lower, "NOT IMPLEMENTED")
-    if det_name == "NOT IMPLEMENTED":
-        raise ValueError(f"Unknown detector type: {det_type}")
+    det_name = psana_to_calib_det_name.get(det_type_lower)
     return f"{station}:{det_name}.0"
 
 
