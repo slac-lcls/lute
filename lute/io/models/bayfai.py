@@ -10,10 +10,10 @@ __author__ = "Louis Conreux"
 
 from typing import Any, Dict, Optional, Union, Tuple
 import os
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field
 
 from lute.io.models.base import TaskParameters
-from lute.io.models.validators import validate_smd_path, validate_calib_path
+from lute.io.models.validators import validate_smd_path, validate_calib_path, validate_output_path
 
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
@@ -90,6 +90,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     _find_smd_path = validate_smd_path("powder")
 
+    _find_out_file_path = validate_output_path("out_file")
+
     det_type: str = Field(
         "",
         description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
@@ -125,13 +127,3 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         BayesGeomOptParameters(),
         description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
     )
-
-    @validator("out_file", always=True)
-    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
-        if out_file == "":
-            run = values["lute_config"].run
-            in_file = values["in_file"]
-            in_file_path, _ = os.path.split(in_file)
-            output_file = os.path.join(in_file_path, f"{run}-end.data")
-            return output_file
-        return out_file
