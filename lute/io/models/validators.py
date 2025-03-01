@@ -16,7 +16,7 @@ from pydantic import validator
 from lute.io.db import read_latest_db_entry
 from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 
-from lute.execution.logging import get_logger
+import os
 
 
 def template_parameter_validator(template_params_name: str):
@@ -77,7 +77,7 @@ def validate_calib_path(calib_path_name: str):
     """Finds the path to a valid calibration file or raises an error."""
 
     def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
-        if not calib_path:
+        if calib_path == "":
             exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             try:
@@ -99,3 +99,17 @@ def validate_calib_path(calib_path_name: str):
         return calib_path
 
     return validator(calib_path_name, always=True)(_validate_calib_path)
+
+def validate_output_path(output_path_name: str):
+    """Finds the path to a valid output file or raises an error."""
+
+    def _validate_output_path(cls, output_path: str, values: Dict[str, Any]) -> str:
+        if output_path == "":
+            print(values)
+            run = values["lute_config"].run
+            in_file = values["in_file"]
+            in_file_path, _ = os.path.split(in_file)
+            out_file = os.path.join(in_file_path, f"{run}-end.data")
+        return out_file
+
+    return validator(output_path_name, always=True)(_validate_output_path)
