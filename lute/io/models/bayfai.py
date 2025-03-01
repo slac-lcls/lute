@@ -115,23 +115,23 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'LaB6', etc.",
     )
 
-    bo_params: BayesGeomOptParameters = Field(
-        BayesGeomOptParameters(),
-        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
-    )
-
     out_file: str = Field(
         "",
         description="Path to the output .data file containing the optimized detector geometry.",
         is_result=True,
     )
 
-    @root_validator("out_file", pre=False)
+    bo_params: BayesGeomOptParameters = Field(
+        BayesGeomOptParameters(),
+        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
+    )
+
+    @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
-            print(values.keys())
             run = values["lute_config"].run
             in_file = values["in_file"]
             in_file_path, _ = os.path.split(in_file)
-            out_file = os.path.join(in_file_path, f"{run}-end.data")
+            output_file = os.path.join(in_file_path, f"{run}-end.data")
+            return output_file
         return out_file
