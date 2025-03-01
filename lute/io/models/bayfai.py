@@ -86,12 +86,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Seed for the random number generator for reproducibility.",
         )
 
-    _find_in_file_path = validate_calib_path("in_file")
-
-    _find_smd_path = validate_smd_path("powder")
-
-    _find_out_file_path = validate_output_path("out_file")
-
     det_type: str = Field(
         "",
         description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
@@ -127,3 +121,9 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         BayesGeomOptParameters(),
         description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
     )
+
+    _find_in_file_path = validate_calib_path("in_file")
+
+    _find_smd_path = validate_smd_path("powder")
+
+    _find_out_file_path = validate_output_path("out_file")
