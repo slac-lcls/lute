@@ -9,11 +9,11 @@ __all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
 from typing import Any, Dict, Optional, Union, Tuple
-
+import os
 from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
-from lute.io.models.validators import validate_smd_path, validate_calib_path, validate_output_path
+from lute.io.models.validators import validate_smd_path, validate_calib_path
 
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
@@ -88,8 +88,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     _find_in_file_path = validate_calib_path("in_file")
 
-    _find_out_file_path = validate_output_path("out_file")
-
     _find_smd_path = validate_smd_path("powder")
 
     det_type: str = Field(
@@ -127,3 +125,12 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         BayesGeomOptParameters(),
         description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
     )
+
+    @validator("out_file", always=True)
+    def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
+        if out_file == "":
+            run = values["lute_config"].run
+            in_file = values["in_file"]
+            in_file_path, _ = os.path.split(in_file)
+            out_file = os.path.join(in_file_path, f"{run}-end.data")
+        return out_file

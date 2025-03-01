@@ -78,12 +78,12 @@ def validate_calib_path(calib_path_name: str):
 
     def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
         if calib_path == "":
-            exp: str = values["lute_config"].experiment
+            exp: str = str(values["lute_config"].experiment)
             run: int = int(values["lute_config"].run)
             try:
-                det_type: str = values["det_type"]
+                det_type: str = str(values["det_type"])
             except KeyError:
-                det_type = values["detname"]
+                det_type = str(values["detname"])
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             src = source_from_det_info(det_type, exp[:3])
             group = group_from_det_type(det_type)
@@ -91,7 +91,7 @@ def validate_calib_path(calib_path_name: str):
             calib_dir = f"{cdir}/{group}/{src}/{type}/"
             calib_run_path = select_calib_file(calib_dir, run)
             print(f"Calibration found: {calib_run_path}")
-            if os.path.exists(calib_path):
+            if os.path.exists(calib_run_path):
                 return calib_run_path
             print(f"Calibration not found at {calib_run_path}")
             raise ValueError(f"Calibration file not found at {calib_run_path}")
@@ -99,17 +99,3 @@ def validate_calib_path(calib_path_name: str):
         return calib_path
 
     return validator(calib_path_name, always=True)(_validate_calib_path)
-
-def validate_output_path(output_path_name: str):
-    """Finds the path to a valid output file or raises an error."""
-
-    def _validate_output_path(cls, output_path: str, values: Dict[str, Any]) -> str:
-        if output_path == "":
-            print(values)
-            run = values["lute_config"].run
-            in_file = values["in_file"]
-            in_file_path, _ = os.path.split(in_file)
-            out_file = os.path.join(in_file_path, f"{run}-end.data")
-        return out_file
-
-    return validator(output_path_name, always=True)(_validate_output_path)
