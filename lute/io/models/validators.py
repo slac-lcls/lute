@@ -78,12 +78,12 @@ def validate_calib_path(calib_path_name: str):
 
     def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
         if calib_path == "":
-            exp: str = str(values["lute_config"].experiment)
+            exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             try:
-                det_type: str = str(values["det_type"])
+                det_type: str = values["det_type"]
             except KeyError:
-                det_type = str(values["detname"])
+                det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             src = source_from_det_info(det_type.lower(), exp[:3])
             group = group_from_det_type(det_type.lower())
@@ -104,12 +104,12 @@ def validate_output_path(output_path_name: str):
 
     def _validate_output_path(cls, output_path: str, values: Dict[str, Any]) -> str:
         if output_path == "":
-            exp: str = str(values["lute_config"].experiment)
+            exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             try:
-                det_type: str = str(values["det_type"])
+                det_type: str = values["det_type"]
             except KeyError:
-                det_type = str(values["detname"])
+                det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib/"
             src = source_from_det_info(det_type.lower(), exp[:3])
             group = group_from_det_type(det_type.lower())
