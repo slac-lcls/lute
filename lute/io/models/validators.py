@@ -85,8 +85,8 @@ def validate_calib_path(calib_path_name: str):
             except KeyError:
                 det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            src = source_from_det_info(det_type, exp[:3])
-            group = group_from_det_type(det_type)
+            src = source_from_det_info(det_type.lower(), exp[:3])
+            group = group_from_det_type(det_type.lower())
             calib_type = "geometry"
             calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
             calib_run_path = select_calib_file(calib_dir, run)
@@ -111,8 +111,8 @@ def validate_output_path(output_path_name: str):
             except KeyError:
                 det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib/"
-            src = source_from_det_info(det_type, exp[:3])
-            group = group_from_det_type(det_type)
+            src = source_from_det_info(det_type.lower(), exp[:3])
+            group = group_from_det_type(det_type.lower())
             calib_type = "geometry"
             calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
             output_run_path = os.path.join(calib_dir, f"{run}-end.data")
