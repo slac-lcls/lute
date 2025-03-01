@@ -102,6 +102,49 @@ psana_det_names = (
     "Alvium",
 )
 
+psana_det_names_lower = (
+    "undefined",
+    "cspad",
+    "cspad2x2",
+    "princeton",
+    "pnccd",
+    "tm6740",
+    "opal1000",
+    "opal2000",
+    "opal4000",
+    "opal8000",
+    "orcaFl40",
+    "epix",
+    "epix10k",
+    "epix100a",
+    "fccd960",
+    "andor",
+    "acqiris",
+    "imp",
+    "quartz4A150",
+    "rayonix",
+    "evr",
+    "fccd",
+    "timepix",
+    "fli",
+    "pimax",
+    "andor3d",
+    "jungfrau",
+    "jungfrau1m",
+    "jungfrau4m",
+    "zyla",
+    "controlscamera",
+    "epix10ka",
+    "uxi",
+    "pixis",
+    "epix10ka2m",
+    "epix10kaquad",
+    "streak",
+    "archon",
+    "istar",
+    "alvium",
+)
+
 calib_det_names = (
     "UNDEFINED",
     "Cspad",
@@ -164,14 +207,11 @@ stations = (
 )
 
 
-psana_det_names_lower = [name.lower() for name in psana_det_names]
-
 psana_to_calib_det_name = dict(zip(psana_det_names_lower, calib_det_names))
 
 det_to_group = dict(zip(calib_det_names, calib_groups))
 
 hutch_to_station = dict(zip(hutches, stations))
-
 
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
