@@ -10,7 +10,7 @@ __author__ = "Louis Conreux"
 
 from typing import Any, Dict, Optional, Union, Tuple
 import os
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 
 from lute.io.models.base import TaskParameters
 from lute.io.models.validators import validate_smd_path, validate_calib_path
@@ -115,18 +115,18 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'LaB6', etc.",
     )
 
+    bo_params: BayesGeomOptParameters = Field(
+        BayesGeomOptParameters(),
+        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
+    )
+
     out_file: str = Field(
         "",
         description="Path to the output .data file containing the optimized detector geometry.",
         is_result=True,
     )
 
-    bo_params: BayesGeomOptParameters = Field(
-        BayesGeomOptParameters(),
-        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
-    )
-
-    @validator("out_file", always=True)
+    @root_validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             print(values.keys())

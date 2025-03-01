@@ -76,14 +76,14 @@ def validate_smd_path(smd_path_name: str):
 def validate_calib_path(calib_path_name: str):
     """Finds the path to a valid calibration file or raises an error."""
 
-    def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> str:
-        if calib_path == "":
-            exp: str = str(values["lute_config"].experiment)
+    def _validate_calib_path(cls, in_file: str, values: Dict[str, Any]) -> str:
+        if in_file == "":
+            exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
             try:
-                det_type: str = str(values["det_type"])
+                det_type: str = values["det_type"]
             except KeyError:
-                det_type = str(values["detname"])
+                det_type = values["detname"]
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             src = source_from_det_info(det_type, exp[:3])
             group = group_from_det_type(det_type)
@@ -96,6 +96,6 @@ def validate_calib_path(calib_path_name: str):
             print(f"Calibration not found at {calib_run_path}")
             raise ValueError(f"Calibration file not found at {calib_run_path}")
 
-        return calib_path
+        return in_file
 
-    return validator(calib_path_name, always=True)(_validate_calib_path)
+    return validator(calib_path_name, always=True, pre=True)(_validate_calib_path)
