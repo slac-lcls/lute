@@ -87,8 +87,8 @@ def validate_calib_path(calib_path_name: str):
             cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
             src = source_from_det_info(det_type, exp[:3])
             group = group_from_det_type(det_type)
-            type = "geometry"
-            calib_dir = f"{cdir}/{group}/{src}/{type}/"
+            calib_type = "geometry"
+            calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
             calib_run_path = select_calib_file(calib_dir, run)
             print(f"Calibration found: {calib_run_path}")
             if os.path.exists(calib_run_path):
@@ -98,4 +98,4 @@ def validate_calib_path(calib_path_name: str):
 
         return in_file
 
-    return validator(calib_path_name, always=True, pre=True)(_validate_calib_path)
+    return validator(calib_path_name, always=True)(_validate_calib_path)
