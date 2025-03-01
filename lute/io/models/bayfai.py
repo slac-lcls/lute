@@ -129,6 +129,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     @validator("out_file", always=True)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
+            print(values.keys())
             run = values["lute_config"].run
             in_file = values["in_file"]
             in_file_path, _ = os.path.split(in_file)
