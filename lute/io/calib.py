@@ -213,6 +213,7 @@ det_to_group = dict(zip(calib_det_names, calib_groups))
 
 hutch_to_station = dict(zip(hutches, stations))
 
+
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
