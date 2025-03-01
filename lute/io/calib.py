@@ -217,17 +217,21 @@ hutch_to_station = dict(zip(hutches, stations))
 def group_from_det_type(det_type: str) -> str:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
-    det_name = psana_to_calib_det_name.get(det_type_lower)
-    group = det_to_group.get(det_name)
+    det_name = psana_to_calib_det_name[det_type_lower]
+    group = det_to_group[det_name]
+    print(det_type_lower)
+    print(det_to_group)
     return group
 
 
 def source_from_det_info(det_type: str, hutch: str) -> str:
     """Retrieve the source string from the detector type and hutch."""
     hutch_upper = hutch.upper()
-    station = hutch_to_station.get(hutch_upper)
+    station = hutch_to_station[hutch_upper]
     det_type_lower = det_type.lower()
-    det_name = psana_to_calib_det_name.get(det_type_lower)
+    print(det_type_lower)
+    print(psana_det_names_lower)
+    det_name = psana_to_calib_det_name[det_type_lower]
     return f"{station}:{det_name}.0"
 
 
