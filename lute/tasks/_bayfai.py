@@ -2,7 +2,7 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    BayesGeomOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization 
+    BayesGeomOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization
 
 """
 

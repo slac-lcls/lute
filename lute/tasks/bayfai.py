@@ -2,7 +2,7 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    OptimizePyFAIGeom: optimize detector geometry using PyFAI coupled with Bayesian Optimization 
+    OptimizePyFAIGeom: optimize detector geometry using PyFAI coupled with Bayesian Optimization
 
 """
 
@@ -374,7 +374,7 @@ class OptimizePyFAIGeometry(Task):
             logger.info(f"Detector Distance to Sample: {distance:.6f}")
             logger.info(f"Beam center: ({cx:.6f}, {cy:.6f})")
             logger.info(
-                f"Rotations: \u03B8x = ({optimizer.params[3]:.2e}, \u03B8y = {optimizer.params[4]:.2e}, \u03B8z = {optimizer.params[5]:.2e})"
+                f"Rotations: \u03b8x = ({optimizer.params[3]:.2e}, \u03b8y = {optimizer.params[4]:.2e}, \u03b8z = {optimizer.params[5]:.2e})"
             )
             logger.info(f"Final Residual: {optimizer.residual:.2e}")
             fig_folder = os.path.join(
