@@ -126,7 +126,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         is_result=True,
     )
 
-    @root_validator("out_file")
+    @root_validator("out_file", pre=False)
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             print(values.keys())
