@@ -222,9 +222,9 @@ class OptimizePyFAIGeometry(Task):
         for i in range(Y.shape[0]):
             images.append(Y[i,:]).reshape(self.shape)
         if self._task_parameters.det_type == "Rayonix":
-            powder = np.mean(images[1:], axis=0) # Average the images while skipping the first one for Rayonix
+            powder = np.sum(images[1:], axis=0) # Sum the images while skipping the first one for Rayonix
         else:
-            powder = np.mean(images, axis=0)
+            powder = np.sum(images, axis=0)
         return powder
 
     def _preprocess_powder(
