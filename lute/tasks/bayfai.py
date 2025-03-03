@@ -203,8 +203,8 @@ class OptimizePyFAIGeometry(Task):
         projections = os.listdir(
             f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}/"
         )
-        model_dir = os.path.join(pypca_path, "models/r{self._task_parameters.lute_config.run:0>4}/")
-        projection_dir = os.path.join(pypca_path, "projections/r{self._task_parameters.lute_config.run:0>4}/")
+        model_dir = os.path.join(pypca_path, f"models/r{self._task_parameters.lute_config.run:0>4}/")
+        projection_dir = os.path.join(pypca_path, f"projections/r{self._task_parameters.lute_config.run:0>4}/")
         model_list = [os.path.join(model_dir, file) for file in models if file.endswith(".h5")]
         projections_list = [os.path.join(projection_dir, file) for file in projections if file.endswith(".h5")]
 
