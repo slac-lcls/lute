@@ -217,12 +217,16 @@ class OptimizePyFAIGeometry(Task):
         with h5py.File(projections_h5, "r") as h5:
             U = np.array(h5["projected_images"])  # U are the projections
 
-        Y = np.dot(U[0,:,1:], V[0,:,1:].T)  # Reconstruct the powder without first rank and mean
+        Y = np.dot(
+            U[0, :, 1:], V[0, :, 1:].T
+        )  # Reconstruct the powder without first rank and mean
         images = []
         for i in range(Y.shape[0]):
-            images.append(Y[i,:]).reshape(self.shape)
+            images.append(Y[i, :]).reshape(self.shape)
         if self._task_parameters.det_type == "Rayonix":
-            powder = np.mean(images[1:], axis=0) # Average the images while skipping the first one for Rayonix
+            powder = np.mean(
+                images[1:], axis=0
+            )  # Average the images while skipping the first one for Rayonix
         else:
             powder = np.mean(images, axis=0)
         return powder
@@ -297,7 +301,9 @@ class OptimizePyFAIGeometry(Task):
             powder = gaussian_laplace(powder, sigma=sigma)
             return powder
         elif preprocess == "PyPCA":
-            pypca_path = os.path.join(self._task_parameters.lute_config.work_dir, "pypca")
+            pypca_path = os.path.join(
+                self._task_parameters.lute_config.work_dir, "pypca"
+            )
             if not os.path.exists(pypca_path):
                 logger.warning(
                     f"PyPCA path {pypca_path} does not exist. Using raw powder instead."
