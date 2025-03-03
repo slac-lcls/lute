@@ -200,8 +200,12 @@ class OptimizePyFAIGeometry(Task):
         model = f"{pypca_path}/models/pypca_model_{self._task_parameters.lute_config.run}_*.h5"
         projections = f"{pypca_path}/projections/projections_{self._task_parameters.lute_config.run}_*.h5"
 
-        model_list = os.listdir(f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}")
-        projections_list = os.listdir(f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}")
+        model_list = os.listdir(
+            f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}"
+        )
+        projections_list = os.listdir(
+            f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}"
+        )
 
         if len(model_list) == 1 and len(projections_list) == 1:
             model_h5 = str(model_list[0])
