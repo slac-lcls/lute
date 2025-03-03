@@ -197,18 +197,17 @@ class OptimizePyFAIGeometry(Task):
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
 
-        model = f"{pypca_path}/models/pypca_model_{self._task_parameters.lute_config.run}_*.h5"
-        projections = f"{pypca_path}/projections/projections_{self._task_parameters.lute_config.run}_*.h5"
-
-        model_list = os.listdir(f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}")
-        projections_list = os.listdir(f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}")
+        models = os.listdir(f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}/")
+        projections = os.listdir(f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}/")
+        model_list = [file for file in models if file.endswith(".h5")]
+        projections_list = [file for file in projections if file.endswith(".h5")]
 
         if len(model_list) == 1 and len(projections_list) == 1:
             model_h5 = str(model_list[0])
             projections_h5 = str(projections_list[0])
         else:
             raise ValueError(
-                f"Expected one file, but found {len(model_list)} models in {model} and {len(projections_list)} projections in {projections}."
+                f"Expected one file, but found {len(model_list)} models and {len(projections_list)} projections in {pypca_path}."
             )
 
         with h5py.File(model_h5, "r") as h5:
