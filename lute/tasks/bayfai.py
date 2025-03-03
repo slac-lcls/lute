@@ -197,8 +197,12 @@ class OptimizePyFAIGeometry(Task):
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
 
-        models = os.listdir(f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}/")
-        projections = os.listdir(f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}/")
+        models = os.listdir(
+            f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}/"
+        )
+        projections = os.listdir(
+            f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}/"
+        )
         model_list = [file for file in models if file.endswith(".h5")]
         projections_list = [file for file in projections if file.endswith(".h5")]
 
