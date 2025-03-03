@@ -89,11 +89,12 @@ def validate_calib_path(calib_path_name: str):
             group = group_from_det_type(det_type.lower())
             calib_type = "geometry"
             calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
-            calib_run_path = select_calib_file(calib_dir, run)
+            if os.path.exists(calib_dir):
+                calib_run_path = select_calib_file(calib_dir, run)
+            else:
+                return ""
             if os.path.exists(calib_run_path):
                 return calib_run_path
-            raise ValueError(f"Calibration file not found at {calib_run_path}")
-
         return calib_path
 
     return validator(calib_path_name, always=True)(_validate_calib_path)
