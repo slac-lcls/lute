@@ -279,7 +279,6 @@ class OptimizePyFAIGeometry(Task):
             gradx_calib[:-1, :] = calib[1:, :] - calib[:-1, :]
             grady_calib[:, :-1] = calib[:, 1:] - calib[:, :-1]
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
-            return powder
         elif preprocess == "Central":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
@@ -288,7 +287,6 @@ class OptimizePyFAIGeometry(Task):
             gradx_calib[1:-1, :] = (calib[2:, :] - calib[:-2, :]) / 2
             grady_calib[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
-            return powder
         elif preprocess == "Diagonal":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
@@ -301,7 +299,6 @@ class OptimizePyFAIGeometry(Task):
                 calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
             ) / 2
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
-            return powder
         elif preprocess == "Sobel":
             sigma = 1
             calib = gaussian_filter(powder, sigma=sigma)
@@ -310,11 +307,9 @@ class OptimizePyFAIGeometry(Task):
             gradx_calib = convolve(calib, sobel_x, mode="reflect")
             grady_calib = convolve(calib, sobel_y, mode="reflect")
             powder = np.sqrt(gradx_calib**2 + grady_calib**2)
-            return powder
         elif preprocess == "Laplacian":
             sigma = 1
             powder = gaussian_laplace(powder, sigma=sigma)
-            return powder
         elif preprocess == "PyPCA":
             pypca_path = os.path.join(
                 self._task_parameters.lute_config.work_dir, "pypca"
@@ -330,7 +325,14 @@ class OptimizePyFAIGeometry(Task):
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             logger.warning("Using raw powder instead.")
-            return powder
+        if self._task_parameters.det_type == "Rayonix":
+            beam_stop_radius = 9
+            beam_stop_mask = np.zeros_like(powder)
+            y, x = np.ogrid[: powder.shape[0], : powder.shape[1]]
+            mask = (x - powder.shape[1] / 2) ** 2 + (y - powder.shape[0] / 2) ** 2
+            beam_stop_mask[mask <= beam_stop_radius**2] = 1
+            powder = np.where(beam_stop_mask == 1, 0, powder)
+        return powder
 
     def _update_geometry(self, optimizer):
         """
