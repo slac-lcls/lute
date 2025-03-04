@@ -735,9 +735,10 @@ class BayesGeomOpt:
 
         cx, cy = 0, 0
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
+        if self.det_type == "Rayonix":
+            closest_pixel = 0.009 # Beam Stop Radius Rayonix = 9 mm 
         closest_q = (
             4
             * np.pi
