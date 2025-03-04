@@ -20,6 +20,7 @@ import os
 import logging
 from typing import Optional, Tuple
 import sys
+import glob
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import (  # type: ignore
@@ -197,53 +198,28 @@ class OptimizePyFAIGeometry(Task):
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
 
-        models = os.listdir(
-            f"{pypca_path}/models/r{self._task_parameters.lute_config.run:0>4}/"
-        )
-        projections = os.listdir(
-            f"{pypca_path}/projections/r{self._task_parameters.lute_config.run:0>4}/"
-        )
-        model_dir = os.path.join(
-            pypca_path, f"models/r{self._task_parameters.lute_config.run:0>4}/"
-        )
-        projection_dir = os.path.join(
-            pypca_path, f"projections/r{self._task_parameters.lute_config.run:0>4}/"
-        )
-        model_list = [
-            os.path.join(model_dir, file) for file in models if file.endswith(".h5")
-        ]
-        projections_list = [
-            os.path.join(projection_dir, file)
-            for file in projections
-            if file.endswith(".h5")
-        ]
+        run_dir = f"r{self._task_parameters.lute_config.run:0>4}"
 
-        if len(model_list) == 1 and len(projections_list) == 1:
-            model_h5 = str(model_list[0])
-            projections_h5 = str(projections_list[0])
-        else:
+        model_files = glob(os.path.join(pypca_path, f"models/{run_dir}/*.h5"))
+        projection_files = glob(os.path.join(pypca_path, f"projections/{run_dir}/*.h5"))
+
+        if len(model_files) != 1 or len(projection_files) != 1:
             raise ValueError(
-                f"Expected one file, but found {len(model_list)} models and {len(projections_list)} projections in {pypca_path}."
+                f"Expected one file, but found {len(model_files)} models and "
+                f"{len(projection_files)} projections in {pypca_path}."
             )
 
-        with h5py.File(model_h5, "r") as h5:
-            V = np.array(h5["V"])  # V is the PCA model
+        with h5py.File(model_files[0], "r") as model_h5:
+            V = model_h5["V"][0, :, 1:]
 
-        with h5py.File(projections_h5, "r") as h5:
-            U = np.array(h5["projected_images"])  # U are the projections
+        with h5py.File(projection_files[0], "r") as projections_h5:
+            U = projections_h5["projected_images"][0, :, 1:]
 
-        Y = np.dot(
-            U[0, :, 1:], V[0, :, 1:].T
-        )  # Reconstruct the powder without first rank and mean
-        images = []
-        for i in range(Y.shape[0]):
-            images.append(Y[i, :].reshape(self.shape))
-        if self._task_parameters.det_type == "Rayonix":
-            powder = np.sum(
-                images[1:], axis=0
-            )  # Sum the images while skipping the first one for Rayonix
-        else:
-            powder = np.sum(images, axis=0)
+        Y = np.dot(U, V.T)
+        images = Y.reshape(-1, *self.shape)
+
+        start_idx = 1 if self._task_parameters.det_type == "Rayonix" else 0
+        powder = np.sum(images[start_idx:], axis=0)
         return powder
 
     def _preprocess_powder(
