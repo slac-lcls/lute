@@ -302,7 +302,7 @@ class OptimizePyFAIGeometry(Task):
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             logger.warning("Using raw powder instead.")
         if self._task_parameters.det_type == "Rayonix":
-            beam_stop_radius = 9
+            beam_stop_radius = 15
             beam_stop_mask = np.zeros_like(powder)
             y, x = np.ogrid[: powder.shape[0], : powder.shape[1]]
             mask = (x - powder.shape[1] / 2) ** 2 + (y - powder.shape[0] / 2) ** 2
