@@ -237,7 +237,7 @@ class OptimizePyFAIGeometry(Task):
         )  # Reconstruct the powder without first rank and mean
         images = []
         for i in range(Y.shape[0]):
-            images.append(Y[i, :]).reshape(self.shape)
+            images.append(Y[i, :].reshape(self.shape))
         if self._task_parameters.det_type == "Rayonix":
             powder = np.sum(
                 images[1:], axis=0
