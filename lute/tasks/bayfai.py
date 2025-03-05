@@ -83,6 +83,7 @@ class OptimizePyFAIGeometry(Task):
                     self.shape,
                 )
                 time.sleep(5)
+                self._task_parameters.in_file = in_file
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
         psana_to_pyfai = PsanaToPyFAI(
