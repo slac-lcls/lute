@@ -209,37 +209,41 @@ class OptimizePyFAIGeometry(Task):
                 f"Expected one file, but found {len(model_files)} models and "
                 f"{len(projection_files)} projections in {pypca_path}."
             )
-        
-        powder=None
-        
+
+        powder = None
+
         batch_size = 50
 
-        with h5py.File(model_files[0], 'r') as f_model, h5py.File(projection_files[0], 'r') as f_proj:
-            V = f_model['V']
-            U = f_proj['projected_images']
+        with h5py.File(model_files[0], "r") as f_model, h5py.File(
+            projection_files[0], "r"
+        ) as f_proj:
+            V = f_model["V"]
+            U = f_proj["projected_images"]
             min_rank = 1
             max_rank = V.shape[2]
-            for idx in range(0, U.shape[1], batch_size): 
-                batch_powder=[]
+            for idx in range(0, U.shape[1], batch_size):
+                batch_powder = []
                 for i in range(V.shape[0]):
                     dummy = np.zeros(V.shape[1])
-                    
+
                     for rank in range(min_rank, max_rank, 100):
                         end = min(rank + 100, max_rank)
-                        U_chunk = U[i, idx:min(idx+batch_size,U.shape[1]), rank:end]
+                        U_chunk = U[
+                            i, idx : min(idx + batch_size, U.shape[1]), rank:end
+                        ]
                         V_chunk = V[i, :, rank:end]
                         chunk = np.dot(U_chunk, V_chunk.T)
-                        chunk_powder = np.sum(chunk,axis=0)
-                        dummy+=chunk_powder
+                        chunk_powder = np.sum(chunk, axis=0)
+                        dummy += chunk_powder
                     batch_powder.append(dummy)
-                    
-                if powder is None:
-                    powder= np.array(batch_powder)
-                else:
-                    powder+= np.array(batch_powder)
 
-                print(f"Processed {min(idx+batch_size,U.shape[1])} images",flush=True)
-                
+                if powder is None:
+                    powder = np.array(batch_powder)
+                else:
+                    powder += np.array(batch_powder)
+
+                print(f"Processed {min(idx+batch_size,U.shape[1])} images", flush=True)
+
         return powder
 
     def _preprocess_powder(
