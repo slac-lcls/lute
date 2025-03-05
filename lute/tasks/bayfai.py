@@ -209,18 +209,37 @@ class OptimizePyFAIGeometry(Task):
                 f"Expected one file, but found {len(model_files)} models and "
                 f"{len(projection_files)} projections in {pypca_path}."
             )
+        
+        powder=None
+        
+        batch_size = 50
 
-        with h5py.File(model_files[0], "r") as model_h5:
-            V = model_h5["V"][0, :, 1:]
+        with h5py.File(model_files[0], 'r') as f_model, h5py.File(projection_files[0], 'r') as f_proj:
+            V = f_model['V']
+            U = f_proj['projected_images']
+            min_rank = 1
+            max_rank = V.shape[2]
+            for idx in range(0, U.shape[1], batch_size): 
+                batch_powder=[]
+                for i in range(V.shape[0]):
+                    dummy = np.zeros(V.shape[1])
+                    
+                    for rank in range(min_rank, max_rank, 100):
+                        end = min(rank + 100, max_rank)
+                        U_chunk = U[i, idx:min(idx+batch_size,U.shape[1]), rank:end]
+                        V_chunk = V[i, :, rank:end]
+                        chunk = np.dot(U_chunk, V_chunk.T)
+                        chunk_powder = np.sum(chunk,axis=0)
+                        dummy+=chunk_powder
+                    batch_powder.append(dummy)
+                    
+                if powder is None:
+                    powder= np.array(batch_powder)
+                else:
+                    powder+= np.array(batch_powder)
 
-        with h5py.File(projection_files[0], "r") as projections_h5:
-            U = projections_h5["projected_images"][0, :, 1:]
-
-        Y = np.dot(U, V.T)
-        images = Y.reshape(-1, *self.shape)
-
-        start_idx = 1 if self._task_parameters.det_type == "Rayonix" else 0
-        powder = np.sum(images[start_idx:], axis=0)
+                print(f"Processed {min(idx+batch_size,U.shape[1])} images",flush=True)
+                
         return powder
 
     def _preprocess_powder(
@@ -369,6 +388,7 @@ class OptimizePyFAIGeometry(Task):
             bounds=self._task_parameters.bo_params.bounds,
             res=self._task_parameters.bo_params.res,
             max_rings=self._task_parameters.bo_params.max_rings,
+            preprocess=self._task_parameters.preprocess,
             n_samples=self._task_parameters.bo_params.n_samples,
             n_iterations=self._task_parameters.bo_params.n_iterations,
             kernel=self._task_parameters.bo_params.kernel,

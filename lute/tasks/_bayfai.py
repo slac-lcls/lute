@@ -159,7 +159,7 @@ class BayesGeomOpt:
                 mask = np.reshape(mask, (mask.shape[0] * mask.shape[1], mask.shape[2]))
         return mask
 
-    def min_intensity(self, powder):
+    def min_intensity(self, powder, preprocess=None):
         """
         Define minimal intensity for control point extraction
 
@@ -177,17 +177,21 @@ class BayesGeomOpt:
         if self.rank == 0:
             logger.info(f"Threshold for pixel outliers: {threshold}")
         nice_pix = powder < threshold
-        SNRs = []
-        Imins = np.arange(95, 100, 0.25)
-        for Imin in Imins:
-            threshold = np.percentile(powder[nice_pix], Imin)
-            signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
-            signal = np.std(signal_pixels)
-            noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
-            noise = np.std(noise_pixels)
-            SNRs.append(signal / noise)
-        q = Imins[np.argmax(SNRs)]
-        Imin = np.percentile(powder[nice_pix], q)
+        if preprocess is not None:
+            Imin = np.percentile(powder[nice_pix], 95)
+            q = 95
+        else:
+            SNRs = []
+            Imins = np.arange(95, 100, 0.25)
+            for Imin in Imins:
+                threshold = np.percentile(powder[nice_pix], Imin)
+                signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
+                signal = np.std(signal_pixels)
+                noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
+                noise = np.std(noise_pixels)
+                SNRs.append(signal / noise)
+            q = Imins[np.argmax(SNRs)]
+            Imin = np.percentile(powder[nice_pix], q)
         self.q = round(q, 2)
         self.Imin = Imin
         self.powder = powder
@@ -456,6 +460,7 @@ class BayesGeomOpt:
         bounds,
         res,
         max_rings=6,
+        preprocess=None,
         n_samples=20,
         n_iterations=80,
         kernel="RBF",
@@ -477,6 +482,8 @@ class BayesGeomOpt:
             Resolution of the grid used to discretize the parameter search space
         max_rings : int
             Maximum number of rings to use for control point extraction
+        preprocess : str or None
+            Preprocessing treatment applied to the powder image
         n_samples : int
             Number of samples to initialize the GP model
         n_iterations : int
@@ -503,7 +510,7 @@ class BayesGeomOpt:
             powder = powder * mask
 
         self.max_rings = max_rings
-        Imin = self.min_intensity(powder)
+        Imin = self.min_intensity(powder, preprocess)
 
         self.bounds = bounds
         if self.rank == 0:
