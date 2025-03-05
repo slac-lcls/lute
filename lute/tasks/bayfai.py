@@ -82,9 +82,9 @@ class OptimizePyFAIGeometry(Task):
                     pixel_size_um,
                     self.shape,
                 )
+                time.sleep(5)
         else:
             self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
-        logger.info(in_file)
         psana_to_pyfai = PsanaToPyFAI(
             in_file=in_file,
             det_type=det_type,
