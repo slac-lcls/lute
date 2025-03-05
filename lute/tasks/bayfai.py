@@ -27,9 +27,9 @@ from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,
     CrystFELToPsana,
-    get_beam_center,
-    pick_template,
 )
+from LCLSGeom.calib import fetch_template # type: ignore
+from LCLSGeom.geometry import get_beam_center # type: ignore
 
 import h5py  # type: ignore
 import panel as pn  # type: ignore
@@ -75,7 +75,7 @@ class OptimizePyFAIGeometry(Task):
                     f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}",
                 )
                 src = str(self.det.name)
-                in_file = pick_template(
+                in_file = fetch_template(
                     self._task_parameters.lute_config.experiment,
                     det_type,
                     src,
