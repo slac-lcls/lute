@@ -212,7 +212,7 @@ class OptimizePyFAIGeometry(Task):
 
         powder = None
 
-        batch_size = 50
+        batch_size = 500
 
         with h5py.File(model_files[0], "r") as f_model, h5py.File(
             projection_files[0], "r"
@@ -221,20 +221,19 @@ class OptimizePyFAIGeometry(Task):
             U = f_proj["projected_images"]
             min_rank = 1
             max_rank = V.shape[2]
-            for idx in range(0, U.shape[1], batch_size):
+            start_idx = 1 if self._task_parameters.det_type == "Rayonix" else 0
+            for idx in range(start_idx, U.shape[1], batch_size):
                 batch_powder = []
                 for i in range(V.shape[0]):
                     dummy = np.zeros(V.shape[1])
 
-                    for rank in range(min_rank, max_rank, 100):
-                        end = min(rank + 100, max_rank)
-                        U_chunk = U[
-                            i, idx : min(idx + batch_size, U.shape[1]), rank:end
-                        ]
-                        V_chunk = V[i, :, rank:end]
-                        chunk = np.dot(U_chunk, V_chunk.T)
-                        chunk_powder = np.sum(chunk, axis=0)
-                        dummy += chunk_powder
+                    U_chunk = U[
+                        i, idx : min(idx + batch_size, U.shape[1]), :min_rank:max_rank
+                    ]
+                    V_chunk = V[i, :, :min_rank:max_rank]
+                    chunk = np.dot(U_chunk, V_chunk.T)
+                    chunk_powder = np.sum(chunk, axis=0)
+                    dummy += chunk_powder
                     batch_powder.append(dummy)
 
                 if powder is None:
@@ -242,8 +241,8 @@ class OptimizePyFAIGeometry(Task):
                 else:
                     powder += np.array(batch_powder)
 
-                print(f"Processed {min(idx+batch_size,U.shape[1])} images", flush=True)
-
+                logger.info(f"Processed {min(idx+batch_size,U.shape[1])} images", flush=True)
+        powder = np.reshape(powder, self.shape)
         return powder
 
     def _preprocess_powder(
@@ -326,7 +325,7 @@ class OptimizePyFAIGeometry(Task):
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             logger.warning("Using raw powder instead.")
         if self._task_parameters.det_type == "Rayonix":
-            beam_stop_radius = int(0.008 / self.pixel_size)
+            beam_stop_radius = int(0.0085 / self.pixel_size)
             beam_stop_mask = np.zeros_like(powder)
             y, x = np.ogrid[: powder.shape[0], : powder.shape[1]]
             mask = (x - powder.shape[1] / 2) ** 2 + (y - powder.shape[0] / 2) ** 2
@@ -392,7 +391,6 @@ class OptimizePyFAIGeometry(Task):
             bounds=self._task_parameters.bo_params.bounds,
             res=self._task_parameters.bo_params.res,
             max_rings=self._task_parameters.bo_params.max_rings,
-            preprocess=self._task_parameters.preprocess,
             n_samples=self._task_parameters.bo_params.n_samples,
             n_iterations=self._task_parameters.bo_params.n_iterations,
             kernel=self._task_parameters.bo_params.kernel,
