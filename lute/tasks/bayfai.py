@@ -241,7 +241,9 @@ class OptimizePyFAIGeometry(Task):
                 else:
                     powder += np.array(batch_powder)
 
-                logger.info(f"Processed {min(idx+batch_size,U.shape[1])} images", flush=True)
+                logger.info(
+                    f"Processed {min(idx+batch_size,U.shape[1])} images", flush=True
+                )
         powder = np.reshape(powder, self.shape)
         return powder
 
