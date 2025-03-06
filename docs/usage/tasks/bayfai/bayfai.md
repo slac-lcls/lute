@@ -5,6 +5,7 @@
 - [`BayFAI Configuration`](#bayfai-configuration)
 - [`Running BayFAI from the Command-Line`](#running-bayfai-from-the-command-line)
 - [`Running BayFAI from the eLog`](#running-bayfai-from-the-elog)
+- [`Running only BayFAI Geometry Calibration`](#running-only-bayfai-geometry-calibration)
 
 ---
 ## BayFAI Configuration
@@ -149,5 +150,8 @@ Fitting plots will can be found in the "Summaries" page (go to ***runs > r0010**
 | !BayFAI summary of geometry inferred from Silver Behenate run | 
 |:-----------------------------------------------------------------------------------------:| 
 |              __BayFAI summary of geometry inferred from Silver Behenate run.__               |
+
+
+## Running only BayFAI Geometry Calibration
 
 ---

@@ -432,7 +432,7 @@ class OptimizePyFAIGeometry(Task):
             self._result.summary.append(
                 {
                     "Detector distance (m)": f"{distance:.6f}",
-                    "Detector center (m)": (f"{cx:.6f}", f"{cy:.6f}"),
+                    "Detector center (pix)": (f"{cx/self.pixel_size:.3f}", f"{cy/self.pixel_size:.3f}"),
                     "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
                     "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
                     "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
