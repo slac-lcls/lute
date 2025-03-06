@@ -186,9 +186,7 @@ class OptimizePyFAIGeometry(Task):
                         powder = np.reshape(powder, shape)
         return powder
 
-    def _reconstruct_powder(
-        self, pypca_path: str
-        ) -> Optional[npt.NDArray[np.float64]]:
+    def _reconstruct_powder(self, pypca_path: str) -> Optional[npt.NDArray[np.float64]]:
         """
         Reconstruct powder from PyPCA.
 
