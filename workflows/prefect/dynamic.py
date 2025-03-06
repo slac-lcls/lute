@@ -7,7 +7,7 @@ from prefect.task_runners import ThreadPoolTaskRunner
 from flow_dataclasses import FlowConf
 from tasks.jidtasks import run_managed_task
 
-flow_name: str = f"lute_dynamic"
+flow_name: str = "lute_dynamic"
 
 
 def create_workflow(

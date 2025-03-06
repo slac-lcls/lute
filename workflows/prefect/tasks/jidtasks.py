@@ -14,7 +14,6 @@ Classes:
 __all__ = ["run_managed_task"]
 __author__ = "Gabriel Dorlhiac"
 
-import sys
 import uuid
 import time
 import logging
@@ -376,7 +375,7 @@ def run_managed_task(
     for failure_msg in failure_messages:
         if failure_msg in out:
             logger.error("Logs indicate `Task` failed!")
-            return Failed(message=f"Logs indicate `Task` failed!")
+            return Failed(message="Logs indicate `Task` failed!")
 
     print(out)
     return Completed(message="Task completed successfully.")
