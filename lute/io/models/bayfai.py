@@ -8,8 +8,7 @@ Classes:
 __all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
-from typing import Any, Dict, Optional, Union, Tuple
-import os
+from typing import Dict, Optional, Union, Tuple
 from pydantic import BaseModel, Field
 
 from lute.io.models.base import TaskParameters

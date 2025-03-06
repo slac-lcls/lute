@@ -35,7 +35,6 @@ import h5py  # type: ignore
 import panel as pn  # type: ignore
 import numpy as np
 import numpy.typing as npt
-from pathlib import Path  # type: ignore
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
@@ -188,8 +187,8 @@ class OptimizePyFAIGeometry(Task):
         return powder
 
     def _reconstruct_powder(
-        self, pypca_path: Optional[str] = None
-    ) -> Optional[npt.NDArray[np.float64]]:
+        self, pypca_path: str
+        ) -> Optional[npt.NDArray[np.float64]]:
         """
         Reconstruct powder from PyPCA.
 
@@ -243,7 +242,8 @@ class OptimizePyFAIGeometry(Task):
                     powder += np.array(batch_powder)
 
                 logger.info(f"Processed {min(idx+batch_size,U.shape[1])} images")
-        powder = np.reshape(powder, self.shape)
+            if powder is not None and powder.shape != self.shape:
+                powder = np.reshape(powder, self.shape)
         return powder
 
     def _preprocess_powder(
@@ -331,7 +331,7 @@ class OptimizePyFAIGeometry(Task):
             y, x = np.ogrid[: powder.shape[0], : powder.shape[1]]
             mask = (x - powder.shape[1] / 2) ** 2 + (y - powder.shape[0] / 2) ** 2
             beam_stop_mask[mask <= beam_stop_radius**2] = 1
-            powder = np.where(beam_stop_mask == 1, 0, powder)
+            powder = powder * beam_stop_mask
         return powder
 
     def _update_geometry(self, optimizer):

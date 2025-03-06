@@ -13,6 +13,8 @@ Exceptions:
 
 import os
 
+from typing import Optional
+
 __all__ = ["group_from_det_type", "source_from_det_info"]
 __author__ = "Louis Conreux"
 
@@ -173,7 +175,7 @@ det_to_group = dict(zip(calib_det_names, calib_groups))
 hutch_to_station = dict(zip(hutches, stations))
 
 
-def group_from_det_type(det_type: str) -> str:
+def group_from_det_type(det_type: str) -> Optional[str]:
     """Retrieve the group string from the detector type."""
     det_type_lower = det_type.lower()
     det_name = psana_to_calib_det_name.get(det_type_lower, "UNDEFINED")
@@ -183,7 +185,7 @@ def group_from_det_type(det_type: str) -> str:
     return group
 
 
-def source_from_det_info(det_type: str, hutch: str) -> str:
+def source_from_det_info(det_type: str, hutch: str) -> Optional[str]:
     """Retrieve the source string from the detector type and hutch."""
     hutch_upper = hutch.upper()
     station = hutch_to_station.get(hutch_upper, "UNDEFINED")
@@ -196,7 +198,7 @@ def source_from_det_info(det_type: str, hutch: str) -> str:
     return f"{station}:{det_name}.0"
 
 
-def select_calib_file(calib_dir: str, run: int) -> str:
+def select_calib_file(calib_dir: str, run: int) -> Optional[str]:
     """Select the calibration file from the calibration directory and run number."""
     fnames = os.listdir(calib_dir)
     files = [os.path.join(calib_dir, fname) for fname in fnames]
