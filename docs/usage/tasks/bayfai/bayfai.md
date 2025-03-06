@@ -116,7 +116,34 @@ producer: /sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/geom_opt/smalldata_
 
 ## Running BayFAI from the Command-Line
 
-Skip this section if you are interested in launching BayFAI from the [eLog](#running-bayfai-from-the-elog)
+Skip this section if you are only interested in launching BayFAI from the [eLog](#running-bayfai-from-the-elog)
+
+After setting correctly the config yaml, one can launch BayFAI workflow from the command-line by calling the lute executor.
+
+1. Navigate to the launchpad folder:
+    ```bash
+    (base) [lconreux@sdfiana002 bayfai] cd launchpad 
+    ```
+
+2. Launch BayFAI workflow
+    ```bash
+    (base) [lconreux@sdfiana002 launchpad] /sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/geom_opt/lute/launch_scripts/submit_launch_airflow.sh /sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/geom_opt/lute/launch_scripts/launch_airflow.py -w bayfai -c /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/yamls/<experiment>.yaml --partition=milano --ntasks=102 --account=lcls:<experiment> --nodes=1 --test
+    ```
+    This will launch the BayFAI workflow using the config yaml one specified earlier, and will scan 101 distances around the provided <guess distance>.
+
+3. Monitor the Results (after a couple of minutes):
+    - Inside the launchpad folder, one will find the logs. If everything went smoothed, one should see Task Complete!
+    - Inside the smd_output, one will find the powder computed thanks to `smalldata`.
+    - After task completion, a figs folder should be created. Inside of it, Fitting plots along with BayFAI metrics can be found.
+    - The corrected geometry files should created within the calibration folder of the experiment: 
+    ```bash
+    (base) [lconreux@sdfiana002 launchpad] cd /sdf/data/lcls/ds/<hutch>/<experiment>/calib/<group>/<source>/geometry/
+    (base) [lconreux@sdfiana002 geometry] ls -l
+    
+    ```
+        <run>-end.data 
+
+
 
 ## Running BayFAI from the eLog
 
@@ -137,14 +164,14 @@ Skip this section if you are interested in launching BayFAI from the [eLog](#run
 
 3. Monitor the Results (after a couple of minutes!):
     - Geometry is posted to the eLog along with the Resolution range covered by the detector.
-    - Fitting plots along with BayFAI metrics can be found in the "Summaries" page
+    - Fitting plots along with BayFAI metrics can be found in the "Summaries" page.
 The measured distance between sample and detector will eventually be reported in the Workflow controls tab. 
 
 | ![BayFAI reporting of geometry inferred from Silver Behenate run](images/bayfai-geom.png) | 
 |:-----------------------------------------------------------------------------------:| 
 |                      __BayFAI reporting of geometry inferred from Silver Behenate run.__                       |
 
-Fitting plots will can be found in the "Summaries" page (go to ***runs > r0010*** where 10 is the run number).
+Fitting plots can be found in the "Summaries" page (go to ***runs > r0010*** where 10 is the run number).
 
 
 | !BayFAI summary of geometry inferred from Silver Behenate run | 

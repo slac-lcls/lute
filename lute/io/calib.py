@@ -141,7 +141,7 @@ calib_det_names = (
     "Epix10ka",
     "Uxi",
     "Pixis",
-    "Epix10k2aM",
+    "Epix10ka2M",
     "Epix10kaQuad",
     "Streak",
     "Archon",
