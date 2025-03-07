@@ -26,7 +26,7 @@ A stable and up to date version working with BayFAI can be found at `/sdf/data/l
 
 Each experiment requires a customized YAML configuration file.
 
-1. Navigate to the experiment scratch folder and create a lute folder:
+1. Navigate to the experiment scratch folder and create a working directory:
     ```bash
     (base) [lconreux@sdfiana002 ~] cd /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/
     (base) [lconreux@sdfiana002 scratch] mkdir bayfai
@@ -57,63 +57,64 @@ Each experiment requires a customized YAML configuration file.
     ```
 
 4. Fill in the blanks in the config yaml:
-    A template config yaml has been created but the user needs to fill in some important information. Here what the template config file looks like:
-```bash
-date: 2023/10/25
-lute_version: 0.1
-experiment: <experiment> # If launch from eLog, erase that line
-run: <run>               # If launch from eLog, erase that line
-task_timeout: 1200
-title: LUTE Task Configuration
-work_dir: /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/ # Fill this line 
----
-OptimizePyFAIGeometry:
-bo_params:
-    bounds:
-    dist: <guess distance> # Fill this line with guessed detector distance
-    poni1:
-    - -0.01
-    - 0.01
-    poni2:
-    - -0.01
-    - 0.01
-    res: 0.0002         
-calibrant: <calibrant> # Fill this line with calibrant name (AgBh, LaB6...)
-det_type: <detector>   # Fill this line with detector name (epix10k2M, jungfrau4M, Rayonix...)
-SubmitSMD:
-detSumAlgos:
-    Rayonix:
-    - calib_skipFirst_thresADU1
-    - calib_skipFirst_max
-    all:
-    - calib
-    - calib_dropped
-    - calib_dropped_square
-    - calib_thresADU1
-    epix10k2M:
-    - calib_thresADU5
-    - calib_max
-    jungfrau4M:
-    - calib_thresADU5
-    - calib_max
-detnames:
-- <detector> # Fill this line with detector name (epix10k2M, jungfrau4M, Rayonix...)
-directory: /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/smd_output/ # Fill this line 
-producer: /sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/geom_opt/smalldata_tools/lcls1_producers/smd_producer.py # If no smalldata cloned in experiment folder, use this one!
-...
-```
+    A template config yaml has been created but the user needs to fill in some important information.
     ```bash
     (base) [lconreux@sdfiana002 bayfai] nano yamls/<experiment>.yaml
     ```
+    Here what the template config file looks like:
+    ```bash
+    date: 2023/10/25
+    lute_version: 0.1
+    experiment: <experiment> # If launch from eLog, erase that line
+    run: <run>               # If launch from eLog, erase that line
+    task_timeout: 1200
+    title: LUTE Task Configuration
+    work_dir: /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/ # Fill this line 
+    ---
+    OptimizePyFAIGeometry:
+    bo_params:
+        bounds:
+        dist: <guess distance> # Fill this line with guessed detector distance
+        poni1:
+        - -0.01
+        - 0.01
+        poni2:
+        - -0.01
+        - 0.01
+        res: 0.0002         
+    calibrant: <calibrant> # Fill this line with calibrant name (AgBh, LaB6...)
+    det_type: <detector>   # Fill this line with detector name (epix10k2M, jungfrau4M, Rayonix...)
+    SubmitSMD:
+    detSumAlgos:
+        Rayonix:
+        - calib_skipFirst_thresADU1
+        - calib_skipFirst_max
+        all:
+        - calib
+        - calib_dropped
+        - calib_dropped_square
+        - calib_thresADU1
+        epix10k2M:
+        - calib_thresADU5
+        - calib_max
+        jungfrau4M:
+        - calib_thresADU5
+        - calib_max
+    detnames:
+    - <detector> # Fill this line with detector name (epix10k2M, jungfrau4M, Rayonix...)
+    directory: /sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/smd_output/ # Fill this line 
+    producer: /sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/geom_opt/smalldata_tools/lcls1_producers/smd_producer.py # If no smalldata cloned in experiment folder, use this one!
+    ...
+    ```
     BayFAI's config template is divided into three parts, the `lute_config`: basic experiment configuration (top top of the yaml), `OptimizePyFAIGeometry`: BayFAI required parameters, `SMDSubmit`: smalldata required parameters
-    a. `lute_config`:
+    1. `lute_config`:
         - If launched from eLog, erase the experiment and run lines.
         - Fill in the correct working directory `/sdf/data/lcls/ds/<hutch>/<experiment>/scratch/bayfai/`.
-    b. `OptimizePyFAIGeometry`:
+    2. `OptimizePyFAIGeometry`:
         - Fill in a guessed detector distance, BayFAI will scan around that distance in the following manner [guess-50mm; guess+50mm] with a step size of 1mm.
         - Fill in the calibrant name, (usually AgBh or LaB6) (list of all calibrant available: [ressources](https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration)).
         - Fill in the detector type name, as it is defined in the psana environment (epix10k2M, jungfrau4M, Rayonix, Epix10kaQuad...).
-    c. `SubmitSMD`:
+    3. `SubmitSMD`:
         - Fill the output directory for smalldata.
         - Don't touch the producer if no smalldata repo was cloned in your experiment (I'd recommend even to never touch it!).
 
@@ -198,10 +199,6 @@ At this point, this is what the Workflow Definition Panel should look like:
 
 3. Go to the Workflow Control Panel:
     - Trigger BayFAI for the desired run!
-
-| ![BayFAI workflow controls from the eLog](images/bayfai-controls.png) | 
-|:---------------------------------------------------------------------:| 
-|      __BayFAI workflow controls from the eLog for mfxl1047723.__      |
 
 4. Monitor the Results (after a couple of minutes!):
     - Geometry is posted to the eLog along with the Resolution range covered by the detector (beam center is defined relative to the center of the powder image (in pixels)).
