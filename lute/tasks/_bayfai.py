@@ -787,7 +787,7 @@ class BayesGeomOpt:
             -cy + closest_pixel / np.sqrt(2),
             f"{closest_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -813,7 +813,7 @@ class BayesGeomOpt:
             cy + border_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -826,7 +826,7 @@ class BayesGeomOpt:
             cy + (border_pixel / 2) / np.sqrt(2),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -834,7 +834,7 @@ class BayesGeomOpt:
         ax.set_ylabel("Y-axis (m)")
         ax.tick_params(axis="x", labelsize=8)
         ax.tick_params(axis="y", labelsize=8)
-        ax.set_title(label)
+        ax.set_title(label, fontsize=8)
         ax.set_aspect("equal")
         return (
             closest_q,
@@ -889,7 +889,7 @@ class BayesGeomOpt:
                     )
                     ax.add_line(line)
 
-        ax.set_title("Radial Profile")
+        ax.set_title("Radial Profile", fontsize=8)
         if unit:
             ax.set_xlabel(unit.label)
         ax.set_ylabel("Intensity")
@@ -916,7 +916,7 @@ class BayesGeomOpt:
         ax.legend()
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Score")
-        ax.set_title("Number of Control Points vs Distance")
+        ax.set_title("Number of Control Points vs Distance", fontsize=8)
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
         """
@@ -950,7 +950,7 @@ class BayesGeomOpt:
         ax.set_yscale("log")
         ax.set_xlabel("Distance (m)")
         ax.set_ylabel("Residual")
-        ax.set_title("Residual vs Distance")
+        ax.set_title("Residual vs Distance", fontsize=8)
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
         """
@@ -1010,7 +1010,7 @@ class BayesGeomOpt:
         ax.set_xlabel("Frequency")
         ax.set_xticks([])
         ax.set_xticklabels([])
-        ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}")
+        ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8)
         ax.legend(fontsize="x-small")
 
     def visualize_results(
@@ -1043,7 +1043,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 12), dpi=180)
+        fig = plt.figure(figsize=(12, 9), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
@@ -1064,11 +1064,11 @@ class BayesGeomOpt:
             f"Experiment {self.exp}",
             ha="left",
             va="center",
-            fontsize=12,
+            fontsize=8,
         )
-        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=12)
+        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=12
+            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
@@ -1076,7 +1076,7 @@ class BayesGeomOpt:
             f"Calibrant {self.calibrant_name}",
             ha="left",
             va="center",
-            fontsize=12,
+            fontsize=8,
         )
         ax1.text(
             0.05,
@@ -1084,7 +1084,7 @@ class BayesGeomOpt:
             f"Distance = {distance:.4f} m",
             ha="left",
             va="center",
-            fontsize=12,
+            fontsize=8,
         )
         ax1.axis("off")
         icol += 1
@@ -1142,7 +1142,7 @@ class BayesGeomOpt:
         ax5.set_xlabel("Iteration")
         ax5.set_ylabel("Number of Control Points")
         ax5.legend()
-        ax5.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}")
+        ax5.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}", fontsize=8)
         icol += 1
 
         # Plotting score scan over distance
