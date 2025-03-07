@@ -705,7 +705,7 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity", fontsize=6)
-        cbar.ax.tick_params(labelsize=4)
+        cbar.ax.tick_params(labelsize=6)
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
@@ -914,9 +914,9 @@ class BayesGeomOpt:
             self.thrsh,
             color="red",
             linestyle="--",
-            label=f"Minimal score: {self.thrsh}",
+            label=f"Threshold score: {self.thrsh}",
         )
-        ax.legend(fontsize=4)
+        ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Score", fontsize=6)
         ax.tick_params(axis="x", labelsize=4)
@@ -951,7 +951,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Refined distance (m): {refined_dist:.3f}",
         )
-        ax.legend(fontsize=6)
+        ax.legend(fontsize=4)
         ax.set_yscale("log")
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Residual", fontsize=6)
