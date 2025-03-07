@@ -1010,7 +1010,9 @@ class BayesGeomOpt:
         ax.set_xlabel("Frequency")
         ax.set_xticks([])
         ax.set_xticklabels([])
-        ax.set_title(f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8)
+        ax.set_title(
+            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8
+        )
         ax.legend(fontsize="x-small")
 
     def visualize_results(
@@ -1142,7 +1144,10 @@ class BayesGeomOpt:
         ax5.set_xlabel("Iteration")
         ax5.set_ylabel("Number of Control Points")
         ax5.legend()
-        ax5.set_title(f"Convergence Plot, best score: {self.scan['score'][self.index]}", fontsize=8)
+        ax5.set_title(
+            f"Convergence Plot, best score: {self.scan['score'][self.index]}",
+            fontsize=8,
+        )
         icol += 1
 
         # Plotting score scan over distance
