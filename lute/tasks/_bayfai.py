@@ -632,11 +632,11 @@ class BayesGeomOpt:
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.3f}m"
         )
-        ax.set_xlabel("X-axis (m)")
-        ax.set_ylabel("Y-axis (m)")
-        ax.legend(loc="upper right")
-        ax.tick_params(axis="x", labelsize=8)
-        ax.tick_params(axis="y", labelsize=8)
+        ax.set_xlabel("X-axis (m)", fontsize=6)
+        ax.set_ylabel("Y-axis (m)", fontsize=6)
+        ax.legend(loc="upper right", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
 
         def update(frame):
             iteration_key = f"iteration_{frame + 1}"
@@ -830,10 +830,10 @@ class BayesGeomOpt:
             ha="left",
         )
 
-        ax.set_xlabel("X-axis (m)")
-        ax.set_ylabel("Y-axis (m)")
-        ax.tick_params(axis="x", labelsize=8)
-        ax.tick_params(axis="y", labelsize=8)
+        ax.set_xlabel("X-axis (m)", fontsize=6)
+        ax.set_ylabel("Y-axis (m)", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
         ax.set_title(label, fontsize=6)
         ax.set_aspect("equal")
         return (
@@ -875,7 +875,7 @@ class BayesGeomOpt:
             ax.plot(*result, label=label)
 
         if label:
-            ax.legend()
+            ax.legend(fontsize=6)
         if calibrant and unit:
             x_values = calibrant.get_peaks(unit)
             if x_values is not None:
@@ -891,7 +891,7 @@ class BayesGeomOpt:
 
         ax.set_title("Radial Profile", fontsize=6)
         if unit:
-            ax.set_xlabel(unit.label)
+            ax.set_xlabel(unit.label, fontsize=6)
         ax.set_ylabel("Intensity")
 
     def plot_score_distance_scan(self, distances, ax):
@@ -913,9 +913,9 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Minimal score: {self.thrsh}",
         )
-        ax.legend()
-        ax.set_xlabel("Distance (m)")
-        ax.set_ylabel("Score")
+        ax.legend(fontsize=6)
+        ax.set_xlabel("Distance (m)", fontsize=6)
+        ax.set_ylabel("Score", fontsize=6)
         ax.set_title("Number of Control Points vs Distance", fontsize=6)
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
@@ -946,10 +946,10 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Refined distance (m): {refined_dist:.3f}",
         )
-        ax.legend(fontsize="x-small")
+        ax.legend(fontsize=6)
         ax.set_yscale("log")
-        ax.set_xlabel("Distance (m)")
-        ax.set_ylabel("Residual")
+        ax.set_xlabel("Distance (m)", fontsize=6)
+        ax.set_ylabel("Residual", fontsize=6)
         ax.set_title("Residual vs Distance", fontsize=6)
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
@@ -1006,14 +1006,14 @@ class BayesGeomOpt:
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
         ax.set_ylim([0, mean + 5 * std_dev])
-        ax.set_ylabel("Pixel Intensity")
-        ax.set_xlabel("Frequency")
+        ax.set_ylabel("Pixel Intensity", fontsize=6)
+        ax.set_xlabel("Frequency", fontsize=6)
         ax.set_xticks([])
         ax.set_xticklabels([])
         ax.set_title(
             f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
         )
-        ax.legend(fontsize="x-small")
+        ax.legend(fontsize=6)
 
     def visualize_results(
         self,
@@ -1045,7 +1045,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 10), dpi=180)
+        fig = plt.figure(figsize=(6, 8), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
