@@ -704,7 +704,8 @@ class BayesGeomOpt:
             vmax=np.percentile(powder, 95),
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
-        cbar.set_label("Intensity")
+        cbar.set_label("Intensity", fontsize=6)
+        cbar.ax.tick_params(labelsize=4) 
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
@@ -892,7 +893,9 @@ class BayesGeomOpt:
         ax.set_title("Radial Profile", fontsize=6)
         if unit:
             ax.set_xlabel(unit.label, fontsize=6)
-        ax.set_ylabel("Intensity")
+        ax.set_ylabel("Intensity", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
 
     def plot_score_distance_scan(self, distances, ax):
         """
@@ -913,9 +916,11 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Minimal score: {self.thrsh}",
         )
-        ax.legend(fontsize=6)
+        ax.legend(fontsize=4)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Score", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Number of Control Points vs Distance", fontsize=6)
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
@@ -950,6 +955,8 @@ class BayesGeomOpt:
         ax.set_yscale("log")
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Residual", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Residual vs Distance", fontsize=6)
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
@@ -1010,6 +1017,7 @@ class BayesGeomOpt:
         ax.set_xlabel("Frequency", fontsize=6)
         ax.set_xticks([])
         ax.set_xticklabels([])
+        ax.tick_params(axis="y", labelsize=4)
         ax.set_title(
             f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
         )
@@ -1045,7 +1053,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(6, 8), dpi=180)
+        fig = plt.figure(figsize=(8, 8), dpi=180)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
@@ -1141,9 +1149,11 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Best score at n={self.scan['best_idx'][self.index]}",
         )
-        ax5.set_xlabel("Iteration")
-        ax5.set_ylabel("Number of Control Points")
-        ax5.legend()
+        ax5.set_xlabel("Iteration", fontsize=6)
+        ax5.set_ylabel("Number of Control Points", fontsize=6)
+        ax5.legend(fontsize=6)
+        ax5.tick_params(axis="x", labelsize=4)
+        ax5.tick_params(axis="y", labelsize=4)
         ax5.set_title(
             f"Convergence Plot, best score: {self.scan['score'][self.index]}",
             fontsize=6,
