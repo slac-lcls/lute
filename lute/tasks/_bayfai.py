@@ -1053,7 +1053,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 8), dpi=180)
+        fig = plt.figure(figsize=(7, 8), dpi=300)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
@@ -1172,5 +1172,5 @@ class BayesGeomOpt:
         fig.tight_layout()
 
         if plot != "":
-            fig.savefig(plot, dpi=180)
+            fig.savefig(plot, dpi=300)
         return fig, low_q, low_res, high_q, high_res, border_q, border_res
