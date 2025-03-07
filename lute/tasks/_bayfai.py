@@ -705,7 +705,7 @@ class BayesGeomOpt:
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity", fontsize=6)
-        cbar.ax.tick_params(labelsize=4) 
+        cbar.ax.tick_params(labelsize=4)
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
