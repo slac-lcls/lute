@@ -17,14 +17,11 @@ import sys
 import time
 import uuid
 import yaml
-from typing import Any, cast, Dict, List, Optional, Tuple
+from typing import Any, cast, Dict, List, Literal, Optional, Tuple
+from typing_extensions import TypedDict
 
 import requests
 from requests.auth import HTTPBasicAuth
-
-# from requests.exceptions import HTTPError
-
-from flow_dataclasses import FlowConf, FlowRequestDict, LuteParams
 
 # Requests, urllib have lots of debug statements. Only set level for this logger
 logger: logging.Logger = logging.getLogger("Launch_Prefect")
@@ -37,6 +34,30 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
+
+class LuteParams(TypedDict):
+    config_file: str
+    debug: bool
+
+
+class FlowConf(TypedDict):
+    experiment: str
+    run_id: str
+    JID_UPDATE_COUNTERS: Optional[str]
+    ARP_ROOT_JOB_ID: str
+    ARP_LOCATION: str
+    Authorization: str
+    user: str
+    lute_location: str
+    kerb_file: Optional[str]
+    lute_params: LuteParams
+    slurm_params: List[str]
+    workflow: Dict[str, Any]
+
+
+class FlowRequestDict(TypedDict):
+    parameters: Dict[Literal["flow_conf"], FlowConf]
 
 
 def _retrieve_creds_and_url(instance: str = "experimental") -> Tuple[str, str, str]:
