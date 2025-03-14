@@ -368,26 +368,22 @@ class BaseExecutor(ABC):
                 overwrite them (except PATH and PYTHONPATH, see below).
 
             update_path (str): If PATH and/or PYTHONPATH are present in the new
-                set of variables, this argument determines how the old value is 
+                set of variables, this argument determines how the old value is
                 dealt with. There are three options:
                 * "prepend" : The new values are prepended to the old ones.
                 * "append" : The new values are appended to the old ones.
                 * "overwrite" : The old value is overwritten by the new one.
                 "prepend" is the default option. If PATH and/or PYTHONPATH is not
-                present in the current environment, the new PATH is used without 
+                present in the current environment, the new PATH is used without
                 modification.
         """
         for key in ("PATH", "PYTHONPATH"):
             if key in env:
                 sep: str = os.pathsep
                 if update_path == "prepend":
-                    env[key] = (
-                        f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
-                    )
+                    env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
                 elif update_path == "append":
-                    env[key] = (
-                        f"{self._analysis_desc.task_env[key]}{sep}{env[key]}"
-                    )
+                    env[key] = f"{self._analysis_desc.task_env[key]}{sep}{env[key]}"
                 elif update_path == "overwrite":
                     pass
                 else:

@@ -28,7 +28,7 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
-from LCLSGeom.swap_geom import ( # type: ignore
+from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,
     CrystFELToPsana,
