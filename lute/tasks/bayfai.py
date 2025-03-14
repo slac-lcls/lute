@@ -30,13 +30,13 @@ import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
 sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
-from LCLSGeom.swap_geom import ( # type: ignore
+from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,
     CrystFELToPsana,
 )
-from LCLSGeom.calib import fetch_template # type: ignore
-from LCLSGeom.geometry import get_beam_center # type: ignore
+from LCLSGeom.calib import fetch_template  # type: ignore
+from LCLSGeom.geometry import get_beam_center  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
