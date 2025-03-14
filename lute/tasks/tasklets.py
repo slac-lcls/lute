@@ -167,7 +167,7 @@ def clone_lcls_geom(work_dir: str) -> None:
     """
 
     repo: str = "LouConreux/LCLSGeom"
-    git_clone(repo, f"{work_dir}/LCLSGeom", 0o777)
+    git_clone(repo, work_dir, 0o777)
     python_path: Optional[str] = os.getenv("PYTHONPATH")
     if python_path is not None:
         python_path = f"{python_path}:{work_dir}/LCLSGeom"
