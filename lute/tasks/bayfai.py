@@ -29,6 +29,14 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
+sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
+from LCLSGeom.swap_geom import ( # type: ignore
+    PsanaToPyFAI,
+    PyFAIToCrystFEL,
+    CrystFELToPsana,
+)
+from LCLSGeom.calib import fetch_template # type: ignore
+from LCLSGeom.geometry import get_beam_center # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -40,8 +48,6 @@ class OptimizePyFAIGeometry(Task):
         self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
-        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
-        sys.path.append(f"{self._task_parameters.lute_config.work_dir}/LCLSGeom")
 
     def _build_pyFAI_detector(self):
         """
@@ -357,14 +363,6 @@ class OptimizePyFAIGeometry(Task):
         return detector
 
     def _run(self) -> None:
-        from LCLSGeom.swap_geom import (  # type: ignore
-            PsanaToPyFAI,
-            PyFAIToCrystFEL,
-            CrystFELToPsana,
-        )
-        from LCLSGeom.calib import fetch_template  # type: ignore
-        from LCLSGeom.geometry import get_beam_center  # type: ignore
-
         start_time = time.time()
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         detector = self._build_pyFAI_detector()
