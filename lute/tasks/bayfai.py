@@ -39,8 +39,9 @@ class OptimizePyFAIGeometry(Task):
     def __init__(
         self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
     ) -> None:
-        sys.path.append(f"{self._task_parameters.lute_config.work_dir}/LCLSGeom")
         super().__init__(params=params, use_mpi=use_mpi)
+        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+        sys.path.append(f"{self._task_parameters.lute_config.work_dir}/LCLSGeom")
 
     def _build_pyFAI_detector(self):
         """
