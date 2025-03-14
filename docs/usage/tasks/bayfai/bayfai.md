@@ -1,5 +1,5 @@
 
-# BayFAI User Documentation {: #top}
+# BayFAI User Documentation
 
 <a name="toc"></a> **Jump to:**
 - [`BayFAI Configuration`](#bayfai-configuration)

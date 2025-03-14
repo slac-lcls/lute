@@ -159,6 +159,17 @@ def clone_smalldata(producer_location: str) -> None:
     git_clone(repo, location, 0o777)
 
 
+def clone_bayfai_lute(work_dir: str) -> None:
+    """Clone the Bayfai LUTE repository in the working directory 
+
+    Args:
+        work_dir (str): Full path to the location to clone to.
+    """
+
+    repo: str = "LouConreux/lute"
+    git_clone(repo, work_dir, 0o777)    
+
+
 def grep(match_str: str, in_file: str) -> List[str]:
     """Grep for specific lines of text output.
 

@@ -7,6 +7,7 @@ here.
 from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.tasklets import (
     clone_smalldata,
+    clone_bayfai_lute,
     compare_hkl_fom_summary,
     indexamajig_summary_indexing_rate,
     setup_dimple_uglymol,
@@ -134,10 +135,17 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 # PyFAI
 #######
 PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
-"""Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
+"""Optimize detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
 PyFAIGeometryOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
     }
+)
+PyFAIGeometryOptimizer.add_tasklet(
+    clone_bayfai_lute,
+    ["{{ work_dir }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
 )
