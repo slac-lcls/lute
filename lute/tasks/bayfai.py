@@ -17,7 +17,6 @@ from lute.execution.logging import get_logger
 
 import psana  # type: ignore
 import os
-import sys
 import logging
 from typing import Optional, Tuple
 from glob import glob  # type: ignore
@@ -29,7 +28,6 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
-sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import ( # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,

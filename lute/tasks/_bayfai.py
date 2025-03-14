@@ -510,7 +510,6 @@ class BayesGeomOpt:
             logger.info(
                 f"Optimizing geometry for exp {self.exp} run {self.run} with {self.det_type} detector with minimal intensity threshold {Imin:.2e}"
             )
-            logger.info(f"Number of distances to scan: {self.size}")
             if isinstance(bounds["dist"], float):
                 distances = np.linspace(
                     bounds["dist"] - 0.05, bounds["dist"] + 0.05, self.size
@@ -1149,7 +1148,7 @@ class BayesGeomOpt:
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
         profile = self.radial_profile(masked_powder)
-        q = self.pix2q(self.pixel_size * powder.shape[0] / 2, distance)
+        q = self.pix2q(self.detector.pixel_size * powder.shape[0] / 2, distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
         )
