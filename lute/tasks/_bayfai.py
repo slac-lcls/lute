@@ -21,7 +21,7 @@ from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
-from pyFAI.units import RADIAL_UNITS # type: ignore
+from pyFAI.units import RADIAL_UNITS  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
@@ -666,14 +666,14 @@ class BayesGeomOpt:
     def get_radius_map(self, shape, center=None):
         """
         Compute each pixel's radius for an array with input shape and center.
-        
+
         Parameters
         ----------
         shape : tuple, 2d
             dimensions of array
-        center : 2d tuple or array                                                                                                                                                                                     
-            (cx,cy) detector center in pixels; if None, choose image center     
-            
+        center : 2d tuple or array
+            (cx,cy) detector center in pixels; if None, choose image center
+
         Returns
         -------
         r : numpy.ndarray, with input shape
@@ -681,14 +681,14 @@ class BayesGeomOpt:
         """
         y, x = np.indices(shape)
         if center is None:
-            center = (int(shape[1]/2), int(shape[0]/2))
-        r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+            center = (int(shape[1] / 2), int(shape[0] / 2))
+        r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
         return r
 
     def radial_profile(self, powder, center=None):
         """
         Compute the radial intensity profile of an image.
-        
+
         Parameters
         ----------
         powder : numpy.ndarray, shape (n,m)
@@ -701,18 +701,18 @@ class BayesGeomOpt:
             radial intensity profile of input image
         """
         if center is None:
-            center = (int(powder.shape[1]/2), int(powder.shape[0]/2))
+            center = (int(powder.shape[1] / 2), int(powder.shape[0] / 2))
         r = self.get_radius_map(powder.shape, center=center)
         r = r.astype(np.int32)
         tbin = np.bincount(r.ravel(), powder.ravel())
-        nr   = np.bincount(r.ravel())
-        radialprofile = np.divide(tbin, nr, out=np.zeros(nr.shape[0]), where=nr!=0)
+        nr = np.bincount(r.ravel())
+        radialprofile = np.divide(tbin, nr, out=np.zeros(nr.shape[0]), where=nr != 0)
         return radialprofile
 
     def pix2q(self, pixels, distance):
         """
         Convert distance from number of pixels from detector center to q-space.
-        
+
         Parameters
         ----------
         pixels : numpy.ndarray, 1d
@@ -725,7 +725,7 @@ class BayesGeomOpt:
             magnitude of q-vector in per Angstrom
         """
         theta = np.arctan2(pixels, distance)
-        return 4.*np.pi*np.sin(theta/2.)/(self.wavelength * 1e10)
+        return 4.0 * np.pi * np.sin(theta / 2.0) / (self.wavelength * 1e10)
 
     def plot_powder_and_resolution(self, sg, distance, ax=None):
         """
@@ -891,7 +891,9 @@ class BayesGeomOpt:
             border_resol,
         )
 
-    def plot_radial_integration(self, profile, q, error, calibrant=None, label=None, ax=None):
+    def plot_radial_integration(
+        self, profile, q, error, calibrant=None, label=None, ax=None
+    ):
         """
         Plot the radial integration of a powder image
 
@@ -1148,8 +1150,10 @@ class BayesGeomOpt:
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
         profile = self.radial_profile(masked_powder)
-        q = self.pix2q(self.pixel_size * powder.shape[0]/2, distance)
-        self.plot_radial_integration(q, profile, error=None, calibrant=self.calibrant, ax=ax2)
+        q = self.pix2q(self.pixel_size * powder.shape[0] / 2, distance)
+        self.plot_radial_integration(
+            q, profile, error=None, calibrant=self.calibrant, ax=ax2
+        )
         irow += 1
         icol = 0
 

@@ -160,7 +160,7 @@ def clone_smalldata(producer_location: str) -> None:
 
 
 def clone_lcls_geom(work_dir: str) -> None:
-    """Clone the LCLS Geom repository in the working directory 
+    """Clone the LCLS Geom repository in the working directory
 
     Args:
         work_dir (str): Full path to the location to clone to.
