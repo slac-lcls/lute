@@ -17,6 +17,7 @@ from lute.execution.logging import get_logger
 
 import psana  # type: ignore
 import os
+import sys
 import logging
 from typing import Optional, Tuple
 from glob import glob  # type: ignore
@@ -38,6 +39,7 @@ class OptimizePyFAIGeometry(Task):
     def __init__(
         self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
     ) -> None:
+        sys.path.append(f"{self._task_parameters.lute_config.work_dir}/LCLSGeom")
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _build_pyFAI_detector(self):
