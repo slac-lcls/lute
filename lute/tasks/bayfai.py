@@ -19,7 +19,6 @@ import psana  # type: ignore
 import os
 import logging
 from typing import Optional, Tuple
-import sys
 from glob import glob  # type: ignore
 
 from LCLSGeom.swap_geom import (  # type: ignore
@@ -322,13 +321,6 @@ class OptimizePyFAIGeometry(Task):
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             logger.warning("Using raw powder instead.")
-        if self._task_parameters.det_type == "Rayonix":
-            beam_stop_radius = int(0.0085 / self.pixel_size)
-            beam_stop_mask = np.zeros_like(powder)
-            y, x = np.ogrid[: powder.shape[0], : powder.shape[1]]
-            mask = (x - powder.shape[1] / 2) ** 2 + (y - powder.shape[0] / 2) ** 2
-            beam_stop_mask[mask <= beam_stop_radius**2] = 1
-            powder = powder * beam_stop_mask
         return powder
 
     def _update_geometry(self, optimizer):
@@ -419,7 +411,6 @@ class OptimizePyFAIGeometry(Task):
                     preprocessed_powder=optimizer.powder,
                     bo_history=optimizer.bo_history,
                     detector=calib_detector,
-                    params=optimizer.params,
                     distance=distance,
                     plot=plot,
                 )

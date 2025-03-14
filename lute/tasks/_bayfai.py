@@ -19,7 +19,6 @@ import matplotlib.patches as patches  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
-from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
