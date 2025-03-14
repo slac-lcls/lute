@@ -33,8 +33,8 @@ from LCLSGeom.swap_geom import ( # type: ignore
     PyFAIToCrystFEL,
     CrystFELToPsana,
 )
-from LCLSGeom.calib import fetch_template # type: ignore
-from LCLSGeom.geometry import get_beam_center # type: ignore
+from LCLSGeom.calib import fetch_template  # type: ignore
+from LCLSGeom.geometry import get_beam_center  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
