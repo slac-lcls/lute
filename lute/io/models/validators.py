@@ -74,7 +74,9 @@ def validate_smd_path(smd_path_name: str):
 def validate_calib_path(calib_path_name: str):
     """Finds the path to a valid calibration file or raises an error."""
 
-    def _validate_calib_path(cls, calib_path: str, values: Dict[str, Any]) -> Optional[str]:
+    def _validate_calib_path(
+        cls, calib_path: str, values: Dict[str, Any]
+    ) -> Optional[str]:
         if calib_path == "":
             exp: str = values["lute_config"].experiment
             run: int = int(values["lute_config"].run)
