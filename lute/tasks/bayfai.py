@@ -361,6 +361,7 @@ class OptimizePyFAIGeometry(Task):
         )
         from LCLSGeom.calib import fetch_template  # type: ignore
         from LCLSGeom.geometry import get_beam_center  # type: ignore
+
         start_time = time.time()
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         detector = self._build_pyFAI_detector()
