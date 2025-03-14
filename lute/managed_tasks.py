@@ -7,7 +7,7 @@ here.
 from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.tasklets import (
     clone_smalldata,
-    clone_bayfai_lute,
+    clone_lcls_geom,
     compare_hkl_fom_summary,
     indexamajig_summary_indexing_rate,
     setup_dimple_uglymol,
@@ -143,7 +143,7 @@ PyFAIGeometryOptimizer.update_environment(
     }
 )
 PyFAIGeometryOptimizer.add_tasklet(
-    clone_bayfai_lute,
+    clone_lcls_geom,
     ["{{ work_dir }}"],
     when="before",
     set_result=False,

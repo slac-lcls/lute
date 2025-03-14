@@ -22,7 +22,6 @@ from typing import Optional, Tuple
 import sys
 from glob import glob  # type: ignore
 
-sys.path.append("/sdf/home/l/lconreux/LCLSGeom")
 from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,

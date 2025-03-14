@@ -21,6 +21,7 @@ from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
+from pyFAI.units import RADIAL_UNITS # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
@@ -632,11 +633,11 @@ class BayesGeomOpt:
         ax.set_title(
             f"Bayesian Optimization on {self.exp} \n run {self.run} for distance {dist:.3f}m"
         )
-        ax.set_xlabel("X-axis (m)", fontsize=6)
-        ax.set_ylabel("Y-axis (m)", fontsize=6)
-        ax.legend(loc="upper right", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
+        ax.set_xlabel("X-axis (m)", fontsize=8)
+        ax.set_ylabel("Y-axis (m)", fontsize=8)
+        ax.legend(loc="upper right", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
 
         def update(frame):
             iteration_key = f"iteration_{frame + 1}"
@@ -661,6 +662,70 @@ class BayesGeomOpt:
         filename = f"../tests/animation/bayes_opt_{self.exp}_r{self.run}_dist_{int(dist * 1000):03d}mm.gif"
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
+
+    def get_radius_map(self, shape, center=None):
+        """
+        Compute each pixel's radius for an array with input shape and center.
+        
+        Parameters
+        ----------
+        shape : tuple, 2d
+            dimensions of array
+        center : 2d tuple or array                                                                                                                                                                                     
+            (cx,cy) detector center in pixels; if None, choose image center     
+            
+        Returns
+        -------
+        r : numpy.ndarray, with input shape
+            map of pixels' radii
+        """
+        y, x = np.indices(shape)
+        if center is None:
+            center = (int(shape[1]/2), int(shape[0]/2))
+        r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+        return r
+
+    def radial_profile(self, powder, center=None):
+        """
+        Compute the radial intensity profile of an image.
+        
+        Parameters
+        ----------
+        powder : numpy.ndarray, shape (n,m)
+            detector image
+        center : 2d tuple or array
+            (cx,cy) detector center in pixels; if None, choose image center
+        Returns
+        -------
+        radialprofile : numpy.ndarray, 1d
+            radial intensity profile of input image
+        """
+        if center is None:
+            center = (int(powder.shape[1]/2), int(powder.shape[0]/2))
+        r = self.get_radius_map(powder.shape, center=center)
+        r = r.astype(np.int32)
+        tbin = np.bincount(r.ravel(), powder.ravel())
+        nr   = np.bincount(r.ravel())
+        radialprofile = np.divide(tbin, nr, out=np.zeros(nr.shape[0]), where=nr!=0)
+        return radialprofile
+
+    def pix2q(self, pixels, distance):
+        """
+        Convert distance from number of pixels from detector center to q-space.
+        
+        Parameters
+        ----------
+        pixels : numpy.ndarray, 1d
+            distance in m from detector center
+        distance : float
+            detector distance in m
+        Returns
+        -------
+        qvals : numpy.ndarray, 1d
+            magnitude of q-vector in per Angstrom
+        """
+        theta = np.arctan2(pixels, distance)
+        return 4.*np.pi*np.sin(theta/2.)/(self.wavelength * 1e10)
 
     def plot_powder_and_resolution(self, sg, distance, ax=None):
         """
@@ -704,7 +769,7 @@ class BayesGeomOpt:
             vmax=np.percentile(powder, 95),
         )
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
-        cbar.set_label("Intensity", fontsize=6)
+        cbar.set_label("Intensity", fontsize=8)
         cbar.ax.tick_params(labelsize=6)
         tth = cp.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
@@ -740,22 +805,12 @@ class BayesGeomOpt:
         closest_pixel = d.flatten()[closest_pixel_index]
         if self.det_type == "Rayonix":
             closest_pixel = 0.009  # Beam Stop Radius Rayonix = 9 mm
-        closest_q = (
-            4
-            * np.pi
-            * np.sin(np.arctan2(closest_pixel, distance) / 2)
-            / (self.wavelength * 1e10)
-        )
+        closest_q = self.pix2q(closest_pixel, distance)
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(d)
         furthest_pixel = d.flatten()[furthest_pixel_index]
-        furthest_q = (
-            4
-            * np.pi
-            * np.sin(np.arctan2(furthest_pixel, distance) / 2)
-            / (self.wavelength * 1e10)
-        )
+        furthest_q = self.pix2q(furthest_pixel, distance)
         furthest_resol = 2 * np.pi / furthest_q
 
         d_left = abs(cx - xmin)
@@ -764,19 +819,9 @@ class BayesGeomOpt:
         d_top = abs(cy - ymax)
         border_distances = [d_left, d_right, d_bottom, d_top]
         border_pixel = min(border_distances)
-        border_q = (
-            4
-            * np.pi
-            * np.sin(np.arctan2(border_pixel, distance) / 2)
-            / (self.wavelength * 1e10)
-        )
+        border_q = self.pix2q(border_pixel, distance)
         border_resol = 2 * np.pi / border_q
-        border_2_q = (
-            4
-            * np.pi
-            * np.sin(np.arctan2(border_pixel / 2, distance) / 2)
-            / (self.wavelength * 1e10)
-        )
+        border_2_q = self.pix2q(border_pixel / 2, distance)
         border_2_resol = 2 * np.pi / border_2_q
 
         circle_closest = plt.Circle(
@@ -788,7 +833,7 @@ class BayesGeomOpt:
             -cy + closest_pixel / np.sqrt(2),
             f"{closest_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -801,7 +846,7 @@ class BayesGeomOpt:
             -cy + furthest_pixel / np.sqrt(2),
             f"{furthest_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -814,7 +859,7 @@ class BayesGeomOpt:
             cy + border_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
@@ -827,15 +872,15 @@ class BayesGeomOpt:
             cy + (border_pixel / 2) / np.sqrt(2),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
-            fontsize=6,
+            fontsize=8,
             ha="left",
         )
 
-        ax.set_xlabel("X-axis (m)", fontsize=6)
-        ax.set_ylabel("Y-axis (m)", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
-        ax.set_title(label, fontsize=6)
+        ax.set_xlabel("X-axis (m)", fontsize=8)
+        ax.set_ylabel("Y-axis (m)", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title(label, fontsize=8)
         ax.set_aspect("equal")
         return (
             closest_q,
@@ -846,9 +891,9 @@ class BayesGeomOpt:
             border_resol,
         )
 
-    def plot_radial_integration(self, result, calibrant=None, label=None, ax=None):
+    def plot_radial_integration(self, profile, q, error, calibrant=None, label=None, ax=None):
         """
-        Display the powder diffraction pattern
+        Plot the radial integration of a powder image
 
         Parameters
         ----------
@@ -866,17 +911,14 @@ class BayesGeomOpt:
         if ax is None:
             fig, ax = plt.subplots()
 
-        try:
-            unit = result.unit
-        except AttributeError:
-            unit = None
-        if len(result) == 3:
-            ax.errorbar(*result, label=label)
+        unit = RADIAL_UNITS["q_A^-1"]
+        if error is not None:
+            ax.errorbar(q, profile, error, label=label)
         else:
-            ax.plot(*result, label=label)
+            ax.plot(q, profile, label=label)
 
         if label:
-            ax.legend(fontsize=6)
+            ax.legend(fontsize=8)
         if calibrant and unit:
             x_values = calibrant.get_peaks(unit)
             if x_values is not None:
@@ -890,12 +932,12 @@ class BayesGeomOpt:
                     )
                     ax.add_line(line)
 
-        ax.set_title("Radial Profile", fontsize=6)
+        ax.set_title("Radial Profile", fontsize=8)
         if unit:
-            ax.set_xlabel(unit.label, fontsize=6)
-        ax.set_ylabel("Intensity", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
+            ax.set_xlabel(unit.label, fontsize=8)
+        ax.set_ylabel("Intensity", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
 
     def plot_score_distance_scan(self, distances, ax):
         """
@@ -916,12 +958,12 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Threshold score: {self.thrsh}",
         )
-        ax.legend(fontsize=6)
-        ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel("Score", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("Number of Control Points vs Distance", fontsize=6)
+        ax.legend(fontsize=8)
+        ax.set_xlabel("Distance (m)", fontsize=8)
+        ax.set_ylabel("Score", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title("Number of Control Points vs Distance", fontsize=8)
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
         """
@@ -953,11 +995,11 @@ class BayesGeomOpt:
         )
         ax.legend(fontsize=4)
         ax.set_yscale("log")
-        ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel("Residual", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("Residual vs Distance", fontsize=6)
+        ax.set_xlabel("Distance (m)", fontsize=8)
+        ax.set_ylabel("Residual", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title("Residual vs Distance", fontsize=8)
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
         """
@@ -1013,15 +1055,15 @@ class BayesGeomOpt:
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
         ax.set_ylim([0, mean + 5 * std_dev])
-        ax.set_ylabel("Pixel Intensity", fontsize=6)
-        ax.set_xlabel("Frequency", fontsize=6)
+        ax.set_ylabel("Pixel Intensity", fontsize=8)
+        ax.set_xlabel("Frequency", fontsize=8)
         ax.set_xticks([])
         ax.set_xticklabels([])
-        ax.tick_params(axis="y", labelsize=4)
+        ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
+            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8
         )
-        ax.legend(fontsize=6)
+        ax.legend(fontsize=8)
 
     def visualize_results(
         self,
@@ -1029,7 +1071,6 @@ class BayesGeomOpt:
         preprocessed_powder,
         bo_history,
         detector,
-        params,
         distance,
         plot="",
     ):
@@ -1046,14 +1087,12 @@ class BayesGeomOpt:
             Dictionary containing the history of optimization
         detector : PyFAI(Detector)
             Corrected PyFAI detector object
-        params : list
-            List of parameters for the best fit
         distance : float
             Refined distance
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(7, 8), dpi=300)
+        fig = plt.figure(figsize=(9, 12), dpi=300)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
@@ -1074,11 +1113,11 @@ class BayesGeomOpt:
             f"Experiment {self.exp}",
             ha="left",
             va="center",
-            fontsize=6,
+            fontsize=8,
         )
-        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=6)
+        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=6
+            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
@@ -1086,7 +1125,7 @@ class BayesGeomOpt:
             f"Calibrant {self.calibrant_name}",
             ha="left",
             va="center",
-            fontsize=6,
+            fontsize=8,
         )
         ax1.text(
             0.05,
@@ -1094,16 +1133,13 @@ class BayesGeomOpt:
             f"Distance = {distance:.4f} m",
             ha="left",
             va="center",
-            fontsize=6,
+            fontsize=8,
         )
         ax1.axis("off")
         icol += 1
 
         # Plotting radial profiles with peaks
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        ai = AzimuthalIntegrator(
-            dist=params[0], detector=detector, wavelength=self.calibrant.wavelength
-        )
         masked_powder = powder
         if self.det_type.lower() == "rayonix":
             radius = np.sqrt(2) * powder.shape[0] / 4
@@ -1111,8 +1147,9 @@ class BayesGeomOpt:
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
-        res = ai.integrate1d(masked_powder, 1000)
-        self.plot_radial_integration(res, calibrant=self.calibrant, ax=ax2)
+        profile = self.radial_profile(masked_powder)
+        q = self.pix2q(self.pixel_size * powder.shape[0]/2, distance)
+        self.plot_radial_integration(q, profile, error=None, calibrant=self.calibrant, ax=ax2)
         irow += 1
         icol = 0
 
@@ -1149,14 +1186,14 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Best score at n={self.scan['best_idx'][self.index]}",
         )
-        ax5.set_xlabel("Iteration", fontsize=6)
-        ax5.set_ylabel("Number of Control Points", fontsize=6)
-        ax5.legend(fontsize=6)
-        ax5.tick_params(axis="x", labelsize=4)
-        ax5.tick_params(axis="y", labelsize=4)
+        ax5.set_xlabel("Iteration", fontsize=8)
+        ax5.set_ylabel("Number of Control Points", fontsize=8)
+        ax5.legend(fontsize=8)
+        ax5.tick_params(axis="x", labelsize=6)
+        ax5.tick_params(axis="y", labelsize=6)
         ax5.set_title(
             f"Convergence Plot, best score: {self.scan['score'][self.index]}",
-            fontsize=6,
+            fontsize=8,
         )
         icol += 1
 
