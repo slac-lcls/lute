@@ -259,15 +259,33 @@ if __name__ == "__main__":
     ##############################################
     flow_run_state_endpoint: str = f"{PREFECT_API_URL}/flow_runs/{flow_run_id}"
     task_run_state_endpoint: str = f"{PREFECT_API_URL}/task_run_states/{{task_run_id}}"
+    log_endpoint: str = f"{PREFECT_API_URL}/logs/filter"
+
+    log_payload: Dict[str, Any] = {
+        "logs": {
+            "level": {
+                "ge_": 20,
+            },
+            "flow_run_id": {"any_": [flow_run_id]},
+        },
+        "sort": "TIMESTAMP_ASC",
+    }
 
     resp = requests.get(flow_run_state_endpoint, auth=auth)
     state: str = resp.json()["state_type"]
     task_run_id: str = resp.json()["state"]["state_details"]["task_run_id"]
+
+    last_log_idx: int = 0
     while state in ("SCHEDULED", "PENDING", "RUNNING"):
         time.sleep(5)
-        resp = requests.get(
-            task_run_state_endpoint.format(task_run_id=task_run_id), auth=auth
-        )
+        # Retrieve logs for flow run, printing new ones... Bit wasteful...
+        resp = requests.post(log_endpoint, headers=headers, auth=auth, json=log_payload)
+        current_len_logs: int = len(resp.json())
+        log_dict: Dict[str, Any]
+        for log_dict in resp.json()[last_log_idx:current_len_logs]:
+            print(log_dict["message"])
+        last_log_idx = current_len_logs
+
         resp = requests.get(flow_run_state_endpoint, auth=auth)
         state = resp.json()["state_type"]
         task_run_id = resp.json()["state"]["state_details"]["task_run_id"]

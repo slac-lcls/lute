@@ -322,6 +322,7 @@ def run_managed_task(
         custom_slurm_params (str): Optionally override all the SLURM options which are
             present in the `conf` object.
     """
+    print(f"Running LUTE Managed Task: {lute_task_id}")
     logger.info("Attempting to run at S3DF.")
     try:
         control_doc = create_control_doc(
