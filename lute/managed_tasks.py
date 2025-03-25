@@ -139,6 +139,6 @@ PyFAIGeometryOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
-        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
     }
 )
