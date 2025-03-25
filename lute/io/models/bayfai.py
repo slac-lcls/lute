@@ -41,7 +41,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Bounds defining the parameter search space for the Bayesian optimization. All bound values are in meters.",
         )
 
-        res: float = Field(
+        res: Optional[float] = Field(
             None,
             description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters. If None, set to the detector pixel size.",
         )
@@ -51,32 +51,32 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Maximum number of rings to be used for the Bayesian optimization.",
         )
 
-        n_samples: Optional[int] = Field(
+        n_samples: int = Field(
             20,
             description="Number of random starts to initialize the Bayesian optimization.",
         )
 
-        n_iterations: Optional[int] = Field(
+        n_iterations: int = Field(
             80,
             description="Number of iterations to run the Bayesian optimization.",
         )
 
-        kernel: Optional[str] = Field(
+        kernel: str = Field(
             "RBF",
             description="Kernel to be used by the Gaussian Process for the Bayesian optimization. Currently supported: 'RBF', 'Matern'",
         )
 
-        prior: Optional[bool] = Field(
+        prior: bool = Field(
             True,
             description="Flag to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
         )
 
-        af: Optional[str] = Field(
+        af: str = Field(
             "ucb",
             description="Acquisition function to be used by the Bayesian optimization. \n Currently supported: Upper Confidence Bound 'ucb', \n Expected Improvement 'ei', \n Probability of Improvement 'poi'",
         )
 
-        hyperparams: Optional[Dict[str, float]] = Field(
+        hyperparams: Dict[str, float] = Field(
             {
                 "beta": 1.96,
                 "epsilon": 0.01,
