@@ -378,7 +378,7 @@ class BaseExecutor(ABC):
                 modification.
         """
         for key in ("PATH", "PYTHONPATH"):
-            if key in env:
+            if key in env and key in self._analysis_desc.task_env:
                 sep: str = os.pathsep
                 if update_path == "prepend":
                     env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
