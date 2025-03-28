@@ -920,7 +920,7 @@ class BayesGeomOpt:
         if error is not None:
             ax.errorbar(q, profile, error, label=label)
         else:
-            ax.plot(q, profile, label=label, color="black")
+            ax.plot(q, profile, label=label, color="black", linewidth=0.8)
 
         if label:
             ax.legend(fontsize=8)
@@ -933,6 +933,7 @@ class BayesGeomOpt:
                         ax.axis()[2:4],
                         color="red",
                         linestyle="--",
+                        linewidth=0.8,
                         alpha=0.7,
                     )
                     ax.add_line(line)
