@@ -661,14 +661,14 @@ class BayesGeomOpt:
         anim.save(filename, writer="imagemagick")
         # anim.save("bayesian_optimization.mp4", writer="ffmpeg")
 
-    def get_radius_map(self, shape, center=None):
+    def get_radius_map(self, detector, center=None):
         """
         Compute each pixel's radius for an array with input shape and center.
 
         Parameters
         ----------
-        shape : tuple, 2d
-            dimensions of array
+        detector  : pyFAI Detector object
+            detector object containing pixel infos
         center : 2d tuple or array
             (cx,cy) detector center in pixels; if None, choose image center
 
@@ -677,13 +677,15 @@ class BayesGeomOpt:
         r : numpy.ndarray, with input shape
             map of pixels' radii
         """
-        y, x = np.indices(shape)
+        y, x, z = detector.calc_cartesian_positions()
         if center is None:
-            center = (int(shape[1] / 2), int(shape[0] / 2))
+            center = (0, 0)
         r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+        r /= detector.pixel_size
+        r = r.astype(np.int32)
         return r
 
-    def radial_profile(self, powder, center=None):
+    def radial_profile(self, powder, detector, center=None):
         """
         Compute the radial intensity profile of an image.
 
@@ -692,16 +694,15 @@ class BayesGeomOpt:
         powder : numpy.ndarray, shape (n,m)
             detector image
         center : 2d tuple or array
-            (cx,cy) beam center in pixels; if None, choose detector center
+            (cx,cy) beam center in meter; if None, choose detector origin
         Returns
         -------
         radialprofile : numpy.ndarray, 1d
             radial intensity profile of input image
         """
         if center is None:
-            center = (int(powder.shape[1] / 2), int(powder.shape[0] / 2))
-        r = self.get_radius_map(powder.shape, center=center)
-        r = r.astype(np.int32)
+            center = (0, 0)
+        r = self.get_radius_map(detector, center=center)
         tbin = np.bincount(r.ravel(), powder.ravel())
         nr = np.bincount(r.ravel())
         radialprofile = np.divide(tbin, nr, out=np.zeros(nr.shape[0]), where=nr != 0)
@@ -1147,8 +1148,8 @@ class BayesGeomOpt:
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
-        profile = self.radial_profile(masked_powder)
-        q = self.pix2q(self.detector.pixel_size * np.arange(powder.shape[0] / 2), distance)
+        profile = self.radial_profile(masked_powder, detector)
+        q = self.pix2q(self.detector.pixel_size * len(profile), distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
         )
