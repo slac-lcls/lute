@@ -692,7 +692,7 @@ class BayesGeomOpt:
         powder : numpy.ndarray, shape (n,m)
             detector image
         center : 2d tuple or array
-            (cx,cy) detector center in pixels; if None, choose image center
+            (cx,cy) beam center in pixels; if None, choose detector center
         Returns
         -------
         radialprofile : numpy.ndarray, 1d
@@ -714,9 +714,9 @@ class BayesGeomOpt:
         Parameters
         ----------
         pixels : numpy.ndarray, 1d
-            distance in m from detector center
+            distance in meter from beam center
         distance : float
-            detector distance in m
+            detector distance in meter
         Returns
         -------
         qvals : numpy.ndarray, 1d
@@ -1148,7 +1148,7 @@ class BayesGeomOpt:
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
         profile = self.radial_profile(masked_powder)
-        q = self.pix2q(self.detector.pixel_size * powder.shape[0] / 2, distance)
+        q = self.pix2q(self.detector.pixel_size * np.arange(powder.shape[0] / 2), distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
         )
