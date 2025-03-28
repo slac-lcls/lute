@@ -891,15 +891,19 @@ class BayesGeomOpt:
         )
 
     def plot_radial_integration(
-        self, profile, q, error, calibrant=None, label=None, ax=None
+        self, q, profile, error, calibrant=None, label=None, ax=None
     ):
         """
         Plot the radial integration of a powder image
 
         Parameters
         ----------
-        result : np.ndarray
-            Powder diffraction pattern
+        q : np.array
+            Array of q values
+        profile : np.array
+            Array of intensity values
+        error : np.array
+            Array of intensity errors if provided
         calibrant : Calibrant
             Calibrant object
         label : str
@@ -916,7 +920,7 @@ class BayesGeomOpt:
         if error is not None:
             ax.errorbar(q, profile, error, label=label)
         else:
-            ax.plot(q, profile, label=label)
+            ax.plot(q, profile, label=label, color='black', linewidth=0.5)
 
         if label:
             ax.legend(fontsize=8)
@@ -930,6 +934,7 @@ class BayesGeomOpt:
                         color="red",
                         linestyle="--",
                         linewidth=0.5,
+                        alpha=0.7,
                     )
                     ax.add_line(line)
 
