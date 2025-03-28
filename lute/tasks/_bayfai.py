@@ -1149,7 +1149,7 @@ class BayesGeomOpt:
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
         profile = self.radial_profile(masked_powder, detector)
-        q = self.pix2q(self.detector.pixel_size * len(profile), distance)
+        q = self.pix2q(self.detector.pixel_size * np.arange(len(profile)), distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
         )
