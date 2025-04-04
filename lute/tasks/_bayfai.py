@@ -770,15 +770,20 @@ class BayesGeomOpt:
         elif xmin < 0 and ymin < 0 and xmax > 0 and ymax < 0:
             ax.set_xlim(xmin * 1.1, xmax * 1.1)
             ax.set_ylim(ymin * 1.1, ymax * 0.9)
+        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax > 0:
+            ax.set_xlim(xmin * 1.1, xmax * 0.9)
+            ax.set_ylim(ymin * 1.1, ymax * 1.1)
         elif xmin < 0 and ymin > 0 and xmax < 0 and ymax > 0:
             ax.set_xlim(xmin * 1.1, xmax * 0.9)
             ax.set_ylim(ymin * 0.9, ymax * 1.1)
         elif xmin > 0 and ymin < 0 and xmax > 0 and ymax < 0:
             ax.set_xlim(xmin * 0.9, xmax * 1.1)
             ax.set_ylim(ymin * 1.1, ymax * 0.9)
-        else:
-            ax.set_xlim(xmin * 1.1, xmax * 0.9)
+        elif xmin > 0 and ymin > 0 and xmax > 0 and ymax > 0:
+            ax.set_xlim(xmin * 0.9, xmax * 1.1)
             ax.set_ylim(ymin * 0.9, ymax * 1.1)
+        
+
 
         img = ax.scatter(
             x.flatten(),
