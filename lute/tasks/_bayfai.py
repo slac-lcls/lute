@@ -845,7 +845,7 @@ class BayesGeomOpt:
         d_bottom = abs(cy - ymin)
         d_top = abs(cy - ymax)
         border_distances = [d_left, d_right, d_bottom, d_top]
-        border_pixel = min(border_distances)
+        border_pixel = max(border_distances)
         border_q = self.pix2q(border_pixel, distance)
         border_resol = 2 * np.pi / border_q
         border_2_q = self.pix2q(border_pixel / 2, distance)
