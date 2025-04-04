@@ -172,13 +172,13 @@ class OptimizePyFAIGeometry(Task):
                             ][()]
                         else:
                             powder = h5[
-                                f"Sums/{self._task_parameters.det_type}_calib_max"
+                                f"Sums/{self._task_parameters.det_type.replace(".", "")}_calib_max"
                             ][()]
                     except KeyError:
                         logger.warning(
                             'No "Max" powder found in SmallData. Using "Sum" powder.'
                         )
-                        powder = h5[f"Sums/{self._task_parameters.det_type}_calib"][()]
+                        powder = h5[f"Sums/{self._task_parameters.det_type.replace(".", "")}_calib"][()]
                     if powder is not None and powder.shape != shape:
                         powder = np.reshape(powder, shape)
         return powder
