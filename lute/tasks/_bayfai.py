@@ -825,6 +825,8 @@ class BayesGeomOpt:
             )
 
         cx, cy = 0, 0
+        sign_x = np.sign(np.mean(x))
+        sign_y = np.sign(np.mean(y))
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
@@ -854,8 +856,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_closest)
         ax.text(
-            cx + closest_pixel / np.sqrt(2),
-            -cy + closest_pixel / np.sqrt(2),
+            cx + sign_x * closest_pixel / np.sqrt(2),
+            -cy + sign_y * closest_pixel / np.sqrt(2),
             f"{closest_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -867,8 +869,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_furthest)
         ax.text(
-            cx + furthest_pixel / np.sqrt(2),
-            -cy + furthest_pixel / np.sqrt(2),
+            cx + sign_x * closest_pixel / np.sqrt(2),
+            -cy + sign_y * closest_pixel / np.sqrt(2),
             f"{furthest_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -880,8 +882,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_border)
         ax.text(
-            cx + border_pixel / np.sqrt(2),
-            cy + border_pixel / np.sqrt(2),
+            cx + sign_x * closest_pixel / np.sqrt(2),
+            -cy + sign_y * closest_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -893,8 +895,8 @@ class BayesGeomOpt:
         )
         ax.add_artist(circle_border_2)
         ax.text(
-            cx + (border_pixel / 2) / np.sqrt(2),
-            cy + (border_pixel / 2) / np.sqrt(2),
+            cx + sign_x * closest_pixel / np.sqrt(2),
+            -cy + sign_y * closest_pixel / np.sqrt(2),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
