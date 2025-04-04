@@ -56,7 +56,7 @@ class OptimizePyFAIGeometry(Task):
         det_type = self._task_parameters.det_type
         ds_args = f"exp={self._task_parameters.lute_config.experiment}:run={self._task_parameters.lute_config.run}:idx"
         self.ds = psana.DataSource(ds_args)
-        self.det = psana.Detector(det_type, self.ds.env())
+        self.det = psana.Detector(det_type.replace(".", ""), self.ds.env())
         self.shape = self.det.shape()
         if det_type.lower() == "rayonix":
             env = self.ds.env()
