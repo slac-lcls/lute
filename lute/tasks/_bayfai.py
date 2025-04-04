@@ -121,6 +121,7 @@ class BayesGeomOpt:
         ds = psana.DataSource(ds_args)
         runner = next(ds.runs())
         evt = runner.event(runner.times()[0])
+        photon_energy = None
         try:
             photon_energy = psana.Detector("EBeam").get(evt).ebeamPhotonEnergy()
         except AttributeError:
