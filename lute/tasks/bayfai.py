@@ -56,7 +56,7 @@ class OptimizePyFAIGeometry(Task):
         det_type = self._task_parameters.det_type
         ds_args = f"exp={self._task_parameters.lute_config.experiment}:run={self._task_parameters.lute_config.run}:idx"
         self.ds = psana.DataSource(ds_args)
-        self.det = psana.Detector(det_type.replace(".", ""), self.ds.env())
+        self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
         if det_type.lower() == "rayonix":
             env = self.ds.env()
@@ -172,13 +172,13 @@ class OptimizePyFAIGeometry(Task):
                             ][()]
                         else:
                             powder = h5[
-                                f"Sums/{self._task_parameters.det_type.replace(".", "")}_calib_max"
+                                f"Sums/{self._task_parameters.det_type}_calib_max"
                             ][()]
                     except KeyError:
                         logger.warning(
                             'No "Max" powder found in SmallData. Using "Sum" powder.'
                         )
-                        powder = h5[f"Sums/{self._task_parameters.det_type.replace(".", "")}_calib"][()]
+                        powder = h5[f"Sums/{self._task_parameters.det_type}_calib"][()]
                     if powder is not None and powder.shape != shape:
                         powder = np.reshape(powder, shape)
         return powder
