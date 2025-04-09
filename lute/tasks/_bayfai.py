@@ -252,10 +252,16 @@ class BayesGeomOpt:
         if res is None:
             res = self.detector.pixel_size
 
-        if bounds['poni1'][0] > bounds['poni1'][1]:
-            bounds['poni1'][0], bounds['poni1'][1] = bounds['poni1'][1], bounds['poni1'][0]
-        if bounds['poni2'][0] > bounds['poni2'][1]:
-            bounds['poni2'][0], bounds['poni2'][1] = bounds['poni2'][1], bounds['poni2'][0]
+        if bounds["poni1"][0] > bounds["poni1"][1]:
+            bounds["poni1"][0], bounds["poni1"][1] = (
+                bounds["poni1"][1],
+                bounds["poni1"][0],
+            )
+        if bounds["poni2"][0] > bounds["poni2"][1]:
+            bounds["poni2"][0], bounds["poni2"][1] = (
+                bounds["poni2"][1],
+                bounds["poni2"][0],
+            )
 
         inputs = {}
         norm_inputs = {}
