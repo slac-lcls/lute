@@ -411,7 +411,6 @@ class BayesGeomOpt:
             bo_history[f"iteration_{i+1}"] = {
                 "param": X[new_idx],
                 "score": score,
-                "pred": y_pred,
             }
             X_samples = np.append(X_samples, [X[new_idx]], axis=0)
             X_norm_samples = np.append(X_norm_samples, [X_norm[new_idx]], axis=0)
