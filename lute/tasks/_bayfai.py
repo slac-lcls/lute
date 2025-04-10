@@ -788,9 +788,9 @@ class BayesGeomOpt:
             ax.set_ylim(ymin * 0.9, ymax * 1.1)
 
         img = ax.scatter(
-            x.flatten(),
-            y.flatten(),
-            c=powder.flatten(),
+            x.ravel(),
+            y.ravel(),
+            c=powder.ravel(),
             s=1,
             edgecolors=None,
             linewidth=0,
@@ -874,7 +874,7 @@ class BayesGeomOpt:
         ax.add_artist(circle_furthest)
         ax.text(
             cx + sign_x * furthest_pixel / np.sqrt(2),
-            -cy + sign_y * furthest_pixel / np.sqrt(2),
+            cy + sign_y * furthest_pixel / np.sqrt(2),
             f"{furthest_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -887,7 +887,7 @@ class BayesGeomOpt:
         ax.add_artist(circle_border)
         ax.text(
             cx + sign_x * border_pixel / np.sqrt(2),
-            -cy + sign_y * border_pixel / np.sqrt(2),
+            cy + sign_y * border_pixel / np.sqrt(2),
             f"{border_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -900,7 +900,7 @@ class BayesGeomOpt:
         ax.add_artist(circle_border_2)
         ax.text(
             cx + sign_x * border_pixel / (2 * np.sqrt(2)),
-            -cy + sign_y * border_pixel / (2 * np.sqrt(2)),
+            cy + sign_y * border_pixel / (2 * np.sqrt(2)),
             f"{border_2_resol:.3f} \u00c5",
             color="red",
             fontsize=8,
@@ -1185,6 +1185,8 @@ class BayesGeomOpt:
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
+        elif 'jungfrau' in self.det_type.lower():
+            masked_powder = np.flipud(np.fliplr(powder))
         profile = self.radial_profile(masked_powder, detector)
         q = self.pix2q(self.detector.pixel_size * np.arange(len(profile)), distance)
         self.plot_radial_integration(
@@ -1196,6 +1198,8 @@ class BayesGeomOpt:
         # Plotting assembled powder with resolutions
         ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2, colspan=2)
         geometry = Geometry(dist=distance)
+        if 'jungfrau' in self.det_type.lower():
+            preprocessed_powder = np.flipud(np.fliplr(preprocessed_powder))
         sg = SingleGeometry(
             f"Run {self.run} {self.calibrant_name}",
             preprocessed_powder,
