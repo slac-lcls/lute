@@ -335,7 +335,6 @@ class OptimizePyFAIGeometry(Task):
         PyFAIToCrystFEL(
             detector=optimizer.detector,
             params=optimizer.params,
-            psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file.replace(
                 f"{self._task_parameters.lute_config.run}-end.data",
                 f"r{self._task_parameters.lute_config.run:0>4}.geom",
@@ -347,6 +346,7 @@ class OptimizePyFAIGeometry(Task):
                 f"r{self._task_parameters.lute_config.run:0>4}.geom",
             ),
             det_type=optimizer.det_type,
+            psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
         )
         psana_to_pyfai = PsanaToPyFAI(
