@@ -32,6 +32,7 @@ from LCLSGeom.swap_geom import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToCrystFEL,
     CrystFELToPsana,
+    PyFAIToPsana,
 )
 from LCLSGeom.calib import fetch_template  # type: ignore
 from LCLSGeom.geometry import get_beam_center  # type: ignore
@@ -332,7 +333,7 @@ class OptimizePyFAIGeometry(Task):
             Optimizer object
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
-        PyFAIToCrystFEL(
+        """PyFAIToCrystFEL(
             detector=optimizer.detector,
             params=optimizer.params,
             out_file=self._task_parameters.out_file.replace(
@@ -346,6 +347,12 @@ class OptimizePyFAIGeometry(Task):
                 f"r{self._task_parameters.lute_config.run:0>4}.geom",
             ),
             det_type=optimizer.det_type,
+            psana_file=self._task_parameters.in_file,
+            out_file=self._task_parameters.out_file,
+        )"""
+        PyFAIToPsana(
+            detector=optimizer.detector,
+            params=optimizer.params,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
         )
