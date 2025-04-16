@@ -264,6 +264,7 @@ class OptimizePyFAIGeometry(Task):
                 "PyPCA": Principal Component Analysis preprocessing
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+        powder[powder < 0] = 0
         self.raw_powder = powder
         if preprocess is None:
             return powder
