@@ -707,9 +707,13 @@ class BayesGeomOpt:
         if center is None:
             center = (0, 0)
         r = self.get_radius_map(detector, center=center)
-        intensity, bin_edges = np.histogram(r.ravel(), bins=1000, range=(0, r.max()), weights=powder.ravel())
+        intensity, bin_edges = np.histogram(
+            r.ravel(), bins=1000, range=(0, r.max()), weights=powder.ravel()
+        )
         count, _ = np.histogram(r.ravel(), bins=bin_edges)
-        radialprofile = np.divide(intensity, count, out=np.zeros_like(intensity), where=count != 0)
+        radialprofile = np.divide(
+            intensity, count, out=np.zeros_like(intensity), where=count != 0
+        )
         r_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
         return radialprofile, r_centers
 
