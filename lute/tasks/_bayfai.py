@@ -1106,7 +1106,6 @@ class BayesGeomOpt:
     def visualize_results(
         self,
         powder,
-        preprocessed_powder,
         bo_history,
         detector,
         distance,
@@ -1119,8 +1118,6 @@ class BayesGeomOpt:
         ----------
         powder : np.ndarray
             Powder image
-        preprocessed_powder : np.ndarray
-            Preprocessed powder image
         bo_history : dict
             Dictionary containing the history of optimization
         detector : PyFAI(Detector)
@@ -1198,7 +1195,7 @@ class BayesGeomOpt:
         geometry = Geometry(dist=distance)
         sg = SingleGeometry(
             f"Run {self.run} {self.calibrant_name}",
-            preprocessed_powder,
+            powder,
             calibrant=self.calibrant,
             detector=detector,
             geometry=geometry,
@@ -1211,7 +1208,7 @@ class BayesGeomOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_hist_and_compute_stats(preprocessed_powder, self.exp, self.run, ax4)
+        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax4)
         irow += 2
         icol = 0
 

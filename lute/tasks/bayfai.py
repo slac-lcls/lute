@@ -411,8 +411,7 @@ class OptimizePyFAIGeometry(Task):
             calib_detector = self._update_geometry(optimizer)
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.visualize_results(
-                    powder=self.raw_powder,
-                    preprocessed_powder=optimizer.powder,
+                    powder=optimizer.powder,
                     bo_history=optimizer.bo_history,
                     detector=calib_detector,
                     distance=distance,
