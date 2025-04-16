@@ -675,7 +675,7 @@ class BayesGeomOpt:
         detector  : pyFAI Detector object
             detector object containing pixel infos
         center : 2d tuple or array
-            (cx,cy) detector center in pixels; if None, choose image center
+            (cx,cy) detector center in meters; if None, choose image center
 
         Returns
         -------
@@ -686,8 +686,6 @@ class BayesGeomOpt:
         if center is None:
             center = (0, 0)
         r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        r /= detector.pixel_size
-        r = r.astype(np.int32)
         return r
 
     def radial_profile(self, powder, detector, center=None):
@@ -700,6 +698,7 @@ class BayesGeomOpt:
             detector image
         center : 2d tuple or array
             (cx,cy) beam center in meter; if None, choose detector origin
+
         Returns
         -------
         radialprofile : numpy.ndarray, 1d
@@ -708,10 +707,11 @@ class BayesGeomOpt:
         if center is None:
             center = (0, 0)
         r = self.get_radius_map(detector, center=center)
-        tbin = np.bincount(r.ravel(), powder.ravel())
-        nr = np.bincount(r.ravel())
-        radialprofile = np.divide(tbin, nr, out=np.zeros(nr.shape[0]), where=nr != 0)
-        return radialprofile
+        intensity, bin_edges = np.histogram(r.ravel(), bins=1000, range=(0, r.max()), weights=powder.ravel())
+        count, _ = np.histogram(r.ravel(), bins=bin_edges)
+        radialprofile = np.divide(intensity, count, out=np.zeros_like(intensity), where=count != 0)
+        r_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+        return radialprofile, r_centers
 
     def pix2q(self, pixels, distance):
         """
@@ -1185,8 +1185,8 @@ class BayesGeomOpt:
             center = (powder.shape[0] / 2, powder.shape[1] / 2)
             mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
             masked_powder = powder * mask
-        profile = self.radial_profile(masked_powder, detector)
-        q = self.pix2q(self.detector.pixel_size * np.arange(len(profile)), distance)
+        profile, radii = self.radial_profile(masked_powder, detector)
+        q = self.pix2q(radii, distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
         )
