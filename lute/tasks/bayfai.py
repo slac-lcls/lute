@@ -28,11 +28,10 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
-from LCLSGeom.swap_geom import (  # type: ignore
+from LCLSGeom.converter import (  # type: ignore
     PsanaToPyFAI,
-    PyFAIToCrystFEL,
-    CrystFELToPsana,
     PyFAIToPsana,
+    PsanaToCrystFEL,
 )
 from LCLSGeom.calib import fetch_template  # type: ignore
 from LCLSGeom.geometry import get_beam_center  # type: ignore
@@ -334,28 +333,17 @@ class OptimizePyFAIGeometry(Task):
             Optimizer object
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
-        """PyFAIToCrystFEL(
-            detector=optimizer.detector,
-            params=optimizer.params,
-            out_file=self._task_parameters.out_file.replace(
-                f"{self._task_parameters.lute_config.run}-end.data",
-                f"r{self._task_parameters.lute_config.run:0>4}.geom",
-            ),
-        )
-        CrystFELToPsana(
-            in_file=self._task_parameters.out_file.replace(
-                f"{self._task_parameters.lute_config.run}-end.data",
-                f"r{self._task_parameters.lute_config.run:0>4}.geom",
-            ),
-            det_type=optimizer.det_type,
-            psana_file=self._task_parameters.in_file,
-            out_file=self._task_parameters.out_file,
-        )"""
         PyFAIToPsana(
             detector=optimizer.detector,
             params=optimizer.params,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
+        )
+        path = os.path.dirname(self._task_parameters.in_file)
+        geom_file = os.path.join(path, f"r{self._task_parameters.lute_config.run:0>4}.geom")
+        PsanaToCrystFEL(
+            in_file=self._task_parameters.out_file,
+            out_file=geom_file,
         )
         psana_to_pyfai = PsanaToPyFAI(
             in_file=self._task_parameters.out_file,
