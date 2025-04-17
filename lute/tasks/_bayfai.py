@@ -377,7 +377,6 @@ class BayesGeomOpt:
 
         for i in range(n_iterations):
             # 1. Generate the Acquisition Function values using the Gaussian Process Regressor
-            y_pred = gp_model.predict(X_norm, return_std=False)
             af_values = af(X_norm, gp_model, best_score, hyperparam)
             af_values[visited_idx] = -np.inf
 

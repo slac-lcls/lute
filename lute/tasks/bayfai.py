@@ -243,7 +243,7 @@ class OptimizePyFAIGeometry(Task):
 
     def _preprocess_powder(
         self,
-        powder: Optional[npt.NDArray[np.float64]],
+        powder: npt.NDArray[np.float64],
         preprocess: Optional[str] = "Diagonal",
     ) -> Optional[npt.NDArray[np.float64]]:
         """
