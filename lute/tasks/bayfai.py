@@ -340,7 +340,9 @@ class OptimizePyFAIGeometry(Task):
             out_file=self._task_parameters.out_file,
         )
         path = os.path.dirname(self._task_parameters.in_file)
-        geom_file = os.path.join(path, f"r{self._task_parameters.lute_config.run:0>4}.geom")
+        geom_file = os.path.join(
+            path, f"r{self._task_parameters.lute_config.run:0>4}.geom"
+        )
         PsanaToCrystFEL(
             in_file=self._task_parameters.out_file,
             out_file=geom_file,
