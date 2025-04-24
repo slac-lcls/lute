@@ -749,11 +749,8 @@ class BayesGeomOpt:
         """
         if ax is None:
             _fig, ax = plt.subplots()
-        if sg is not None:
-            powder = sg.image
-            cp = sg.control_points
-            # ai = sg.geometry_refinement
-            label = sg.label
+        powder = sg.image
+        label = sg.label
         detector = sg.detector
         y, x, z = detector.calc_cartesian_positions()
         if z is None:
@@ -803,7 +800,7 @@ class BayesGeomOpt:
         cbar = plt.colorbar(img, ax=ax, orientation="vertical")
         cbar.set_label("Intensity", fontsize=8)
         cbar.ax.tick_params(labelsize=6)
-        tth = cp.calibrant.get_2th()
+        tth = self.calibrant.get_2th()
         if self.det_type.lower() != "rayonix":
             x = np.reshape(x, detector.raw_shape)
             y = np.reshape(y, detector.raw_shape)
