@@ -10,6 +10,7 @@ from lute.tasks.tasklets import (
     compare_hkl_fom_summary,
     indexamajig_summary_indexing_rate,
     setup_dimple_uglymol,
+    setup_smd2_env,
 )
 
 # Tests
@@ -38,10 +39,30 @@ MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunicat
 # SmallData-related
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
-"""Runs the production of a smalldata HDF5 file."""
+"""Runs the production of a LCLS1 smalldata HDF5 file."""
 SmallDataProducer.add_tasklet(
     clone_smalldata,
     ["{{ producer }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+
+SmallDataProducer2: Executor = Executor("SubmitSMD")
+"""Runs the production of a LCLS2 smalldata HDF5 file."""
+SmallDataProducer2.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
+SmallDataProducer2.add_tasklet(
+    clone_smalldata,
+    ["{{ producer }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+SmallDataProducer2.add_tasklet(
+    setup_smd2_env,
+    [],
     when="before",
     set_result=False,
     set_summary=False,
