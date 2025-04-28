@@ -330,6 +330,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
         description="Number of processes",
         flag_type="-",
     )
+    map_by: str = Field(
+        "core", description="MPI rank mapping.", flag_type="--", rename_param="map-by"
+    )
     p_arg1: str = Field(
         "python", description="Executable to run with mpi (i.e. python).", flag_type=""
     )

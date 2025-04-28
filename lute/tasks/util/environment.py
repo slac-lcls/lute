@@ -9,7 +9,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 import subprocess
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 
 def setup_smd2_env() -> Dict[str, str]:
@@ -19,6 +19,7 @@ def setup_smd2_env() -> Dict[str, str]:
     nodes: Optional[str] = os.getenv("SLURM_NNODES")
     cores_per_node: Optional[str] = os.getenv("SLURM_NTASKS_PER_NODE")
     # If above are None, not running in SLURM
+    # Must run with --nodes=X and --ntasks-per-node=Y for SLURM
     if nodes is None or cores_per_node is None:
         psana_vars["PS_SRV_NODES"] = "1"
         psana_vars["PS_EB_NODES"] = "1"
@@ -50,14 +51,9 @@ def setup_smd2_env() -> Dict[str, str]:
     with open(host_file, "w") as f:
         for i in range(len(host_list)):
             if i == 0:
-                f.write(f"{host_list[i]} slots=1")
+                f.write(f"{host_list[i]} slots=1\n")
             else:
-                f.write(f"{host_list[i]}")
-
-    # cpus_on_node: Optional[str] = os.getenv("SLURM_CPUS_ON_NODE")
-    # Same as cores_per_node above
-    # slurm_job_num_nodes: Optional[str] = os.getenv("SLURM_JOB_NUM_NODES")
-    # Same as nodes as above
+                f.write(f"{host_list[i]}\n")
 
     n_ranks: int = int(cores_per_node) * (int(nodes) - 1) + 1
 
