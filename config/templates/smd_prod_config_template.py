@@ -26,11 +26,19 @@ def get_intg(run):
                              in-phase with intg_main.
     """
     run = int(run)
-    intg_main = None
+    intg_main = ""
     intg_addl = []
     if run > 0:
-        intg_main = ""
-        intg_addl = []
+{%- if get_intg is defined and get_intg %}
+    {%- if get_intg["intg_main"] and get_intg["intg_main"] %}
+        intg_main = "{{ get_intg['intg_main'] }}"
+    {% endif %}
+    {%- if get_intg["intg_addl"] and get_intg["intg_addl"] %}
+        {%- for det in get_intg["intg_addl"] %}
+        intg_addl.append("{{ det }}")
+        {% endfor %}
+    {% endif %}
+{% endif %}
     return intg_main, intg_addl
 
 {%- if getROIs is defined and getROIs %}

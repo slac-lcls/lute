@@ -56,6 +56,20 @@ class SubmitSMDParameters(ThirdPartyParameters):
         """Defines a result from the parameters. Use a validator to do so."""
 
     class ProducerParameters(BaseModel):
+        class IntgParams(BaseModel):
+            intg_main: str = Field(
+                description=(
+                    "The integrating detector to be passed to psana. "
+                    "Should be the SLOWEST integrating detector in the data."
+                )
+            )
+            intg_addl: List[str] = Field(
+                description=(
+                    "Additional detectors to be analyzed as integrating detectors. "
+                    "The readout frequency must be commensurate and in-phase with intg_main."
+                )
+            )
+
         class ROIParams(BaseModel):
             ROIs: Optional[List[List[List[int]]]] = Field(
                 description="Definition of ROIs, can define multiple."
@@ -261,6 +275,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
         aioParams: Optional[List[List[Union[str, int, float]]]] = Field(
             None,
             description="Save analog inputs and give them nice names. [[inp],['name']]",
+        )
+
+        get_intg: Optional[IntgParams] = Field(
+            None, description="Integrating detector configuration. LCLS2 only."
         )
 
         getROIs: Optional[Dict[str, ROIParams]] = Field(
