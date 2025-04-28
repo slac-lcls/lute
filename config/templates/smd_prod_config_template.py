@@ -38,6 +38,8 @@ def get_intg(run):
         intg_addl.append("{{ det }}")
         {% endfor %}
     {% endif %}
+{% else %}
+        ...
 {% endif %}
     return intg_main, intg_addl
 
@@ -64,7 +66,6 @@ def getROIs(run):
 
 
 {%- if getDroplet2Photons is defined and getDroplet2Photons %}
-
 def get_droplet2photon(run):
     ret_dict = {}
 
@@ -97,11 +98,12 @@ def get_droplet2photon(run):
 # epicsPV = ['las_fs14_controller_time']
 # epicsOncePV = ['m0c0_vset', ('TMO:PRO2:MPOD:01:M2:C3:VoltageMeasure', 'MyAlias'),
 #               'IM4K4:PPM:SPM:VOLT_RBV', "FOO:BAR:BAZ", ("X:Y:Z", "MCBTest"), "A:B:C"]
-{% if epicsPV is defined %}
+{%- if epicsPV is defined %}
 epicsPV = {{ epicsPV }}
 {% else %}
 epicsPV = []
-{% if epicsOncePV is defined %}
+{% endif %}
+{%- if epicsOncePV is defined %}
 epicsOncePV = {{ epicsOncePV }}
 {% else %}
 epicsOncePV = []
