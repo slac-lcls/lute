@@ -4,7 +4,13 @@ The following page attempts to provide an overview of the architecture of LUTE a
 
 ## Architecture
 
-4 Layers
+The LUTE architecture consists of four separate layers:
+- A database layer for storing parameter information and the results of analysis.
+- A `Task` layer which runs analysis code.
+- An execution layer which manages the differing environments used by components of the `Task` layer.
+- A workflow layer which launches series of **managed** `Task`s (see below), in a specified order, to run various analysis routines in their respective environments.
+
+A rough schematic of the architecture and how the various layers communicate with each other is given by:
 
 ![Overview of LUTE Architecture](images/architecture.png)
 
@@ -50,10 +56,10 @@ The `Task` layer consists of the actual analysis "code of interest". In paritcul
 
 A `Task` can be instantiated by passing in an instance of the `TaskParameters` object. The `Task` can then be run by invoking the `run()` method. A script is provided to do this: `subprocess_task.py`, although this script is not intended to be run directly, but rather submitted by an `Executor` (see below).
 
-The `subprocess_task.py` will go through the following steps:
+The `subprocess_task.py` script will go through the following steps:
 
-1. `subprocess_task.py` does parameter validation.
-2. `Task` is created and signals it is ready to start to the `Executor`. It passes along the validated parameter set along with this signal. After signalling the process suspends itself with a `SIGSTOP`. This gives the `Executor` time to run any tasklets it may need to.
+1. `subprocess_task.py` does parameter validation. A configuration YAML is parsed for the specific `Task` we want to run, and the parameters are type-validated. If the validation fails, the script exits at this point without attempting to execute the analysis code.
+2. `Task` is created and signals it is ready to start to the `Executor`. It passes along the validated parameter set along with this signal. After signalling, the process suspends itself with a `SIGSTOP`. This gives the `Executor` time to run any tasklets it may need to.
 3. The process is resumed by the `Executor` when appropriate and the `Task` begins its actual analysis.
 4. On completion the `Task` sends the result back to the `Executor` and exits.
 
