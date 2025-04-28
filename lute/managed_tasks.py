@@ -5,12 +5,12 @@ here.
 """
 
 from lute.execution.executor import Executor, MPIExecutor
+from lute.tasks.util.environment import setup_smd2_env
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
     indexamajig_summary_indexing_rate,
     setup_dimple_uglymol,
-    setup_smd2_env,
 )
 
 # Tests
@@ -60,14 +60,7 @@ SmallDataProducer2.add_tasklet(
     set_result=False,
     set_summary=False,
 )
-SmallDataProducer2.add_tasklet(
-    setup_smd2_env,
-    [],
-    when="before",
-    set_result=False,
-    set_summary=False,
-)
-
+SmallDataProducer2.update_environment(setup_smd2_env)
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
