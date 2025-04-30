@@ -30,6 +30,7 @@ import time
 import os
 import signal
 from typing import (
+    overload,
     Dict,
     Callable,
     List,
@@ -142,6 +143,9 @@ class BaseExecutor(ABC):
             functions.
 
         update_environment(env: Dict[str, str], update_path: str): Update the
+            environment that is passed to the Task subprocess.
+
+        shell_source(env: str): Source a shell script at `env` to update the
             environment that is passed to the Task subprocess.
 
         execute_task(): Run the task as a subprocess.
@@ -354,6 +358,7 @@ class BaseExecutor(ABC):
 
         ...
 
+    @overload
     def update_environment(
         self, env: Dict[str, str], update_path: str = "prepend"
     ) -> None:
@@ -376,6 +381,57 @@ class BaseExecutor(ABC):
                 "prepend" is the default option. If PATH is not present in the
                 current environment, the new PATH is used without modification.
         """
+        ...
+
+    @overload
+    def update_environment(self, env: Callable[[], Dict[str, str]]) -> None:
+        """Update the stored set of environment variables.
+
+        These are passed to the subprocess to setup its environment.
+
+        Args:
+            env (Callable[[],Dict[str, str]]): A managed-Task specific function
+                which returns a dictionary of environment variables to include
+                in the Task environment. This function can implement more complex
+                logic to determine values for the specific environment variables.
+        """
+        ...
+
+    def update_environment(
+        self,
+        env: Union[Dict[str, str], Callable[[], Dict[str, str]]],
+        update_path: str = "prepend",
+    ) -> None:
+        """Update the stored set of environment variables.
+
+        These are passed to the subprocess to setup its environment.
+
+        Args:
+            env (Union[Dict[str, str], Callable[[],Dict[str, str]]]): If a dictionary,
+                it contains a series of "VAR":"VALUE" pairs of environment variables to
+                be added to the subprocess environment. If any variables already exist,
+                the new variables will overwrite them (except PATH, see below). If a
+                callable, a managed-Task specific function which returns a dictionary
+                of environment variables to include in the Task environment. This function
+                can implement more complex logic to determine values for the specific
+                environment variables. If it is a callable, the `update_path` argument
+                to this method is ignored.
+
+            update_path (str): If PATH is present in the new set of variables,
+                this argument determines how the old PATH is dealt with. There
+                are three options:
+                * "prepend" : The new PATH values are prepended to the old ones.
+                * "append" : The new PATH values are appended to the old ones.
+                * "overwrite" : The old PATH is overwritten by the new one.
+                "prepend" is the default option. If PATH is not present in the
+                current environment, the new PATH is used without modification.
+        """
+        if callable(env):
+            env_update: Dict[str, str] = env()
+            os.environ.update(env_update)
+            self._analysis_desc.task_env.update(env_update)
+            return
+
         if "PATH" in env:
             sep: str = os.pathsep
             if update_path == "prepend":
@@ -439,7 +495,7 @@ class BaseExecutor(ABC):
         new_environment: Dict[str, str] = {}
         for key, value in tmp_environment.items():
             # Make sure LUTE vars are available
-            if "LUTE_" in key or key in ("RUN", "EXPERIMENT"):
+            if "LUTE_" in key or "SLURM_" in key or key in ("RUN", "EXPERIMENT"):
                 new_environment[key] = value
             else:
                 new_environment[f"LUTE_TENV_{key}"] = value
