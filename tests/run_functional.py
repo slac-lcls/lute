@@ -279,7 +279,18 @@ def inplace_sed(in_file: str, pattern: str) -> None:
     _run_subprocess_log(cmd)
 
 
+def git_stash(path_to_repo: str) -> None:
+    old_cwd: str = os.getcwd()
+    os.chdir(path_to_repo)
+    stash_cmd: List[str] = ["git", "stash"]
+    _run_subprocess_log(stash_cmd)
+    os.chdir(old_cwd)
+
+
 def git_checkout_branch(path_to_repo: str, branch: str) -> None:
+    # Not clear to me why need to stash on occassion??
+    # But this seems to be required switching between some branches
+    git_stash(path_to_repo)
     old_cwd: str = os.getcwd()
     os.chdir(path_to_repo)
     switch_cmd: List[str] = ["git", "switch", branch]
