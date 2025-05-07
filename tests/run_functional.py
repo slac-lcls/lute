@@ -13,15 +13,16 @@ import subprocess
 import shutil
 import time
 from typing import (
-    Dict,
-    Union,
-    List,
-    Optional,
     Any,
-    cast,
-    TypedDict,
-    overload,
+    Dict,
+    List,
     Literal,
+    Optional,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+    overload,
 )
 
 import yaml
@@ -63,7 +64,48 @@ class DagRunData(TypedDict):
     conf: DagRunConf
 
 
-def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
+class LuteParams(TypedDict):
+    config_file: str
+    debug: bool
+
+
+class FlowConf(TypedDict):
+    experiment: str
+    run_id: str
+    JID_UPDATE_COUNTERS: Optional[str]
+    ARP_ROOT_JOB_ID: str
+    ARP_LOCATION: str
+    Authorization: str
+    user: str
+    lute_location: str
+    kerb_file: Optional[str]
+    lute_params: LuteParams
+    slurm_params: List[str]
+    workflow: Dict[str, Any]
+
+
+class FlowRequestDict(TypedDict):
+    parameters: Dict[Literal["flow_conf"], FlowConf]
+
+
+def _retrieve_prefect_creds_and_url(
+    instance: str = "experimental",
+) -> Tuple[str, str, str]:
+    path: str = "/sdf/group/lcls/ds/tools/lute/prefect_{instance}.txt"
+    if instance == "experimental":
+        path = path.format(instance=instance)
+    else:
+        raise ValueError('`instance` must be "experimental"')
+    with open(path, "r") as f:
+        user_pw: str = f.readline().strip()
+        url: str = f.readline().strip()
+    user: str
+    pw: str
+    user, pw = user_pw.split(":")
+    return user, pw, url
+
+
+def _retrieve_airflow_pw(instance: str = "prod", is_admin: bool = False) -> str:
     user_type: str
     if is_admin:
         logger.debug("Running as operator.")
@@ -259,7 +301,7 @@ def git_fetch_pr_branch(path_to_repo: str, github_id: int) -> None:
     git_checkout_branch(path_to_repo, new_pr_branch_name)
 
 
-def run_workflow(
+def run_workflow_airflow(
     lute_location: str,
     config_file: str,
     workflow_file: str,
@@ -308,7 +350,7 @@ def run_workflow(
         "parse_file": "api/v1/parseDagFile/{file_token}",
     }
 
-    pw: str = _retrieve_pw(instance_str, is_admin=is_admin)
+    pw: str = _retrieve_airflow_pw(instance_str, is_admin=is_admin)
     user_name: str = "btx" if is_admin else "lcls_user"
     auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
     resp: requests.models.Response = requests.get(
@@ -500,6 +542,145 @@ def run_workflow(
         return True
 
 
+def run_workflow_prefect(
+    lute_location: str,
+    config_file: str,
+    workflow_file: str,
+) -> bool:
+    """Run a workflow.
+
+    Args:
+        lute_location (str): Path to the LUTE installation.
+
+        config_file (str): Path to the configuration YAML.
+
+        workflow_file (str): Path to the DAG definition YAML.
+
+    Returns:
+        is_successful (bool): True if workflow returns successful. False otherwise.
+    """
+
+    flow_name: str = "lute_dynamic"
+    deployment_name: str = "test-deployment2"
+
+    user: str
+    pw: str
+    PREFECT_API_URL: str
+    user, pw, PREFECT_API_URL = _retrieve_prefect_creds_and_url()
+    auth: HTTPBasicAuth = HTTPBasicAuth(user, pw)
+
+    csrf_endpoint: str = f"{PREFECT_API_URL}/csrf-token"
+    name_endpoint: str = (
+        f"{PREFECT_API_URL}/deployments/name/{flow_name}/{deployment_name}"
+    )
+
+    if not os.path.exists(workflow_file):
+        logger.error("Workflow definition path does not exist! Exiting!")
+        sys.exit(-1)
+
+    wf_defn: Dict[str, Any] = {}
+    with open(workflow_file, "r") as f:
+        wf_defn = yaml.load(f, yaml.FullLoader)
+
+    # Experiment, run #, and ARP env variables come from ARP submission only
+    # We override above or exit if we cannot, so we cast here
+    assert isinstance(os.getenv("EXPERIMENT"), str)
+    assert isinstance(os.getenv("RUN_NUM"), str)
+    assert isinstance(os.getenv("ARP_JOB_ID"), str)
+    assert isinstance(os.getenv("Authorization"), str)
+
+    params: LuteParams = {
+        "config_file": config_file,
+        "debug": True,
+    }
+
+    conf: FlowConf = {
+        "experiment": cast(str, os.getenv("EXPERIMENT")),
+        "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
+        "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
+        "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
+        "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
+        "Authorization": cast(str, os.getenv("Authorization")),
+        "user": getpass.getuser(),
+        "lute_location": lute_location,
+        "kerb_file": cache_file,
+        "lute_params": params,
+        "slurm_params": extra_args,
+        "workflow": wf_defn,
+    }
+
+    # Get CSRF
+    ##############################################
+    resp: requests.models.Response = requests.get(
+        csrf_endpoint, auth=auth, params={"client": user}
+    )
+
+    token: str = resp.json()["token"]
+    client: str = resp.json()["client"]
+
+    # Get ID from name
+    ##############################################
+    resp = requests.get(name_endpoint, auth=auth)
+
+    deployment_id: str = resp.json()["id"]
+
+    # Launch flow_run
+    ##############################################
+    launch_endpoint: str = (
+        f"{PREFECT_API_URL}/deployments/{deployment_id}/create_flow_run"
+    )
+
+    data: FlowRequestDict = {"parameters": {"flow_conf": conf}}
+    headers: Dict[str, str] = {
+        "Prefect-Csrf-Token": token,
+        "Prefect-Csrf-Client": client,
+    }
+
+    resp = requests.post(launch_endpoint, headers=headers, json=data, auth=auth)
+
+    flow_run_id: str = resp.json()["id"]
+
+    # Run loop, gather logs, etc.
+    ##############################################
+    flow_run_state_endpoint: str = f"{PREFECT_API_URL}/flow_runs/{flow_run_id}"
+    log_endpoint: str = f"{PREFECT_API_URL}/logs/filter"
+
+    log_payload: Dict[str, Any] = {
+        "logs": {
+            "level": {
+                "ge_": 20,
+            },
+            "flow_run_id": {"any_": [flow_run_id]},
+        },
+        "sort": "TIMESTAMP_ASC",
+    }
+
+    resp = requests.get(flow_run_state_endpoint, auth=auth)
+    state: str = resp.json()["state_type"]
+
+    last_log_idx: int = 0
+    while state in ("SCHEDULED", "PENDING", "RUNNING"):
+        time.sleep(5)
+        # Retrieve logs for flow run, printing new ones... Bit wasteful...
+        resp = requests.post(log_endpoint, headers=headers, auth=auth, json=log_payload)
+        current_len_logs: int = len(resp.json())
+        log_dict: Dict[str, Any]
+        for log_dict in resp.json()[last_log_idx:current_len_logs]:
+            print(log_dict["message"])
+        last_log_idx = current_len_logs
+
+        resp = requests.get(flow_run_state_endpoint, auth=auth)
+        state = resp.json()["state_type"]
+
+    if state in ("CANCELLED", "FAILED", "CRASHED"):
+        return False
+    else:
+        return True
+
+
+run_workflow = run_workflow_airflow
+
+
 def clean_up(
     cache_file: Optional[str], lute_location: str, output_location: str
 ) -> None:
@@ -684,7 +865,7 @@ if __name__ == "__main__":
             if is_successful:
                 if should_fail:
                     num_unsuccessful += 1
-                    logger.info(
+                    logger.error(
                         f"Test workflow {test_name} completed successfully but should fail!"
                     )
                 else:
