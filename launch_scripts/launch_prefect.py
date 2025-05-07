@@ -185,7 +185,7 @@ if __name__ == "__main__":
     auth: HTTPBasicAuth = HTTPBasicAuth(user, pw)
 
     flow_name: str = "lute_dynamic"
-    deployment_name: str = "test-deployment2"
+    deployment_name: str = "dev"
 
     csrf_endpoint: str = f"{PREFECT_API_URL}/csrf-token"
     name_endpoint: str = (
