@@ -561,7 +561,7 @@ def run_workflow_prefect(
     """
 
     flow_name: str = "lute_dynamic"
-    deployment_name: str = "test-deployment2"
+    deployment_name: str = "dev"
 
     user: str
     pw: str
