@@ -14,6 +14,7 @@ import shutil
 import time
 from typing import (
     Any,
+    Callable,
     Dict,
     List,
     Literal,
@@ -678,9 +679,6 @@ def run_workflow_prefect(
         return True
 
 
-run_workflow = run_workflow_airflow
-
-
 def clean_up(
     cache_file: Optional[str], lute_location: str, output_location: str
 ) -> None:
@@ -708,10 +706,21 @@ if __name__ == "__main__":
         description="Run the LUTE functional test suite.",
         epilog="Refer to https://github.com/slac-lcls/lute for more information.",
     )
+    # Airflow vs Prefect arguments
     parser.add_argument(
         "-a",
         "--admin",
-        help="Run as Airflow admin. Requires permissions.",
+        help="Run as Airflow admin. Requires permissions. Ignored if using prefect.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--test_airflow",
+        help="Use test Airflow instance. Ignored if using prefect.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--use_prefect",
+        help="Use prefect (experimental) instead of Airflow.",
         action="store_true",
     )
     # Options for running specific versions of LUTE
@@ -726,12 +735,13 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
+        "-r", "--run_dir", help="Directory to install LUTE to.", type=str, required=True
+    )
+    # Choice of using specific tests, and whether to delete output files.
+    parser.add_argument(
         "--no_delete",
         help="If passed, do not delete output files when tests are finished.",
         action="store_true",
-    )
-    parser.add_argument(
-        "-r", "--run_dir", help="Directory to install LUTE to.", type=str, required=True
     )
     parser.add_argument(
         "--run_tests",
@@ -750,9 +760,6 @@ if __name__ == "__main__":
             "If this flag and --use_local_tests are both passed, this one is used."
         ),
         type=str,
-    )
-    parser.add_argument(
-        "--test_airflow", help="Use test Airflow instance.", action="store_true"
     )
     parser.add_argument(
         "--use_local_tests",
@@ -847,20 +854,34 @@ if __name__ == "__main__":
             experiment: str = parse_yaml_value(config_file, "experiment")
             run: str = parse_yaml_value(config_file, "run")
 
-            # Setup environment variables -> These are passed to airflow
+            # Setup environment variables -> These are passed to airflow (or prefect)
             # run_workflow function uses them
             os.environ["EXPERIMENT"] = experiment
             os.environ["RUN_NUM"] = run
             os.environ["Authorization"] = _request_arp_token(experiment)
             os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
 
-            is_successful: bool = run_workflow(
-                lute_location=lute_location,
-                config_file=config_file,
-                workflow_file=wf_file,
-                use_test_inst=args.test_airflow,
-                is_admin=args.admin,
-            )
+            run_workflow: Union[
+                Callable[[str, str, str, bool, bool], bool],
+                Callable[[str, str, str], bool],
+            ]
+            is_successful: bool
+            if args.use_prefect:
+                run_workflow = run_workflow_prefect
+                is_successful = run_workflow(
+                    lute_location=lute_location,
+                    config_file=config_file,
+                    workflow_file=wf_file,
+                )
+            else:
+                run_workflow = run_workflow_airflow
+                is_successful = run_workflow(
+                    lute_location=lute_location,
+                    config_file=config_file,
+                    workflow_file=wf_file,
+                    use_test_inst=args.test_airflow,
+                    is_admin=args.admin,
+                )
 
             if is_successful:
                 if should_fail:

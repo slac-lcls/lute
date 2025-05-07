@@ -4,12 +4,24 @@
 usage()
 {
     cat << EOF
-run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] [--no_delete] -r RUN_DIR [--run_tests RUN_TESTS] [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests]
+run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] [--no_delete] -r RUN_DIR [--run_tests RUN_TESTS] [--tests_dir TESTS_DIR] [--test_airflow] [--use_local_tests] [--use_prefect]
     Run a series of functional tests for LUTE.
 
     Options:
+        # Airflow and prefect arguments
+        ###############################
+
         -a|--admin
-          Use an administrator account for Airflow authentication. Default: False
+          Use an administrator account for Airflow authentication. Ignored if using prefect. Default: False
+
+        --test_airflow
+          Use the test Airflow instance. Ignored if using prefect. Default: False
+
+        --use_prefect
+          Use prefect instead of Airflow.
+
+        # Options to select a version of LUTE to use for the tests and where to install.
+        ################################################################################
 
         --git_pr_id GIT_PR_ID
           Checkout a PR branch to run LUTE against based on GitHub ID. (Optional)
@@ -17,31 +29,33 @@ run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] [--no_de
         --git_tag GIT_TAG
           Checkout a specific tag (e.g. release) of LUTE. (Optional)
 
-        -h|--help
-          Display this message.
+        -r|--run_dir RUN_DIR
+          Directory to install LUTE in, and setup the output folder. (Required)
+
+        # Options to select specific  tests and configure behaviour of tests.
+        #####################################################################
 
         --no_delete
           If passed, do not delete output files when tests are finished.
-
-        -r|--run_dir RUN_DIR
-          Directory to install LUTE in, and setup the output folder. (Required)
 
         --run_tests RUN_TESTS
           Provide a comma-separated string of tests to run. If provided, this script
           will only run those, rather than the default behaviour of running all tests.
           E.g: --run_these_tests test2,test5. Tests that do not exist are silently ignored.
 
-
         --tests_dir TESTS_DIR
           Specify an alternative path to tests than those from the LUTE clone. Must have the same directory structure:
           $DIR/test1/... $DIR/test2/... If this flag and --use_local_tests are both passed, this one is used.
 
-        --test_airflow
-          Use the test Airflow instance.
-
         --use_local_tests
           Use the tests from the installation of LUTE where this script is called, rather than those from the clone of LUTE which is run against,
           or another directory if passed. If this flag and --tests_dir are both passed, --tests_dir is used.
+
+        # Misc.
+        #######
+
+        -h|--help
+          Display this message.
 EOF
 }
 
