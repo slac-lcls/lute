@@ -290,7 +290,7 @@ def elog_http_request(
 
 
 def format_file_for_post(
-    in_file: Union[str, tuple, list]
+    in_file: Union[str, tuple, list],
 ) -> Tuple[str, Tuple[str, BufferedReader], Any]:
     """Format a file for attachment to an eLog post.
 
