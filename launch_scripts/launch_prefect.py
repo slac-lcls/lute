@@ -50,6 +50,7 @@ class FlowConf(TypedDict):
     Authorization: str
     user: str
     lute_location: str
+    executable_subdir: str
     kerb_file: Optional[str]
     lute_params: LuteParams
     slurm_params: List[str]
@@ -218,6 +219,7 @@ if __name__ == "__main__":
         "Authorization": cast(str, os.getenv("Authorization")),
         "user": getpass.getuser(),
         "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
+        "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
         "kerb_file": cache_file,
         "lute_params": params,
         "slurm_params": extra_args,

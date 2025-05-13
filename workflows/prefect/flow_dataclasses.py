@@ -16,6 +16,7 @@ class FlowConf(TypedDict):
     Authorization: str
     user: str
     lute_location: str
+    executable_subdir: str
     kerb_file: Optional[str]
     lute_params: LuteParams
     slurm_params: List[str]
