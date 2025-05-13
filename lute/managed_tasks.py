@@ -5,6 +5,7 @@ here.
 """
 
 from lute.execution.executor import Executor, MPIExecutor
+from lute.tasks.util.environment import setup_smd2_env
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
@@ -38,7 +39,7 @@ MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunicat
 # SmallData-related
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
-"""Runs the production of a smalldata HDF5 file."""
+"""Runs the production of a LCLS1 smalldata HDF5 file."""
 SmallDataProducer.add_tasklet(
     clone_smalldata,
     ["{{ producer }}"],
@@ -47,6 +48,19 @@ SmallDataProducer.add_tasklet(
     set_summary=False,
 )
 
+SmallDataProducer2: Executor = Executor("SubmitSMD")
+"""Runs the production of a LCLS2 smalldata HDF5 file."""
+SmallDataProducer2.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
+SmallDataProducer2.add_tasklet(
+    clone_smalldata,
+    ["{{ producer }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+SmallDataProducer2.update_environment(setup_smd2_env)
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""

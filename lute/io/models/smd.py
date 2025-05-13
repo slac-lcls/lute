@@ -26,6 +26,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
+from pathlib import Path
 from typing import Union, List, Optional, Dict, Any, Tuple, ClassVar
 
 from pydantic import BaseModel, HttpUrl, PositiveInt, NonNegativeInt
@@ -87,8 +88,22 @@ class SubmitSMDParameters(ThirdPartyParameters):
         )
 
     class ProducerParameters(BaseModel):
+        class IntgParams(BaseModel):
+            intg_main: str = Field(
+                description=(
+                    "The integrating detector to be passed to psana. "
+                    "Should be the SLOWEST integrating detector in the data."
+                )
+            )
+            intg_addl: List[str] = Field(
+                description=(
+                    "Additional detectors to be analyzed as integrating detectors. "
+                    "The readout frequency must be commensurate and in-phase with intg_main."
+                )
+            )
+
         class ROIParams(BaseModel):
-            ROIs: List[List[List[int]]] = Field(
+            ROIs: Optional[List[List[List[int]]]] = Field(
                 description="Definition of ROIs, can define multiple."
             )
 
@@ -99,6 +114,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
             thresADU: Optional[float] = Field(
                 None, description="Optional threshold on ADU."
             )
+
+            calcPars: Optional[bool] = Field(False, description="...")
 
         class AzIntParams(BaseModel):
             eBeam: float = Field(description="Beam energy in keV.")
@@ -270,6 +287,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
             None, description="List of detectors to process."
         )
 
+        integrating_detectors: Optional[List[str]] = Field(
+            None,
+            description="List of integrating detectors to process. Only for LCLS2.",
+        )
+
         epicsPV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
             None, description="List of PVs to save once per event."
         )
@@ -285,6 +307,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
         aioParams: Optional[List[List[Union[str, int, float]]]] = Field(
             None,
             description="Save analog inputs and give them nice names. [[inp],['name']]",
+        )
+
+        get_intg: Optional[IntgParams] = Field(
+            None, description="Integrating detector configuration. LCLS2 only."
         )
 
         getROIs: Optional[Dict[str, ROIParams]] = Field(
@@ -335,6 +361,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
         max(int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1),
         description="Number of processes",
         flag_type="-",
+    )
+    map_by: str = Field(
+        "core", description="MPI rank mapping.", flag_type="--", rename_param="map-by"
     )
     p_arg1: str = Field(
         "python", description="Executable to run with mpi (i.e. python).", flag_type=""
@@ -474,7 +503,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
             hutch: str = exp[:3]
             base_path: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
             path: str
-            if hutch.lower() in ("cxi", "mec", "mfx", "xcs", "xpp"):
+            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
                 path = f"{base_path}/lcls1_producers/smd_producer.py"
             else:
                 path = f"{base_path}/lcls2_producers/smd_producer.py"
@@ -486,8 +515,17 @@ class SubmitSMDParameters(ThirdPartyParameters):
     def use_producer(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
+        exp: str = values["lute_config"].experiment
+        hutch: str = exp[:3]
         if not lute_template_cfg.output_path:
-            lute_template_cfg.output_path = values["producer"]
+            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
+                lute_template_cfg.output_path = values["producer"]
+            else:
+                cfg: str = str(
+                    Path(values["producer"]).parent / f"prod_config_{hutch}.py"
+                )
+                lute_template_cfg.output_path = cfg
+                lute_template_cfg.template_name = "smd_prod_config_template.py"
         return lute_template_cfg
 
     @result_validator
