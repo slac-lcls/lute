@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n",
         "--name",
-        description="Name of the new deployment.",
+        help="Name of the new deployment.",
         type=str,
         default="dev",
     )
