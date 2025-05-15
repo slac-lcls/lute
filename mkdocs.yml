@@ -11,6 +11,7 @@ nav:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task: "development/new_task.md"
       - Creating a new Workflow: "development/creating_workflows.md"
+      - Tests: "development/tests.md"
   - Source Code:
       - managed_tasks: "source/managed_tasks.md"
       - execution:

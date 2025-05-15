@@ -13,11 +13,14 @@ definition and how it is parsed and passed along.
 from datetime import datetime
 import os
 import time
+import sys
 from typing import Optional, Any, Dict, List
 
+from airflow import configuration
 from airflow.decorators import dag, task, task_group
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.models import Variable
+from airflow.models import Variable, DagBag, TaskInstance
+from airflow.models.taskmixin import DAGNode
 
 from lute.operators.jidoperators import JIDSlurmOperator
 
@@ -67,7 +70,35 @@ def test_dynamic():
 
     @task(trigger_rule=TriggerRule.ALL_DONE)
     def delete_workflow(**context):
+        folder: Any = configuration.get("core", "DAGS_FOLDER")
+        dagbag: DagBag = DagBag(folder)
+        dag_ref: Any = dagbag.dags[dag_id]
+
+        tg: Any = dag_ref.task_group.get_child_by_label("user_workflow")
+        execution_date: str = context.get("logical_date")
+
+        # Collect the TaskGroup state now by looking at state of Tasks in the group
+        # Otherwise this information gets hidden when we delete the user_workflow
+        # This Task (`delete_workflow`) always succeeds, so if we don't collect
+        # the information the workflow is marked as successful even when it fails
+        task: "DAGNode"
+        ti: TaskInstance
+        user_wf_state: str = "success"
+        for task in tg.children.values():
+            try:
+                ti = TaskInstance(task, execution_date)
+                if ti.current_state() != "success":
+                    print(
+                        f"{task.task_id} was marked {ti.current_state()}. "
+                        "Marking task group the same."
+                    )
+                    user_wf_state = ti.current_state()
+            except Exception as err:
+                print(err)
         Variable.delete(key="user_workflow")
+        if user_wf_state != "success":
+            print(f"User workflow does not report success: {user_wf_state}")
+            sys.exit(-1)
 
     retrieve_workflow() >> user_workflow() >> delete_workflow()
 
