@@ -195,10 +195,12 @@ def create_workflow(
     lute_params: LuteParams,
     kerb_file: Optional[str] = None,
 ) -> None:
+    slurm_params: str
+    future: Future
     if isinstance(wf_dict, list):
         for task_dict in wf_dict:
-            slurm_params: str = task_dict.get("slurm_params", "")
-            future: Future = executor.submit(
+            slurm_params = task_dict.get("slurm_params", "")
+            future = executor.submit(
                 launch_lute_task,
                 lute_location,
                 task_dict["task_name"],
@@ -222,8 +224,8 @@ def create_workflow(
                         kerb_file=kerb_file,
                     )
     else:
-        slurm_params: str = wf_dict.get("slurm_params", "")
-        future: Future = executor.submit(
+        slurm_params = wf_dict.get("slurm_params", "")
+        future = executor.submit(
             launch_lute_task,
             lute_location,
             wf_dict["task_name"],
