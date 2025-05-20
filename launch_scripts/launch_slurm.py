@@ -16,7 +16,7 @@ import subprocess
 import sys
 import yaml
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Literal, Optional, Tuple, overload
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 from typing_extensions import TypedDict
 
 logger: logging.Logger = logging.getLogger("Launch_SLURM_Workflow")
@@ -67,7 +67,7 @@ def _run_subprocess_log(cmd: List[str], return_output: bool = False) -> Optional
 
     if return_output:
         return out
-    return
+    return None
 
 
 def get_slurm_logfile_path(jobid: str) -> str:
@@ -104,7 +104,7 @@ def get_slurm_job_status(jobid: str) -> str:
         "State",
     ]
     status_cmd_out: str = _run_subprocess_log(status_cmd, return_output=True)
-    status: str = status_cmd_out.split("\n")[2].strip()
+    status: str = status_cmd_out.split("\n")[2].strip().replace("+", "")
     return status
 
 
@@ -176,7 +176,11 @@ def launch_lute_task(
     logfile_path: str = get_slurm_logfile_path(jobid=jobid)
     # Loop on task here?
     logfile: str = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
-    while (status := get_slurm_job_status(jobid=jobid)) not in ("FAILED", "COMPLETED"):
+    while (status := get_slurm_job_status(jobid=jobid)) not in (
+        "FAILED",
+        "COMPLETED",
+        "CANCELLED",
+    ):
         logfile = get_slurm_log(logfile_path=logfile_path)
 
     return task_name, status, logfile
@@ -186,36 +190,93 @@ def create_workflow(
     executor: ThreadPoolExecutor,
     wait_for: Optional[Future],
     all_futures: List[Future],
-    wf_dict: Dict[str, Any],
+    wf_dict: Union[Dict[str, Any], List[Dict[str, Any]]],
     lute_location: str,
     lute_params: LuteParams,
     kerb_file: Optional[str] = None,
 ) -> None:
-    slurm_params: str = wf_dict.get("slurm_params", "")
-    future: Future = executor.submit(
-        launch_lute_task,
-        lute_location,
-        wf_dict["task_name"],
-        lute_params,
-        slurm_params,
-        kerb_file,
-        wait_for,
-    )
-    all_futures.append(future)
-    if wf_dict["next"] == []:
-        return
-    else:
-        for task in wf_dict["next"]:
-            create_workflow(
-                executor,
-                wait_for=future,
-                all_futures=all_futures,
-                wf_dict=task,
-                lute_location=lute_location,
-                lute_params=lute_params,
-                kerb_file=kerb_file,
+    if isinstance(wf_dict, list):
+        for task_dict in wf_dict:
+            slurm_params: str = task_dict.get("slurm_params", "")
+            future: Future = executor.submit(
+                launch_lute_task,
+                lute_location,
+                task_dict["task_name"],
+                lute_params,
+                slurm_params,
+                kerb_file,
+                wait_for,
             )
-    return
+            all_futures.append(future)
+            if task_dict["next"] == []:
+                return None
+            else:
+                for task in task_dict["next"]:
+                    create_workflow(
+                        executor,
+                        wait_for=future,
+                        all_futures=all_futures,
+                        wf_dict=task,
+                        lute_location=lute_location,
+                        lute_params=lute_params,
+                        kerb_file=kerb_file,
+                    )
+    else:
+        slurm_params: str = wf_dict.get("slurm_params", "")
+        future: Future = executor.submit(
+            launch_lute_task,
+            lute_location,
+            wf_dict["task_name"],
+            lute_params,
+            slurm_params,
+            kerb_file,
+            wait_for,
+        )
+        all_futures.append(future)
+        if wf_dict["next"] == []:
+            return None
+        else:
+            for task in wf_dict["next"]:
+                create_workflow(
+                    executor,
+                    wait_for=future,
+                    all_futures=all_futures,
+                    wf_dict=task,
+                    lute_location=lute_location,
+                    lute_params=lute_params,
+                    kerb_file=kerb_file,
+                )
+    return None
+
+
+def count_tasks_and_print_wf(
+    wf: Union[List[Dict[str, Any]], Dict[str, Any]], wf_str: str, task_count: int = 0
+) -> Tuple[str, int]:
+    if isinstance(wf, list):
+        return "", 1
+    else:
+        task_name: str = wf["task_name"]
+        new_str: str
+        if wf_str != "":
+            new_str = f"{wf_str} >> {task_name}"
+        else:
+            new_str = task_name
+
+        if wf["next"] == []:
+            return f"{new_str}", 1
+        else:
+            task_count = 1
+            full_branched_str: str = ""
+            for task in wf["next"]:
+                branch_str: str
+                branch_task_count: int
+                branch_str, branch_task_count = count_tasks_and_print_wf(
+                    task, new_str, task_count
+                )
+                full_branched_str += f"{branch_str}\n"
+                task_count += branch_task_count
+
+            return full_branched_str, task_count
 
 
 if __name__ == "__main__":
@@ -285,7 +346,13 @@ if __name__ == "__main__":
 
     lute_params: LuteParams = {"config_file": args.config, "debug": args.debug}
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    wf_repr: str
+    task_count: int
+    wf_repr, task_count = count_tasks_and_print_wf(wf_defn, "", 0)
+
+    logger.info(f"Running the following workflow with {task_count} Managed Tasks:")
+    print(wf_repr)
+    with ThreadPoolExecutor(max_workers=task_count) as executor:
         all_futures: List[Future] = []
         # Recursively submit work to the ThreadPoolExecutor. The individual functions
         # submitted to the ThreadPoolExecutor wait on previous futures if
