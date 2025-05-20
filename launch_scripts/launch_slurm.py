@@ -19,7 +19,6 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Literal, Optional, Tuple, overload
 from typing_extensions import TypedDict
 
-# Requests, urllib have lots of debug statements. Only set level for this logger
 logger: logging.Logger = logging.getLogger("Launch_SLURM_Workflow")
 handler: logging.Handler = logging.StreamHandler()
 formatter: logging.Formatter = logging.Formatter(logging.BASIC_FORMAT)
@@ -68,6 +67,7 @@ def _run_subprocess_log(cmd: List[str], return_output: bool = False) -> Optional
 
     if return_output:
         return out
+    return
 
 
 def get_slurm_logfile_path(jobid: str) -> str:
@@ -316,6 +316,6 @@ if __name__ == "__main__":
                 n_failed += 1
 
         if n_failed > 0:
-            logger.info(f"Workflow exited: FAILED")
+            logger.info("Workflow exited: FAILED")
         else:
-            logger.info(f"Workflow exited: COMPLETED")
+            logger.info("Workflow exited: COMPLETED")
