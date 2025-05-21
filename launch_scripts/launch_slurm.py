@@ -210,8 +210,8 @@ def create_workflow(
                 wait_for,
             )
             all_futures.append(future)
-            if task_dict["next"] == []:
-                return None
+            if task_dict["next"] == [] or task_dict["next"] is None:
+                pass
             else:
                 for task in task_dict["next"]:
                     create_workflow(
@@ -235,7 +235,7 @@ def create_workflow(
             wait_for,
         )
         all_futures.append(future)
-        if wf_dict["next"] == []:
+        if wf_dict["next"] == [] or wf_dict["next"] is None:
             return None
         else:
             for task in wf_dict["next"]:
@@ -252,10 +252,34 @@ def create_workflow(
 
 
 def count_tasks_and_print_wf(
-    wf: Union[List[Dict[str, Any]], Dict[str, Any]], wf_str: str, task_count: int = 0
+    wf: Union[List[Dict[str, Any]], Dict[str, Any]], wf_str: str
 ) -> Tuple[str, int]:
     if isinstance(wf, list):
-        return "", 1
+        parallel_str: str = ""
+        task_count: int = 0
+        for task_dict in wf:
+            task_count += 1
+            task_name: str = task_dict["task_name"]
+            new_str: str
+            if wf_str != "":
+                new_str = f"{wf_str} >> {task_name}"
+            else:
+                new_str = task_name
+
+            if task_dict["next"] == [] or task_dict["next"] is None:
+                parallel_str += f"{task_name}\n"
+            else:
+                full_branched_str: str = ""
+                for task in task_dict["next"]:
+                    branch_str: str
+                    branch_task_count: int
+                    branch_str, branch_task_count = count_tasks_and_print_wf(
+                        task, new_str
+                    )
+                    full_branched_str += f"{branch_str}\n"
+                    task_count += branch_task_count
+                parallel_str += f"{full_branched_str}\n"
+        return parallel_str, task_count
     else:
         task_name: str = wf["task_name"]
         new_str: str
@@ -264,7 +288,7 @@ def count_tasks_and_print_wf(
         else:
             new_str = task_name
 
-        if wf["next"] == []:
+        if wf["next"] == [] or wf["next"] is None:
             return f"{new_str}", 1
         else:
             task_count = 1
@@ -272,9 +296,7 @@ def count_tasks_and_print_wf(
             for task in wf["next"]:
                 branch_str: str
                 branch_task_count: int
-                branch_str, branch_task_count = count_tasks_and_print_wf(
-                    task, new_str, task_count
-                )
+                branch_str, branch_task_count = count_tasks_and_print_wf(task, new_str)
                 full_branched_str += f"{branch_str}\n"
                 task_count += branch_task_count
 
@@ -350,7 +372,7 @@ if __name__ == "__main__":
 
     wf_repr: str
     task_count: int
-    wf_repr, task_count = count_tasks_and_print_wf(wf_defn, "", 0)
+    wf_repr, task_count = count_tasks_and_print_wf(wf_defn, "")
 
     logger.info(f"Running the following workflow with {task_count} Managed Tasks:")
     print(wf_repr)
