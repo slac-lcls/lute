@@ -337,7 +337,7 @@ class BayesGeomOpt:
         if np.std(y) != 0:
             y_norm = (y - np.mean(y)) / np.std(y)
         else:
-            y_norm = (y - np.mean(y))
+            y_norm = y - np.mean(y)
         best_score = np.max(y_norm)
 
         if kernel == "RBF":
@@ -421,7 +421,7 @@ class BayesGeomOpt:
             if np.std(y) != 0:
                 y_norm = (y - np.mean(y)) / np.std(y)
             else:
-                y_norm = (y - np.mean(y))
+                y_norm = y - np.mean(y)
             best_score = np.max(y_norm)
 
             # 4. Update the Gaussian Process Regressor
