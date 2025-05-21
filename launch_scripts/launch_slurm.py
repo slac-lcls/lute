@@ -147,7 +147,7 @@ def launch_lute_task(
         prev_task: str
         prev_status: str
         prev_task, prev_status, _ = wait_for.result()
-        if prev_status in ("FAILED", "UPSTREAM_FAILED"):
+        if prev_status in ("FAILED", "UPSTREAM_FAILED", "CANCELLED"):
             log: str = (
                 f"---- UPSTREAM {prev_task} FAILED, NOT LAUNCHING {task_name} ----"
             )
