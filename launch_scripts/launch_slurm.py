@@ -281,8 +281,7 @@ def count_tasks_and_print_wf(
                 parallel_str += f"{full_branched_str}\n"
         return parallel_str, task_count
     else:
-        task_name: str = wf["task_name"]
-        new_str: str
+        task_name = wf["task_name"]
         if wf_str != "":
             new_str = f"{wf_str} >> {task_name}"
         else:
@@ -292,10 +291,8 @@ def count_tasks_and_print_wf(
             return f"{new_str}", 1
         else:
             task_count = 1
-            full_branched_str: str = ""
+            full_branched_str = ""
             for task in wf["next"]:
-                branch_str: str
-                branch_task_count: int
                 branch_str, branch_task_count = count_tasks_and_print_wf(task, new_str)
                 full_branched_str += f"{branch_str}\n"
                 task_count += branch_task_count
