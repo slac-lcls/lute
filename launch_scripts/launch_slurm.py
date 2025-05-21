@@ -375,7 +375,7 @@ if __name__ == "__main__":
     wf_repr, task_count = count_tasks_and_print_wf(wf_defn, "")
 
     logger.info(f"Running the following workflow with {task_count} Managed Tasks:")
-    print(wf_repr)
+    print(wf_repr, flush=True)
     with ThreadPoolExecutor(max_workers=task_count) as executor:
         all_futures: List[Future] = []
         # Recursively submit work to the ThreadPoolExecutor. The individual functions
