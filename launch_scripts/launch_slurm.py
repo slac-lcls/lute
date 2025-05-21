@@ -405,5 +405,6 @@ if __name__ == "__main__":
 
         if n_failed > 0:
             logger.info("Workflow exited: FAILED")
+            sys.exit(-1)
         else:
             logger.info("Workflow exited: COMPLETED")
