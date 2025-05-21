@@ -333,7 +333,6 @@ class BayesGeomOpt:
             )
             return result
         y[np.isnan(y)] = 0
-        y_norm[np.isnan(y_norm)] = 0
         if np.std(y) != 0:
             y_norm = (y - np.mean(y)) / np.std(y)
         else:
@@ -411,6 +410,8 @@ class BayesGeomOpt:
             )
             sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
             score = len(sg.geometry_refinement.data)
+            if np.isnan(score):
+                score = 0
             y = np.append(y, [score], axis=0)
             bo_history[f"iteration_{i+1}"] = {
                 "param": X[new_idx],
