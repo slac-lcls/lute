@@ -332,6 +332,8 @@ class BayesGeomOpt:
                 f"All samples have score 0 for dist={dist}. Skipping Bayesian Optimization."
             )
             return result
+        y[np.isnan(y)] = 0
+        y_norm[np.isnan(y_norm)] = 0
         if np.std(y) != 0:
             y_norm = (y - np.mean(y)) / np.std(y)
         else:
@@ -421,7 +423,7 @@ class BayesGeomOpt:
             else:
                 y_norm = (y - np.mean(y))
             best_score = np.max(y_norm)
-            
+
             # 4. Update the Gaussian Process Regressor
             gp_model.fit(X_norm_samples, y_norm)
 
