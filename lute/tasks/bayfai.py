@@ -183,64 +183,6 @@ class OptimizePyFAIGeometry(Task):
                         powder = np.reshape(powder, shape)
         return powder
 
-    def _reconstruct_powder(self, pypca_path: str) -> Optional[npt.NDArray[np.float64]]:
-        """
-        Reconstruct powder from PyPCA.
-
-        Parameters
-        ----------
-        pypca_path : str
-            Path to the PyPCA folder containing the model and the projections.
-        """
-        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
-
-        run_dir = f"r{self._task_parameters.lute_config.run:0>4}"
-
-        model_files = glob(os.path.join(pypca_path, f"models/{run_dir}/*.h5"))
-        projection_files = glob(os.path.join(pypca_path, f"projections/{run_dir}/*.h5"))
-
-        if len(model_files) != 1 or len(projection_files) != 1:
-            raise ValueError(
-                f"Expected one file, but found {len(model_files)} models and "
-                f"{len(projection_files)} projections in {pypca_path}."
-            )
-
-        powder = None
-
-        batch_size = 500
-
-        with h5py.File(model_files[0], "r") as f_model, h5py.File(
-            projection_files[0], "r"
-        ) as f_proj:
-            V = f_model["V"]
-            U = f_proj["projected_images"]
-            min_rank = 1
-            max_rank = V.shape[2]
-            start_idx = 1 if self._task_parameters.det_type == "Rayonix" else 0
-            for idx in range(start_idx, U.shape[1], batch_size):
-                batch_powder = []
-                for i in range(V.shape[0]):
-                    dummy = np.zeros(V.shape[1])
-
-                    U_chunk = U[
-                        i, idx : min(idx + batch_size, U.shape[1]), :min_rank:max_rank
-                    ]
-                    V_chunk = V[i, :, :min_rank:max_rank]
-                    chunk = np.dot(U_chunk, V_chunk.T)
-                    chunk_powder = np.sum(chunk, axis=0)
-                    dummy += chunk_powder
-                    batch_powder.append(dummy)
-
-                if powder is None:
-                    powder = np.array(batch_powder)
-                else:
-                    powder += np.array(batch_powder)
-
-                logger.info(f"Processed {min(idx+batch_size,U.shape[1])} images")
-            if powder is not None and powder.shape != self.shape:
-                powder = np.reshape(powder, self.shape)
-        return powder
-
     def _preprocess_powder(
         self,
         powder: npt.NDArray[np.float64],
@@ -260,7 +202,6 @@ class OptimizePyFAIGeometry(Task):
                 "Central": Gradient Computation using Central Differences
                 "Laplacian": Gradient Computation using Laplacian of Gaussian
                 "Sobel": Gradient Computation using Sobel filter
-                "PyPCA": Principal Component Analysis preprocessing
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         powder[powder < 0] = 0
@@ -306,18 +247,6 @@ class OptimizePyFAIGeometry(Task):
         elif preprocess == "Laplacian":
             sigma = 1
             powder = gaussian_laplace(powder, sigma=sigma)
-        elif preprocess == "PyPCA":
-            pypca_path = os.path.join(
-                self._task_parameters.lute_config.work_dir, "pypca"
-            )
-            if not os.path.exists(pypca_path):
-                logger.warning(
-                    f"PyPCA path {pypca_path} does not exist. Using raw powder instead."
-                )
-                return powder
-            else:
-                powder = self._reconstruct_powder(pypca_path=pypca_path)
-            return powder
         else:
             logger.warning(f"Preprocessing technique {preprocess} not recognized.")
             logger.warning("Using raw powder instead.")
