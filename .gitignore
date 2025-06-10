@@ -31,3 +31,6 @@ pip-delete-this-directory.txt
 nosetests.xml
 coverage.xml
 
+# Notebooks
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
