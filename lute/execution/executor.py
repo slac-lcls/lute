@@ -419,7 +419,7 @@ class BaseExecutor(ABC):
                 to this method is ignored.
 
             update_path (str): If PATH or PYTHONPATH is present in the new set of
-                variables, this argument determines how the old PATH/PYTHONPATH is 
+                variables, this argument determines how the old PATH/PYTHONPATH is
                 dealt with. There are three options:
                 * "prepend" : The new PATH values are prepended to the old ones.
                 * "append" : The new PATH values are appended to the old ones.
