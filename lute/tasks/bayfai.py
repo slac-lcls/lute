@@ -19,7 +19,6 @@ import psana  # type: ignore
 import os
 import logging
 from typing import Optional, Tuple
-from glob import glob  # type: ignore
 
 import h5py  # type: ignore
 import panel as pn  # type: ignore
