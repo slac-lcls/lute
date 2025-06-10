@@ -418,8 +418,8 @@ class BaseExecutor(ABC):
                 environment variables. If it is a callable, the `update_path` argument
                 to this method is ignored.
 
-            update_path (str): If PATH or PYTHONPATH is present in the new set of
-                variables, this argument determines how the old PATH/PYTHONPATH is
+            update_path (str): If PATH and/or PYTHONPATH is present in the new
+                set of variables, this argument determines how the old value is
                 dealt with. There are three options:
                 * "prepend" : The new PATH values are prepended to the old ones.
                 * "append" : The new PATH values are appended to the old ones.
