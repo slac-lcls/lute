@@ -184,9 +184,9 @@ class OptimizePyFAIGeometry(Task):
 
     def _preprocess_powder(
         self,
-        powder: npt.NDArray[np.float64],
+        powder: Optional[npt.NDArray[np.float64]],
         preprocess: Optional[str] = "Diagonal",
-    ) -> npt.NDArray[np.float64]:
+    ) -> Optional[npt.NDArray[np.float64]]:
         """
         Preprocess extracted powder for enhancing optimization
 
