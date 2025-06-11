@@ -194,6 +194,8 @@ class BaseExecutor(ABC):
         )
         self._tasklets: TaskletDict = {"before": None, "after": None}
         self._shell_source_script: Optional[str] = None
+        self._task_timeout: Optional[int] = None
+        self._task_time0: Optional[float] = None
 
     def add_tasklet(
         self,
@@ -593,9 +595,14 @@ class BaseExecutor(ABC):
             self._shell_source()
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
+        self._task_time0 = time.monotonic()
 
         while self._task_is_running(proc):
             self._task_loop(proc)
+            if self._task_timeout is not None:
+                run_time: float = time.monotonic() - self._task_time0
+                if run_time > self._task_timeout:
+                    self._sigalrm_task(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
         if proc.stdout is not None:
@@ -670,6 +677,11 @@ class BaseExecutor(ABC):
         """Stop the Task subprocess."""
         os.kill(proc.pid, signal.SIGTSTP)
         self._analysis_desc.task_result.task_status = TaskStatus.STOPPED
+
+    def _sigalrm_task(self, proc: subprocess.Popen) -> None:
+        """Timeout the Task subprocess with SIGALRM."""
+        os.kill(proc.pid, signal.SIGALRM)
+        self._analysis_desc.task_result.task_status = TaskStatus.TIMEDOUT
 
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
@@ -897,6 +909,9 @@ class Executor(BaseExecutor):
                 f"Executor: {executor._analysis_desc.task_result.task_name} started"
             )
             executor._analysis_desc.task_result.task_status = TaskStatus.RUNNING
+            executor._task_timeout = (
+                self._analysis_desc.task_parameters.lute_config.task_timeout
+            )
             elog_data: Dict[str, str] = {
                 f"{executor._analysis_desc.task_result.task_name} status": "RUNNING",
             }
