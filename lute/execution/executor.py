@@ -899,6 +899,9 @@ class Executor(BaseExecutor):
                     executor._run_tasklets(when="before")
                 # Need to continue since Task._signal_start raises SIGSTOP
                 executor._continue(proc)
+                executor._task_timeout = (
+                    executor._analysis_desc.task_parameters.lute_config.task_timeout
+                )
                 if hasattr(
                     executor._analysis_desc.task_parameters.Config, "set_result"
                 ):
@@ -909,9 +912,6 @@ class Executor(BaseExecutor):
                 f"Executor: {executor._analysis_desc.task_result.task_name} started"
             )
             executor._analysis_desc.task_result.task_status = TaskStatus.RUNNING
-            executor._task_timeout = (
-                self._analysis_desc.task_parameters.lute_config.task_timeout
-            )
             elog_data: Dict[str, str] = {
                 f"{executor._analysis_desc.task_result.task_name} status": "RUNNING",
             }
