@@ -70,6 +70,9 @@ from lute.io.models.base import (
     AnalysisHeader,  # noqa: F401
     TemplateConfig,  # noqa: F401
     ThirdPartyParameters,
+    TaskParametersConfig,  # noqa: F401
+    ThirdPartyParametersConfig,  # noqa: F401
+    PYDANTIC_V2,
 )  # NOTE: All imports required for unpickling!
 from lute.io.db import record_analysis_db
 from lute.io.elog import post_elog_run_status, post_elog_run_table
@@ -740,8 +743,17 @@ class BaseExecutor(ABC):
             del self._analysis_desc.task_parameters._result_from_params
         else:
             # Iterate parameters to find the one that is the result
-            schema: Dict[str, Any] = self._analysis_desc.task_parameters.schema()
-            for param, value in self._analysis_desc.task_parameters.dict().items():
+            schema: Dict[str, Any] = (
+                self._analysis_desc.task_parameters.model_json_schema()
+                if PYDANTIC_V2
+                else self._analysis_desc.task_parameters.schema()
+            )
+            param_dict: Dict[str, Any] = (
+                self._analysis_desc.task_parameters.model_dump()
+                if PYDANTIC_V2
+                else self._analysis_desc.task_parameters.dict()
+            )
+            for param, value in param_dict.items():
                 if param == "_result_from_params":
                     continue
                 param_attrs: Dict[str, Any]

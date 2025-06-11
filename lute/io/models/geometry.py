@@ -11,9 +11,7 @@ __author__ = "Gabriel Dorlhiac"
 
 from typing import Optional, Tuple
 
-from pydantic import Field
-
-from lute.io.models.base import TaskParameters
+from lute.io.models.base import TaskParameters, Field
 from lute.io.models.validators import validate_smd_path
 
 

@@ -11,11 +11,7 @@ __author__ = "Gabriel Dorlhiac"
 
 from typing import Optional, Literal
 
-from pydantic import (
-    Field,
-)
-
-from lute.io.models.base import TaskParameters
+from lute.io.models.base import TaskParameters, Field
 
 
 class TestMultiNodeCommunicationParameters(TaskParameters):

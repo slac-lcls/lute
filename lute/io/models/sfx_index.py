@@ -14,22 +14,44 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Any, Dict, Optional, Union, Tuple, ClassVar
 
 from pydantic import (
     BaseModel,
     AnyUrl,
-    Field,
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
     conint,
-    validator,
 )
 
 from lute.io.db import read_latest_db_entry
-from lute.io.models.base import ThirdPartyParameters, TaskParameters, TemplateConfig
+from lute.io.models.base import (
+    ThirdPartyParameters,
+    TaskParameters,
+    TemplateConfig,
+    ThirdPartyParametersConfig,
+    TaskParametersConfig,
+    PYDANTIC_V2,
+    Field,
+    LUTE_PARAMETER_CONFIG_KEYS,
+)
 from lute.io.models.validators import template_parameter_validator
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import field_validator, ConfigDict  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
+else:
+    from pydantic import validator
+
+
+class IndexCrystFELParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    long_flags_use_eq: bool = True
+    """Whether long command-line arguments are passed like `--long=arg`."""
 
 
 class IndexCrystFELParameters(ThirdPartyParameters):
@@ -40,12 +62,24 @@ class IndexCrystFELParameters(ThirdPartyParameters):
     https://www.desy.de/~twhite/crystfel/manual-indexamajig.html
     """
 
-    class Config(ThirdPartyParameters.Config):
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in IndexCrystFELParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = IndexCrystFELParametersConfig()
+    else:
+        Config = IndexCrystFELParametersConfig
 
-        long_flags_use_eq: bool = True
-        """Whether long command-line arguments are passed like `--long=arg`."""
+    if PYDANTIC_V2:
+        in_file_validator: ClassVar = field_validator("in_file")
+        out_file_validator: ClassVar = field_validator("out_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        out_file_validator = validator("out_file", always=True)
 
     executable: str = Field(
         "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin/indexamajig",
@@ -53,15 +87,36 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         flag_type="",
     )
     # Basic options
-    in_file: Optional[str] = Field(
-        "", description="Path to input file.", flag_type="-", rename_param="i"
+    in_file: Optional[str] = (
+        Field(
+            "",
+            description="Path to input file.",
+            flag_type="-",
+            rename_param="i",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "", description="Path to input file.", flag_type="-", rename_param="i"
+        )
     )
-    out_file: str = Field(
-        "",
-        description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
-        is_result=True,
+    out_file: str = (
+        Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
     )
     peaks: Optional[str] = Field(
         None,
@@ -406,7 +461,8 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         rename_param="harvest-file",
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             filename: Optional[str] = read_latest_db_entry(
@@ -430,7 +486,8 @@ class IndexCrystFELParameters(ThirdPartyParameters):
                 return filename
         return in_file
 
-    @validator("out_file", always=True)
+    @out_file_validator
+    @classmethod
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             expmt: str = values["lute_config"].experiment
@@ -450,6 +507,11 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         return out_file
 
 
+class ConcatenateStreamFilesParametersConfig(TaskParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+
 class ConcatenateStreamFilesParameters(TaskParameters):
     """Parameters for stream concatenation.
 
@@ -457,25 +519,66 @@ class ConcatenateStreamFilesParameters(TaskParameters):
     experimental runs.
     """
 
-    class Config(TaskParameters.Config):
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in ConcatenateStreamFilesParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = ConcatenateStreamFilesParametersConfig()
+    else:
+        Config = ConcatenateStreamFilesParametersConfig
 
-    in_file: str = Field(
-        "",
-        description="Root of directory tree storing stream files to merge.",
+    if PYDANTIC_V2:
+        in_file_validator: ClassVar = field_validator("in_file")
+        tag_validator: ClassVar = field_validator("tag")
+        out_file_validator: ClassVar = field_validator("out_file")
+    else:
+        in_file_validator = validator("in_file", always=True)
+        tag_validator = validator("tag", always=True)
+        out_file_validator = validator("out_file", always=True)
+
+    in_file: str = (
+        Field(
+            "",
+            description="Root of directory tree storing stream files to merge.",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Root of directory tree storing stream files to merge.",
+        )
     )
 
-    tag: Optional[str] = Field(
-        "",
-        description="Tag identifying the stream files to merge.",
+    tag: Optional[str] = (
+        Field(
+            "",
+            description="Tag identifying the stream files to merge.",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Tag identifying the stream files to merge.",
+        )
     )
 
-    out_file: str = Field(
-        "", description="Path to merged output stream file.", is_result=True
+    out_file: str = (
+        Field(
+            "",
+            description="Path to merged output stream file.",
+            is_result=True,
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field("", description="Path to merged output stream file.", is_result=True)
     )
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def validate_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             stream_file: Optional[str] = read_latest_db_entry(
@@ -486,7 +589,8 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 return stream_dir
         return in_file
 
-    @validator("tag", always=True)
+    @tag_validator
+    @classmethod
     def validate_tag(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_file: Optional[str] = read_latest_db_entry(
@@ -497,7 +601,8 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 return stream_tag
         return tag
 
-    @validator("out_file", always=True)
+    @out_file_validator
+    @classmethod
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
         if tag == "":
             stream_out_file: str = str(
@@ -507,18 +612,58 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         return tag
 
 
+class IndexCCTBXXFELParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = False
+    """Whether the Executor should mark a specified parameter as a result."""
+
+
+class PhilParametersConfig(dict):
+    extra: ClassVar[str] = "allow"
+
+
 class IndexCCTBXXFELParameters(ThirdPartyParameters):
     """Parameters for indexing with cctbx.xfel."""
 
-    class Config(ThirdPartyParameters.Config):
-        set_result: bool = False
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in IndexCCTBXXFELParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = IndexCCTBXXFELParametersConfig()
+    else:
+        Config = IndexCCTBXXFELParametersConfig
+
+    if PYDANTIC_V2:
+        phil_path_validator: ClassVar = field_validator("phil_file")
+        phil_template_validator: ClassVar = field_validator("lute_template_cfg")
+        in_file_validator: ClassVar = field_validator("in_file")
+        data_spec_validator: ClassVar = field_validator("data_spec")
+    else:
+        phil_path_validator = validator("phil_file", always=True)
+        phil_template_validator = validator("lute_template_cfg", always=True)
+        in_file_validator = validator("in_file", always=True)
+        data_spec_validator = validator("data_spec", always=True)
 
     class PhilParameters(BaseModel):
         """Template parameters for CCTBX phil file."""
 
-        class Config(BaseModel.Config):  # type: ignore
-            extra: str = "allow"
+        if PYDANTIC_V2:
+            model_config = ConfigDict(**PhilParametersConfig())
+            Config: ClassVar = PhilParametersConfig()  # type: ignore
+        else:
+            Config = PhilParametersConfig
+
+        if PYDANTIC_V2:
+            output_output_dir_validator: ClassVar = field_validator("output_output_dir")
+            output_logging_dir_validator: ClassVar = field_validator(
+                "output_logging_dir"
+            )
+        else:
+            output_output_dir_validator = validator("output_output_dir", always=True)
+            output_logging_dir_validator = validator("output_logging_dir", always=True)
 
         # Generic input settings: input_
         input_reference_geometry: Optional[str] = Field(
@@ -537,9 +682,17 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         )
 
         # Generic output settings: output_
-        output_output_dir: str = Field(
-            "",
-            description="Directory output files will be placed",
+        output_output_dir: str = (
+            Field(
+                "",
+                description="Directory output files will be placed",
+                validate_default=True,
+            )
+            if PYDANTIC_V2
+            else Field(
+                "",
+                description="Directory output files will be placed",
+            )
         )
         output_composite_output: bool = Field(
             True,
@@ -550,8 +703,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
                 "experiment/reflection file per image (generates a lot of files)."
             ),
         )
-        output_logging_dir: str = Field(
-            "", description="Directory output log files will be placed"
+        output_logging_dir: str = (
+            Field(
+                "",
+                description="Directory output log files will be placed",
+                validate_default=True,
+            )
+            if PYDANTIC_V2
+            else Field("", description="Directory output log files will be placed")
         )
 
         # Dispatch settings: dispatch_
@@ -694,13 +853,15 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             ),
         )
 
-        @validator("output_output_dir", always=True)
+        @output_output_dir_validator
+        @classmethod
         def set_output_dir(cls, output: str, values: Dict[str, Any]) -> str:
             if output == "":
                 return os.getenv("LUTE_WORK_DIR", ".")
             return output
 
-        @validator("output_logging_dir", always=True)
+        @output_logging_dir_validator
+        @classmethod
         def set_output_log_dir(cls, output: str, values: Dict[str, Any]) -> str:
             if output == "":
                 return values["output_output_dir"]
@@ -718,45 +879,96 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         description="CCTBX indexing program (DIALS).",
         flag_type="",
     )
-    in_file: str = Field(
-        "",
-        description=(
-            "The location of a data specification for LCLS. "
-            "This file will be written for you based on the data_spec parameter. "
-            "If not running at LCLS, this can be an input file, or a glob."
-        ),
-        flag_type="",
+    in_file: str = (
+        Field(
+            "",
+            description=(
+                "The location of a data specification for LCLS. "
+                "This file will be written for you based on the data_spec parameter. "
+                "If not running at LCLS, this can be an input file, or a glob."
+            ),
+            flag_type="",
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description=(
+                "The location of a data specification for LCLS. "
+                "This file will be written for you based on the data_spec parameter. "
+                "If not running at LCLS, this can be an input file, or a glob."
+            ),
+            flag_type="",
+        )
     )
-    data_spec: Optional[Dict[str, Union[str, float, int]]] = Field(
-        None,
-        description="Provide a CCTBX specification for data access.",
-        flag_type="",
+    data_spec: Optional[Dict[str, Union[str, float, int]]] = (
+        Field(
+            None,
+            description="Provide a CCTBX specification for data access.",
+            flag_type="",
+        )
+        if PYDANTIC_V2
+        else Field(
+            None,
+            description="Provide a CCTBX specification for data access.",
+            flag_type="",
+        )
     )
-    phil_file: str = Field(
-        "",
-        description="Location of the input settings ('phil') file.",
-        flag_type="",
+    phil_file: str = (
+        Field(
+            "",
+            description="Location of the input settings ('phil') file.",
+            flag_type="",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Location of the input settings ('phil') file.",
+            flag_type="",
+        )
     )
-    phil_parameters: Optional[PhilParameters] = Field(
-        None,
-        description="Optional template parameters to fill in a CCTBX phil file.",
-        flag_type="",  # Does nothing since always None by time it's seen by Task
+    phil_parameters: Optional[PhilParameters] = (
+        Field(
+            None,
+            description="Optional template parameters to fill in a CCTBX phil file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            None,
+            description="Optional template parameters to fill in a CCTBX phil file.",
+            flag_type="",  # Does nothing since always None by time it's seen by Task
+        )
     )
-    lute_template_cfg: TemplateConfig = Field(
-        TemplateConfig(
-            template_name="cctbx_index.phil",
-            output_path="",
-        ),
-        description="Template information for the cctbx_index file.",
+    lute_template_cfg: TemplateConfig = (
+        Field(
+            TemplateConfig(
+                template_name="cctbx_index.phil",
+                output_path="",
+            ),
+            description="Template information for the cctbx_index file.",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            TemplateConfig(
+                template_name="cctbx_index.phil",
+                output_path="",
+            ),
+            description="Template information for the cctbx_index file.",
+        )
     )
 
-    @validator("phil_file", always=True)
+    @phil_path_validator
+    @classmethod
     def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
         if phil_file == "":
             return f"{values['lute_config'].work_dir}/cctbx_index.phil"
         return phil_file
 
-    @validator("lute_template_cfg", always=True)
+    @phil_template_validator
+    @classmethod
     def set_phil_template_path(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
@@ -764,7 +976,8 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             lute_template_cfg.output_path = values["phil_file"]
         return lute_template_cfg
 
-    @validator("in_file", always=True)
+    @in_file_validator
+    @classmethod
     def set_in_file(cls, in_file: str, values: Dict[str, Any]) -> str:
         if in_file == "":
             exp: str = values["lute_config"].experiment
@@ -773,7 +986,8 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             return f"{work_dir}/data_{exp}_{run}.loc"
         return in_file
 
-    @validator("data_spec", always=True)
+    @data_spec_validator
+    @classmethod
     def write_data_spec_file(
         cls,
         data_spec: Optional[Dict[str, Union[str, float, int]]],

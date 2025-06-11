@@ -24,7 +24,7 @@ import os
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 from lute.execution.logging import get_logger
-from lute.io.models.base import TaskParameters, TemplateParameters
+from lute.io.models.base import TaskParameters, TemplateParameters, PYDANTIC_V2
 from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
 
 if __debug__:
@@ -114,9 +114,17 @@ def _params_to_entry_cols(
     gen_columns: Dict[str, str]
     entry: Dict[str, Any]
     columns: Dict[str, str]
-    gen_entry, gen_columns = _dict_to_flatdicts(params.lute_config.dict())
+    if PYDANTIC_V2:
+        # Ignore mypy for now since type checking against pydantic 1.10
+        gen_entry, gen_columns = _dict_to_flatdicts(params.lute_config.model_dump())  # type: ignore
+    else:
+        gen_entry, gen_columns = _dict_to_flatdicts(params.lute_config.dict())
     del params.lute_config
-    entry, columns = _dict_to_flatdicts(params.dict())
+    if PYDANTIC_V2:
+        # Ignore mypy for now since type checking against pydantic 1.10
+        entry, columns = _dict_to_flatdicts(params.model_dump())  # type: ignore
+    else:
+        entry, columns = _dict_to_flatdicts(params.dict())
 
     return (
         entry,

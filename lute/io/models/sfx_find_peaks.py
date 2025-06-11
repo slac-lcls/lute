@@ -1,10 +1,31 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, Literal, Optional, Union, ClassVar
 
-from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
+from pydantic import BaseModel, PositiveInt
 
-from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
+from lute.io.models.base import (
+    ThirdPartyParameters,
+    TaskParameters,
+    TemplateConfig,
+    TaskParametersConfig,
+    ThirdPartyParametersConfig,
+    PYDANTIC_V2,
+    Field,
+    LUTE_PARAMETER_CONFIG_KEYS,
+)
+
+if PYDANTIC_V2:
+    # Ignore mypy for now since type checking against pydantic 1.10
+    from pydantic import model_validator, field_validator  # type: ignore
+    from pydantic_settings import SettingsConfigDict  # type: ignore
+else:
+    from pydantic import root_validator, validator
+
+
+class FindPeaksPyAlgosParametersConfig(TaskParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
 
 
 class FindPeaksPyAlgosParameters(TaskParameters):
@@ -14,9 +35,22 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     data with SZ for the purpose of compression validation.
     """
 
-    class Config(TaskParameters.Config):
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in FindPeaksPyAlgosParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = FindPeaksPyAlgosParametersConfig()
+    else:
+        Config = FindPeaksPyAlgosParametersConfig
+
+    if PYDANTIC_V2:
+        out_file_validator: ClassVar = field_validator("out_file")
+    else:
+        out_file_validator = validator("out_file", always=True)
 
     class SZCompressorParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(
@@ -114,15 +148,27 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         None,
         description="Options for the SZ Compression Algorithm",
     )
-    out_file: str = Field(
-        "",
-        description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
-        is_result=True,
+    out_file: str = (
+        Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            "",
+            description="Path to output file.",
+            flag_type="-",
+            rename_param="o",
+            is_result=True,
+        )
     )
 
-    @validator("out_file", always=True)
+    @out_file_validator
+    @classmethod
     def validate_out_file(cls, out_file: str, values: Dict[str, Any]) -> str:
         if out_file == "":
             fname: Path = (
@@ -134,6 +180,14 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         return out_file
 
 
+class FindPeaksPsocakeParametersConfig(ThirdPartyParametersConfig):
+    set_result: bool = True
+    """Whether the Executor should mark a specified parameter as a result."""
+
+    result_from_params: str = ""
+    """Defines a result from the parameters. Use a validator to do so."""
+
+
 class FindPeaksPsocakeParameters(ThirdPartyParameters):
     """Parameters for crystallographic (Bragg) peak finding using Psocake.
 
@@ -142,12 +196,35 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
     NOTE: This Task is deprecated and provided for compatibility only.
     """
 
-    class Config(TaskParameters.Config):
-        set_result: bool = True
-        """Whether the Executor should mark a specified parameter as a result."""
+    if PYDANTIC_V2:
+        model_config = SettingsConfigDict(
+            **{
+                key: val
+                for key, val in FindPeaksPsocakeParametersConfig()
+                if key not in LUTE_PARAMETER_CONFIG_KEYS
+            }
+        )
+        Config: ClassVar = FindPeaksPsocakeParametersConfig()
+    else:
+        Config = FindPeaksPsocakeParametersConfig
 
-        result_from_params: str = ""
-        """Defines a result from the parameters. Use a validator to do so."""
+    if PYDANTIC_V2:
+        e_validator: ClassVar = field_validator("e")
+        r_validator: ClassVar = field_validator("r")
+        set_output_path_validator: ClassVar = field_validator("lute_template_cfg")
+        sz_parameters_validator: ClassVar = field_validator("sz_parameters")
+        result_validator: ClassVar = model_validator(mode="after")
+    else:
+        e_validator = validator("e", always=True)
+        r_validator = validator("r", always=True)
+        set_output_path_validator = validator("lute_template_cfg", always=True)
+        sz_parameters_validator = validator("sz_parameters", always=True)
+        # Strictly only need pre=False for running, but it doesn't match overload
+        # variants so mypy complains when using pydantic v2. This is functionally
+        # the same for our purposes
+        result_validator = root_validator(
+            pre=False, skip_on_failure=True, allow_reuse=True
+        )
 
     class SZParameters(BaseModel):
         compressor: Literal["qoz", "sz3"] = Field(
@@ -180,8 +257,16 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
         flag_type="",
     )
     d: str = Field(description="Detector name", flag_type="-")
-    e: str = Field("", description="Experiment name", flag_type="-")
-    r: int = Field(-1, description="Run number", flag_type="-")
+    e: str = (
+        Field("", description="Experiment name", flag_type="-", validate_default=True)
+        if PYDANTIC_V2
+        else Field("", description="Experiment name", flag_type="-")
+    )
+    r: int = (
+        Field(-1, description="Run number", flag_type="-", validate_default=True)
+        if PYDANTIC_V2
+        else Field(-1, description="Run number", flag_type="-")
+    )
     outDir: str = Field(
         description="Output directory where .cxi will be saved", flag_type="--"
     )
@@ -279,30 +364,44 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
         "ana", description="Data node type: {ana,ffb}", flag_type="--"
     )
     szfile: str = Field("qoz.json", description="Path to SZ's JSON configuration file")
-    lute_template_cfg: TemplateConfig = Field(
-        TemplateConfig(
-            template_name="sz.json",
-            output_path="",  # Will want to change where this goes...
-        ),
-        description="Template information for the sz.json file",
+    lute_template_cfg: TemplateConfig = (
+        Field(
+            TemplateConfig(
+                template_name="sz.json",
+                output_path="",  # Will want to change where this goes...
+            ),
+            description="Template information for the sz.json file",
+            validate_default=True,
+        )
+        if PYDANTIC_V2
+        else Field(
+            TemplateConfig(
+                template_name="sz.json",
+                output_path="",  # Will want to change where this goes...
+            ),
+            description="Template information for the sz.json file",
+        )
     )
     sz_parameters: SZParameters = Field(
         description="Configuration parameters for SZ Compression", flag_type=""
     )
 
-    @validator("e", always=True)
+    @e_validator
+    @classmethod
     def validate_e(cls, e: str, values: Dict[str, Any]) -> str:
         if e == "":
             return values["lute_config"].experiment
         return e
 
-    @validator("r", always=True)
+    @r_validator
+    @classmethod
     def validate_r(cls, r: int, values: Dict[str, Any]) -> int:
         if r == -1:
             return values["lute_config"].run
         return r
 
-    @validator("lute_template_cfg", always=True)
+    @set_output_path_validator
+    @classmethod
     def set_output_path(
         cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
     ) -> TemplateConfig:
@@ -310,7 +409,8 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
             lute_template_cfg.output_path = values["szfile"]
         return lute_template_cfg
 
-    @validator("sz_parameters", always=True)
+    @sz_parameters_validator
+    @classmethod
     def set_sz_compression_parameters(
         cls, sz_parameters: SZParameters, values: Dict[str, Any]
     ) -> None:
@@ -326,7 +426,8 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
             values["pressio_opts"] = {"pressio:abs": sz_parameters.absError}
         return None
 
-    @root_validator(pre=False)
+    @result_validator
+    @classmethod
     def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         exp: str = values["lute_config"].experiment
         run: int = int(values["lute_config"].run)
