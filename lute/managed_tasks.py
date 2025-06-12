@@ -85,7 +85,7 @@ CCTBXIndexer.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 SMDToNexusConvertor: Executor = Executor("ConvertSMDToNexus")
 """Convert smalldata HDF5 to NEXUS HDF5 for use by CCTBX."""
 SMDToNexusConvertor.shell_source(
-    "/sdf/data/lcls/ds/prj/prjlumine22/results/lcls-mlcv/cctbx-builds/cctbx-psana2/build/conda_setpaths.sh"
+    "/sdf/group/lcls/ds/tools/cctbx-psana2/build/conda_setpaths.sh"
 )
 CrystFELIndexer: Executor = Executor("IndexCrystFEL")
 """Runs crystallographic indexing using CrystFEL."""
