@@ -356,6 +356,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
         flag_type="--",
     )
     stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    config: Optional[str] = Field(
+        None,
+        description="Alternative config file to use for producer configuration",
+        flag_type="--",
+    )
     nevents: int = Field(
         int(1e9), description="Number of events to process.", flag_type="--"
     )
@@ -462,9 +467,14 @@ class SubmitSMDParameters(ThirdPartyParameters):
             if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
                 lute_template_cfg.output_path = values["producer"]
             else:
-                cfg: str = str(
-                    Path(values["producer"]).parent / f"prod_config_{hutch}.py"
-                )
+                cfg: str
+                if values["config"] is not None:
+                    prod_cfg: str = f"prod_config_{values['config']}"
+                    cfg = str(Path(values["producer"]).parent / prod_cfg)
+                else:
+                    cfg = str(
+                        Path(values["producer"]).parent / f"prod_config_{hutch}.py"
+                    )
                 lute_template_cfg.output_path = cfg
                 lute_template_cfg.template_name = "smd_prod_config_template.py"
         return lute_template_cfg
