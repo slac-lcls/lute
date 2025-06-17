@@ -602,6 +602,7 @@ class BaseExecutor(ABC):
             if self._task_timeout is not None:
                 run_time: float = time.monotonic() - self._task_time0
                 if run_time > self._task_timeout:
+                    logger.error("Task timed out!")
                     self._sigalrm_task(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
@@ -617,9 +618,10 @@ class BaseExecutor(ABC):
             proc.stderr.close()
         proc.wait()
         if ret := proc.returncode:
-            logger.warning(f"Task failed with return code: {ret}")
-            self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-            self.Hooks.task_failed(self, msg=Message())
+            if self._analysis_desc.task_result.task_status != TaskStatus.TIMEDOUT:
+                logger.warning(f"Task failed with return code: {ret}")
+                self._analysis_desc.task_result.task_status = TaskStatus.FAILED
+                self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
@@ -645,10 +647,16 @@ class BaseExecutor(ABC):
 
         for comm in self._communicators:
             comm.clear_communicator()
-
-        if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
+        time.sleep(1)
+        if self._analysis_desc.task_result.task_status in (
+            TaskStatus.FAILED,
+            TaskStatus.TIMEDOUT,
+        ):
             logger.info("Exiting after Task failure. Result recorded.")
+            logging.shutdown()
             sys.exit(-1)
+        logger.info("Exiting after Task completion.")
+        logging.shutdown()
 
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
