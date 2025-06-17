@@ -694,19 +694,6 @@ class BaseExecutor(ABC):
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
         os.kill(proc.pid, signal.SIGCONT)
-        # status: str = psutil.Process(proc.pid).status()
-        # max_tries: int = 10
-        # while status != "running":
-        #    max_tries -= 1
-        #    os.kill(proc.pid, signal.SIGCONT)
-        #    status = psutil.Process(proc.pid).status()
-        #    if max_tries == 0:
-        #        logger.error(
-        #            "Cannot resume process from stopped/sleeping state! Exiting!"
-        #        )
-        #        os.kill(proc.pid, signal.SIGKILL)
-        #        self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-        #        return None
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
 
     def _set_result_from_parameters(self) -> None:
@@ -905,6 +892,11 @@ class Executor(BaseExecutor):
                 # Run "before" tasklets
                 if executor._tasklets["before"] is not None:
                     executor._run_tasklets(when="before")
+                else:
+                    # Hack: Seemingly SIGCONT doesn't always resume execution
+                    # Seemingly occurs more when there are no tasklets, waiting
+                    # before SIGCONT helps
+                    time.sleep(2)
                 # Need to continue since Task._signal_start raises SIGSTOP
                 executor._continue(proc)
                 executor._task_timeout = (
