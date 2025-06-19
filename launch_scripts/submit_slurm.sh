@@ -122,7 +122,7 @@ else
 fi
 
 # By default source the psana environment since most Tasks will use it.
-source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
 
 export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
 EXECUTABLE="${LUTE_PATH}run_task.py"
