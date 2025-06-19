@@ -651,6 +651,7 @@ class BaseExecutor(ABC):
         if self._analysis_desc.task_result.task_status in (
             TaskStatus.FAILED,
             TaskStatus.TIMEDOUT,
+            TaskStatus.CANCELLED,
         ):
             logger.info("Exiting after Task failure. Result recorded.")
             logging.shutdown()
@@ -892,13 +893,11 @@ class Executor(BaseExecutor):
                 # Run "before" tasklets
                 if executor._tasklets["before"] is not None:
                     executor._run_tasklets(when="before")
-                else:
-                    # Hack: Seemingly SIGCONT doesn't always resume execution
-                    # Seemingly occurs more when there are no tasklets, waiting
-                    # before SIGCONT helps
-                    time.sleep(2)
                 # Need to continue since Task._signal_start raises SIGSTOP
-                executor._continue(proc)
+                status: int
+                _, status = os.waitpid(proc.pid, os.WUNTRACED)
+                if os.WIFSTOPPED(status):
+                    executor._continue(proc)
                 executor._task_timeout = (
                     executor._analysis_desc.task_parameters.lute_config.task_timeout
                 )
