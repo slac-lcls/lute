@@ -27,11 +27,10 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
-from bokeh.plotting import figure  # type: ignore
+from bokeh.plotting import figure, save  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
-from bokeh.io import export_png  # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -1010,7 +1009,7 @@ class BayesGeomOpt:
         p.yaxis.major_label_text_font_size = "8pt"
 
         if plot != "":
-            export_png(p, filename=plot)
+            save(p, filename=plot)
 
         return (
             p,
