@@ -28,7 +28,7 @@ from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
 from bokeh.plotting import figure  # type: ignore
-from bokeh.models import ColorBar, LinearColorMapper, HoverTool  # type: ignore
+from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
 from bokeh.io import export_png  # type: ignore
@@ -905,36 +905,36 @@ class BayesGeomOpt:
             y_range=ylim
         )
 
-        # Set up color mapping
         vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
         color_mapper = LinearColorMapper(palette=Viridis256, low=vmin, high=vmax)
 
-        # Create scatter plot
-        scatter = p.circle(
-            x.ravel(),
-            y.ravel(),
+        source = ColumnDataSource(data={
+        'x': x.ravel(),
+        'y': y.ravel(), 
+        'intensity': powder.ravel()
+        })
+
+        _ = p.circle(
+            x='x',
+            y='y',
             size=1,
             color={"field": "intensity", "transform": color_mapper},
             line_color=None,
-            source={"x": x.ravel(), "y": y.ravel(), "intensity": powder.ravel()},
+            source=source,
         )
 
-        # Add color bar
         color_bar = ColorBar(
             color_mapper=color_mapper, width=8, location=(0, 0), title="Intensity"
         )
         p.add_layout(color_bar, "right")
 
-        # Add contour lines for calibrant rings
         tth = self.calibrant.get_2th()
-
         x = np.reshape(x, detector.raw_shape)
         y = np.reshape(y, detector.raw_shape)
         z = np.reshape(z, detector.raw_shape)
 
         for i in range(detector.n_modules):
             ttha = np.arctan2(np.sqrt(x[i] * x[i] + y[i] * y[i]), z[i])
-            # Use Bokeh's contour_line method
             p.contour(
                 x=x[i],
                 y=y[i],
