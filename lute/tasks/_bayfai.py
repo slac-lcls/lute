@@ -865,7 +865,7 @@ class BayesGeomOpt:
 
         xmin, xmax = x.min(), x.max()
         ymin, ymax = y.min(), y.max()
-        
+
         if xmin < 0 and ymin < 0 and xmax > 0 and ymax > 0:
             xlim = (xmin * 1.1, xmax * 1.1)
             ylim = (ymin * 1.1, ymax * 1.1)
@@ -903,52 +903,49 @@ class BayesGeomOpt:
                 height=600,
                 match_aspect=True,
                 x_range=xlim,
-                y_range=ylim
+                y_range=ylim,
             )
 
         # Set up color mapping
         vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
         color_mapper = LinearColorMapper(palette=Viridis256, low=vmin, high=vmax)
-        
+
         # Create scatter plot
         scatter = p.circle(
             x.ravel(),
             y.ravel(),
             size=1,
-            color={'field': 'intensity', 'transform': color_mapper},
+            color={"field": "intensity", "transform": color_mapper},
             line_color=None,
-            source={'x': x.ravel(), 'y': y.ravel(), 'intensity': powder.ravel()}
+            source={"x": x.ravel(), "y": y.ravel(), "intensity": powder.ravel()},
         )
-        
+
         # Add color bar
         color_bar = ColorBar(
-            color_mapper=color_mapper,
-            width=8,
-            location=(0, 0),
-            title="Intensity"
+            color_mapper=color_mapper, width=8, location=(0, 0), title="Intensity"
         )
-        p.add_layout(color_bar, 'right')
+        p.add_layout(color_bar, "right")
 
         # Add contour lines for calibrant rings
         tth = self.calibrant.get_2th()
-        
+
         x = np.reshape(x, detector.raw_shape)
         y = np.reshape(y, detector.raw_shape)
         z = np.reshape(z, detector.raw_shape)
-            
+
         for i in range(detector.n_modules):
             ttha = np.arctan2(np.sqrt(x[i] * x[i] + y[i] * y[i]), z[i])
             # Use Bokeh's contour_line method
             p.contour(
                 x=x[i],
-                y=y[i], 
+                y=y[i],
                 z=ttha,
                 levels=tth,
-                line_color='red',
+                line_color="red",
                 line_width=1,
-                line_dash='dashed'
+                line_dash="dashed",
             )
-        
+
         cx, cy = 0, 0
         sign_x = np.sign(np.mean(x))
         sign_y = np.sign(np.mean(y))
@@ -976,32 +973,37 @@ class BayesGeomOpt:
 
         circles_data = [
             (closest_pixel, closest_resol),
-            (furthest_pixel, furthest_resol), 
+            (furthest_pixel, furthest_resol),
             (border_pixel, border_resol),
-            (border_pixel / 2, border_2_resol)
+            (border_pixel / 2, border_2_resol),
         ]
-        
+
         for radius, resol in circles_data:
-            theta = np.linspace(0, 2*np.pi, 100)
+            theta = np.linspace(0, 2 * np.pi, 100)
             circle_x = cx + radius * np.cos(theta)
             circle_y = cy + radius * np.sin(theta)
-            p.line(circle_x, circle_y, line_color='green', line_dash='dashed', line_width=2)
+            p.line(
+                circle_x, circle_y, line_color="green", line_dash="dashed", line_width=2
+            )
             text_x = cx + sign_x * radius / np.sqrt(2)
             text_y = cy + sign_y * radius / np.sqrt(2)
-                
+
             label_annotation = Label(
-                x=text_x, y=text_y,
+                x=text_x,
+                y=text_y,
                 text=f"{resol:.3f} Å",
-                text_color='red',
-                text_font_size='8pt'
+                text_color="red",
+                text_font_size="8pt",
             )
             p.add_layout(label_annotation)
 
-        hover = HoverTool(tooltips=[
-            ("X", "@x{0.000}"),
-            ("Y", "@y{0.000}"), 
-            ("Intensity", "@intensity{0.0}")
-        ])
+        hover = HoverTool(
+            tooltips=[
+                ("X", "@x{0.000}"),
+                ("Y", "@y{0.000}"),
+                ("Intensity", "@intensity{0.0}"),
+            ]
+        )
         p.add_tools(hover)
 
         p.title.text_font_size = "12pt"
@@ -1022,7 +1024,6 @@ class BayesGeomOpt:
             border_q,
             border_resol,
         )
-        
 
     def create_diagnostics_panel(
         self,

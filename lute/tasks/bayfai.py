@@ -336,7 +336,9 @@ class OptimizePyFAIGeometry(Task):
                 distance=distance,
                 plot=plot,
             )
-            plot = f"{fig_folder}/bayFAI_powder_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = (
+                f"{fig_folder}/bayFAI_powder_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            )
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
