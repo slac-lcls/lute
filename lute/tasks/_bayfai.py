@@ -27,6 +27,11 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
+from bokeh.plotting import figure  # type: ignore
+from bokeh.models import ColorBar, LinearColorMapper, HoverTool  # type: ignore
+from bokeh.palettes import Viridis256  # type: ignore
+from bokeh.models.annotations import Label  # type: ignore
+from bokeh.io import export_png  # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -651,194 +656,6 @@ class BayesGeomOpt:
         theta = np.arctan2(pixels, distance)
         return 4.0 * np.pi * np.sin(theta / 2.0) / (self.wavelength * 1e10)
 
-    def plot_powder_and_resolution(self, sg, distance, ax=None):
-        """
-        Display an image with the control points and the calibrated rings as well as detector resolutions
-
-        Parameters
-        ----------
-        sg : SingleGeometry
-            SingleGeometry object containing powder and geometry data
-        distance : float
-            Distance of the detector
-        beam_center : Tuple(float)
-            Beam center coordinates
-        """
-        if ax is None:
-            _fig, ax = plt.subplots()
-        powder = sg.image
-        label = sg.label
-        detector = sg.detector
-        y, x, z = detector.calc_cartesian_positions()
-        if z is None:
-            z = np.zeros_like(x)
-        z += distance
-
-        xmin, xmax = x.min(), x.max()
-        ymin, ymax = y.min(), y.max()
-        if xmin < 0 and ymin < 0 and xmax > 0 and ymax > 0:
-            ax.set_xlim(xmin * 1.1, xmax * 1.1)
-            ax.set_ylim(ymin * 1.1, ymax * 1.1)
-        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax < 0:
-            ax.set_xlim(xmin * 1.1, xmax * 0.9)
-            ax.set_ylim(ymin * 1.1, ymax * 0.9)
-        elif xmin < 0 and ymin > 0 and xmax > 0 and ymax > 0:
-            ax.set_xlim(xmin * 1.1, xmax * 1.1)
-            ax.set_ylim(ymin * 0.9, ymax * 1.1)
-        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax > 0:
-            ax.set_xlim(xmin * 0.9, xmax * 1.1)
-            ax.set_ylim(ymin * 1.1, ymax * 1.1)
-        elif xmin < 0 and ymin < 0 and xmax > 0 and ymax < 0:
-            ax.set_xlim(xmin * 1.1, xmax * 1.1)
-            ax.set_ylim(ymin * 1.1, ymax * 0.9)
-        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax > 0:
-            ax.set_xlim(xmin * 1.1, xmax * 0.9)
-            ax.set_ylim(ymin * 1.1, ymax * 1.1)
-        elif xmin < 0 and ymin > 0 and xmax < 0 and ymax > 0:
-            ax.set_xlim(xmin * 1.1, xmax * 0.9)
-            ax.set_ylim(ymin * 0.9, ymax * 1.1)
-        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax < 0:
-            ax.set_xlim(xmin * 0.9, xmax * 1.1)
-            ax.set_ylim(ymin * 1.1, ymax * 0.9)
-        elif xmin > 0 and ymin > 0 and xmax > 0 and ymax > 0:
-            ax.set_xlim(xmin * 0.9, xmax * 1.1)
-            ax.set_ylim(ymin * 0.9, ymax * 1.1)
-
-        img = ax.scatter(
-            x.ravel(),
-            y.ravel(),
-            c=powder.ravel(),
-            s=1,
-            edgecolors=None,
-            linewidth=0,
-            vmin=np.percentile(powder, 5),
-            vmax=np.percentile(powder, 95),
-        )
-        cbar = plt.colorbar(img, ax=ax, orientation="vertical")
-        cbar.set_label("Intensity", fontsize=8)
-        cbar.ax.tick_params(labelsize=6)
-        tth = self.calibrant.get_2th()
-        if self.det_type.lower() != "rayonix":
-            x = np.reshape(x, detector.raw_shape)
-            y = np.reshape(y, detector.raw_shape)
-            z = np.reshape(z, detector.raw_shape)
-            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
-            for i in range(detector.n_modules):
-                ax.contour(
-                    x[i],
-                    y[i],
-                    ttha[i],
-                    levels=tth,
-                    cmap="autumn",
-                    linewidths=1,
-                    linestyles="dashed",
-                )
-        else:
-            ttha = np.arctan2(np.sqrt(x * x + y * y), z)
-            ax.contour(
-                x,
-                y,
-                ttha,
-                levels=tth,
-                cmap="autumn",
-                linewidths=1,
-                linestyles="dashed",
-            )
-
-        cx, cy = 0, 0
-        sign_x = np.sign(np.mean(x))
-        sign_y = np.sign(np.mean(y))
-        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-        closest_pixel_index = np.argmin(d)
-        closest_pixel = d.flatten()[closest_pixel_index]
-        if self.det_type == "Rayonix":
-            closest_pixel = 0.009  # Beam Stop Radius Rayonix = 9 mm
-        closest_q = self.pix2q(closest_pixel, distance)
-        closest_resol = 2 * np.pi / closest_q
-
-        furthest_pixel_index = np.argmax(d)
-        furthest_pixel = d.flatten()[furthest_pixel_index]
-        furthest_q = self.pix2q(furthest_pixel, distance)
-        furthest_resol = 2 * np.pi / furthest_q
-
-        d_left = abs(cx - xmin)
-        d_right = abs(cx - xmax)
-        d_bottom = abs(cy - ymin)
-        d_top = abs(cy - ymax)
-        border_distances = [d_left, d_right, d_bottom, d_top]
-        border_pixel = max(border_distances)
-        border_q = self.pix2q(border_pixel, distance)
-        border_resol = 2 * np.pi / border_q
-        border_2_q = self.pix2q(border_pixel / 2, distance)
-        border_2_resol = 2 * np.pi / border_2_q
-
-        circle_closest = plt.Circle(
-            (cx, cy), closest_pixel, color="green", linestyle="dashed", fill=False
-        )
-        ax.add_artist(circle_closest)
-        ax.text(
-            cx + sign_x * closest_pixel / np.sqrt(2),
-            -cy + sign_y * closest_pixel / np.sqrt(2),
-            f"{closest_resol:.3f} \u00c5",
-            color="red",
-            fontsize=8,
-            ha="left",
-        )
-
-        circle_furthest = plt.Circle(
-            (cx, cy), furthest_pixel, color="green", linestyle="dashed", fill=False
-        )
-        ax.add_artist(circle_furthest)
-        ax.text(
-            cx + sign_x * furthest_pixel / np.sqrt(2),
-            cy + sign_y * furthest_pixel / np.sqrt(2),
-            f"{furthest_resol:.3f} \u00c5",
-            color="red",
-            fontsize=8,
-            ha="left",
-        )
-
-        circle_border = plt.Circle(
-            (cx, cy), border_pixel, color="green", linestyle="dashed", fill=False
-        )
-        ax.add_artist(circle_border)
-        ax.text(
-            cx + sign_x * border_pixel / np.sqrt(2),
-            cy + sign_y * border_pixel / np.sqrt(2),
-            f"{border_resol:.3f} \u00c5",
-            color="red",
-            fontsize=8,
-            ha="left",
-        )
-
-        circle_border_2 = plt.Circle(
-            (cx, cy), border_pixel / 2, color="green", linestyle="dashed", fill=False
-        )
-        ax.add_artist(circle_border_2)
-        ax.text(
-            cx + sign_x * border_pixel / (2 * np.sqrt(2)),
-            cy + sign_y * border_pixel / (2 * np.sqrt(2)),
-            f"{border_2_resol:.3f} \u00c5",
-            color="red",
-            fontsize=8,
-            ha="left",
-        )
-
-        ax.set_xlabel("X-axis (m)", fontsize=8)
-        ax.set_ylabel("Y-axis (m)", fontsize=8)
-        ax.tick_params(axis="x", labelsize=6)
-        ax.tick_params(axis="y", labelsize=6)
-        ax.set_title(label, fontsize=8)
-        ax.set_aspect("equal")
-        return (
-            closest_q,
-            closest_resol,
-            furthest_q,
-            furthest_resol,
-            border_q,
-            border_resol,
-        )
-
     def plot_radial_integration(
         self, q, profile, error, calibrant=None, label=None, ax=None
     ):
@@ -1020,7 +837,194 @@ class BayesGeomOpt:
         )
         ax.legend(fontsize=8)
 
-    def visualize_results(
+    def create_interactive_powder(
+        self,
+        powder,
+        detector,
+        distance,
+        plot="",
+    ):
+        """
+        Create an interactive powder image with control points and calibrated rings.
+
+        Parameters
+        ----------
+        powder : np.ndarray
+            Powder image
+        detector : PyFAI(Detector)
+            Corrected PyFAI detector object
+        distance : float
+            Refined distance
+        plot : str
+            Path to save the plot
+        """
+        y, x, z = detector.calc_cartesian_positions()
+        if z is None:
+            z = np.zeros_like(x)
+        z += distance
+
+        xmin, xmax = x.min(), x.max()
+        ymin, ymax = y.min(), y.max()
+        
+        if xmin < 0 and ymin < 0 and xmax > 0 and ymax > 0:
+            xlim = (xmin * 1.1, xmax * 1.1)
+            ylim = (ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax < 0:
+            xlim = (xmin * 1.1, xmax * 0.9)
+            ylim = (ymin * 1.1, ymax * 0.9)
+        elif xmin < 0 and ymin > 0 and xmax > 0 and ymax > 0:
+            xlim = (xmin * 1.1, xmax * 1.1)
+            ylim = (ymin * 0.9, ymax * 1.1)
+        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax > 0:
+            xlim = (xmin * 0.9, xmax * 1.1)
+            ylim = (ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin < 0 and xmax > 0 and ymax < 0:
+            xlim = (xmin * 1.1, xmax * 1.1)
+            ylim = (ymin * 1.1, ymax * 0.9)
+        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax > 0:
+            xlim = (xmin * 1.1, xmax * 0.9)
+            ylim = (ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin > 0 and xmax < 0 and ymax > 0:
+            xlim = (xmin * 1.1, xmax * 0.9)
+            ylim = (ymin * 0.9, ymax * 1.1)
+        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax < 0:
+            xlim = (xmin * 0.9, xmax * 1.1)
+            ylim = (ymin * 1.1, ymax * 0.9)
+        elif xmin > 0 and ymin > 0 and xmax > 0 and ymax > 0:
+            xlim = (xmin * 0.9, xmax * 1.1)
+            ylim = (ymin * 0.9, ymax * 1.1)
+
+        if p is None:
+            p = figure(
+                title=f"Run {self.run} - {self.det_type} - {self.calibrant_name}",
+                x_axis_label="X-axis (m)",
+                y_axis_label="Y-axis (m)",
+                width=600,
+                height=600,
+                match_aspect=True,
+                x_range=xlim,
+                y_range=ylim
+            )
+
+        # Set up color mapping
+        vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
+        color_mapper = LinearColorMapper(palette=Viridis256, low=vmin, high=vmax)
+        
+        # Create scatter plot
+        scatter = p.circle(
+            x.ravel(),
+            y.ravel(),
+            size=1,
+            color={'field': 'intensity', 'transform': color_mapper},
+            line_color=None,
+            source={'x': x.ravel(), 'y': y.ravel(), 'intensity': powder.ravel()}
+        )
+        
+        # Add color bar
+        color_bar = ColorBar(
+            color_mapper=color_mapper,
+            width=8,
+            location=(0, 0),
+            title="Intensity"
+        )
+        p.add_layout(color_bar, 'right')
+
+        # Add contour lines for calibrant rings
+        tth = self.calibrant.get_2th()
+        
+        x = np.reshape(x, detector.raw_shape)
+        y = np.reshape(y, detector.raw_shape)
+        z = np.reshape(z, detector.raw_shape)
+            
+        for i in range(detector.n_modules):
+            ttha = np.arctan2(np.sqrt(x[i] * x[i] + y[i] * y[i]), z[i])
+            # Use Bokeh's contour_line method
+            p.contour(
+                x=x[i],
+                y=y[i], 
+                z=ttha,
+                levels=tth,
+                line_color='red',
+                line_width=1,
+                line_dash='dashed'
+            )
+        
+        cx, cy = 0, 0
+        sign_x = np.sign(np.mean(x))
+        sign_y = np.sign(np.mean(y))
+        d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        closest_pixel_index = np.argmin(d)
+        closest_pixel = d.flatten()[closest_pixel_index]
+        closest_q = self.pix2q(closest_pixel, distance)
+        closest_resol = 2 * np.pi / closest_q
+
+        furthest_pixel_index = np.argmax(d)
+        furthest_pixel = d.flatten()[furthest_pixel_index]
+        furthest_q = self.pix2q(furthest_pixel, distance)
+        furthest_resol = 2 * np.pi / furthest_q
+
+        d_left = abs(cx - xmin)
+        d_right = abs(cx - xmax)
+        d_bottom = abs(cy - ymin)
+        d_top = abs(cy - ymax)
+        border_distances = [d_left, d_right, d_bottom, d_top]
+        border_pixel = max(border_distances)
+        border_q = self.pix2q(border_pixel, distance)
+        border_resol = 2 * np.pi / border_q
+        border_2_q = self.pix2q(border_pixel / 2, distance)
+        border_2_resol = 2 * np.pi / border_2_q
+
+        circles_data = [
+            (closest_pixel, closest_resol),
+            (furthest_pixel, furthest_resol), 
+            (border_pixel, border_resol),
+            (border_pixel / 2, border_2_resol)
+        ]
+        
+        for radius, resol in circles_data:
+            theta = np.linspace(0, 2*np.pi, 100)
+            circle_x = cx + radius * np.cos(theta)
+            circle_y = cy + radius * np.sin(theta)
+            p.line(circle_x, circle_y, line_color='green', line_dash='dashed', line_width=2)
+            text_x = cx + sign_x * radius / np.sqrt(2)
+            text_y = cy + sign_y * radius / np.sqrt(2)
+                
+            label_annotation = Label(
+                x=text_x, y=text_y,
+                text=f"{resol:.3f} Å",
+                text_color='red',
+                text_font_size='8pt'
+            )
+            p.add_layout(label_annotation)
+
+        hover = HoverTool(tooltips=[
+            ("X", "@x{0.000}"),
+            ("Y", "@y{0.000}"), 
+            ("Intensity", "@intensity{0.0}")
+        ])
+        p.add_tools(hover)
+
+        p.title.text_font_size = "12pt"
+        p.xaxis.axis_label_text_font_size = "10pt"
+        p.yaxis.axis_label_text_font_size = "10pt"
+        p.xaxis.major_label_text_font_size = "8pt"
+        p.yaxis.major_label_text_font_size = "8pt"
+
+        if plot != "":
+            export_png(p, plot)
+
+        return (
+            p,
+            closest_q,
+            closest_resol,
+            furthest_q,
+            furthest_resol,
+            border_q,
+            border_resol,
+        )
+        
+
+    def create_diagnostics_panel(
         self,
         powder,
         bo_history,
@@ -1029,7 +1033,7 @@ class BayesGeomOpt:
         plot="",
     ):
         """
-        Visualize fit, plotting (1) the BO convergence, (2) the radial profile and (3) the powder image.
+        Create a diagnostics panel with the results of the Bayesian Optimization.
 
         Parameters
         ----------
@@ -1044,8 +1048,8 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(12, 16), dpi=300)
-        nrow, ncol = 4, 3
+        fig = plt.figure(figsize=(8, 12), dpi=300)
+        nrow, ncol = 3, 2
         irow, icol = 0, 0
 
         # Labelling experiment and run number
@@ -1092,14 +1096,7 @@ class BayesGeomOpt:
 
         # Plotting radial profiles with peaks
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        masked_powder = powder
-        if self.det_type.lower() == "rayonix":
-            radius = np.sqrt(2) * powder.shape[0] / 4
-            row, col = np.ogrid[: powder.shape[0], : powder.shape[1]]
-            center = (powder.shape[0] / 2, powder.shape[1] / 2)
-            mask = ((row - center[0]) ** 2 + (col - center[1]) ** 2) <= radius**2
-            masked_powder = powder * mask
-        profile, radii = self.radial_profile(masked_powder, detector)
+        profile, radii = self.radial_profile(powder, detector)
         q = self.pix2q(radii, distance)
         self.plot_radial_integration(
             q, profile, error=None, calibrant=self.calibrant, ax=ax2
@@ -1107,61 +1104,45 @@ class BayesGeomOpt:
         irow += 1
         icol = 0
 
-        # Plotting assembled powder with resolutions
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2, colspan=2)
-        geometry = Geometry(dist=distance)
-        sg = SingleGeometry(
-            f"Run {self.run} {self.calibrant_name}",
-            powder,
-            calibrant=self.calibrant,
-            detector=detector,
-            geometry=geometry,
-        )
-        sg.extract_cp(max_rings=self.max_rings, pts_per_deg=1, Imin=self.Imin)
-        low_q, low_res, high_q, high_res, border_q, border_res = (
-            self.plot_powder_and_resolution(sg=sg, distance=distance, ax=ax3)
-        )
-        icol = +2
-
-        # Plotting histogram of pixel intensities
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax4)
-        irow += 2
-        icol = 0
-
         # Plotting BO convergence
-        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol))
         scores = [bo_history[key]["score"] for key in bo_history.keys()]
-        ax5.plot(scores)
-        ax5.set_xticks(np.arange(len(scores), step=20))
-        ax5.axvline(
+        ax3.plot(scores)
+        ax3.set_xticks(np.arange(len(scores), step=20))
+        ax3.axvline(
             self.scan["best_idx"][self.index],
             color="green",
             linestyle="--",
             label=f"Best score at n={self.scan['best_idx'][self.index]}",
         )
-        ax5.set_xlabel("Iteration", fontsize=8)
-        ax5.set_ylabel("Number of Control Points", fontsize=8)
-        ax5.legend(fontsize=8)
-        ax5.tick_params(axis="x", labelsize=6)
-        ax5.tick_params(axis="y", labelsize=6)
-        ax5.set_title(
+        ax3.set_xlabel("Iteration", fontsize=8)
+        ax3.set_ylabel("Number of Control Points", fontsize=8)
+        ax3.legend(fontsize=8)
+        ax3.tick_params(axis="x", labelsize=6)
+        ax3.tick_params(axis="y", labelsize=6)
+        ax3.set_title(
             f"Convergence Plot, best score: {self.scan['score'][self.index]}",
             fontsize=8,
         )
         icol += 1
 
+        # Plotting histogram of pixel intensities
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
+        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax4)
+        irow += 1
+        icol = 0
+
         # Plotting score scan over distance
-        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_score_distance_scan(self.distances, ax6)
+        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_score_distance_scan(self.distances, ax5)
         icol += 1
 
         # Plotting residual scan over distance
-        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.plot_residual_distance_scan(self.distances, distance, ax7)
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.plot_residual_distance_scan(self.distances, distance, ax6)
 
         fig.tight_layout()
 
         if plot != "":
             fig.savefig(plot, dpi=300)
-        return fig, low_q, low_res, high_q, high_res, border_q, border_res
+        return fig

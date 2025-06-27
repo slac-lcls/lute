@@ -327,18 +327,34 @@ class OptimizePyFAIGeometry(Task):
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
-            plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = f"{fig_folder}/bayFAI_diagnostics_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
-            fig, low_q, low_res, high_q, high_res, border_q, border_res = (
-                optimizer.visualize_results(
+            diagnostics_plot = optimizer.create_diagnostics_panel(
+                powder=optimizer.powder,
+                bo_history=optimizer.bo_history,
+                detector=calib_detector,
+                distance=distance,
+                plot=plot,
+            )
+            plot = f"{fig_folder}/bayFAI_powder_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
+                optimizer.create_interactive_powder(
                     powder=optimizer.powder,
-                    bo_history=optimizer.bo_history,
                     detector=calib_detector,
                     distance=distance,
                     plot=plot,
                 )
             )
-            plots = pn.Tabs(fig)
+            pn.extension("matplotlib", "bokeh")
+            content = pn.Column(
+                pn.pane.Matplotlib(diagnostics_plot),
+                powder_plot,
+                pn.pane.Markdown(
+                    "### Detector Geometry Optimization Summary",
+                    style={"font-size": "1.5em", "font-weight": "bold"},
+                ),
+            )
+            plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(
                 {
