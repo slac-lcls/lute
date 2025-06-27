@@ -894,17 +894,16 @@ class BayesGeomOpt:
             xlim = (xmin * 0.9, xmax * 1.1)
             ylim = (ymin * 0.9, ymax * 1.1)
 
-        if p is None:
-            p = figure(
-                title=f"Run {self.run} - {self.det_type} - {self.calibrant_name}",
-                x_axis_label="X-axis (m)",
-                y_axis_label="Y-axis (m)",
-                width=600,
-                height=600,
-                match_aspect=True,
-                x_range=xlim,
-                y_range=ylim
-            )
+        p = figure(
+            title=f"Run {self.run} - {self.det_type} - {self.calibrant_name}",
+            x_axis_label="X-axis (m)",
+            y_axis_label="Y-axis (m)",
+            width=600,
+            height=600,
+            match_aspect=True,
+            x_range=xlim,
+            y_range=ylim
+        )
 
         # Set up color mapping
         vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
