@@ -356,7 +356,10 @@ class OptimizePyFAIGeometry(Task):
                 plots,
                 sizing_mode="stretch_width"
             )
-            content.save(f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html", embed=True)
+            content.save(
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
+                embed=True,
+            )
             plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(
