@@ -28,7 +28,7 @@ from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
 from bokeh.plotting import figure  # type: ignore
-from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource # type: ignore
+from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
 from bokeh.io import export_png  # type: ignore
@@ -908,15 +908,13 @@ class BayesGeomOpt:
         vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
         color_mapper = LinearColorMapper(palette=Viridis256, low=vmin, high=vmax)
 
-        source = ColumnDataSource(data={
-        'x': x.ravel(),
-        'y': y.ravel(), 
-        'intensity': powder.ravel()
-        })
+        source = ColumnDataSource(
+            data={"x": x.ravel(), "y": y.ravel(), "intensity": powder.ravel()}
+        )
 
         _ = p.circle(
-            x='x',
-            y='y',
+            x="x",
+            y="y",
             size=1,
             color={"field": "intensity", "transform": color_mapper},
             line_color=None,
