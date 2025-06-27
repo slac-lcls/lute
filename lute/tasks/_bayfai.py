@@ -902,7 +902,7 @@ class BayesGeomOpt:
             height=600,
             match_aspect=True,
             x_range=xlim,
-            y_range=ylim
+            y_range=ylim,
         )
 
         vmin, vmax = np.percentile(powder, 5), np.percentile(powder, 95)
