@@ -1012,7 +1012,7 @@ class BayesGeomOpt:
         p.yaxis.major_label_text_font_size = "8pt"
 
         if plot != "":
-            export_png(p, plot)
+            export_png(p, filename=plot)
 
         return (
             p,
