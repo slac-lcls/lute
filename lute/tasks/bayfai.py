@@ -351,7 +351,9 @@ class OptimizePyFAIGeometry(Task):
                     "### Detector Geometry Optimization Summary",
                 ),
             )
-            content.save(f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html")
+            content.save(
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html"
+            )
             plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(
