@@ -354,7 +354,7 @@ class OptimizePyFAIGeometry(Task):
                     styles={"font-size": "2em", "font-weight": "bold"},
                 ),
                 plots,
-                sizing_mode="stretch_width"
+                sizing_mode="stretch_width",
             )
             content.save(
                 f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
