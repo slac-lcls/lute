@@ -344,14 +344,19 @@ class OptimizePyFAIGeometry(Task):
                 )
             )
             pn.extension("matplotlib", "bokeh")
-            content = pn.Column(
-                pn.pane.Matplotlib(diagnostics_plot),
+            plots = pn.Row(
+                pn.pane.Matplotlib(diagnostics_plot, sizing_mode="fixed"),
                 powder_plot,
+            )
+            content = pn.Column(
                 pn.pane.Markdown(
                     "### Detector Geometry Optimization Summary",
+                    styles={"font-size": "2em", "font-weight": "bold"},
                 ),
+                plots,
+                sizing_mode="stretch_width"
             )
-            content.save(f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html")
+            content.save(f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html", embed=True)
             plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(

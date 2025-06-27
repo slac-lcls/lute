@@ -787,7 +787,7 @@ class BayesGeomOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        threshold = np.mean(powder) + 5 * np.std(powder)
+        threshold = np.mean(powder) + 3 * np.std(powder)
         nice_pix = powder < threshold
         mean = np.mean(powder[nice_pix])
         std_dev = np.std(powder[nice_pix])
@@ -894,8 +894,8 @@ class BayesGeomOpt:
             title=f"Run {self.run} - {self.det_type} - {self.calibrant_name}",
             x_axis_label="X-axis (m)",
             y_axis_label="Y-axis (m)",
-            width=1000,
-            height=1000,
+            width=1200,
+            height=1200,
             match_aspect=True,
             x_range=xlim,
             y_range=ylim,
@@ -1039,7 +1039,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(8, 12), dpi=300)
+        fig = plt.figure(figsize=(8, 12), dpi=100)
         nrow, ncol = 3, 2
         irow, icol = 0, 0
 
@@ -1086,7 +1086,7 @@ class BayesGeomOpt:
         icol += 1
 
         # Plotting radial profiles with peaks
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
         profile, radii = self.radial_profile(powder, detector)
         q = self.pix2q(radii, distance)
         self.plot_radial_integration(
@@ -1118,7 +1118,7 @@ class BayesGeomOpt:
         icol += 1
 
         # Plotting histogram of pixel intensities
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol))
         self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax4)
         irow += 1
         icol = 0
@@ -1129,7 +1129,7 @@ class BayesGeomOpt:
         icol += 1
 
         # Plotting residual scan over distance
-        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
         self.plot_residual_distance_scan(self.distances, distance, ax6)
 
         fig.tight_layout()
