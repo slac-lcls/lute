@@ -353,7 +353,7 @@ class OptimizePyFAIGeometry(Task):
                 powder_plot,
                 pn.pane.Markdown(
                     "### Detector Geometry Optimization Summary",
-                    style={"font-size": "1.5em", "font-weight": "bold"},
+                    styles={"font-size": "1.5em", "font-weight": "bold"},
                 ),
             )
             plots = pn.Tabs(content)
