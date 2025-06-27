@@ -336,15 +336,11 @@ class OptimizePyFAIGeometry(Task):
                 distance=distance,
                 plot=plot,
             )
-            plot = (
-                f"{fig_folder}/bayFAI_powder_{optimizer.exp}_r{optimizer.run:0>4}.html"
-            )
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
                     detector=calib_detector,
                     distance=distance,
-                    plot=plot,
                 )
             )
             pn.extension("matplotlib", "bokeh")
@@ -353,9 +349,9 @@ class OptimizePyFAIGeometry(Task):
                 powder_plot,
                 pn.pane.Markdown(
                     "### Detector Geometry Optimization Summary",
-                    styles={"font-size": "1.5em", "font-weight": "bold"},
                 ),
             )
+            content.save(f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html")
             plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(

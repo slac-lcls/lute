@@ -27,7 +27,7 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from scipy.stats import norm  # type: ignore
 from mpi4py import MPI
-from bokeh.plotting import figure, save  # type: ignore
+from bokeh.plotting import figure  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
@@ -841,7 +841,6 @@ class BayesGeomOpt:
         powder,
         detector,
         distance,
-        plot="",
     ):
         """
         Create an interactive powder image with control points and calibrated rings.
@@ -854,8 +853,6 @@ class BayesGeomOpt:
             Corrected PyFAI detector object
         distance : float
             Refined distance
-        plot : str
-            Path to save the plot
         """
         y, x, z = detector.calc_cartesian_positions()
         if z is None:
@@ -897,8 +894,8 @@ class BayesGeomOpt:
             title=f"Run {self.run} - {self.det_type} - {self.calibrant_name}",
             x_axis_label="X-axis (m)",
             y_axis_label="Y-axis (m)",
-            width=600,
-            height=600,
+            width=1000,
+            height=1000,
             match_aspect=True,
             x_range=xlim,
             y_range=ylim,
@@ -1007,9 +1004,6 @@ class BayesGeomOpt:
         p.yaxis.axis_label_text_font_size = "10pt"
         p.xaxis.major_label_text_font_size = "8pt"
         p.yaxis.major_label_text_font_size = "8pt"
-
-        if plot != "":
-            save(p, filename=plot)
 
         return (
             p,
