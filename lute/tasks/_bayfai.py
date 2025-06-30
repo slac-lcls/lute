@@ -703,12 +703,12 @@ class BayesGeomOpt:
                     )
                     ax.add_line(line)
 
-        ax.set_title("Radial Profile", fontsize=8)
+        ax.set_title("Radial Profile", fontsize=6)
         if unit:
-            ax.set_xlabel(unit.label, fontsize=8)
-        ax.set_ylabel("Intensity", fontsize=8)
-        ax.tick_params(axis="x", labelsize=6)
-        ax.tick_params(axis="y", labelsize=6)
+            ax.set_xlabel(unit.label, fontsize=6)
+        ax.set_ylabel("Intensity", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
 
     def plot_score_distance_scan(self, distances, ax):
         """
@@ -730,11 +730,11 @@ class BayesGeomOpt:
             label=f"Threshold score: {self.thrsh}",
         )
         ax.legend(fontsize=6)
-        ax.set_xlabel("Distance (m)", fontsize=8)
-        ax.set_ylabel("Score", fontsize=8)
-        ax.tick_params(axis="x", labelsize=6)
-        ax.tick_params(axis="y", labelsize=6)
-        ax.set_title("Number of Control Points vs Distance", fontsize=8)
+        ax.set_xlabel("Distance (m)", fontsize=6)
+        ax.set_ylabel("Score", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
+        ax.set_title("Number of Control Points vs Distance", fontsize=6)
 
     def plot_residual_distance_scan(self, distances, refined_dist, ax):
         """
@@ -766,11 +766,11 @@ class BayesGeomOpt:
         )
         ax.legend(fontsize=6)
         ax.set_yscale("log")
-        ax.set_xlabel("Distance (m)", fontsize=8)
-        ax.set_ylabel("Residual", fontsize=8)
-        ax.tick_params(axis="x", labelsize=6)
-        ax.tick_params(axis="y", labelsize=6)
-        ax.set_title("Residual vs Distance", fontsize=8)
+        ax.set_xlabel("Distance (m)", fontsize=6)
+        ax.set_ylabel("Residual", fontsize=6)
+        ax.tick_params(axis="x", labelsize=4)
+        ax.tick_params(axis="y", labelsize=4)
+        ax.set_title("Residual vs Distance", fontsize=6)
 
     def plot_hist_and_compute_stats(self, powder, exp, run, ax):
         """
@@ -793,7 +793,7 @@ class BayesGeomOpt:
         std_dev = np.std(powder[nice_pix])
         _ = ax.hist(
             powder[nice_pix],
-            bins=500,
+            bins=200,
             color="skyblue",
             edgecolor="black",
             alpha=0.7,
@@ -825,15 +825,15 @@ class BayesGeomOpt:
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_xlim([0, 10000])
+        ax.set_xlim([0, 100000])
         ax.set_ylim([0, mean + 3 * std_dev])
-        ax.set_ylabel("Pixel Intensity", fontsize=8)
-        ax.set_xlabel("Frequency", fontsize=8)
+        ax.set_ylabel("Pixel Intensity", fontsize=6)
+        ax.set_xlabel("Frequency", fontsize=6)
         ax.set_xticks([])
         ax.set_xticklabels([])
-        ax.tick_params(axis="y", labelsize=6)
+        ax.tick_params(axis="y", labelsize=4)
         ax.set_title(
-            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8
+            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
         )
         ax.legend(fontsize=6)
 
@@ -1141,11 +1141,11 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Best score at n={self.scan['best_idx'][self.index]}",
         )
-        ax3.set_xlabel("Iteration", fontsize=8)
-        ax3.set_ylabel("Number of Control Points", fontsize=8)
+        ax3.set_xlabel("Iteration", fontsize=6)
+        ax3.set_ylabel("Number of Control Points", fontsize=6)
         ax3.legend(fontsize=6)
-        ax3.tick_params(axis="x", labelsize=6)
-        ax3.tick_params(axis="y", labelsize=6)
+        ax3.tick_params(axis="x", labelsize=4)
+        ax3.tick_params(axis="y", labelsize=4)
         ax3.set_title(
             f"Convergence Plot, best score: {self.scan['score'][self.index]}",
             fontsize=8,
