@@ -329,19 +329,22 @@ class OptimizePyFAIGeometry(Task):
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_diagnostics_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
-            diagnostics_plot = optimizer.create_diagnostics_panel(
-                powder=optimizer.powder,
-                bo_history=optimizer.bo_history,
-                detector=calib_detector,
-                distance=distance,
-                plot=plot,
-            )
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
                     detector=calib_detector,
                     distance=distance,
                 )
+            )
+            diagnostics_plot = optimizer.create_diagnostics_panel(
+                powder=optimizer.powder,
+                bo_history=optimizer.bo_history,
+                detector=calib_detector,
+                distance=distance,
+                low_res=low_res,
+                high_res=high_res,
+                border_res=border_res,
+                plot=plot,
             )
             pn.extension("matplotlib", "bokeh")
             plots = pn.Row(

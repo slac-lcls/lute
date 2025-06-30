@@ -1021,6 +1021,9 @@ class BayesGeomOpt:
         bo_history,
         detector,
         distance,
+        low_resolution=None,
+        high_resolution=None,
+        border_resolution=None,
         plot="",
     ):
         """
@@ -1039,7 +1042,7 @@ class BayesGeomOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(6, 8), dpi=100)
+        fig = plt.figure(figsize=(6, 9), dpi=100)
         nrow, ncol = 3, 2
         irow, icol = 0, 0
 
@@ -1082,6 +1085,31 @@ class BayesGeomOpt:
             va="center",
             fontsize=8,
         )
+        if low_resolution is not None:
+            ax1.text(
+                0.05,
+                0.4,
+                f"Low-q Resolution = {low_resolution:.3f}",
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
+            ax1.text(
+                0.05,
+                0.3,
+                f"Resolution at border edge = {border_resolution:.3f}",
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
+            ax1.text(
+                0.05,
+                0.2,
+                f"Resolution at corner = {high_resolution:.3f}",
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
         ax1.axis("off")
         icol += 1
 
