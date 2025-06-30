@@ -194,6 +194,8 @@ class BaseExecutor(ABC):
         )
         self._tasklets: TaskletDict = {"before": None, "after": None}
         self._shell_source_script: Optional[str] = None
+        self._task_timeout: Optional[int] = None
+        self._task_time0: Optional[float] = None
 
     def add_tasklet(
         self,
@@ -593,9 +595,15 @@ class BaseExecutor(ABC):
             self._shell_source()
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
+        self._task_time0 = time.monotonic()
 
         while self._task_is_running(proc):
             self._task_loop(proc)
+            if self._task_timeout is not None:
+                run_time: float = time.monotonic() - self._task_time0
+                if run_time > self._task_timeout:
+                    logger.error("Task timed out!")
+                    self._sigalrm_task(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
         if proc.stdout is not None:
@@ -610,9 +618,10 @@ class BaseExecutor(ABC):
             proc.stderr.close()
         proc.wait()
         if ret := proc.returncode:
-            logger.warning(f"Task failed with return code: {ret}")
-            self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-            self.Hooks.task_failed(self, msg=Message())
+            if self._analysis_desc.task_result.task_status != TaskStatus.TIMEDOUT:
+                logger.warning(f"Task failed with return code: {ret}")
+                self._analysis_desc.task_result.task_status = TaskStatus.FAILED
+                self.Hooks.task_failed(self, msg=Message())
         elif self._analysis_desc.task_result.task_status == TaskStatus.RUNNING:
             # Ret code is 0, no exception was thrown, task forgot to set status
             self._analysis_desc.task_result.task_status = TaskStatus.COMPLETED
@@ -638,10 +647,17 @@ class BaseExecutor(ABC):
 
         for comm in self._communicators:
             comm.clear_communicator()
-
-        if self._analysis_desc.task_result.task_status == TaskStatus.FAILED:
+        time.sleep(1)
+        if self._analysis_desc.task_result.task_status in (
+            TaskStatus.FAILED,
+            TaskStatus.TIMEDOUT,
+            TaskStatus.CANCELLED,
+        ):
             logger.info("Exiting after Task failure. Result recorded.")
+            logging.shutdown()
             sys.exit(-1)
+        logger.info("Exiting after Task completion.")
+        logging.shutdown()
 
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
@@ -671,22 +687,14 @@ class BaseExecutor(ABC):
         os.kill(proc.pid, signal.SIGTSTP)
         self._analysis_desc.task_result.task_status = TaskStatus.STOPPED
 
+    def _sigalrm_task(self, proc: subprocess.Popen) -> None:
+        """Timeout the Task subprocess with SIGALRM."""
+        os.kill(proc.pid, signal.SIGALRM)
+        self._analysis_desc.task_result.task_status = TaskStatus.TIMEDOUT
+
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
         os.kill(proc.pid, signal.SIGCONT)
-        # status: str = psutil.Process(proc.pid).status()
-        # max_tries: int = 10
-        # while status != "running":
-        #    max_tries -= 1
-        #    os.kill(proc.pid, signal.SIGCONT)
-        #    status = psutil.Process(proc.pid).status()
-        #    if max_tries == 0:
-        #        logger.error(
-        #            "Cannot resume process from stopped/sleeping state! Exiting!"
-        #        )
-        #        os.kill(proc.pid, signal.SIGKILL)
-        #        self._analysis_desc.task_result.task_status = TaskStatus.FAILED
-        #        return None
         self._analysis_desc.task_result.task_status = TaskStatus.RUNNING
 
     def _set_result_from_parameters(self) -> None:
@@ -886,7 +894,13 @@ class Executor(BaseExecutor):
                 if executor._tasklets["before"] is not None:
                     executor._run_tasklets(when="before")
                 # Need to continue since Task._signal_start raises SIGSTOP
-                executor._continue(proc)
+                status: int
+                _, status = os.waitpid(proc.pid, os.WUNTRACED)
+                if os.WIFSTOPPED(status):
+                    executor._continue(proc)
+                executor._task_timeout = (
+                    executor._analysis_desc.task_parameters.lute_config.task_timeout
+                )
                 if hasattr(
                     executor._analysis_desc.task_parameters.Config, "set_result"
                 ):
