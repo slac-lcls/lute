@@ -628,7 +628,7 @@ class BayesGeomOpt:
             center = (0, 0)
         r = self.get_radius_map(detector, center=center)
         intensity, bin_edges = np.histogram(
-            r.ravel(), bins=1000, range=(0, r.max()), weights=powder.ravel()
+            r.ravel(), bins=1000, range=(r.min(), r.max()), weights=powder.ravel()
         )
         count, _ = np.histogram(r.ravel(), bins=bin_edges)
         radialprofile = np.divide(
@@ -825,7 +825,8 @@ class BayesGeomOpt:
             linewidth=1.5,
             label=f"{self.q} th Percentile ({self.Imin:.2f})",
         )
-        ax.set_ylim([0, mean + 5 * std_dev])
+        ax.set_xlim([0, 10000])
+        ax.set_ylim([0, mean + 3 * std_dev])
         ax.set_ylabel("Pixel Intensity", fontsize=8)
         ax.set_xlabel("Frequency", fontsize=8)
         ax.set_xticks([])
@@ -935,7 +936,7 @@ class BayesGeomOpt:
                 z=ttha,
                 levels=tth,
                 line_color="red",
-                line_width=1,
+                line_width=3,
                 line_dash="dashed",
             )
 
@@ -976,7 +977,7 @@ class BayesGeomOpt:
             circle_x = cx + radius * np.cos(theta)
             circle_y = cy + radius * np.sin(theta)
             p.line(
-                circle_x, circle_y, line_color="green", line_dash="dashed", line_width=2
+                circle_x, circle_y, line_color="green", line_dash="dashed", line_width=3
             )
             text_x = cx + sign_x * radius / np.sqrt(2)
             text_y = cy + sign_y * radius / np.sqrt(2)
@@ -986,14 +987,14 @@ class BayesGeomOpt:
                 y=text_y,
                 text=f"{resol:.3f} Å",
                 text_color="red",
-                text_font_size="8pt",
+                text_font_size="16pt",
             )
             p.add_layout(label_annotation)
 
         hover = HoverTool(
             tooltips=[
-                ("X", "@x{0.000}"),
-                ("Y", "@y{0.000}"),
+                ("x", "@x{0.000}"),
+                ("y", "@y{0.000}"),
                 ("Intensity", "@intensity{0.0}"),
             ]
         )
@@ -1095,7 +1096,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.4,
-                f"Low-q Resolution = {low_resolution:.3f}",
+                f"Low-q Resolution = {low_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1103,7 +1104,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.3,
-                f"Resolution at border edge = {border_resolution:.3f}",
+                f"Resolution at border edge = {border_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1111,7 +1112,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.2,
-                f"Resolution at corner = {high_resolution:.3f}",
+                f"Resolution at corner = {high_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1142,7 +1143,7 @@ class BayesGeomOpt:
         )
         ax3.set_xlabel("Iteration", fontsize=8)
         ax3.set_ylabel("Number of Control Points", fontsize=8)
-        ax3.legend(fontsize=8)
+        ax3.legend(fontsize=6)
         ax3.tick_params(axis="x", labelsize=6)
         ax3.tick_params(axis="y", labelsize=6)
         ax3.set_title(
