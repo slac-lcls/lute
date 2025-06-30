@@ -351,7 +351,13 @@ class OptimizePyFAIGeometry(Task):
             content = pn.Column(
                 pn.pane.Markdown(
                     "### Detector Geometry Optimization Summary",
-                    styles={"font-size": "2em", "font-weight": "bold"},
+                    styles={
+                        "font-size": "2em",
+                        "font-weight": "bold",
+                        "text-align": "center",
+                        "margin": "0 auto",
+                        "display": "block",
+                    },
                 ),
                 plots,
                 sizing_mode="stretch_width"
