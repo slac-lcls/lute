@@ -729,7 +729,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Threshold score: {self.thrsh}",
         )
-        ax.legend(fontsize=8)
+        ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=8)
         ax.set_ylabel("Score", fontsize=8)
         ax.tick_params(axis="x", labelsize=6)
@@ -764,7 +764,7 @@ class BayesGeomOpt:
             linestyle="--",
             label=f"Refined distance (m): {refined_dist:.3f}",
         )
-        ax.legend(fontsize=4)
+        ax.legend(fontsize=6)
         ax.set_yscale("log")
         ax.set_xlabel("Distance (m)", fontsize=8)
         ax.set_ylabel("Residual", fontsize=8)
@@ -834,7 +834,7 @@ class BayesGeomOpt:
         ax.set_title(
             f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=8
         )
-        ax.legend(fontsize=8)
+        ax.legend(fontsize=6)
 
     def create_interactive_powder(
         self,
