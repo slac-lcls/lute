@@ -341,9 +341,9 @@ class OptimizePyFAIGeometry(Task):
                 bo_history=optimizer.bo_history,
                 detector=calib_detector,
                 distance=distance,
-                low_res=low_res,
-                high_res=high_res,
-                border_res=border_res,
+                low_resolution=low_res,
+                high_resolution=high_res,
+                border_resolution=border_res,
                 plot=plot,
             )
             pn.extension("matplotlib", "bokeh")

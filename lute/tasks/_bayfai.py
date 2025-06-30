@@ -1039,6 +1039,12 @@ class BayesGeomOpt:
             Corrected PyFAI detector object
         distance : float
             Refined distance
+        low_resolution : float, optional
+            Lowest resolution value, if available
+        high_resolution : float, optional
+            Highest resolution value, if available
+        border_resolution : float, optional
+            Border resolution value, if available
         plot : str
             Path to save plot
         """
