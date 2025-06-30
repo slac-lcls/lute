@@ -52,7 +52,7 @@ def setup_smd2_env() -> Dict[str, str]:
             psana_vars["PS_EB_NODES"] = "1"
             return psana_vars
     else:
-        mpi_slots: int = int(cores_per_node) * int(nodes) - 1
+        mpi_slots = int(cores_per_node) * int(nodes) - 1
 
     # default_srv_cores: int = 16 * int(nodes)
     # Try to convert above for the case where no nodes were specified explicitly
