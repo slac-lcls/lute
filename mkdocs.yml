@@ -10,7 +10,11 @@ nav:
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task: "development/new_task.md"
-      - Creating a new Workflow: "development/creating_workflows.md"
+      - Creating a new Workflow:
+          - Overview: "development/creating_workflows.md"
+          - With Airflow: "development/creating_workflows_airflow.md"
+          - Dynamic Run-time Workflows: "development/dynamic_workflows.md"
+          #- With Prefect: "development/creating_workflows_prefect.md"
       - Tests: "development/tests.md"
   - Source Code:
       - managed_tasks: "source/managed_tasks.md"
@@ -34,6 +38,7 @@ nav:
           - mpi_test: "source/tasks/mpi_test.md"
           - util:
               - html: "source/tasks/util/html.md"
+              - environment: "source/tasks/util/environment.md"
       - io:
           - models:
               - base: "source/io/models/base.md"
