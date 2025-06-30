@@ -360,7 +360,7 @@ class OptimizePyFAIGeometry(Task):
                     },
                 ),
                 plots,
-                sizing_mode="stretch_width"
+                sizing_mode="stretch_width",
             )
             content.save(
                 f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
