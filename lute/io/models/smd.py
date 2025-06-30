@@ -464,19 +464,17 @@ class SubmitSMDParameters(ThirdPartyParameters):
         exp: str = values["lute_config"].experiment
         hutch: str = exp[:3]
         if not lute_template_cfg.output_path:
-            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
-                lute_template_cfg.output_path = values["producer"]
+            cfg: str
+            if values["config"] is not None:
+                prod_cfg: str = f"prod_config_{values['config']}"
+                cfg = str(Path(values["producer"]).parent / prod_cfg)
             else:
-                cfg: str
-                if values["config"] is not None:
-                    prod_cfg: str = f"prod_config_{values['config']}"
-                    cfg = str(Path(values["producer"]).parent / prod_cfg)
-                else:
-                    cfg = str(
-                        Path(values["producer"]).parent / f"prod_config_{hutch}.py"
-                    )
-                lute_template_cfg.output_path = cfg
-                lute_template_cfg.template_name = "smd_prod_config_template.py"
+                cfg = str(Path(values["producer"]).parent / f"prod_config_{hutch}.py")
+            lute_template_cfg.output_path = cfg
+            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
+                lute_template_cfg.template_name = "smd1_prod_config_template.py"
+            else:
+                lute_template_cfg.template_name = "smd2_prod_config_template.py"
         return lute_template_cfg
 
     @root_validator(pre=False)
