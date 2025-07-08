@@ -20,7 +20,7 @@ import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
-from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore 
+from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel, Matern  # type: ignore
@@ -584,7 +584,7 @@ class BayesGeomOpt:
             self.best_idx = self.scan["best_idx"][index]
             self.gr = GeometryRefinement(
                 calibrant=self.calibrant,
-                dist= self.params[0],
+                dist=self.params[0],
                 poni1=self.params[1],
                 poni2=self.params[2],
                 rot1=self.params[3],
