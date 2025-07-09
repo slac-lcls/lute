@@ -107,7 +107,7 @@ Currently, the following `Operator`s are maintained:
 - `custom_slurm_params`: You can provide a string of parameters which will be used in its entirety to replace any and all default arguments passed by the launch script. This method is not recommended for general use and is mostly used for dynamic DAGs described at the end of the document.
 
 
-# Creating a new workflow
+## Creating a new workflow
 Defining a new workflow involves creating a **new** module (Python file) in the directory `workflows/airflow`, creating a number of `Operator` instances within the module, and then drawing the connectivity between them. At the top of the file an Airflow DAG is created and given a name. By convention all `LUTE` workflows use the name of the file as the name of the DAG. The following code can be copied exactly into the file:
 
 ```py
@@ -176,4 +176,54 @@ task1 >> task3
 
 As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.
 
-**Note:** Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can use the advanced run-time DAGs defined below as well.
+**Note:** Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [[dynamic workflows page][dynamic_workflows]], or discuss having the DAG pushed directly to the test Airflow instance.
+
+### More Advanced Patterns: Branching based on run type
+Additional run time information can be passed along in the Airflow context on a submission-by-submission basis. This information can be used to implement more complex logic into the DAG definition.
+
+A current example of this is the `run_type` parameter. This would usually be a special signifier provided to the eLog at the time the DAQ starts recording a run to identify the type of data the run contains. The Airflow launch script supports optionally overriding the type, either for testing, or for some other specific behaviour implemented in the workflow.
+
+An example of how to make use of this information to create branches in the DAG can be found in the `test_type_branch` DAG. This is reproduced below for ease of access.
+
+```python
+dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
+description: str = "DAG to test branching based on run_type."
+
+dag: DAG = DAG(
+    dag_id=dag_id,
+    start_date=datetime(1970, 1, 1),
+    schedule_interval=None,
+    description=description,
+    is_paused_on_creation=False,
+)
+
+@task.branch(task_id="BranchTester")
+def test_branch_func(**context) -> str:
+    if "dag_run" in context:
+        conf: Dict[str, Any] = context["dag_run"].conf
+        if "run_type" in conf and conf["run_type"] == "TEST_ERROR":
+            return "BinaryErrTester"
+    return "BinaryTester"
+
+branch_tester = test_branch_func()
+tester: JIDSlurmOperator = JIDSlurmOperator(max_cores=2, task_id="Tester", dag=dag)
+binary_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=5, task_id="BinaryTester", dag=dag
+)
+binary_err_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=5, task_id="BinaryErrTester", dag=dag
+)
+socket_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="SocketTester", dag=dag
+)
+write_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="WriteTester", dag=dag
+)
+read_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="ReadTester", dag=dag
+)
+
+# If we get binary_err_tester rest of workflow won't run
+tester >> branch_tester >> [binary_tester, binary_err_tester] >> socket_tester >> write_tester >> read_tester
+
+```
