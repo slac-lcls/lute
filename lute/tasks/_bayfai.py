@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
+from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
@@ -585,6 +586,17 @@ class BayesGeomOpt:
             self.residual = self.scan["residual"][index]
             self.score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
+            self.gr = GeometryRefinement(
+                calibrant=self.calibrant,
+                dist=self.params[0],
+                poni1=self.params[1],
+                poni2=self.params[2],
+                rot1=self.params[3],
+                rot2=self.params[4],
+                rot3=self.params[5],
+                detector=self.detector,
+                wavelength=self.calibrant.wavelength,
+            )
 
     def get_radius_map(self, detector, center=None):
         """

@@ -262,13 +262,17 @@ class OptimizePyFAIGeometry(Task):
             Optimizer object
         """
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+        path = os.path.dirname(self._task_parameters.out_file)
+        poni_file = os.path.join(
+            path, f"r{self._task_parameters.lute_config.run:0>4}.poni"
+        )
+        optimizer.gr.save(poni_file)
         PyFAIToPsana(
             detector=optimizer.detector,
             params=optimizer.params,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
         )
-        path = os.path.dirname(self._task_parameters.out_file)
         geom_file = os.path.join(
             path, f"r{self._task_parameters.lute_config.run:0>4}.geom"
         )
