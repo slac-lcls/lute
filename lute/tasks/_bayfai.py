@@ -457,7 +457,7 @@ class BayesGeomOpt:
         score = len(sg.geometry_refinement.data)
         residual = 0
         if score != 0:
-            residual = sg.geometry_refinement.refine3(fix=["wavelength"])
+            residual = sg.geometry_refinement.refine3(fix=["rot3", "wavelength"])
         params = sg.geometry_refinement.param
         result = {
             "bo_history": bo_history,
@@ -941,8 +941,6 @@ class BayesGeomOpt:
             )
 
         cx, cy = 0, 0
-        sign_x = np.sign(np.mean(x))
-        sign_y = np.sign(np.mean(y))
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
@@ -979,8 +977,8 @@ class BayesGeomOpt:
             p.line(
                 circle_x, circle_y, line_color="green", line_dash="dashed", line_width=3
             )
-            text_x = cx + sign_x * radius / np.sqrt(2)
-            text_y = cy + sign_y * radius / np.sqrt(2)
+            text_x = cx + radius / np.sqrt(2)
+            text_y = cy + radius / np.sqrt(2)
 
             label_annotation = Label(
                 x=text_x,
@@ -1096,7 +1094,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.4,
-                f"Low-q Resolution = {low_resolution:.3f} \u00c5",
+                f"Low-q Resolution         {low_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1104,7 +1102,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.3,
-                f"Resolution at border edge = {border_resolution:.3f} \u00c5",
+                f"Border edge Resolution   {border_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1112,7 +1110,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.2,
-                f"Resolution at corner = {high_resolution:.3f} \u00c5",
+                f"Corner Resolution        {high_resolution:.3f} \u00c5",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1120,43 +1118,20 @@ class BayesGeomOpt:
         ax1.axis("off")
         icol += 1
 
-        # Plotting radial profiles with peaks
+        # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax2)
+        icol = 0
+        irow += 1
+
+        # Plotting radial profiles with peaks
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
         profile, radii = self.radial_profile(powder, detector)
         q = self.pix2q(radii, distance)
         self.plot_radial_integration(
-            q, profile, error=None, calibrant=self.calibrant, ax=ax2
+            q, profile, error=None, calibrant=self.calibrant, ax=ax3
         )
         irow += 1
-        icol = 0
-
-        # Plotting BO convergence
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        scores = [bo_history[key]["score"] for key in bo_history.keys()]
-        ax3.plot(scores)
-        ax3.set_xticks(np.arange(len(scores), step=20))
-        ax3.axvline(
-            self.scan["best_idx"][self.index],
-            color="green",
-            linestyle="--",
-            label=f"Best score at n={self.scan['best_idx'][self.index]}",
-        )
-        ax3.set_xlabel("Iteration", fontsize=6)
-        ax3.set_ylabel("Number of Control Points", fontsize=6)
-        ax3.legend(fontsize=6)
-        ax3.tick_params(axis="x", labelsize=4)
-        ax3.tick_params(axis="y", labelsize=4)
-        ax3.set_title(
-            f"Convergence Plot, best score: {self.scan['score'][self.index]}",
-            fontsize=8,
-        )
-        icol += 1
-
-        # Plotting histogram of pixel intensities
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax4)
-        irow += 1
-        icol = 0
 
         # Plotting score scan over distance
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
@@ -1170,5 +1145,5 @@ class BayesGeomOpt:
         fig.tight_layout()
 
         if plot != "":
-            fig.savefig(plot, dpi=300)
+            fig.savefig(plot, dpi=100)
         return fig
