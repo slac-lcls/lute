@@ -268,8 +268,7 @@ class OptimizePyFAIGeometry(Task):
         )
         optimizer.gr.save(poni_file)
         PyFAIToPsana(
-            detector=optimizer.detector,
-            params=optimizer.params,
+            in_file=poni_file,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
         )
