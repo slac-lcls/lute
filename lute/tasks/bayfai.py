@@ -254,7 +254,7 @@ class OptimizePyFAIGeometry(Task):
 
     def _update_geometry(self, optimizer):
         """
-        Update the geometry and write a new .geom file and .data file
+        Update the geometry and write a new .poni, .geom and .data file
 
         Parameters
         ----------
