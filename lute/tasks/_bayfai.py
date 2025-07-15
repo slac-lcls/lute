@@ -1029,7 +1029,6 @@ class BayesGeomOpt:
     def create_diagnostics_panel(
         self,
         powder,
-        bo_history,
         detector,
         distance,
         low_resolution=None,
@@ -1044,8 +1043,6 @@ class BayesGeomOpt:
         ----------
         powder : np.ndarray
             Powder image
-        bo_history : dict
-            Dictionary containing the history of optimization
         detector : PyFAI(Detector)
             Corrected PyFAI detector object
         distance : float
@@ -1106,26 +1103,56 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.4,
-                f"Low-q Resolution         {low_resolution:.3f} \u00c5",
+                f"{'Low-q Resolution':<25}",
                 ha="left",
                 va="center",
                 fontsize=8,
+                color="black",
+            )
+            ax1.text(
+                0.50,
+                0.4,
+                f"{low_resolution:.3f} \u00c5",
+                ha="left",
+                va="center",
+                fontsize=8,
+                color="red",
             )
             ax1.text(
                 0.05,
                 0.3,
-                f"Border edge Resolution   {border_resolution:.3f} \u00c5",
+                f"{'Border Resolution':<25}",
                 ha="left",
                 va="center",
                 fontsize=8,
+                color="black",
+            )
+            ax1.text(
+                0.50,
+                0.3,
+                f"{border_resolution:.3f} \u00c5",
+                ha="left",
+                va="center",
+                fontsize=8,
+                color="red",
             )
             ax1.text(
                 0.05,
                 0.2,
-                f"Corner Resolution        {high_resolution:.3f} \u00c5",
+                f"{'Corner Resolution':<25}",
                 ha="left",
                 va="center",
                 fontsize=8,
+                color="black",
+            )
+            ax1.text(
+                0.50,
+                0.2,
+                f"{high_resolution:.3f} \u00c5",
+                ha="left",
+                va="center",
+                fontsize=8,
+                color="red",
             )
         ax1.axis("off")
         icol += 1
