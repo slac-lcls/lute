@@ -254,7 +254,7 @@ class OptimizePyFAIGeometry(Task):
 
     def _update_geometry(self, optimizer):
         """
-        Update the geometry and write a new .geom file and .data file
+        Update the geometry and write a new .poni, .geom and .data file
 
         Parameters
         ----------
@@ -268,8 +268,7 @@ class OptimizePyFAIGeometry(Task):
         )
         optimizer.gr.save(poni_file)
         PyFAIToPsana(
-            detector=optimizer.detector,
-            params=optimizer.params,
+            in_file=poni_file,
             psana_file=self._task_parameters.in_file,
             out_file=self._task_parameters.out_file,
         )
@@ -331,18 +330,48 @@ class OptimizePyFAIGeometry(Task):
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
-            plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = f"{fig_folder}/bayFAI_diagnostics_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = self._update_geometry(optimizer)
-            fig, low_q, low_res, high_q, high_res, border_q, border_res = (
-                optimizer.visualize_results(
+            powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
+                optimizer.create_interactive_powder(
                     powder=optimizer.powder,
-                    bo_history=optimizer.bo_history,
                     detector=calib_detector,
                     distance=distance,
-                    plot=plot,
                 )
             )
-            plots = pn.Tabs(fig)
+            diagnostics_plot = optimizer.create_diagnostics_panel(
+                powder=optimizer.powder,
+                detector=calib_detector,
+                distance=distance,
+                low_resolution=low_res,
+                high_resolution=high_res,
+                border_resolution=border_res,
+                plot=plot,
+            )
+            pn.extension("matplotlib", "bokeh")
+            plots = pn.Row(
+                pn.pane.Matplotlib(diagnostics_plot, sizing_mode="fixed"),
+                powder_plot,
+            )
+            content = pn.Column(
+                pn.pane.Markdown(
+                    "### Detector Geometry Optimization Summary",
+                    styles={
+                        "font-size": "2em",
+                        "font-weight": "bold",
+                        "text-align": "center",
+                        "margin": "0 auto",
+                        "display": "block",
+                    },
+                ),
+                plots,
+                sizing_mode="stretch_width",
+            )
+            content.save(
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
+                embed=True,
+            )
+            plots = pn.Tabs(content)
             self._result.summary = []
             self._result.summary.append(
                 {
