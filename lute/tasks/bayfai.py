@@ -57,35 +57,11 @@ class OptimizePyFAIGeometry(Task):
         self.ds = psana.DataSource(ds_args)
         self.det = psana.Detector(det_type, self.ds.env())
         self.shape = self.det.shape()
-        if det_type.lower() == "rayonix":
-            env = self.ds.env()
-            cfg = env.configStore()
-            pixel_size_um = cfg.get(psana.Rayonix.ConfigV2).pixelWidth()
-            self.pixel_size = pixel_size_um * 1e-6
-            if in_file == "":
-                logger.info(
-                    f"No geometry file found for exp {self._task_parameters.lute_config.experiment}",
-                )
-                logger.info(
-                    f"Fetching default geometry for {det_type} detector with pixel size {pixel_size_um} µm and shape {self.shape}",
-                )
-                src = str(self.det.name)
-                in_file = fetch_template(
-                    self._task_parameters.lute_config.experiment,
-                    det_type,
-                    src,
-                    pixel_size_um,
-                    self.shape,
-                )
-                time.sleep(5)
-                self._task_parameters.in_file = in_file
-        else:
-            self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
+        self.pixel_size = self.det.pixel_size(self.ds.env()) * 1e-6
+        self.stacked_shape = (self.shape[0] * self.shape[1], self.shape[2])
         psana_to_pyfai = PsanaToPyFAI(
             in_file=in_file,
-            det_type=det_type,
-            pixel_size=self.pixel_size,
-            shape=self.shape,
+            shape=self.stacked_shape,
         )
         detector = psana_to_pyfai.detector
         return detector
@@ -281,9 +257,7 @@ class OptimizePyFAIGeometry(Task):
         )
         psana_to_pyfai = PsanaToPyFAI(
             in_file=self._task_parameters.out_file,
-            det_type=self._task_parameters.det_type,
-            pixel_size=self.pixel_size,
-            shape=self.shape,
+            shape=self.stacked_shape,
         )
         detector = psana_to_pyfai.detector
         return detector
