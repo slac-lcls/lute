@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="../../usage/running_lute/">
+        <link rel="prev" href="../creating_workflows/">
       
       
-        <link rel="next" href="../new_task/">
+        <link rel="next" href="../dynamic_workflows/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Architecture and Execution Model - LUTE</title>
+        <title>With Airflow - LUTE</title>
       
     
     
@@ -66,7 +66,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#lute-architecture-and-execution-model" class="md-skip">
+        <a href="#workflows-with-airflow" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture and Execution Model
+              With Airflow
             
           </span>
         </div>
@@ -372,32 +372,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Architecture and Execution Model
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
         
   
   
@@ -408,86 +386,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      Architecture
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#glossary" class="md-nav__link">
-    <span class="md-ellipsis">
-      Glossary
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#database-layer" class="md-nav__link">
-    <span class="md-ellipsis">
-      Database Layer
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#task-layer" class="md-nav__link">
-    <span class="md-ellipsis">
-      Task Layer
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#execution-layer" class="md-nav__link">
-    <span class="md-ellipsis">
-      Execution Layer
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#workflow-layer" class="md-nav__link">
-    <span class="md-ellipsis">
-      Workflow Layer
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -520,18 +418,20 @@
                 
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
@@ -547,7 +447,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_3">
             <span class="md-nav__icon md-icon"></span>
             Creating a new Workflow
@@ -581,10 +481,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../creating_workflows_airflow/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    With Airflow
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -595,6 +517,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#relevant-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      Relevant Components
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launchsubmission-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Launch/Submission Scripts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launch_airflowpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      launch_airflow.py
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="launch_airflow.py">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#submit_launch_airflowsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      submit_launch_airflow.sh
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submit_slurmsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      submit_slurm.sh
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operators
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#jidslurmoperator-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      JIDSlurmOperator arguments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-a-new-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Creating a new workflow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating a new workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more-advanced-patterns-branching-based-on-run-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      More Advanced Patterns: Branching based on run type
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1813,19 +1854,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
+  <a href="#relevant-components" class="md-nav__link">
     <span class="md-ellipsis">
-      Architecture
+      Relevant Components
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Architecture">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launchsubmission-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Launch/Submission Scripts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launch_airflowpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      launch_airflow.py
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="launch_airflow.py">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#glossary" class="md-nav__link">
+  <a href="#submit_launch_airflowsh" class="md-nav__link">
     <span class="md-ellipsis">
-      Glossary
+      submit_launch_airflow.sh
     </span>
   </a>
   
@@ -1837,38 +1896,59 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#database-layer" class="md-nav__link">
+  <a href="#submit_slurmsh" class="md-nav__link">
     <span class="md-ellipsis">
-      Database Layer
+      submit_slurm.sh
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#task-layer" class="md-nav__link">
+  <a href="#operators" class="md-nav__link">
     <span class="md-ellipsis">
-      Task Layer
+      Operators
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#jidslurmoperator-arguments" class="md-nav__link">
+    <span class="md-ellipsis">
+      JIDSlurmOperator arguments
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#execution-layer" class="md-nav__link">
-    <span class="md-ellipsis">
-      Execution Layer
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#workflow-layer" class="md-nav__link">
+  <a href="#creating-a-new-workflow" class="md-nav__link">
     <span class="md-ellipsis">
-      Workflow Layer
+      Creating a new workflow
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Creating a new workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more-advanced-patterns-branching-based-on-run-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      More Advanced Patterns: Branching based on run type
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1891,108 +1971,195 @@
   
 
 
-<h1 id="lute-architecture-and-execution-model">LUTE Architecture and Execution Model</h1>
-<p>The following page attempts to provide an overview of the architecture of LUTE and the various steps and components involved in its execution model.</p>
-<h2 id="architecture">Architecture</h2>
-<p>The LUTE architecture consists of four separate layers:
-- A database layer for storing parameter information and the results of analysis.
-- A <code>Task</code> layer which runs analysis code.
-- An execution layer which manages the differing environments used by components of the <code>Task</code> layer.
-- A workflow layer which launches series of <strong>managed</strong> <code>Task</code>s (see below), in a specified order, to run various analysis routines in their respective environments.</p>
-<p>A rough schematic of the architecture and how the various layers communicate with each other is given by:</p>
-<p><img alt="Overview of LUTE Architecture" src="../images/architecture.png" /></p>
-<h3 id="glossary">Glossary</h3>
-<table>
-<thead>
-<tr>
-<th style="text-align: center;">Term</th>
-<th style="text-align: left;">Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: center;"><code>Task</code></td>
-<td style="text-align: left;">A unit of code “of interest” – e.g. may be an algorithm. Definition is flexible but typically will encompass processing until a natural stopping point.</td>
-</tr>
-<tr>
-<td style="text-align: center;"><code>Executor</code></td>
-<td style="text-align: left;">A manager – executes or runs a Task in a specific environment and provides interactions with UI, etc.</td>
-</tr>
-<tr>
-<td style="text-align: center;"><strong>Managed</strong> <code>Task</code></td>
-<td style="text-align: left;">Executor + Task to run. When code is executed in LUTE, it is done through <strong>managed</strong> <code>Task</code>s. Task code on its own is not usually submitted.</td>
-</tr>
-<tr>
-<td style="text-align: center;"><code>Tasklet</code></td>
-<td style="text-align: left;">A Python function attached to a <strong>managed</strong> <code>Task</code>.</td>
-</tr>
-<tr>
-<td style="text-align: center;"><code>DAG</code></td>
-<td style="text-align: left;">Directed acyclic graph. A workflow, i.e., a number of <strong>managed</strong> <code>Task</code>s and their dependencies.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="database-layer">Database Layer</h2>
-<p>The database layer stores a complete set of information required for reproducing a processing step upon completion of that step, regardless of whether the analysis exited successfully.</p>
-<p>The information stored includes:</p>
-<ul>
-<li>Parameter sets</li>
-<li>Results information - This may be a pointer to objects stored on a filesystem (i.e. a path), or the result itself the result can be simply represented, such as by a scalar value.</li>
-<li>Execution information - Information about communication protocols used between <code>Task</code> and <code>Executor</code>, as well as pertinent environment variables.</li>
-</ul>
-<p><strong>Importantly</strong>, all the data stored in the database is available to subsequent processing steps. In this way <code>Task</code>s which are written to be runnable independently can be chained together into workflows which specify dependencies between them.</p>
-<p><img alt="Database Layer" src="../images/database_layer.png" /></p>
-<p>The database API is designed to be light-weight. The current implementation makes use of a sqlite database for portability, but this can be exchanged as needed.</p>
-<p>In general, the API is designed with the idea the <code>Task</code> layer reads from the database, while the Execution layer writes.</p>
-<p><img alt="Database API" src="../images/database_api.png" /></p>
-<h2 id="task-layer"><code>Task</code> Layer</h2>
-<p>The <code>Task</code> layer consists of the actual analysis "code of interest". In paritcular, it is composed of three main objects:</p>
-<ul>
-<li><code>TaskParameters</code>: A model comprising a set of type-validated parameters needed to run the <code>Task</code>.</li>
-<li><code>TaskResult</code>: A description of the result of the analysis. Depending on the <code>Task</code>, the entire result may be contained within this object, although frequently a <code>Task</code> will, e.g., write out a file, the path to which is recorded as the result.</li>
-<li><code>Task</code>: The main code to run. This object also contains the parameters and results.</li>
-</ul>
-<p><img alt="Task Layer" src="../images/task_layer.png" /></p>
-<p>A <code>Task</code> can be instantiated by passing in an instance of the <code>TaskParameters</code> object. The <code>Task</code> can then be run by invoking the <code>run()</code> method. A script is provided to do this: <code>subprocess_task.py</code>, although this script is not intended to be run directly, but rather submitted by an <code>Executor</code> (see below).</p>
-<p>The <code>subprocess_task.py</code> script will go through the following steps:</p>
-<ol>
-<li><code>subprocess_task.py</code> does parameter validation. A configuration YAML is parsed for the specific <code>Task</code> we want to run, and the parameters are type-validated. If the validation fails, the script exits at this point without attempting to execute the analysis code.</li>
-<li><code>Task</code> is created and signals it is ready to start to the <code>Executor</code>. It passes along the validated parameter set along with this signal. After signalling, the process suspends itself with a <code>SIGSTOP</code>. This gives the <code>Executor</code> time to run any tasklets it may need to.</li>
-<li>The process is resumed by the <code>Executor</code> when appropriate and the <code>Task</code> begins its actual analysis.</li>
-<li>On completion the <code>Task</code> sends the result back to the <code>Executor</code> and exits.</li>
-</ol>
-<h2 id="execution-layer">Execution Layer</h2>
-<p>The execution layer runs a <code>Task</code> in the appropriate environment. It consists of a number of principle objects:</p>
-<ul>
-<li><code>Executor</code>: Orchestrates and manages <code>Task</code> running. The <code>Executor</code> also manages database writes and results presentation via preferred UI.</li>
-<li><code>Task</code>: The code to execute</li>
-<li>Tasklets: Auxiliary functions. These are also run by the <code>Executor</code>, either before or after the main <code>Task</code>. They can take in as arguments the parameters which are passed to the main <code>Task</code>.</li>
-</ul>
-<p><img alt="Execution Layer" src="../images/execution_layer.png" /></p>
-<p>A <strong>managed</strong> <code>Task</code>, in LUTE terminology, is an instance of an <code>Executor</code> which in turns runs (i.e. manages) a <code>Task</code> (the actual analysis code to be run). In nearly all cases, except for perhaps when debugging, <strong>managed</strong> <code>Task</code>s are the smallest executable units in LUTE. I.e. all analysis is submitted via <strong>managed</strong> <code>Task</code>s, rather than by running the <code>Task</code> itself. A simple script, <code>run_task.py</code>, is provided to run one:</p>
-<pre><code class="language-bash">&gt; python -B [-O] run_task.py -t &lt;ManagedTaskName&gt; -c &lt;/path/to/config/yaml&gt;
+<h1 id="workflows-with-airflow">Workflows with Airflow</h1>
+<p><strong>Note:</strong> Airflow uses the term <strong>DAG</strong>, or directed acyclic graph, to describe workflows of tasks with defined (and acyclic) connectivities. This page will use the terms workflow and DAG interchangeably.</p>
+<h2 id="relevant-components">Relevant Components</h2>
+<p>In addition to the core LUTE package, a number of components are generally involved to run a workflow. The current set of scripts and objects are used to interface with Airflow, and the SLURM job scheduler. The core LUTE library can also be used to run workflows using different backends, and in the future these may be supported.</p>
+<p>For building and running workflows using SLURM and Airflow, the following components are necessary, and will be described in more detail below:
+- Airflow launch script: <code>launch_airflow.py</code>
+  - This has a wrapper batch submission script: <code>submit_launch_airflow.sh</code> . When running using the ARP (from the eLog), you <strong>MUST</strong> use this wrapper script instead of the Python script directly.
+- SLURM submission script: <code>submit_slurm.sh</code>
+- Airflow operators:
+  - <code>JIDSlurmOperator</code></p>
+<h2 id="launchsubmission-scripts">Launch/Submission Scripts</h2>
+<h2 id="launch_airflowpy"><code>launch_airflow.py</code></h2>
+<p>Sends a request to an Airflow instance to submit a specific DAG (workflow). This script prepares an HTTP request with the appropriate parameters in a specific format.</p>
+<p>A request involves the following information, most of which is retrieved automatically:</p>
+<pre><code class="language-py">dag_run_data: Dict[str, Union[str, Dict[str, Union[str, int, List[str]]]]] = {
+    &quot;dag_run_id&quot;: str(uuid.uuid4()),
+    &quot;conf&quot;: {
+        &quot;experiment&quot;: os.environ.get(&quot;EXPERIMENT&quot;),
+        &quot;run_id&quot;: f&quot;{os.environ.get('RUN_NUM')}{datetime.datetime.utcnow().isoformat()}&quot;,
+        &quot;JID_UPDATE_COUNTERS&quot;: os.environ.get(&quot;JID_UPDATE_COUNTERS&quot;),
+        &quot;ARP_ROOT_JOB_ID&quot;: os.environ.get(&quot;ARP_JOB_ID&quot;),
+        &quot;ARP_LOCATION&quot;: os.environ.get(&quot;ARP_LOCATION&quot;, &quot;S3DF&quot;),
+        &quot;Authorization&quot;: os.environ.get(&quot;Authorization&quot;),
+        &quot;user&quot;: getpass.getuser(),
+        &quot;lute_params&quot;: params,
+        &quot;slurm_params&quot;: extra_args,
+        &quot;workflow&quot;: wf_defn,  # Used only for custom DAGs. See below under advanced usage.
+    },
+}
 </code></pre>
-<p>This script takes the name of the <strong>managed</strong> <code>Task</code> and the path to the configuration YAML file. The <strong>managed</strong> <code>Task</code> is selected from one of those defined in the module <code>managed_tasks.py</code>, and then its <code>execute_task()</code> method is run.</p>
-<p>On calling <code>execute_task()</code>, the <code>Executor</code> goes through the following stages:</p>
-<ol>
-<li>The <code>Executor</code> updates the environment that the <code>Task</code> will run in. How it does so is defined by using the <code>update_environment()</code> and <code>shell_source()</code> methods when it is created in the <code>managed_tasks.py</code> file. If these methods are not callled, then the <code>Task</code> will execute in the environment of the <code>Executor</code>.</li>
-<li>The <code>Executor</code> then submits the <code>subprocess_task.py</code> as a subprocess. The script will run the specified <code>Task</code> and enter its task loop. The subprocess is launched with any environment modifications created in step 1.</li>
-<li>The <code>Task</code> process will auto-suspend (see above). At this point the <code>Executor</code> will run any <code>tasklets</code> that need to be run before the main analysis. <strong>NOTE:</strong> Because the subprocess has already been launched at this point, the <code>tasklet</code> can <strong>NOT</strong> perform any environment modifications. On the other hand, however, the <code>Executor</code> will now have access to validated parameters for the <code>Task</code>, so these can be used as arguments to the <code>tasklet</code>. See here for more information on <code>tasklet</code>s.</li>
-<li>After running all <code>tasklet</code>s, the <code>Executor</code> will then resume the <code>Task</code> process. It then continues processing signals, messages, etc., until the process completes, either successfully or due to an error.</li>
-<li>When the subprocess exits, post-<code>Task</code> <code>tasklets</code> are run and any results are processed by the <code>Executor</code>. This may include activities such as preparing figures for the eLog.</li>
-<li>Finally, the <code>Executor</code> records the information about the <code>Task</code> execution into the database.</li>
-</ol>
-<p><img alt="Execution Layer Order of Operations" src="../images/execution_generic.png" /></p>
-<h2 id="workflow-layer">Workflow Layer</h2>
-<p>The workflow layer controls the order of submission of a number of <strong>managed</strong> <code>Task</code>s. In the most generic form, it consists of:</p>
+<p>Note that the environment variables are used to fill in the appropriate information because this script is intended to be launched primarily from the ARP (which passes these variables). The ARP allows for the launch job to be defined in the experiment eLog and submitted automatically for each new DAQ run. The environment variables <code>EXPERIMENT</code> and <code>RUN</code> can alternatively be defined prior to submitting the script on the command-line.</p>
+<p>The script takes a number of parameters:</p>
+<pre><code class="language-bash">launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test] [-e &lt;exp&gt;] [-r &lt;run&gt;] [SLURM_ARGS]
+</code></pre>
 <ul>
-<li>A series of <strong>managed</strong> <code>Task</code>s (<code>Executor</code>s)</li>
-<li>A description of the connectivity or dependencies between them. This may also include additional information such as early termination or special submission conditions, e.g. end a workflow early if <code>Executor</code> 2 reports success. Or, run <code>Executor</code> 3 only if <code>Executor</code> 1 reports failure.</li>
+<li><code>-c</code> refers to the path of the configuration YAML that contains the parameters for each <strong>managed</strong> <code>Task</code> in the requested workflow.</li>
+<li><code>-w</code> is the name of the DAG (workflow) to run. By convention each DAG is named by the Python file it is defined in. (See below).</li>
+<li><strong>NOTE:</strong> For advanced usage, a custom DAG can be provided at <strong>run</strong> time using <code>-W</code> (capital W) followed by the path to the workflow instead of <code>-w</code>. See below for further discussion on this use case.</li>
+<li><code>--debug</code> is an optional flag to run all steps of the workflow in debug mode for verbose logging and output.</li>
+<li><code>--test</code> is an optional flag which will use the test Airflow instance. By default the script will make requests of the standard production Airflow instance.</li>
+<li><code>-e</code> is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.</li>
+<li><code>-r</code> is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.</li>
+<li><code>SLURM_ARGS</code> are SLURM arguments to be passed to the <code>submit_slurm.sh</code> script which are used for each individual <strong>managed</strong> <code>Task</code>. These arguments to do NOT affect the submission parameters for the job running <code>launch_airflow.py</code> (if using <code>submit_launch_airflow.sh</code> below).</li>
 </ul>
-<p><img alt="Workflow Layer" src="../images/workflow_layer.png" /></p>
-<p>Currently, the workflow layer is provided by either Airflow, or Prefect. The code running in the workflow layer is mostly independent of the rest of the code base. The workflow orchestration, in fact, runs simultaneously but on separate machines than the <strong>managed</strong> <code>Task</code>s it is submitting.</p>
-<p>A schematic overview of the various components in an Airflow-based workflow running on S3DF is given below. A trigger, such as the start of a DAQ run, reaches the <code>ARP</code> (automatic run processor), which causes a small batch job to be started on S3DF. This batch job makes a request to the Airflow server to begin running a specific workflow. Airflow then submits <code>Operators</code>, which request <strong>managed</strong> <code>Task</code>s be submitted as batch jobs on the S3DF. Once the batch job has started, the execution proceeds through the various layers described above.</p>
-<p><img alt="Overview of LUTE Architecture" src="../images/lute.png" /></p>
+<p><strong>Lifetime</strong>
+This script will run for the entire duration of the <strong>workflow (DAG)</strong>. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed <code>Task</code>)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.</p>
+<h3 id="submit_launch_airflowsh"><code>submit_launch_airflow.sh</code></h3>
+<p>This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the <code>launch_airflow.py</code> job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the <code>launch_airflow.py</code> script to run on the S3DF batch nodes. Usage of this script is mostly identical to <code>launch_airflow.py</code>. All the arguments are passed transparently to the underlying Python script with the exception of the first argument which <strong>must</strong> be the location of the underlying <code>launch_airflow.py</code> script. The wrapper will simply launch a batch job using minimal resources (1 core). While the primary purpose of the script is to allow running from the eLog, it is also an useful wrapper generally, to be able to submit the previous script as a SLURM job.</p>
+<p>Usage:</p>
+<pre><code class="language-bash">submit_launch_airflow.sh /path/to/launch_airflow.py -c &lt;path_to_config_yaml&gt; -w &lt;workflow_name&gt; [--debug] [--test] [-e &lt;exp&gt;] [-r &lt;run&gt;] [SLURM_ARGS]
+</code></pre>
+<h2 id="submit_slurmsh"><code>submit_slurm.sh</code></h2>
+<p>Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single <strong>managed</strong> <code>Task</code> at a time. The usage is as follows:</p>
+<pre><code class="language-bash">submit_slurm.sh -c &lt;path_to_config_yaml&gt; -t &lt;MANAGED_task_name&gt; [--debug] [SLURM_ARGS ...]
+</code></pre>
+<p>As a reminder the <strong>managed</strong> <code>Task</code> refers to the <code>Executor</code>-<code>Task</code> combination. The script does not parse any SLURM specific parameters, and instead passes them transparently to SLURM. At least the following two SLURM arguments must be provided:</p>
+<pre><code class="language-bash">--partition=&lt;...&gt; # Usually partition=milano
+--account=&lt;...&gt; # Usually account=lcls:$EXPERIMENT
+</code></pre>
+<p>Generally, resource requests will also be included, such as the number of cores to use. A complete call may look like the following:</p>
+<pre><code class="language-bash">submit_slurm.sh -c /sdf/data/lcls/ds/hutch/experiment/scratch/config.yaml -t Tester --partition=milano --account=lcls:experiment --ntasks=100 [...]
+</code></pre>
+<p>When running a workflow using the <code>launch_airflow.py</code> script, each step of the workflow will be submitted using this script.</p>
+<h2 id="operators">Operators</h2>
+<p><code>Operator</code>s are the objects submitted as individual steps of a DAG by Airflow. They are conceptually linked to the idea of a task in that each task of a workflow is generally an operator. Care should be taken, not to confuse them with LUTE <code>Task</code>s or <strong>managed</strong> <code>Task</code>s though. There is, however, usually a one-to-one correspondance between a <code>Task</code> and an <code>Operator</code>.</p>
+<p>Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an <code>Operator</code> for each step of the DAG. However, the <code>Operator</code> itself cannot perform productive analysis without access to the data. The solution employed by <code>LUTE</code> is to have a limited set of <code>Operator</code>s which do not perform analysis, but instead request that a <code>LUTE</code> <strong>managed</strong> <code>Task</code>s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided <code>Operator</code>s do this, but in general they will all make a request to the <strong>job interface daemon</strong> (JID) that a new SLURM job be scheduled using the <code>submit_slurm.sh</code> script described above.</p>
+<p>Therefore, running a typical Airflow DAG involves the following steps:</p>
+<ol>
+<li><code>launch_airflow.py</code> script is submitted, usually from a definition in the eLog.</li>
+<li>The <code>launch_airflow</code> script requests that Airflow run a specific DAG.</li>
+<li>The Airflow instance begins submitting the <code>Operator</code>s that makeup the DAG definition.</li>
+<li>Each <code>Operator</code> sends a request to the <code>JID</code> to submit a job.</li>
+<li>The <code>JID</code> submits the <code>elog_submit.sh</code> script with the appropriate <strong>managed</strong> <code>Task</code>.</li>
+<li>The <strong>managed</strong> <code>Task</code> runs on the batch nodes, while the <code>Operator</code>, requesting updates from the JID on job status, waits for it to complete.</li>
+<li>Once a <strong>managed</strong> <code>Task</code> completes, the <code>Operator</code> will receieve this information and tell the Airflow server whether the job completed successfully or resulted in failure.</li>
+<li>The Airflow server will then launch the next step of the DAG, and so on, until every step has been executed.</li>
+</ol>
+<p>Currently, the following <code>Operator</code>s are maintained:
+- <code>JIDSlurmOperator</code>: The standard <code>Operator</code>. Each instance has a one-to-one correspondance with a LUTE <strong>managed</strong> <code>Task</code>.</p>
+<h3 id="jidslurmoperator-arguments"><code>JIDSlurmOperator</code> arguments</h3>
+<ul>
+<li><code>task_id</code>: This is nominally the name of the task on the Airflow side. However, for simplicity this is used 1-1 to match the name of a <strong>managed</strong> Task defined in LUTE's <code>managed_tasks.py</code> module. I.e., it should the name of an <code>Executor("Task")</code> object which will run the specific Task of interest. This <strong>must</strong> match the name of a defined managed Task.</li>
+<li><code>max_cores</code>: Used to cap the maximum number of cores which should be requested of SLURM. By default all jobs will run with the same number of cores, which should be specified when running the <code>launch_airflow.py</code> script (either from the ARP, or by hand). This behaviour was chosen because in general we want to increase or decrease the core-count for all <code>Task</code>s uniformly, and we don't want to have to specify core number arguments for each job individually. Nonetheless, on occassion it may be necessary to cap the number of cores a specific job will use. E.g. if the default value specified when launching the Airflow DAG is multiple cores, and one job is single threaded, the core count can be capped for that single job to 1, while the rest run with multiple cores.</li>
+<li><code>max_nodes</code>: Similar to the above. This will make sure the <code>Task</code> is distributed across no more than a maximum number of nodes. This feature is useful for, e.g., multi-threaded software which does not make use of tools like <code>MPI</code>. So, the <code>Task</code> can run on multiple cores, but only within a single node.</li>
+<li><code>require_partition</code>: This option is a string that forces the use of a specific S3DF partition for the <strong>managed</strong> <code>Task</code> submitted by the Operator. E.g. typically a LCLS user will use <code>--partition=milano</code> for CPU-based workflows; however, if a specific <code>Task</code> requires a GPU you may use <code>JIDSlurmOperator("MyTaskRunner", require_partition="ampere")</code> to override the partition for that single <code>Task</code>.</li>
+<li><code>custom_slurm_params</code>: You can provide a string of parameters which will be used in its entirety to replace any and all default arguments passed by the launch script. This method is not recommended for general use and is mostly used for dynamic DAGs described at the end of the document.</li>
+</ul>
+<h2 id="creating-a-new-workflow">Creating a new workflow</h2>
+<p>Defining a new workflow involves creating a <strong>new</strong> module (Python file) in the directory <code>workflows/airflow</code>, creating a number of <code>Operator</code> instances within the module, and then drawing the connectivity between them. At the top of the file an Airflow DAG is created and given a name. By convention all <code>LUTE</code> workflows use the name of the file as the name of the DAG. The following code can be copied exactly into the file:</p>
+<pre><code class="language-py">from datetime import datetime
+import os
+from airflow import DAG
+from lute.operators.jidoperators import JIDSlurmOperator # Import other operators if needed
+
+dag_id: str = f&quot;lute_{os.path.splitext(os.path.basename(__file__))[0]}&quot;
+description: str = (
+    &quot;Run SFX processing using PyAlgos peak finding and experimental phasing&quot;
+)
+
+dag: DAG = DAG(
+    dag_id=dag_id,
+    start_date=datetime(2024, 3, 18),
+    schedule_interval=None,
+    description=description,
+)
+</code></pre>
+<p>Once the DAG has been created, a number of <code>Operator</code>s must be created to run the various LUTE analysis operations. As an example consider a partial SFX processing workflow which includes steps for peak finding, indexing, merging, and calculating figures of merit. Each of the 4 steps will have an <code>Operator</code> instance which will launch a corresponding <code>LUTE</code> <strong>managed</strong> <code>Task</code>, for example:</p>
+<pre><code class="language-py"># Using only the JIDSlurmOperator
+# syntax: JIDSlurmOperator(task_id=&quot;LuteManagedTaskName&quot;, dag=dag) # optionally, max_cores=123)
+peak_finder: JIDSlurmOperator = JIDSlurmOperator(task_id=&quot;PeakFinderPyAlgos&quot;, dag=dag)
+
+# We specify a maximum number of cores for the rest of the jobs.
+indexer: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=120, task_id=&quot;CrystFELIndexer&quot;, dag=dag
+)
+# We can alternatively specify this task be only ever run with the following args.
+# indexer: JIDSlurmOperator = JIDSlurmOperator(
+#     custom_slurm_params=&quot;--partition=milano --ntasks=120 --account=lcls:myaccount&quot;,
+#     task_id=&quot;CrystFELIndexer&quot;,
+#     dag=dag,
+# )
+
+# Merge
+merger: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=120, task_id=&quot;PartialatorMerger&quot;, dag=dag
+)
+
+# Figures of merit
+hkl_comparer: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=8, task_id=&quot;HKLComparer&quot;, dag=dag
+)
+</code></pre>
+<p>Finally, the dependencies between the <code>Operator</code>s are "drawn", defining the execution order of the various steps. The <code>&gt;&gt;</code> operator has been overloaded for the <code>Operator</code> class, allowing it to be used to specify the next step in the DAG. In this case, a completely linear DAG is drawn as:</p>
+<pre><code class="language-py">peak_finder &gt;&gt; indexer &gt;&gt; merger &gt;&gt; hkl_comparer
+</code></pre>
+<p>Parallel execution can be added by using the <code>&gt;&gt;</code> operator multiple times. Consider a <code>task1</code> which upon successful completion starts a <code>task2</code> and <code>task3</code> in parallel. This dependency can be added to the DAG using:</p>
+<pre><code class="language-py">#task1: JIDSlurmOperator = JIDSlurmOperator(...)
+#task2 ...
+
+task1 &gt;&gt; task2
+task1 &gt;&gt; task3
+</code></pre>
+<p>As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.</p>
+<p><strong>Note:</strong> Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the <code>submit_slurm.sh</code> script and the independent <strong>managed</strong> <code>Task</code> names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [[dynamic workflows page][dynamic_workflows]], or discuss having the DAG pushed directly to the test Airflow instance.</p>
+<h3 id="more-advanced-patterns-branching-based-on-run-type">More Advanced Patterns: Branching based on run type</h3>
+<p>Additional run time information can be passed along in the Airflow context on a submission-by-submission basis. This information can be used to implement more complex logic into the DAG definition.</p>
+<p>A current example of this is the <code>run_type</code> parameter. This would usually be a special signifier provided to the eLog at the time the DAQ starts recording a run to identify the type of data the run contains. The Airflow launch script supports optionally overriding the type, either for testing, or for some other specific behaviour implemented in the workflow.</p>
+<p>An example of how to make use of this information to create branches in the DAG can be found in the <code>test_type_branch</code> DAG. This is reproduced below for ease of access.</p>
+<pre><code class="language-python">dag_id: str = f&quot;lute_{os.path.splitext(os.path.basename(__file__))[0]}&quot;
+description: str = &quot;DAG to test branching based on run_type.&quot;
+
+dag: DAG = DAG(
+    dag_id=dag_id,
+    start_date=datetime(1970, 1, 1),
+    schedule_interval=None,
+    description=description,
+    is_paused_on_creation=False,
+)
+
+@task.branch(task_id=&quot;BranchTester&quot;)
+def test_branch_func(**context) -&gt; str:
+    if &quot;dag_run&quot; in context:
+        conf: Dict[str, Any] = context[&quot;dag_run&quot;].conf
+        if &quot;run_type&quot; in conf and conf[&quot;run_type&quot;] == &quot;TEST_ERROR&quot;:
+            return &quot;BinaryErrTester&quot;
+    return &quot;BinaryTester&quot;
+
+branch_tester = test_branch_func()
+tester: JIDSlurmOperator = JIDSlurmOperator(max_cores=2, task_id=&quot;Tester&quot;, dag=dag)
+binary_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=5, task_id=&quot;BinaryTester&quot;, dag=dag
+)
+binary_err_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=5, task_id=&quot;BinaryErrTester&quot;, dag=dag
+)
+socket_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id=&quot;SocketTester&quot;, dag=dag
+)
+write_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id=&quot;WriteTester&quot;, dag=dag
+)
+read_tester: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id=&quot;ReadTester&quot;, dag=dag
+)
+
+# If we get binary_err_tester rest of workflow won't run
+tester &gt;&gt; branch_tester &gt;&gt; [binary_tester, binary_err_tester] &gt;&gt; socket_tester &gt;&gt; write_tester &gt;&gt; read_tester
+
+</code></pre>
 
 
 
