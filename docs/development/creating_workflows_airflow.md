@@ -194,8 +194,9 @@ dag: DAG = DAG(
     start_date=datetime(1970, 1, 1),
     schedule_interval=None,
     description=description,
-    is_paused_on_creation=False,
+    is_paused_upon_creation=False,
 )
+
 
 @task.branch(task_id="BranchTester")
 def test_branch_func(**context) -> str:
@@ -204,6 +205,7 @@ def test_branch_func(**context) -> str:
         if "run_type" in conf and conf["run_type"] == "TEST_ERROR":
             return "BinaryErrTester"
     return "BinaryTester"
+
 
 branch_tester = test_branch_func()
 tester: JIDSlurmOperator = JIDSlurmOperator(max_cores=2, task_id="Tester", dag=dag)
@@ -214,16 +216,20 @@ binary_err_tester: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=5, task_id="BinaryErrTester", dag=dag
 )
 socket_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="SocketTester", dag=dag
+    max_cores=2, task_id="SocketTester", dag=dag, trigger_rule="none_failed"
 )
 write_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="WriteTester", dag=dag
+    max_cores=2, task_id="WriteTester", dag=dag, trigger_rule="none_failed"
 )
 read_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="ReadTester", dag=dag
+    max_cores=2, task_id="ReadTester", dag=dag, trigger_rule="none_failed"
 )
 
 # If we get binary_err_tester rest of workflow won't run
 tester >> branch_tester >> [binary_tester, binary_err_tester] >> socket_tester >> write_tester >> read_tester
-
 ```
+
+The key features to note in this workflow are:
+
+- The `test_branch_func` branching task returns a `str` which matches the `task_id` of the next task to run. In this case it is either `BinaryTester` or `BinaryErrTester` (these correspond to the operator objects `binary_tester` and `binary_err_tester` respectively).
+- The `trigger_rule` was changed on all of the tasks downstream of the branching operation to be `none_failed`. By default the trigger rule is `all_succeed`, which means that all of the tasks that are upstream need to run, and be successful. In this case, since we are branching, one of the two tasks will be skipped. By specifying a trigger rule of `none_failed`, we say that downstream tasks can run as long as everything upstream was successful, or it was skipped.

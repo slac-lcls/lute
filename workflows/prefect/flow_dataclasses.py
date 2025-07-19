@@ -20,6 +20,7 @@ class FlowConf(TypedDict):
     lute_params: LuteParams
     slurm_params: List[str]
     workflow: Dict[str, Any]
+    run_type: Optional[str]
 
 
 class FlowRequestDict(TypedDict):
