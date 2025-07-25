@@ -2127,8 +2127,9 @@ dag: DAG = DAG(
     start_date=datetime(1970, 1, 1),
     schedule_interval=None,
     description=description,
-    is_paused_on_creation=False,
+    is_paused_upon_creation=False,
 )
+
 
 @task.branch(task_id=&quot;BranchTester&quot;)
 def test_branch_func(**context) -&gt; str:
@@ -2137,6 +2138,7 @@ def test_branch_func(**context) -&gt; str:
         if &quot;run_type&quot; in conf and conf[&quot;run_type&quot;] == &quot;TEST_ERROR&quot;:
             return &quot;BinaryErrTester&quot;
     return &quot;BinaryTester&quot;
+
 
 branch_tester = test_branch_func()
 tester: JIDSlurmOperator = JIDSlurmOperator(max_cores=2, task_id=&quot;Tester&quot;, dag=dag)
@@ -2147,19 +2149,23 @@ binary_err_tester: JIDSlurmOperator = JIDSlurmOperator(
     max_cores=5, task_id=&quot;BinaryErrTester&quot;, dag=dag
 )
 socket_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id=&quot;SocketTester&quot;, dag=dag
+    max_cores=2, task_id=&quot;SocketTester&quot;, dag=dag, trigger_rule=&quot;none_failed&quot;
 )
 write_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id=&quot;WriteTester&quot;, dag=dag
+    max_cores=2, task_id=&quot;WriteTester&quot;, dag=dag, trigger_rule=&quot;none_failed&quot;
 )
 read_tester: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id=&quot;ReadTester&quot;, dag=dag
+    max_cores=2, task_id=&quot;ReadTester&quot;, dag=dag, trigger_rule=&quot;none_failed&quot;
 )
 
 # If we get binary_err_tester rest of workflow won't run
 tester &gt;&gt; branch_tester &gt;&gt; [binary_tester, binary_err_tester] &gt;&gt; socket_tester &gt;&gt; write_tester &gt;&gt; read_tester
-
 </code></pre>
+<p>The key features to note in this workflow are:</p>
+<ul>
+<li>The <code>test_branch_func</code> branching task returns a <code>str</code> which matches the <code>task_id</code> of the next task to run. In this case it is either <code>BinaryTester</code> or <code>BinaryErrTester</code> (these correspond to the operator objects <code>binary_tester</code> and <code>binary_err_tester</code> respectively).</li>
+<li>The <code>trigger_rule</code> was changed on all of the tasks downstream of the branching operation to be <code>none_failed</code>. By default the trigger rule is <code>all_succeed</code>, which means that all of the tasks that are upstream need to run, and be successful. In this case, since we are branching, one of the two tasks will be skipped. By specifying a trigger rule of <code>none_failed</code>, we say that downstream tasks can run as long as everything upstream was successful, or it was skipped.</li>
+</ul>
 
 
 
