@@ -16,7 +16,7 @@ import datetime
 import logging
 import argparse
 import time
-from typing import Dict, Union, List, Optional, Any, cast, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -48,6 +48,7 @@ class DagRunConf(TypedDict):
     lute_params: Dict[str, Union[str, bool]]
     slurm_params: List[str]
     workflow: Dict[str, Any]
+    run_type: Optional[str]
 
 
 class DagRunData(TypedDict):
@@ -111,6 +112,83 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
     return formatted_token
 
 
+def get_elog_active_expmt(hutch: str, *, endstation: int = 0) -> str:
+    """Get the current active experiment for a hutch.
+
+    This function is one of two functions to manage the HTTP request independently.
+    This is because it does not require an authorization object, and its result
+    is needed for the generic function `elog_http_request` to work properly.
+
+    Args:
+        hutch (str): The hutch to get the active experiment for.
+
+        endstation (int): The hutch endstation to get the experiment for. This
+            should generally be 0.
+    """
+
+    base_url: str = "https://pswww.slac.stanford.edu/ws/lgbk/lgbk"
+    endpoint: str = "ws/activeexperiment_for_instrument_station"
+    url: str = f"{base_url}/{endpoint}"
+    params: Dict[str, str] = {"instrument_name": hutch, "station": f"{endstation}"}
+    resp: requests.models.Response = requests.get(url, params)
+    if resp.status_code > 300:
+        raise RuntimeError(
+            f"Error getting current experiment!\n\t\tIncorrect hutch: '{hutch}'?"
+        )
+    if resp.json()["success"]:
+        return resp.json()["value"]["name"]
+    else:
+        msg: str = resp.json()["error_msg"]
+        raise RuntimeError(f"Error getting current experiment! Err: {msg}")
+
+
+def get_elog_opr_auth(exp: str) -> HTTPBasicAuth:
+    """Produce authentication for the "opr" user associated to an experiment.
+
+    This method uses basic authentication using username and password.
+
+    Args:
+        exp (str): Name of the experiment to produce authentication for.
+
+    Returns:
+        auth (HTTPBasicAuth): HTTPBasicAuth for an active experiment based on
+            username and password for the associated operator account.
+    """
+    opr: str = f"{exp[:3]}opr"
+    with open("/sdf/group/lcls/ds/tools/forElogPost.txt", "r") as f:
+        pw: str = f.readline()[:-1]
+    return HTTPBasicAuth(opr, pw)
+
+
+def get_elog_kerberos_auth() -> Dict[str, str]:
+    """Returns Kerberos authorization key.
+
+    This functions returns authorization for the USER account submitting jobs.
+    It assumes that `kinit` has been run.
+
+    Returns:
+        auth (Dict[str, str]): Dictionary containing Kerberos authorization key.
+    """
+    from krtc import KerberosTicket  # type: ignore
+
+    return KerberosTicket("HTTP@pswww.slac.stanford.edu").getAuthHeaders()
+
+
+def get_elog_auth(exp: str) -> Union[HTTPBasicAuth, Dict[str, str]]:
+    """Determine the appropriate auth method depending on experiment state.
+
+    Returns:
+        auth (HTTPBasicAuth | Dict[str, str]): Depending on whether an experiment
+            is active/live, returns authorization for the hutch operator account
+            or the current user submitting a job.
+    """
+    hutch: str = exp[:3]
+    if exp.lower() == get_elog_active_expmt(hutch=hutch).lower():
+        return get_elog_opr_auth(exp)
+    else:
+        return get_elog_kerberos_auth()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="trigger_airflow_lute_dag",
@@ -124,6 +202,16 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
     parser.add_argument(
         "--test", help="Use test Airflow instance.", action="store_true"
+    )
+    parser.add_argument(
+        "--type",
+        help=(
+            "Provide a run type to describe this workflow submission. "
+            "Some workflows may use a run type/tag to determine branching e.g. "
+            "This overrides the eLog type provided by the DAQ (if present)."
+        ),
+        type=str,
+        default="",
     )
     parser.add_argument(
         "-w", "--workflow", type=str, help="Workflow to run.", default="test"
@@ -220,10 +308,10 @@ if __name__ == "__main__":
 
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
     user_name: str = "btx" if args.admin else "lcls_user"
-    auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
+    airflow_auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
     resp: requests.models.Response = requests.get(
         f"{airflow_instance}/{airflow_api_endpoints['health']}",
-        auth=auth,
+        auth=airflow_auth,
     )
     resp.raise_for_status()
 
@@ -251,7 +339,7 @@ if __name__ == "__main__":
         resp = requests.patch(
             f"{airflow_instance}/{airflow_api_endpoints['update_defn']}",
             json=new_workflow,
-            auth=auth,
+            auth=airflow_auth,
         )
         try:
             resp.raise_for_status()
@@ -261,7 +349,7 @@ if __name__ == "__main__":
                 resp = requests.post(
                     f"{airflow_instance}/{airflow_api_endpoints['create_defn']}",
                     json=new_workflow,
-                    auth=auth,
+                    auth=airflow_auth,
                 )
                 resp.raise_for_status()
             else:
@@ -269,45 +357,79 @@ if __name__ == "__main__":
         logger.debug("Sent new workflow definition.")
         resp = requests.get(
             f"{airflow_instance}/{airflow_api_endpoints['mod_dag']}",
-            auth=auth,
+            auth=airflow_auth,
         )
         resp.raise_for_status()
         file_token: str = resp.json()["file_token"]
         f_endpoint: str = airflow_api_endpoints["parse_file"].format(
             file_token=file_token
         )
-        resp = requests.put(f"{airflow_instance}/{f_endpoint}", auth=auth)
+        resp = requests.put(f"{airflow_instance}/{f_endpoint}", auth=airflow_auth)
         resp.raise_for_status()
         logger.debug("Re-parsed DAG for setup with new workflow.")
 
     # Experiment, run #, and ARP env variables come from ARP submission only
     # We override above or exit if we cannot, so we cast here
-    assert isinstance(os.getenv("EXPERIMENT"), str)
-    assert isinstance(os.getenv("RUN_NUM"), str)
-    assert isinstance(os.getenv("ARP_JOB_ID"), str)
-    assert isinstance(os.getenv("Authorization"), str)
+    experiment: Optional[str] = os.getenv("EXPERIMENT")
+    run_num: Optional[str] = os.getenv("RUN_NUM")
+    arp_job_id: Optional[str] = os.getenv("ARP_JOB_ID")
+    jid_authorization: Optional[str] = os.getenv("Authorization")
+    assert isinstance(experiment, str)
+    assert isinstance(run_num, str)
+    assert isinstance(arp_job_id, str)
+    assert isinstance(jid_authorization, str)
+
+    run_type: str
+    if args.type != "":
+        run_type = args.type
+    else:
+        elog_auth: Union[HTTPBasicAuth, Dict[str, str]] = get_elog_auth(experiment)
+        base_url: str
+        run_doc_url: str
+        run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
+        if isinstance(elog_auth, dict):
+            base_url = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
+            run_doc_url = f"{base_url}/{run_doc_endpoint}"
+            resp = requests.get(run_doc_url, headers=elog_auth)
+        else:
+            base_url = "https://pswww.slac.stanford.edu/ws-auth/lgbk/lgbk"
+            run_doc_url = f"{base_url}/{run_doc_endpoint}"
+            resp = requests.get(run_doc_url, auth=elog_auth)
+
+        if resp.status_code != 200:
+            logger.warning(
+                "Unable to retrieve run document! No `run_type` information will be used! "
+                "Workflow may be able to continue but this could point to issues with "
+                "API access that lead to problems downstream."
+            )
+            run_type = "UNKNOWN"
+        else:
+            # If API request succeeds `type` should always be defined
+            run_type = resp.json()["value"]["type"]
+
     dag_run_data: DagRunData = {
         "dag_run_id": str(uuid.uuid4()),
         "conf": {
-            "experiment": cast(str, os.getenv("EXPERIMENT")),
-            "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
+            "experiment": experiment,
+            "run_id": f"{run_num}_{datetime.datetime.utcnow().isoformat()}",
             "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
-            "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
+            "ARP_ROOT_JOB_ID": arp_job_id,
             "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
-            "Authorization": cast(str, os.getenv("Authorization")),
+            "Authorization": jid_authorization,
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
             "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
             "workflow": wf_defn,  # Only used for custom defined workflows.
+            "run_type": run_type,
         },
     }
 
     resp = requests.post(
         f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
         json=dag_run_data,
-        auth=auth,
+        auth=airflow_auth,
     )
     resp.raise_for_status()
     dag_run_id: str = dag_run_data["dag_run_id"]
@@ -320,7 +442,7 @@ if __name__ == "__main__":
     if not use_custom_defn:
         resp = requests.get(
             f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
-            auth=auth,
+            auth=airflow_auth,
         )
         resp.raise_for_status()
         task_ids = [task["task_id"] for task in resp.json()["tasks"]]
@@ -351,12 +473,12 @@ if __name__ == "__main__":
     while True:
         time.sleep(1)
         # DAG Status
-        resp = requests.get(url, auth=auth)
+        resp = requests.get(url, auth=airflow_auth)
         resp.raise_for_status()
         dag_state = resp.json()["state"]
         # Check Task instances
         task_url: str = f"{url}/taskInstances"
-        resp = requests.get(task_url, auth=auth)
+        resp = requests.get(task_url, auth=airflow_auth)
         resp.raise_for_status()
         instance_information: List[Dict[str, Any]] = resp.json()["task_instances"]
         for inst in instance_information:
@@ -384,7 +506,7 @@ if __name__ == "__main__":
                         xcom_key=xcom_key,
                     )
                     try:
-                        resp = requests.get(xcom_url, auth=auth)
+                        resp = requests.get(xcom_url, auth=airflow_auth)
                         resp.raise_for_status()
                         logs: str = resp.json()["value"]  # Only want to print once.
                         logger.info(f"Providing logs for {task_id}")
