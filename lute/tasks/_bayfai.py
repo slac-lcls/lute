@@ -1104,7 +1104,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.4,
-                f"{'Low-q Resolution':<25}",
+                f"{'Low-q Resolution':<30}",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1122,7 +1122,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.3,
-                f"{'Border Resolution':<25}",
+                f"{'Border Resolution':<30}",
                 ha="left",
                 va="center",
                 fontsize=8,
@@ -1140,7 +1140,7 @@ class BayesGeomOpt:
             ax1.text(
                 0.05,
                 0.2,
-                f"{'Corner Resolution':<25}",
+                f"{'Corner Resolution':<30}",
                 ha="left",
                 va="center",
                 fontsize=8,
