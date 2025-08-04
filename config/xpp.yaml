@@ -2,7 +2,7 @@
 ---
 title: "LUTE Task Configuration" # Include experiment description if desired
 #experiment: ""
-#run: "{{ $RUN }}"
+#run: "{{ $RUN_NUM }}"
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
@@ -82,13 +82,14 @@ SubmitSMD:
   #experiment: ""
   #stn: 0
   #directory: ""
+  #config: "xpp"
   #gather_interval: 25
   #norecorder: False
   #url: "https://pswww.slac.stanford.edu"
   #epicsAll: False
   #full: False
   #fullSum: False
-  default: true
+  #default: true
   #image: False
   #tiff: False
   #centerpix: False
