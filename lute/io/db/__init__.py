@@ -15,9 +15,9 @@ LUTE_DB_SPEC_VERSION: int = int(
 )
 
 if LUTE_DB_SPEC_VERSION == 0x000001:
-    from lute.io.db.v1.api import * # noqa: F403
+    from lute.io.db.v1.api import *  # noqa: F403
 elif LUTE_DB_SPEC_VERSION == 0x000002:
-    from lute.io.db.v2.api import * # noqa: F403
+    from lute.io.db.v2.api import *  # noqa: F403
 else:
     raise DatabaseError(
         "Unrecognized database specification version! Set LUTE_DB_SPEC_VERSION appropriately! "
