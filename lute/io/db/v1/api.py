@@ -23,6 +23,7 @@ import logging
 import os
 from typing import List, Dict, Any, Tuple, Optional, Union
 
+from lute.io.db import DatabaseError
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters, TemplateParameters
 from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
@@ -33,12 +34,6 @@ else:
     logging.basicConfig(level=logging.INFO)
 
 logger: logging.Logger = get_logger(__name__, is_task=False)
-
-
-class DatabaseError(Exception):
-    """General LUTE database error."""
-
-    ...
 
 
 def _cfg_to_exec_entry_cols(
