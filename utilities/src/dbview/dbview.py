@@ -82,10 +82,12 @@ class DBView(App):
         self._dbpath: str = dbpath
         self._summarize_v2: bool = summarize_v2
         self._con: sqlite3.Connection = sqlite3.Connection(self._dbpath)
+        self._tables: List[str]
         if api_version == 1 or not self._summarize_v2:
-            self._tables: List[str] = common_sqlite.get_tables(self._con)
+            self._tables = common_sqlite.get_tables(self._con)
         else:
-            self._tables: List[str] = ["Executions"]
+            # Will be updated dynamically
+            self._tables = ["Executions"]
 
     def compose(self) -> ComposeResult:
         """Compose our UI."""
@@ -123,7 +125,7 @@ class DBView(App):
 
         This method is for database specification v0.2.
         """
-        table_name: str = table.id[5:]
+        table_name: str = table.id[5:] if table.id is not None else "<UNKNOWN>"
         if table_name == "Executions":
             return self._executions_summary(table)
         else:  # Per task
@@ -183,7 +185,7 @@ class DBView(App):
         rows: List[Tuple[int, str, int, str, str]] = db.get_task_parameters_summary(
             os.path.dirname(self._dbpath), task_name=task
         )
-        executions = defaultdict(dict)
+        executions: defaultdict = defaultdict(dict)
 
         for execution_id, timestamp, valid_flag, param_name, param_value in rows:
             row = executions[execution_id]
