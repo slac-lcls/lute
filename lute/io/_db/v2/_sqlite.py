@@ -16,7 +16,7 @@ import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 from lute.io._db.common_sqlite import does_table_exist, DatabaseError
-from lute.io.models.base import AnalysisHeader, TaskParameters
+from lute.io.models.base import AnalysisHeader, TaskParameters, TemplateParameters
 from lute.io.parameters import LUTE_PARAMETER_FIELD_ATTRS
 from lute.tasks.dataclasses import BaseSchema, DescribedAnalysis, TaskResult, TaskStatus
 
@@ -653,7 +653,19 @@ def _add_parameters(
     schema: Dict[str, Any] = params.schema()
     param_dict: Dict[str, Any] = params.dict()
     for param in param_dict:
-        props: Dict[str, Any] = schema["properties"][param]
+        try:
+            props: Dict[str, Any] = schema["properties"][param]
+        except KeyError:
+            # It may not be defined at top level if nested
+            for _, defn in schema["definitions"].items():
+                if param in defn["properties"]:
+                    props = defn["properties"][param]
+                    break
+            else:
+                logger.critical(
+                    f"Unable to parse parameter {param} properly! Metadata will be incorrect!"
+                )
+                props = {}
         param_meta_entries: Dict[str, Any] = {
             key: props[key] if key in props else None
             for key in LUTE_PARAMETER_FIELD_ATTRS
@@ -661,11 +673,17 @@ def _add_parameters(
         param_meta_id: int = _insert_maybe_ignore_return_id(
             con=con, table="param_meta", entries=param_meta_entries, ignore=True
         )
+        raw_val: Any = param_dict[param]
+        json_val: str
+        if isinstance(raw_val, TemplateParameters):
+            json_val = json.dumps(raw_val.params)
+        else:
+            json_val = json.dumps(raw_val)
         param_entries: Dict[str, Any] = {
             "execution_id": execution_id,
             "meta_id": param_meta_id,
             "name": param,
-            "value": json.dumps(param_dict[param]),
+            "value": json_val,
         }
         # We should allow redundant entries, so don't ignore.
         # If we get a constraint-based error, something has gone wrong.
