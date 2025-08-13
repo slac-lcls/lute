@@ -1,0 +1,195 @@
+WITH
+    /* Generic Insert/Select */
+    InsertOrSelect AS (
+        SELECT id
+        FROM ?
+        WHERE ?
+        UNION ALL
+        INSERT OR IGNORE INTO ? (columns...)
+        VALUES (values...)
+        RETURNING id
+        LIMIT 1
+    ),
+    /* TASK */
+    InsertedTask AS (
+        SELECT id FROM InsertOrSelect('tasks', name = ?)
+    ),
+    /* COMMUNICATOR */
+    InsertedCommunicator AS (
+        SELECT id FROM InsertOrSelect('communicators', name = ? AND description = ?)
+    ),
+    /* EXECUTOR */
+    InsertedExecutor AS (
+        SELECT id FROM InsertOrSelect('executors', name = ? AND poll_interval = ? AND comm = ?)
+    ),
+    /* CONFIG */
+    InsertedConfig AS (
+        SELECT id FROM InsertOrSelect(
+            'config',
+            title = ? AND experiment = ? AND date = ? AND lute_version = ? AND task_timeout = ?
+        )
+    ),
+    /* RESULT */
+    InsertedResult AS (
+        SELECT id FROM InsertOrSelect(
+            'results',
+            schema_id = ? AND payload = ? AND summary = ? AND status = ?
+        )
+    ),
+    /* TOP-LEVEL TASKPARAMETERS */
+    InsertedTopTaskParameters AS (
+        SELECT id FROM InsertOrSelect('parameter_types', type_name = ? AND definition = ?)
+    ),
+    /* Create EXECUTION from the above */
+    InsertedExecution AS (
+        INSERT INTO executions (task_id, executor_id, config_id, results_id, parameter_type_id)
+        SELECT
+            task.id,
+            executor.id,
+            config.id
+            result.id,
+            task_parameters.id
+        FROM
+            InsertedTask task,
+            InsertedExecutor executor,
+            InsertedConfig config,
+            InsertedResult result,
+            InsertedTopTaskParameters task_parameters
+        RETURNING id
+    ),
+
+
+
+
+
+
+
+
+
+
+
+
+WITH
+    /* TASK */
+    InsertedTask AS (
+        INSERT OR IGNORE INTO tasks (name)
+        VALUES (?)
+        RETURNING id
+    ),
+    SelectedTask AS (
+        SELECT id FROM tasks
+        WHERE name = ?
+    ),
+    /* COMMUNICATOR */
+    InsertedCommunicator AS (
+        INSERT OR IGNORE INTO communicators (name, description)
+        VALUES (?, ?)
+    ),
+    /* EXECUTOR */
+    -- Insert into Executors and retrieve the id
+    InsertedExecutor AS (
+        INSERT OR IGNORE INTO executors (name, poll_interval, comm)
+        VALUES (?, ?, ?)
+        RETURNING id
+    ),
+    SelectedExecutor AS (
+        SELECT id FROM executors
+        WHERE name = ? AND poll_interval = ? AND comm = ?
+    ),
+    /* CONFIG */
+    -- Insert the config
+    InsertedConfig AS (
+         INSERT OR IGNORE INTO config (title, experiment, run, date, lute_version, task_timeout)
+         VALUES (?, ?, ?, ?, ?, ?)
+         RETURNING id
+    ),
+    SelectedConfig AS (
+        SELECT id FROM config
+        WHERE title = ? AND experiment = ? AND run = ? AND date = ? AND lute_version = ? AND task_timeout = ?
+    ),
+    /* RESULT */
+    -- Need to setup schema/base_schema first as needed.
+    InsertedResult AS (
+        INSERT OR IGNORE INTO results (schema_id, payload, summary, status)
+        VALUES (?, ?, ?, ?)
+        RETURNING id
+    ),
+    SelectedResult AS (
+        SELECT id FROM results
+        WHERE schema_id = ? AND payload = ? AND summary = ? AND status = ?
+    ),
+    /* TOP-LEVEL TASKPARAMETERS */
+    InsertedTopTaskParameters AS (
+        INSERT OR IGNORE INTO parameter_types (type_name, definition)
+        VALUES (?, ?)
+        RETURNING id
+    ),
+    SelectedTopTaskParameters AS (
+        SELECT id FROM parameter_types
+        WHERE type_name = ? AND definition = ?
+    ),
+    /* Create EXECUTION from above */
+    InsertedExecution AS (
+        INSERT INTO executions (task_id, executor_id, config_id, results_id, parameter_type_id)
+        SELECT
+            task.id,
+            executor.id,
+            config_id,
+            result.id,
+            task_parameters.id
+        FROM
+            (
+                SELECT id FROM InsertedTask
+                UNION ALL
+                SELECT id FROM SelectedTask
+                LIMIT 1
+            ) task,
+            (
+                SELECT id FROM InsertedExecutor
+                UNION ALL
+                SELECT id FROM SelectedExecutor
+                LIMIT 1
+            ) executor,
+            (
+                SELECT id FROM InsertedConfig
+                UNION ALL
+                SELECT id FROM SelectedConfig
+                LIMIT 1
+            ) config,
+            (
+                SELECT id FROM InsertedResult
+                UNION ALL
+                SELECT id FROM SelectedResult
+                LIMIT 1
+            ) result,
+            (
+                SELECT id FROM InsertedTopTaskParameters
+                UNION ALL
+                SELECT id FROM SelectedTopTaskParameters
+                LIMIT 1
+            ) task_parameters
+            RETURNING id
+    ),
+
+    /* ALL PARAMETERS now*/
+    InsertedParameters AS (
+        INSERT INTO parameters (execution_id, name, value)
+        SELECT id, ?, ?
+        FROM InsertedExecution
+        -- Bind the parameter values dynamically
+        UNION ALL
+        {parameters_union_clause}
+        RETURNING execution_id, name, value
+    ),
+    /*ALL ENVIRONMENT VARS now*/
+    InsertedEnvironment AS (
+        INSERT INTO environment (execution_id, name, value)
+        SELECT id, ?, ?
+        FROM InsertedExecution
+        -- Bind the environment values dynamically
+        UNION ALL
+        {environment_union_clause}
+        RETURNING execution_id, name, value
+    )
+-- Final select just to execute all the inserts
+SELECT 'Insertion completed successfully' AS status;

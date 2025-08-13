@@ -24,7 +24,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
@@ -36,12 +36,6 @@ else:
     logging.basicConfig(level=logging.INFO)
 
 logger: logging.Logger = get_logger(__name__, is_task=False)
-
-
-class DatabaseError(Exception):
-    """General LUTE database error."""
-
-    ...
 
 
 def record_analysis_db(cfg: DescribedAnalysis) -> None:

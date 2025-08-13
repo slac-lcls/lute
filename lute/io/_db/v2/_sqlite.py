@@ -15,8 +15,7 @@ import logging
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
-from lute.io.db import DatabaseError
-from lute.io.db.common_sqlite import does_table_exist
+from lute.io._db.common_sqlite import does_table_exist, DatabaseError
 from lute.io.models.base import AnalysisHeader, TaskParameters
 from lute.io.parameters import LUTE_PARAMETER_FIELD_ATTRS
 from lute.tasks.dataclasses import BaseSchema, DescribedAnalysis, TaskResult, TaskStatus
@@ -54,11 +53,11 @@ def _create_executions_table(con: sqlite3.Connection) -> None:
     query: str = """
     CREATE TABLE IF NOT EXISTS executions (
         id integer PRIMARY KEY,
-        task_id integer,
-        parameter_type_id integer,
-        executor_id integer,
-        config_id integer,
-        result_id integer,
+        task_id INTEGER,
+        parameter_type_id INTEGER,
+        executor_id INTEGER,
+        config_id INTEGER,
+        result_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks(id),
         FOREIGN KEY (parameter_type_id) REFERENCES parameter_types (id)
@@ -550,7 +549,9 @@ def _insert_maybe_ignore_return_id(
     else:
         insert_query = f'INSERT INTO "{table}" {keys_clause} VALUES {values_clause}'
 
-    select_query: str = f'SELECT id FROM "{table}" WHERE {match_clause}'
+    select_query: str = (
+        f'SELECT id FROM "{table}" WHERE {match_clause} ORDER BY id DESC LIMIT 1'
+    )
 
     with con:
         con.executescript(PRAGMAS)
@@ -562,9 +563,11 @@ def _insert_maybe_ignore_return_id(
         row: Optional[Tuple[int]] = cur.fetchone()
 
         if row:
+            if table == "executions":
+                logger.debug(f"Selecting {table} row: {row[0]}")
             return row[0]
         else:
-            raise DatabaseError("Failed to insert or find a row.")
+            raise DatabaseError(f"Failed to insert or find a row for {table}.")
 
 
 def _insert_pow2_id_return_id(
@@ -629,7 +632,9 @@ def _insert_pow2_id_return_id(
                 # Will throw error if there is some other issue
                 return new_id
             else:
-                raise DatabaseError("Failed to insert or find a row.")
+                raise DatabaseError(
+                    f"Failed to insert or find a row (with ID = power of 2) for {table}."
+                )
 
 
 def _add_parameters(
@@ -741,6 +746,7 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
         # id is required, but it will be added to entries by the function being called
         # so we don't include it here.
         entries = {
+            # "id": 123,
             "name": name,
             "description": desc,
         }
@@ -767,8 +773,10 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     )
 
     # Setup schema first
-    # For now we assume all base_schema were inserted during creation
-    # Can extend later to add new schema as needed.
+    # For now we assume all base_schema were inserted during creation -
+    # see _create_base_schema_table
+    # Can extend later to add new schema as needed. Here we just calculate
+    # the appropriate bitwise OR to add to the actual `schema` table
     impl_schemas: Optional[str] = cfg.task_result.impl_schemas
     combined_schema_val: int = 0
     if impl_schemas is not None:
@@ -800,8 +808,8 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     )
     entries.clear()
 
-    # Need to do parameter stuff...
-    ## Have sets in the schema so we will convert
+    # Include the parameter type definition.
+    ## Have sets in the schema so we will convert those with `default=list`
     entries = {
         "type_name": cfg.task_parameters.__class__.__name__,
         "definition": json.dumps(cfg.task_parameters.schema(), default=list),
@@ -822,10 +830,13 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
         con=con, table="executions", entries=entries, ignore=False
     )
 
-    # Need to do parameter stuff
+    # Add individual param/values and their param_meta
+    # NOTE: `param_meta` is probably redundant at the moment, since this may all
+    #       be included in the parameter_types.definition column.
+    #       We will maintain the table in case it is needed however.
     _add_parameters(con=con, params=cfg.task_parameters, execution_id=execution_id)
 
-    # Environment stuff...
+    # Add all environment variable/values
     env: Dict[str, str] = cfg.task_env
     _add_env_vars(con=con, env_vars=env, execution_id=execution_id)
     del cfg.task_env
@@ -836,10 +847,10 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
 def select_param_from_db(
     con: sqlite3.Connection, task_name: str, param_name: str, condition: Dict[str, str]
 ) -> Optional[Any]:
-    """Write an DescribedAnalysis object to the database.
+    """Retrieve a specific value for a parameter subject to conditions.
 
-    This will unpack all the values from the object and distribute the entries
-    across all the various tables.
+    If multiple parameter/value pairs match the provided conditions, this function
+    will return the latest entry.
 
     Args:
         con (sqlite3.Connection): A connection to the database.
@@ -851,6 +862,11 @@ def select_param_from_db(
         condition (Dict[str, str]): A dictionary of conditions. Currently supports:
             - valid_flag: 1/0 # Only include "valid" results.
             - run: XYZ # Only look at entries from this run. Otherwise, take the latest.
+    Returns:
+        value (Optional[Any]): The retrieved value from the `parameters` table or
+            None if nothing is found (or potentially if the value is None). Values
+            are stored serialized as json. This function deserializes and returns
+            the Python object.
     """
 
     condition["param"] = param_name

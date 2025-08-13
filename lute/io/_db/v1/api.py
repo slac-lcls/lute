@@ -23,7 +23,7 @@ import logging
 import os
 from typing import List, Dict, Any, Tuple, Optional, Union
 
-from lute.io.db import DatabaseError
+from lute.io._db.common_sqlite import DatabaseError
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters, TemplateParameters
 from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis

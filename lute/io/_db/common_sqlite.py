@@ -9,6 +9,12 @@ import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 
+class DatabaseError(Exception):
+    """General LUTE database error."""
+
+    ...
+
+
 def does_table_exist(con: sqlite3.Connection, table_name: str) -> bool:
     """Check whether a table exists.
 

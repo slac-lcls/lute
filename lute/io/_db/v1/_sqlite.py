@@ -12,7 +12,7 @@ import sqlite3
 import logging
 from typing import List, Dict, Any, Optional
 
-from lute.io.db.common_sqlite import compare_cols, does_table_exist, get_table_cols
+from lute.io._db.common_sqlite import compare_cols, does_table_exist, get_table_cols
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
