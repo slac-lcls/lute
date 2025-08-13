@@ -138,3 +138,65 @@ def read_latest_db_entry(
         except sqlite3.OperationalError as err:
             logger.error(f"Cannot retrieve value {param} due to: {err}")
             return None
+
+
+def get_executions_summary(
+    db_dir: str,
+) -> List[Tuple[int, str, str, str, str, str, int]]:
+    """Return some summary fields of all executions recorded.
+
+    Args:
+        db_dir (str): Database location.
+
+    Returns:
+        rows (List[Tuple[int, str, str, str, str, str, int]]): Returns a list
+            of rows consisting of tuples with the following entries:
+            (
+                executions.id,
+                executions.timestamp,
+                tasks.name,
+                results.summary,
+                results.payload,
+                results.summary,
+                results.valid_flag,
+            ).
+            An example of how to manipulate this data is in `utilities/src/dbview.py`
+    """
+    import sqlite3
+    from ._sqlite import executions_summary
+
+    db_path: str = f"{db_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
+    with con:
+        return executions_summary(con=con)
+
+
+def get_task_parameters_summary(
+    db_dir: str, task_name: str
+) -> List[Tuple[int, str, int, str, str]]:
+    """Return parameters for a specific task ordered by execution.
+
+    Args:
+        db_dir (str): Database location.
+
+        task_name (str): Name of the Task to retrieve parameters for.
+
+    Returns:
+        rows (List[Tuple[int, str, str, str, str, str, int]]): Returns a list
+            of rows consisting of tuples with the following entries:
+            (
+                executions.id,
+                executions.timestamp,
+                results.valid_flag,
+                parameters.name,
+                parameters.value,
+            ).
+            An example of how to manipulate this data is in `utilities/src/dbview.py`
+    """
+    import sqlite3
+    from ._sqlite import task_parameters_summary
+
+    db_path: str = f"{db_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
+    with con:
+        return task_parameters_summary(con=con, task_name=task_name)

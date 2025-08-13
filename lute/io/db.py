@@ -77,3 +77,11 @@ record_analysis_db: Callable = lazy_import("record_analysis_db", LUTE_DB_SPEC_VE
 read_latest_db_entry: Callable = lazy_import(
     "read_latest_db_entry", LUTE_DB_SPEC_VERSION
 )
+
+if LUTE_DB_SPEC_VERSION == 0x000002:
+    get_executions_summary: Callable = lazy_import(
+        "get_executions_summary", LUTE_DB_SPEC_VERSION
+    )
+    get_task_parameters_summary: Callable = lazy_import(
+        "get_task_parameters_summary", LUTE_DB_SPEC_VERSION
+    )

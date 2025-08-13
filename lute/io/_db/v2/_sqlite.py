@@ -902,3 +902,78 @@ def select_param_from_db(
         row: Any = cur.fetchone()
 
         return json.loads(row[0]) if row else None
+
+
+def executions_summary(
+    con: sqlite3.Connection,
+) -> List[Tuple[int, str, str, str, str, str, int]]:
+    """Return some summary fields of all executions recorded.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+
+    Returns:
+        rows (List[Tuple[int, str, str, str, str, str, int]]): Returns a list
+            of rows consisting of tuples with the following entries:
+            (
+                executions.id,
+                executions.timestamp,
+                tasks.name,
+                results.summary,
+                results.payload,
+                results.summary,
+                results.valid_flag,
+            ).
+            An example of how to manipulate this data is in `utilities/src/dbview.py`
+    """
+    join_query: str = """
+        SELECT e.id, e.timestamp, t.name, r.summary, r.payload, r.status, r.valid_flag
+        FROM parameters p
+        JOIN executions e ON p.execution_id = e.id
+        JOIN config c ON e.config_id = c.id
+        JOIN results r ON e.result_id = r.id
+        JOIN tasks t ON e.task_id = t.id
+        ORDER BY e.timestamp ASC
+    """
+    with con:
+        cur: sqlite3.Cursor = con.execute(join_query)
+        rows: List[Tuple[int, str, str, str, str, str, int]] = cur.fetchall()
+        return rows
+
+
+def task_parameters_summary(
+    con: sqlite3.Connection, task_name: str
+) -> List[Tuple[int, str, int, str, str]]:
+    """Return parameters for a specific task ordered by execution.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+
+        task_name (str): Name of the Task to retrieve parameters for.
+
+    Returns:
+        rows (List[Tuple[int, str, str, str, str, str, int]]): Returns a list
+            of rows consisting of tuples with the following entries:
+            (
+                executions.id,
+                executions.timestamp,
+                results.valid_flag,
+                parameters.name,
+                parameters.value,
+            ).
+            An example of how to manipulate this data is in `utilities/src/dbview.py`
+    """
+    join_query: str = """
+        SELECT e.id, e.timestamp, r.valid_flag, p.name, p.value
+        FROM parameters p
+        JOIN executions e ON p.execution_id = e.id
+        JOIN config c ON e.config_id = c.id
+        JOIN results r ON e.result_id = r.id
+        JOIN tasks t ON e.task_id = t.id
+        WHERE t.name = ?
+        ORDER BY e.timestamp ASC
+    """
+    with con:
+        cur: sqlite3.Cursor = con.execute(join_query, (task_name,))
+        rows: List[Tuple[int, str, int, str, str]] = cur.fetchall()
+        return rows
