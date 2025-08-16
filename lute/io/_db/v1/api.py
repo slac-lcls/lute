@@ -111,6 +111,8 @@ def _params_to_entry_cols(
     columns: Dict[str, str]
     gen_entry, gen_columns = _dict_to_flatdicts(params.lute_config.dict())
     del params.lute_config
+    # Note: We now store the Config options in the schema, but this is not added
+    # to the output of `dict()` so no need to check/remove it.
     entry, columns = _dict_to_flatdicts(params.dict())
 
     return (

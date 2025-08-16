@@ -33,7 +33,7 @@ LUTE_DB_SPEC_VERSION: int = int(
 def lazy_import(func_name: str, api_version: int) -> Callable:
     """Return a lazily loaded version of the function."""
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Callable:
         func: Callable = import_function(func_name=func_name, api_version=api_version)
         return func(*args, **kwargs)
 
@@ -79,9 +79,18 @@ read_latest_db_entry: Callable = lazy_import(
 )
 
 if LUTE_DB_SPEC_VERSION == 0x000002:
+    record_parameters_db: Callable = lazy_import(
+        "record_parameters_db", LUTE_DB_SPEC_VERSION
+    )
+    update_analysis_db: Callable = lazy_import(
+        "update_analysis_db", LUTE_DB_SPEC_VERSION
+    )
     get_executions_summary: Callable = lazy_import(
         "get_executions_summary", LUTE_DB_SPEC_VERSION
     )
     get_task_parameters_summary: Callable = lazy_import(
         "get_task_parameters_summary", LUTE_DB_SPEC_VERSION
+    )
+    get_task_parameters_defn_and_params: Callable = lazy_import(
+        "get_task_parameters_defn_and_params", LUTE_DB_CURRENT_SPEC_VERSION
     )

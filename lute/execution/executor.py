@@ -63,7 +63,9 @@ from lute.tasks.dataclasses import (
     TaskResult,
     TaskStatus,
     ElogSummaryPlots,
+    TaskParametersDBReference,
 )
+from lute.io.parameters import RowIds, construct_task_parameters
 from lute.io.models.base import (
     TaskParameters,
     TemplateParameters,
@@ -71,7 +73,11 @@ from lute.io.models.base import (
     TemplateConfig,  # noqa: F401
     ThirdPartyParameters,
 )  # NOTE: All imports required for unpickling!
-from lute.io.db import record_analysis_db
+from lute.io.db import (
+    record_analysis_db,
+    update_analysis_db,
+    get_task_parameters_defn_and_params,
+)
 from lute.io.elog import post_elog_run_status, post_elog_run_table
 
 if __debug__:
@@ -197,6 +203,7 @@ class BaseExecutor(ABC):
         self._shell_source_script: Optional[str] = None
         self._task_timeout: Optional[int] = None
         self._task_time0: Optional[float] = None
+        self._row_ids: Optional[RowIds] = None
 
     def add_tasklet(
         self,
@@ -662,7 +669,12 @@ class BaseExecutor(ABC):
 
     def _store_configuration(self) -> None:
         """Store configuration and results in the LUTE database."""
-        record_analysis_db(copy.deepcopy(self._analysis_desc))
+        if self._row_ids is not None:
+            update_analysis_db(
+                cfg=copy.deepcopy(self._analysis_desc), row_ids=self._row_ids
+            )
+        else:
+            record_analysis_db(cfg=copy.deepcopy(self._analysis_desc))
 
     def _task_is_running(self, proc: subprocess.Popen) -> bool:
         """Whether a subprocess is running.
@@ -891,23 +903,42 @@ class Executor(BaseExecutor):
             assert proc is not None
             if isinstance(msg.contents, TaskParameters):
                 executor._analysis_desc.task_parameters = msg.contents
-                # Run "before" tasklets
-                if executor._tasklets["before"] is not None:
-                    executor._run_tasklets(when="before")
-                # Need to continue since Task._signal_start raises SIGSTOP
-                status: int
-                _, status = os.waitpid(proc.pid, os.WUNTRACED)
-                if os.WIFSTOPPED(status):
-                    executor._continue(proc)
-                executor._task_timeout = (
-                    executor._analysis_desc.task_parameters.lute_config.task_timeout
+            elif isinstance(msg.contents, TaskParametersDBReference):
+                work_dir: str = msg.contents.db_dir
+                row_ids: RowIds = msg.contents.row_ids
+                definition: Dict[str, Any]
+                param_values: Dict[str, Any]
+                definition, param_values = get_task_parameters_defn_and_params(
+                    db_dir=work_dir, row_ids=row_ids
                 )
-                if hasattr(
-                    executor._analysis_desc.task_parameters.Config, "set_result"
-                ):
-                    # Tasks may mark a parameter as the result
-                    # If so, setup the result now.
-                    executor._set_result_from_parameters()
+                task_parameters: Any = construct_task_parameters(
+                    schema=definition, values=param_values
+                )
+                task_parameters.lute_config.work_dir = work_dir
+                executor._analysis_desc.task_parameters = task_parameters
+                executor._row_ids = row_ids
+            else:
+                logger.critical(
+                    "Received start message, but cannot grab TaskParameters!\n"
+                    f"Message contents: {msg.contents}"
+                )
+                return None
+            assert executor._analysis_desc.task_parameters is not None
+            # Run "before" tasklets
+            if executor._tasklets["before"] is not None:
+                executor._run_tasklets(when="before")
+            # Need to continue since Task._signal_start raises SIGSTOP
+            status: int
+            _, status = os.waitpid(proc.pid, os.WUNTRACED)
+            if os.WIFSTOPPED(status):
+                executor._continue(proc)
+            executor._task_timeout = (
+                executor._analysis_desc.task_parameters.lute_config.task_timeout
+            )
+            if hasattr(executor._analysis_desc.task_parameters.Config, "set_result"):
+                # Tasks may mark a parameter as the result
+                # If so, setup the result now.
+                executor._set_result_from_parameters()
             logger.info(
                 f"Executor: {executor._analysis_desc.task_result.task_name} started"
             )
@@ -1033,6 +1064,11 @@ class Executor(BaseExecutor):
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
+                    elif isinstance(msg.contents, TaskParametersDBReference):
+                        # We will log the actual reconstructed TaskParameters object
+                        # instead of the raw message. The raw message only contains
+                        # the pointers for reconstructing the object.
+                        logger.info(self._analysis_desc.task_parameters)
                     elif not isinstance(msg.contents, str):
                         logger.info(msg.contents)
                 if not communicator.has_messages:
