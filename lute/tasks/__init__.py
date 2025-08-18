@@ -91,4 +91,9 @@ def import_task(task_name: str) -> Type[Task]:
 
         return OptimizeAgBhGeometryExhaustive
 
+    if task_name == "ConvertSMDToNexus":
+        from .nexus import ConvertSMDToNexus
+
+        return ConvertSMDToNexus
+
     raise TaskNotFoundError
