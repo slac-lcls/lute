@@ -186,10 +186,6 @@ class BaseExecutor(ABC):
         task_parameters: Optional[TaskParameters] = None
         task_env: Dict[str, str] = os.environ.copy()
         self._communicators: List[Communicator] = communicators
-        communicator_desc: List[str] = []
-        for comm in self._communicators:
-            comm.stage_communicator()
-            communicator_desc.append(str(comm))
 
         self._analysis_desc: DescribedAnalysis = DescribedAnalysis(
             task_result=result,
@@ -197,7 +193,7 @@ class BaseExecutor(ABC):
             task_env=task_env,
             executor_name=self.__class__.__name__,
             poll_interval=poll_interval,
-            communicator_desc=communicator_desc,
+            communicator_desc=[""],  # Will update in _pre_task, see method for why
         )
         self._tasklets: TaskletDict = {"before": None, "after": None}
         self._shell_source_script: Optional[str] = None
@@ -519,11 +515,17 @@ class BaseExecutor(ABC):
         """
         # This prevents the Executors in managed_tasks.py from all acquiring
         # resources like sockets.
+        # Some Communicators setup descriptions during delayed_setup
+        # so we update our analysis description now.
+        communicator_desc: List[str] = []
         for communicator in self._communicators:
             communicator.delayed_setup()
             # Not great, but experience shows we need a bit of time to setup
             # network.
             time.sleep(0.1)
+            communicator.stage_communicator()
+            communicator_desc.append(str(communicator))
+        self._analysis_desc.communicator_desc = communicator_desc
         # Propagate any env vars setup by Communicators - only update LUTE_ vars
         tmp: Dict[str, str] = {
             key: os.environ[key] for key in os.environ if "LUTE_" in key

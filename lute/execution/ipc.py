@@ -423,12 +423,18 @@ class SocketCommunicator(Communicator):
         """
         self._data_socket: Union[socket.socket, zmq.sugar.socket.Socket]
         self.desc: str
+        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
+        sock_type: str
+        if use_tcp is not None:
+            sock_type = "TCP"
+        else:
+            sock_type = "Unix"
         if USE_ZMQ:
-            self.desc = "Communicates using ZMQ through TCP or Unix sockets."
+            self.desc = f"Communicates using ZMQ through {sock_type} sockets."
             self._context: zmq.Context = zmq.Context()
             self._data_socket = self._create_socket_zmq()
         else:
-            self.desc = "Communicates through a TCP or Unix socket."
+            self.desc = f"Communicates through {sock_type} sockets."
             self._data_socket = self._create_socket_raw()
             self._data_socket.settimeout(SocketCommunicator.ACCEPT_TIMEOUT)
 
