@@ -78,7 +78,6 @@ class RowIds(TypedDict):
     task_id: int
     parameter_type_id: int
     config_id: int
-    result_id: int
     parameter_ids: List[int]
 
 

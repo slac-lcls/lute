@@ -339,8 +339,8 @@ def _create_results_table(con: sqlite3.Connection) -> None:
         status INTEGER,
         valid_flag INTEGER,
         FOREIGN KEY (schema_id) REFERENCES schema (id)
-        --FOREIGN KEY (schema_id) REFERENCES schema (id),
-        --UNIQUE(schema_id, payload, summary, status, valid_flag)
+        FOREIGN KEY (schema_id) REFERENCES schema (id),
+        UNIQUE(schema_id, payload, summary, status, valid_flag)
     );
     """
     with con:
@@ -973,15 +973,20 @@ def update_execution(
     # By default we say it is assuming proper completion
     valid_flag: int = 1 if cfg.task_result.task_status == TaskStatus.COMPLETED else 0
 
+    schema_id: int = _add_schema(con=con, impl_schemas=cfg.task_result.impl_schemas)
+
     # Results
     task_result: TaskResult = cfg.task_result
     entries = {
+        "schema_id": schema_id,
         "payload": task_result.payload,
         "summary": task_result.summary,
         "status": str(task_result.task_status),
         "valid_flag": valid_flag,
     }
-    _update_row(con=con, table="results", entries=entries, row_id=row_ids["result_id"])
+    result_id: int = _insert_maybe_ignore_return_id(
+        con=con, table="results", entries=entries, ignore=True
+    )
     entries.clear()
 
     entries = {
@@ -989,7 +994,7 @@ def update_execution(
         "parameter_type_id": row_ids["parameter_type_id"],
         "executor_id": executor_id,
         "config_id": row_ids["config_id"],
-        "result_id": row_ids["result_id"],
+        "result_id": result_id,  # row_ids["result_id"],
     }
     execution_id: int = _insert_maybe_ignore_return_id(
         con=con, table="executions", entries=entries, ignore=False
@@ -1042,23 +1047,6 @@ def add_placeholder_execution(
         con=con, table="config", entries=lute_config.dict(), ignore=True
     )
 
-    schema_id: int = _add_schema(con=con, impl_schemas=params.Config.impl_schemas)
-
-    assert hasattr(params.Config, "result_from_params")
-    assert hasattr(params.Config, "result_summary")
-    # Results
-    entries = {
-        "schema_id": schema_id,
-        "payload": params.Config.result_from_params,
-        "summary": params.Config.result_summary,
-        "status": "TaskStatus.RUNNING",
-        "valid_flag": 0,
-    }
-    result_id: int = _insert_maybe_ignore_return_id(
-        con=con, table="results", entries=entries, ignore=True
-    )
-    entries.clear()
-
     # Include the parameter type definition.
     ## Have sets in the schema so we will convert those with `default=list`
     entries = {
@@ -1080,7 +1068,6 @@ def add_placeholder_execution(
         "task_id": task_id,
         "parameter_type_id": parameter_type_id,
         "config_id": config_id,
-        "result_id": result_id,
         "parameter_ids": parameter_ids,
     }
 
