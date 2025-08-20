@@ -116,7 +116,7 @@ else:
         rank = comm.Get_rank()
         if size > 1:
             use_mpi = True
-            print(f"Running in a MPI world of size: {{size}}", flush=True)
+            print(f"Running in a MPI world of size: {size}", flush=True)
     except ModuleNotFoundError:
         print("mpi4py not found. Assuming this is not an MPI-based `Task`", flush=True)
     row_ids: Optional[RowIds]
