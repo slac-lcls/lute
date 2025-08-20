@@ -105,8 +105,27 @@ else:
     from lute.execution.subprocess_utils import exec_script_template
 
     # We are a first-party Task that needs a new environment
-    # Record the parameters
-    row_ids: Optional[RowIds] = record_parameters_db(task_parameters)
+    # Record the parameters - but only once if using MPI
+    use_mpi: bool = False
+    rank: int = 0
+    try:
+        from mpi4py import MPI
+
+        comm: MPI.Intracomm = MPI.COMM_WORLD
+        size: int = comm.Get_size()
+        rank = comm.Get_rank()
+        if size > 1:
+            use_mpi = True
+            print(f"Running in a MPI world of size: {{size}}", flush=True)
+    except ModuleNotFoundError:
+        print("mpi4py not found. Assuming this is not an MPI-based `Task`", flush=True)
+    row_ids: Optional[RowIds]
+    if use_mpi:
+        if rank == 0:
+            row_ids = record_parameters_db(task_parameters)
+        comm.Barrier()
+    else:
+        row_ids = record_parameters_db(task_parameters)
     work_dir: str = task_parameters.lute_config.work_dir
 
     new_python: str = f"{os.environ.get('CONDA_PREFIX')}/bin/python"
