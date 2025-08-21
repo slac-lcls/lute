@@ -50,7 +50,6 @@ def setup_env() -> bool:
             new_env[new_key] = value
     if setup_new_env:
         os.environ.update(new_env)
-        sys.modules.pop("pydantic")
     return setup_new_env
 
 
@@ -137,11 +136,9 @@ else:
         row_ids = record_parameters_db(task_parameters)
     work_dir: str = task_parameters.lute_config.work_dir
 
-    new_python: str = f"{os.environ.get('CONDA_PREFIX')}/bin/python"
-
     exec_script: str = exec_script_template.format(
         work_dir=work_dir,
         task_name=task_name,
         row_ids=row_ids,
     )
-    os.execlp(new_python, new_python, "-c", exec_script)
+    os.execlp("python", "python", "-c", exec_script)

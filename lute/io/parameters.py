@@ -72,6 +72,7 @@ def handle_field_attrs(self, *args, **kwargs):
     """"""
     for param_name, param_val in kwargs.items():
         setattr(self, param_name, param_val)
+        type(self)._dict[param_name] = param_val
 
 
 class RowIds(TypedDict):
@@ -97,6 +98,7 @@ class AnalysisHeader(ContainerBase):
     """Header information for LUTE analysis runs."""
 
     _schema: Dict[str, Any] = {}
+    _dict: Dict[str, Any] = {}
 
     title: str
     experiment: str
@@ -160,11 +162,11 @@ class ParameterConfig(ContainerBase):
                 setattr(self, k, v)
 
     # All Tasks
-    run_directory: Optional[str]
-    set_result: Optional[bool]
-    result_from_params: Optional[str]
-    result_summary: Optional[str]
-    impl_schemas: Optional[str]
+    run_directory: Optional[str] = None
+    set_result: Optional[bool] = None
+    result_from_params: Optional[str] = None
+    result_summary: Optional[str] = None
+    impl_schemas: Optional[str] = None
     # Third-party Only
     # short_flags_use_eq: Optional[bool]
     # long_flags_use_eq: Optional[bool]
@@ -175,6 +177,7 @@ class TaskParameters(ContainerBase):
     lute_config: AnalysisHeader
 
     _schema: Dict[str, Any] = {}
+    _dict: Dict[str, Any] = {}
 
     def __init__(self, schema: Dict[str, Any], *args, **kwargs):
         type(self)._schema = schema
@@ -184,7 +187,7 @@ class TaskParameters(ContainerBase):
         return self._schema
 
     def dict(self):
-        return self._schema
+        return self._dict
 
 
 class ThirdPartyParameters(TaskParameters):
