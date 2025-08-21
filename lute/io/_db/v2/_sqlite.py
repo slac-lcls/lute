@@ -1075,7 +1075,11 @@ def add_placeholder_execution(
 
 
 def select_param_from_db(
-    con: sqlite3.Connection, task_name: str, param_name: str, condition: Dict[str, str]
+    con: sqlite3.Connection,
+    task_name: str,
+    param_name: str,
+    condition: Dict[str, str],
+    is_result: bool = False,
 ) -> Optional[Any]:
     """Retrieve a specific value for a parameter subject to conditions.
 
@@ -1087,11 +1091,17 @@ def select_param_from_db(
 
         task_name (str): The `Task` of interest.
 
-        param_name (str): The parameter for that `Task`.
+        param_name (str): The parameter for that `Task`. Or the result field, if
+            `is_result` is True.
 
         condition (Dict[str, str]): A dictionary of conditions. Currently supports:
             - valid_flag: 1/0 # Only include "valid" results.
             - run: XYZ # Only look at entries from this run. Otherwise, take the latest.
+
+        is_result (bool): If True, select the field from the results table instead
+            of the parameters table. E.g. `param_name = payload, is_result=True`
+            selects `payload` from `results`.
+
     Returns:
         value (Optional[Any]): The retrieved value from the `parameters` table or
             None if nothing is found (or potentially if the value is None). Values
@@ -1110,21 +1120,46 @@ def select_param_from_db(
         elif key == "run":
             where_clause = f"{where_clause} c.run = :run"
         elif key == "param":
-            where_clause = f"{where_clause} p.name = :param"
+            if is_result:
+                where_clause = f"{where_clause} p.name = :param"
+            else:
+                where_clause = f"{where_clause} p.name = :param"
         elif key == "task":
             where_clause = f"{where_clause} t.name = :task"
 
-    join_query: str = f"""
-    SELECT p.value
-    FROM parameters p
-    JOIN executions e ON p.execution_id = e.id
-    JOIN config c ON e.config_id = c.id
-    JOIN results r ON e.result_id = r.id
-    JOIN tasks t ON e.task_id = t.id
-    {where_clause}
-    ORDER BY e.timestamp DESC
-    LIMIT 1
-    """
+    join_query: str
+    if is_result:
+        result_keys: Tuple[str, ...] = (
+            "schema_id",
+            "payload",
+            "summary",
+            "status",
+            "valid_flag",
+        )
+        if param_name not in result_keys:
+            raise DatabaseError(f"Cannot search results table for {param_name}!")
+
+        join_query = f"""
+        SELECT r.{param_name}
+        FROM results r
+        JOIN executions e ON e.result_id = r.id
+        JOIN tasks t ON e.task_id = t.id
+        {where_clause}
+        ORDER BY e.timestamp DESC
+        LIMIT 1
+        """
+    else:
+        join_query = f"""
+        SELECT p.value
+        FROM parameters p
+        JOIN executions e ON p.execution_id = e.id
+        JOIN config c ON e.config_id = c.id
+        JOIN results r ON e.result_id = r.id
+        JOIN tasks t ON e.task_id = t.id
+        {where_clause}
+        ORDER BY e.timestamp DESC
+        LIMIT 1
+        """
     with con:
         con.executescript(PRAGMAS)
 

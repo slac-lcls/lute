@@ -208,8 +208,18 @@ def read_latest_db_entry(
             if for_run is not None:
                 cond["run"] = str(for_run)
 
+            new_param: str = param
+            is_result: bool = False
+            if "result." in param:
+                new_param = param.split(".")[1]
+                is_result = True
+
             return select_param_from_db(
-                con=con, task_name=task_name, param_name=param, condition=cond
+                con=con,
+                task_name=task_name,
+                param_name=new_param,
+                condition=cond,
+                is_result=is_result,
             )
         except sqlite3.OperationalError as err:
             logger.error(f"Cannot retrieve value {param} due to: {err}")
