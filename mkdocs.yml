@@ -9,7 +9,10 @@ nav:
       - Running LUTE: "usage/running_lute.md"
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
-      - Creating a new Task: "development/new_task.md"
+      - Creating a new Task:
+          - Overview: "development/new_task/overview.md"
+          - First Party: "development/new_task/first_party.md"
+          - Third Party: "development/new_task/third_party.md"
       - Creating a new Workflow:
           - Overview: "development/creating_workflows.md"
           - With Airflow: "development/creating_workflows_airflow.md"
