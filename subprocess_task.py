@@ -130,7 +130,9 @@ else:
     if use_mpi:
         if rank == 0:
             row_ids = record_parameters_db(task_parameters)
-        comm.Barrier()
+        else:
+            row_ids = None
+        row_ids = comm.bcast(row_ids, root=0)
     else:
         row_ids = record_parameters_db(task_parameters)
     work_dir: str = task_parameters.lute_config.work_dir
