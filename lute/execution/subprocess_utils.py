@@ -1,7 +1,13 @@
+USE_PYDANTIC_MODELS: bool = True
+
 exec_script_template: str = """
 import pickle
 import sys
 from typing import Any, Dict, Optional, Type
+
+# Need to set this before importing anything else
+import lute.execution.subprocess_utils
+lute.execution.subprocess_utils.USE_PYDANTIC_MODELS = False
 
 from lute.io.db import get_task_parameters_defn_and_params
 from lute.io.parameters import construct_task_parameters, RowIds, TaskParameters

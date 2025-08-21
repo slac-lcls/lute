@@ -16,7 +16,9 @@ import os
 import warnings
 import signal
 
-if TYPE_CHECKING:
+import lute.execution.subprocess_utils
+
+if TYPE_CHECKING or lute.execution.subprocess_utils.USE_PYDANTIC_MODELS:
     from lute.io.models.base import (
         TaskParameters,
         ThirdPartyParameters,

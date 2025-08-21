@@ -4,8 +4,9 @@ import os
 import signal
 import sys
 import types
-from typing import Type, Optional, Dict, Any
+from typing import Any, Dict, Optional, Type
 
+import lute.execution.subprocess_utils
 from lute.tasks.task import Task, ThirdPartyTask
 from lute.execution.ipc import Message
 from lute.io.config import parse_config
@@ -82,6 +83,9 @@ task_parameters: TaskParameters = parse_config(task_name=task_name, config_path=
 # For now, we will only use the exec with first-party Task's that require a new env.
 TaskType: Type[Task]
 if isinstance(task_parameters, ThirdPartyParameters) or not setup_env():
+    # lute.execution.subprocess_utils.USE_PYDANTIC_MODELS has a bool
+    # It defaults to True, but we set here in case anything changes in the future
+    lute.execution.subprocess_utils.USE_PYDANTIC_MODELS = True
     is_third_party = True
     if isinstance(task_parameters, ThirdPartyParameters):
         TaskType = ThirdPartyTask
@@ -102,7 +106,10 @@ if isinstance(task_parameters, ThirdPartyParameters) or not setup_env():
     task: Task = TaskType(params=task_parameters)
     task.run()
 else:
-    from lute.execution.subprocess_utils import exec_script_template
+    exec_script_template: str = lute.execution.subprocess_utils.exec_script_template
+    # `lute.execution.subprocess_utils.USE_PYDANTIC_MODELS` needs to be set to False
+    # but this gets set in the `exec_script_template` and is only required by the
+    # process after the exec
 
     # We are a first-party Task that needs a new environment
     # Record the parameters - but only once if using MPI
