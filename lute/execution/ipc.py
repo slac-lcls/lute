@@ -50,10 +50,6 @@ from enum import Enum
 from typing import Any, Optional, Set, List, Union, Tuple, cast
 from typing_extensions import Self
 
-USE_ZMQ: bool = True
-if USE_ZMQ:
-    import zmq
-
 LUTE_SIGNALS: Set[str] = {
     "NO_PICKLE_MODE",
     "TASK_STARTED",
@@ -76,6 +72,23 @@ else:
     os.environ["PYTHONWARNINGS"] = "ignore"
 
 logger: logging.Logger = logging.getLogger(__name__)
+zmq_env: Optional[str] = os.getenv("LUTE_USE_ZMQ")
+USE_ZMQ: bool
+if zmq_env is None:
+    logger.debug("Preference of ZMQ usage not specified. Defaulting to using ZMQ.")
+    try:
+        import zmq
+
+        USE_ZMQ = True
+    except ModuleNotFoundError:
+        logger.warning("ZMQ not found. Will use `socket` implementation.")
+        USE_ZMQ = False
+elif zmq_env == "0":
+    logger.debug("Requested use of `socket` over ZMQ for IPC.")
+    USE_ZMQ = False
+else:
+    logger.debug("Requested use of ZMQ for IPC.")
+    USE_ZMQ = True
 
 
 class Party(Enum):
