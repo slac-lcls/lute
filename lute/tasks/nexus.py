@@ -5,15 +5,15 @@ Classes:
     ConvertSMDToNexus: Convert a smalldata HDF5 file to a NeXuS HDF5 file.
 """
 
+from __future__ import annotations
+
 __all__ = ["ConvertSMDToNexus"]
 __author__ = "Fred Poitevin and Gabriel Dorlhiac"
 
 import copy
 from typing import Any, Dict, List, Tuple, TYPE_CHECKING
 
-import dxtbx_model_ext  # type: ignore
 import h5py  # type: ignore
-import libtbx  # type: ignore
 import numpy as np
 import numpy.typing as npt
 from dxtbx.model import Detector, ExperimentList, Panel  # type: ignore
@@ -45,7 +45,7 @@ class ConvertSMDToNexus(Task):
 
     def _pre_run(self) -> None:
         super()._pre_run()
-        params: libtbx.phil.scope_extract = phil_scope.extract()
+        params: libtbx.phil.scope_extract = phil_scope.extract()  # type: ignore # noqa: F821
         params.nexus_details.source_name = "SLAC LCLS"
         params.nexus_details.instrument_name = "SLAC LCLS BEAMLINE MFX"
         params.nexus_details.instrument_short_name = "MFX"
@@ -55,14 +55,16 @@ class ConvertSMDToNexus(Task):
         self._nexus_writer.construct_entry()
 
     def _run(self) -> None:
-        E: "dxtbx_model_ext.Experiment" = ExperimentList.from_file(
+        E: "dxtbx_model_ext.Experiment" = ExperimentList.from_file(  # type: ignore # noqa: F821
             self._task_parameters.geom, False
-        )[0]
-        D: "dxtbx_model_ext.Detector" = E.detector
+        )[
+            0
+        ]
+        D: "dxtbx_model_ext.Detector" = E.detector  # type: ignore # noqa: F821
 
         if self._task_parameters.flip:
-            new_D: "dxtbx_model_ext.Detector" = Detector()
-            p: "dxtbx_model_ext.DetectorNode"
+            new_D: "dxtbx_model_ext.Detector" = Detector()  # type: ignore # noqa: F821
+            p: "dxtbx_model_ext.DetectorNode"  # type: ignore # noqa: F821
             for _, p in enumerate(D):
                 pd: Dict[str, Any] = p.to_dict()
                 ox: float
@@ -75,7 +77,7 @@ class ConvertSMDToNexus(Task):
                 pd["origin"] = orig
                 pd["slow_axis"] = tuple(slow)
                 pd["fast_axis"] = tuple(fast)
-                new_p: "dxtbx_model_ext.Panel" = Panel.from_dict(pd)
+                new_p: "dxtbx_model_ext.Panel" = Panel.from_dict(pd)  # type: ignore # noqa: F821
                 new_D.add_panel(new_p)
             D = new_D
 
@@ -87,12 +89,12 @@ class ConvertSMDToNexus(Task):
 
         en_convert: float = 1e10 * constants.c * constants.h / constants.electron_volt
         waves: npt.NDArray[np.float64] = en_convert / h5["ebeamh/ebeamPhotonEnergy"][()]
-        B: "dxtbx_model_ext.Beam" = E.beam
+        B: "dxtbx_model_ext.Beam" = E.beam  # type: ignore # noqa: F821
 
         if self._task_parameters.flip:
             B.set_unit_s0((0, 0, -1))
 
-        beams: List["dxtbx_model_ext.Beam"] = []
+        beams: List["dxtbx_model_ext.Beam"] = []  # type: ignore # noqa: F821
         for i, w in enumerate(waves):
             b = copy.deepcopy(B)
             b.set_wavelength(w)
