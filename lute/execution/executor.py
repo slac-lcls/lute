@@ -505,9 +505,18 @@ class BaseExecutor(ABC):
                 new_environment[key] = value
             else:
                 new_environment[f"LUTE_TENV_{key}"] = value
-        for key, value in os.environ.items():
-            if key not in new_environment:
-                new_environment[key] = value
+        # Until we make LUTE installable... Need to make sure this is available
+        # for first-party Tasks, regardless of the directory they run in if using
+        # a new environment
+        old_python_path: str = new_environment.get("PYTHONPATH", "")
+        lute_path: Optional[str] = os.getenv("LUTE_PATH")
+        if lute_path is None:
+            logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
+        else:
+            if old_python_path:
+                new_environment["PYTHONPATH"] = f"{lute_path}:{old_python_path}"
+            else:
+                new_environment["PYTHONPATH"] = lute_path
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> None:
