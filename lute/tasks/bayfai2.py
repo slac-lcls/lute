@@ -10,7 +10,7 @@ __all__ = ["OptimizePyFAIGeometry"]
 __author__ = "Louis Conreux"
 
 from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
-from lute.tasks._bayfai import BayesGeomOpt
+from lute.tasks._bayfai2 import BayesGeomOpt
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger
@@ -44,7 +44,7 @@ cc = wu.cc
 logger: logging.Logger = get_logger(__name__)
 
 
-class OptimizePyFAIGeometry(Task):
+class OptimizePyFAIGeometry2(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
     def __init__(
@@ -62,7 +62,7 @@ class OptimizePyFAIGeometry(Task):
         det_type = self._task_parameters.det_type
         if det_type.lower() == "jungfrau16m":
             detname = "jungfrau"
-        psana_to_pyfai = PsanaToPyFAI(
+        psana_to_pyfai = Psana2ToPyFAI(
             exp=exp,
             run_num=run,
             detname=detname,
@@ -320,7 +320,7 @@ class OptimizePyFAIGeometry(Task):
             path, f"r{self._task_parameters.lute_config.run:0>4}.poni"
         )
 
-        PyFAIToPsana(
+        PyFAIToPsana2(
             in_file=poni_file,
             exp=exp,
             run_num=run_num,
@@ -340,11 +340,9 @@ class OptimizePyFAIGeometry(Task):
         if dbsuffix is None:
             dbsuffix = "testgeom"
 
-        print(f"BEFORE UPDATE DATABASE", flush=True)
         self._update_database(dbsuffix=dbsuffix)
-        print(f"AFTER UPDATE DATABASE", flush=True)
 
-        converter = PsanaToPyFAI(
+        converter = Psana2ToPyFAI(
             exp=exp,
             run=run_num,
             detname=detname,
@@ -368,7 +366,6 @@ class OptimizePyFAIGeometry(Task):
             detector=detector,
             calibrant=self._task_parameters.calibrant,
         )
-        print(f"BEFORE OPTIMIZATION: Process {optimizer.rank}", flush=True)
         optimizer.bayes_opt_geom(
             powder=powder,
             bounds=self._task_parameters.bo_params.bounds,
@@ -382,7 +379,6 @@ class OptimizePyFAIGeometry(Task):
             prior=self._task_parameters.bo_params.prior,
             seed=self._task_parameters.bo_params.seed,
         )
-        print(f"AFTER OPTIMIZATION: Process {optimizer.rank}", flush=True)
         if optimizer.rank == 0:
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
@@ -398,7 +394,6 @@ class OptimizePyFAIGeometry(Task):
             )
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_{optimizer.exp}_r{optimizer.run:0>4}.png"
-            print(f"BEFORE UPDATE GEOMETRY: Process {optimizer.rank}", flush=True)
             calib_detector = self._update_geometry()
             fig, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.visualize_results(
