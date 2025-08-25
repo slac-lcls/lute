@@ -1,0 +1,18 @@
+%YAML 1.3
+---
+title: "Config to test Xtc conversion"
+experiment: "amo06516"
+run: "90"
+date: "2025/08/25"
+lute_version: 0.1      # Do not be change unless need to force older version
+task_timeout: 600
+work_dir: "/sdf/scratch/users/k/kmecseki"
+...
+---
+Xtc1to2:
+  exp: "amo06516"
+  run: "90"
+  mode: "idx"
+  detector: "pnccdFront"
+  geometry: "/reg/d/psdm/amo/amo06516/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/38-end.data"
+...

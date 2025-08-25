@@ -149,3 +149,9 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
+
+# XTC
+#####
+
+Xtc1to2: Executor = Executor("Xtc1to2")
+"""Converts Xtc1 files to Xtc2 to use in psana2"""
