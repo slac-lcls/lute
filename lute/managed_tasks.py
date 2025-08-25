@@ -153,11 +153,23 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 # PyFAI
 #######
 PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
-"""Optimize detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+"""Optimize LCLS1 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization. (psana)."""
 PyFAIGeometryOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
+        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
+    }
+)
+
+PyFAIGeometryOptimizer2: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry2")
+"""Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+PyFAIGeometryOptimizer2.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PS_SRV_NODES": "0",
+        "PS_EB_NODES": "1",
         "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
     }
 )
