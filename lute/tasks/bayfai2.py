@@ -26,12 +26,12 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
-from LCLSGeom.converter import (  # type: ignore
+from LCLSGeom.psana2.converter import (  # type: ignore
     Psana2ToPyFAI,
     PyFAIToPsana2,
     PyFAIToCrystFEL,
 )
-from LCLSGeom.geometry import get_beam_center  # type: ignore
+from LCLSGeom.common.geometry import get_beam_center  # type: ignore
 
 from psana import DataSource  # type: ignore
 from psana.pscalib.calib.MDB_CLI import *  # gu, mu, etc

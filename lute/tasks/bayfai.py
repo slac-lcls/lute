@@ -27,13 +27,12 @@ import numpy.typing as npt
 import time  # type: ignore
 from scipy.ndimage import gaussian_filter, convolve, gaussian_laplace  # type: ignore
 
-from LCLSGeom.converter import (  # type: ignore
+from LCLSGeom.psana.converter import (  # type: ignore
     PsanaToPyFAI,
     PyFAIToPsana,
     PsanaToCrystFEL,
 )
-from LCLSGeom.calib import fetch_template  # type: ignore
-from LCLSGeom.geometry import get_beam_center  # type: ignore
+from LCLSGeom.common.geometry import get_beam_center  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
