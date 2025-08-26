@@ -27,7 +27,7 @@ description: str = "Optimize detector geometry given a produced powder image."
 
 dag: DAG = DAG(
     dag_id=dag_id,
-    start_date=datetime(1970, 1, 1),
+    start_date=datetime(2000, 4, 10),
     schedule_interval=None,
     description=description,
     is_paused_upon_creation=False,
@@ -37,8 +37,11 @@ dag: DAG = DAG(
 def psana1v2_branch_func(**context) -> str:
     if "dag_run" in context:
         conf: Dict[str, Any] = context["dag_run"].conf
-        if "experiment" in conf and conf["experiment"][:3].lower() == "mfx":
-            return "SmallDataProducer2"
+        if "is_daq2" in conf:
+            if conf["is_daq2"]:
+                return "SmallDataProducer2"
+            elif conf["is_daq2"] is None:
+                raise ValueError("Could not determine psana version: Unknown DAQ state")
     return "SmallDataProducer"
 
 psana1v2_brancher = psana1v2_branch_func()
