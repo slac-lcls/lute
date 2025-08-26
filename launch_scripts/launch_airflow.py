@@ -417,6 +417,7 @@ if __name__ == "__main__":
                 # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
                 # In LCLS1 they are sent as "DAQ Detector/<name>"
                 is_daq2 = True
+                break
         else:
             is_daq2 = False
 
