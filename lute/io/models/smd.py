@@ -475,7 +475,8 @@ class SubmitSMDParameters(ThirdPartyParameters):
             # or lcls2
             is_daq2: bool
             try:
-                import psana # type: ignore
+                import psana  # type: ignore
+
                 _ = psana.xtc_version
                 # xtc_version fails in psana1
                 is_daq2 = True
