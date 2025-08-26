@@ -170,6 +170,6 @@ PyFAIGeometryOptimizer2.update_environment(
         "NUMEXPR_NUM_THREADS": "16",
         "PS_SRV_NODES": "0",
         "PS_EB_NODES": "1",
-        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
+        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom/src",
     }
 )
