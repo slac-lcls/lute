@@ -8,13 +8,14 @@ begin running the tasks of the specified directed acyclic graph (DAG).
 
 __author__ = "Gabriel Dorlhiac"
 
-import sys
-import os
-import uuid
-import getpass
-import datetime
-import logging
 import argparse
+import collections
+import datetime
+import getpass
+import logging
+import os
+import sys
+import uuid
 import time
 from typing import Any, Dict, List, Optional, TypedDict, Union
 
@@ -49,6 +50,7 @@ class DagRunConf(TypedDict):
     slurm_params: List[str]
     workflow: Dict[str, Any]
     run_type: Optional[str]
+    is_daq2: Optional[bool]
 
 
 class DagRunData(TypedDict):
@@ -270,7 +272,7 @@ if __name__ == "__main__":
         os.environ["RUN_NUM"] = args.run
 
         os.environ["Authorization"] = _request_arp_token(args.experiment)
-        os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
+        os.environ["ARP_JOB_ID"] = uuid.uuid4().hex[:24]
 
     wf_name: str
     use_custom_defn: bool
@@ -379,33 +381,44 @@ if __name__ == "__main__":
     assert isinstance(arp_job_id, str)
     assert isinstance(jid_authorization, str)
 
-    run_type: str
-    if args.type != "":
-        run_type = args.type
+    elog_auth: Union[HTTPBasicAuth, Dict[str, str]] = get_elog_auth(experiment)
+    base_url: str
+    run_doc_url: str
+    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
+    if isinstance(elog_auth, dict):
+        base_url = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
+        run_doc_url = f"{base_url}/{run_doc_endpoint}"
+        resp = requests.get(run_doc_url, headers=elog_auth)
     else:
-        elog_auth: Union[HTTPBasicAuth, Dict[str, str]] = get_elog_auth(experiment)
-        base_url: str
-        run_doc_url: str
-        run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
-        if isinstance(elog_auth, dict):
-            base_url = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
-            run_doc_url = f"{base_url}/{run_doc_endpoint}"
-            resp = requests.get(run_doc_url, headers=elog_auth)
-        else:
-            base_url = "https://pswww.slac.stanford.edu/ws-auth/lgbk/lgbk"
-            run_doc_url = f"{base_url}/{run_doc_endpoint}"
-            resp = requests.get(run_doc_url, auth=elog_auth)
+        base_url = "https://pswww.slac.stanford.edu/ws-auth/lgbk/lgbk"
+        run_doc_url = f"{base_url}/{run_doc_endpoint}"
+        resp = requests.get(run_doc_url, auth=elog_auth)
 
-        if resp.status_code != 200:
-            logger.warning(
-                "Unable to retrieve run document! No `run_type` information will be used! "
-                "Workflow may be able to continue but this could point to issues with "
-                "API access that lead to problems downstream."
-            )
-            run_type = "UNKNOWN"
+    run_type: str
+    is_daq2: Optional[bool] = None
+    if resp.status_code != 200:
+        logger.warning(
+            "Unable to retrieve run document! No `run_type` information will be used! "
+            "No information about psana1/psana2 can be retrieved. "
+            "Workflow may be able to continue but this could point to issues with "
+            "API access that lead to problems downstream."
+        )
+        run_type = "UNKNOWN"
+    else:
+        if args.type != "":
+            run_type = args.type
         else:
             # If API request succeeds `type` should always be defined
             run_type = resp.json()["value"]["type"]
+        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
+        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
+        for key in param_keys:
+            if "/drp/" in key:
+                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
+                # In LCLS1 they are sent as "DAQ Detector/<name>"
+                is_daq2 = True
+        else:
+            is_daq2 = False
 
     dag_run_data: DagRunData = {
         "dag_run_id": str(uuid.uuid4()),
@@ -423,6 +436,7 @@ if __name__ == "__main__":
             "slurm_params": extra_args,
             "workflow": wf_defn,  # Only used for custom defined workflows.
             "run_type": run_type,
+            "is_daq2": is_daq2,  # True if LCLS2 DAQ, False if LCLS1 DAQ, None if undetermined
         },
     }
 
