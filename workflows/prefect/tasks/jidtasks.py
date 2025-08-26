@@ -167,6 +167,10 @@ def create_control_doc(
     else:
         lute_param_str = f"--taskname {lute_task_id} --config {config_path}"
 
+    is_daq2: Optional[bool] = conf.get("is_daq2", False)
+    if is_daq2:
+        lute_param_str = f"{lute_param_str} --psana2"
+
     kerb_file: Optional[str] = conf.get("kerb_file")
     if kerb_file is not None:
         lute_param_str = f"{lute_param_str} -K {kerb_file}"
