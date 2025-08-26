@@ -471,7 +471,17 @@ class SubmitSMDParameters(ThirdPartyParameters):
             else:
                 cfg = str(Path(values["producer"]).parent / f"prod_config_{hutch}.py")
             lute_template_cfg.output_path = cfg
-            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
+            # Try using xtc_version now available in psana2 to figure out lcls1
+            # or lcls2
+            is_daq2: bool
+            try:
+                import psana # type: ignore
+                _ = psana.xtc_version
+                # xtc_version fails in psana1
+                is_daq2 = True
+            except AttributeError:
+                is_daq2 = False
+            if not is_daq2:
                 lute_template_cfg.template_name = "smd1_prod_config_template.py"
             else:
                 lute_template_cfg.template_name = "smd2_prod_config_template.py"
