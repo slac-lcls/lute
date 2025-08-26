@@ -23,7 +23,7 @@ from airflow.decorators import task
 from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
-description: str = "DAG to test branching based on run_type."
+description: str = "Optimize detector geometry given a produced powder image."
 
 dag: DAG = DAG(
     dag_id=dag_id,
