@@ -13,29 +13,47 @@ Note:
     internally, so a DAG "lute_test" can be triggered by asking for "test"
 """
 
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import Any, Dict
+
 from airflow import DAG
+from airflow.decorators import task
+
 from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
-description: str = (
-    "Run geometry optimization based on given calibrant. Produce powder using "
-    "smalldata_tools."
-)
+description: str = "DAG to test branching based on run_type."
 
 dag: DAG = DAG(
     dag_id=dag_id,
-    start_date=datetime(2024, 9, 3),
+    start_date=datetime(1970, 1, 1),
     schedule_interval=None,
     description=description,
     is_paused_upon_creation=False,
 )
 
+@task.branch(task_id="Psana1v2Brancher")
+def psana1v2_branch_func(**context) -> str:
+    if "dag_run" in context:
+        conf: Dict[str, Any] = context["dag_run"].conf
+        if "experiment" in conf and conf["experiment"][:3].lower() == "mfx":
+            return "SmallDataProducer2"
+    return "SmallDataProducer"
+
+psana1v2_brancher = psana1v2_branch_func()
+
 smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
+
+smd_producer2: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer2", dag=dag)
 
 geom_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer", dag=dag)
 
+geom_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer2", dag=dag)
 
-# Powder production and geometry optimization
+# Branch Workflow depending on available psana version
+psana1v2_brancher >> [smd_producer, smd_producer2]
+
 smd_producer >> geom_optimizer
+
+smd_producer2 >> geom_optimizer2
