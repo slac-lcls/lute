@@ -189,6 +189,7 @@ class BaseExecutor(ABC):
             task_result=result,
             task_parameters=task_parameters,
             task_env=task_env,
+            executor_name=self.__class__.__name__,
             poll_interval=poll_interval,
             communicator_desc=communicator_desc,
         )

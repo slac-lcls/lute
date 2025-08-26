@@ -83,6 +83,11 @@ class TaskResult:
     impl_schemas: Optional[str] = None
 
 
+class BaseSchema(int, Enum):
+    NONE = 0
+    HDF5 = 1
+
+
 @dataclass
 class ElogSummaryPlots:
     """Holds a graphical summary intended for display in the eLog.
@@ -127,5 +132,6 @@ class DescribedAnalysis:
     task_result: TaskResult
     task_parameters: Optional[TaskParameters]
     task_env: Dict[str, str]
+    executor_name: str
     poll_interval: float
     communicator_desc: List[str]
