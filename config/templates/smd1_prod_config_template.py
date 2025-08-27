@@ -1,5 +1,6 @@
 import numpy as np
 
+detnames = {{ detnames }}
 
 {%- if getROIs is defined and getROIs %}
 def getROIs(run):
