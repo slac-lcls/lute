@@ -31,6 +31,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     class BayesGeomOptParameters(BaseModel):
         """Bayesian optimization hyperparameters."""
+
         n_samples: int = Field(
             20,
             description="Number of random starts to initialize the Bayesian optimization.",
@@ -73,7 +74,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             "poni2": 0.0,
             "rot1": 0.0,
             "rot2": 0.0,
-            "rot3": 0.0
+            "rot3": 0.0,
         },
         description="Center values for the parameters to be optimized.",
     )
@@ -85,7 +86,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             "poni2": (-0.01, 0.01),
             "rot1": (-1, 1),
             "rot2": (-1, 1),
-            "rot3": (-1, 1)
+            "rot3": (-1, 1),
         },
         description="Bounds defining the parameter search space for the Bayesian optimization. Bound values are in meters for translations and radians for rotations.",
     )
@@ -97,7 +98,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             "poni2": 0.0001,
             "rot1": 0.1,
             "rot2": 0.1,
-            "rot3": 0.1
+            "rot3": 0.1,
         },
         description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters for translation and radians for rotations.",
     )
