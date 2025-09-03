@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches 
+import matplotlib.patches as patches
 from bokeh.plotting import figure  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
@@ -25,13 +25,13 @@ from bokeh.models.annotations import Label  # type: ignore
 import h5py
 from scipy.ndimage import gaussian_filter
 from tqdm import tqdm
-import pyFAI  
+import pyFAI
 from pyFAI.geometry import Geometry
 from pyFAI.goniometer import SingleGeometry
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
-from sklearn.gaussian_process import GaussianProcessRegressor 
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from mpi4py import MPI
@@ -42,6 +42,7 @@ pyFAI.use_opencl = False
 
 logger: logging.Logger = get_logger(__name__)
 
+
 def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
     """
     Extract a powder image from smalldata analysis.
@@ -50,7 +51,7 @@ def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
     ----------
     powder_path : str
         Path to the h5 file containing the powder data.
-    
+
     Returns
     -------
     powder : npt.NDArray[np.float64]
@@ -60,9 +61,12 @@ def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
         try:
             powder = h5[f"Sums/{detname}_calib_max"][()]
         except KeyError:
-            logger.warning(f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead.")
+            logger.warning(
+                f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
+            )
             powder = h5[f"Sums/{detname}_calib"][()]
     return powder
+
 
 def preprocess_powder(powder, smooth=False):
     """
@@ -82,13 +86,20 @@ def preprocess_powder(powder, smooth=False):
         grady_calib = np.zeros_like(powder)
         for p in range(powder.shape[0]):
             gradx_calib[p, :-1, :-1] = (
-                calib[p, 1:, :-1] - calib[p, :-1, :-1] + calib[p, 1:, 1:] - calib[p, :-1, 1:]
+                calib[p, 1:, :-1]
+                - calib[p, :-1, :-1]
+                + calib[p, 1:, 1:]
+                - calib[p, :-1, 1:]
             ) / 2
             grady_calib[p, :-1, :-1] = (
-                calib[p, :-1, 1:] - calib[p, :-1, :-1] + calib[p, 1:, 1:] - calib[p, 1:, :-1]
+                calib[p, :-1, 1:]
+                - calib[p, :-1, :-1]
+                + calib[p, 1:, 1:]
+                - calib[p, 1:, :-1]
             ) / 2
         powder = np.sqrt(gradx_calib**2 + grady_calib**2)
     return powder
+
 
 def min_intensity(powder, threshold):
     """
@@ -109,6 +120,7 @@ def min_intensity(powder, threshold):
     powder = np.clip(powder, 0, outlier)
     return Imin
 
+
 def generate_powder(powder_path, detname, smooth=False):
     """
     Generate the assembled powder plot and cache it.
@@ -126,6 +138,7 @@ def generate_powder(powder_path, detname, smooth=False):
     powder = preprocess_powder(powder, smooth)
     Imin = min_intensity(powder, 95)
     return powder, Imin
+
 
 def build_detector(in_file, shape):
     """
@@ -150,6 +163,7 @@ def build_detector(in_file, shape):
     detector = psana_to_pyfai.detector
     return detector
 
+
 def update_geometry(optimizer, out_file):
     """
     Update the geometry and write a new .poni, .geom and .data file
@@ -162,18 +176,14 @@ def update_geometry(optimizer, out_file):
         Path to the output file
     """
     path = os.path.dirname(out_file)
-    poni_file = os.path.join(
-        path, f"r{optimizer.run:0>4}.poni"
-    )
+    poni_file = os.path.join(path, f"r{optimizer.run:0>4}.poni")
     optimizer.gr.save(poni_file)
     PyFAIToPsana(
         in_file=poni_file,
         detector=optimizer.detector,
         out_file=out_file,
     )
-    geom_file = os.path.join(
-        path, f"r{optimizer.run:0>4}.geom"
-    )
+    geom_file = os.path.join(path, f"r{optimizer.run:0>4}.geom")
     PsanaToCrystFEL(
         in_file=out_file,
         out_file=geom_file,
@@ -184,6 +194,7 @@ def update_geometry(optimizer, out_file):
     )
     detector = psana_to_pyfai.detector
     return detector
+
 
 def define_calibrant(calibrant, exp, run):
     """
@@ -213,6 +224,7 @@ def define_calibrant(calibrant, exp, run):
     calibrant.wavelength = wavelength
     return calibrant
 
+
 def rotation_matrix(params):
     """
     Compute and return the detector tilts as a single rotation matrix
@@ -229,19 +241,20 @@ def rotation_matrix(params):
     sin_rot2 = np.sin(params[4])
     sin_rot3 = np.sin(params[5])
     # Rotation about vertical axis: Note this rotation is left-handed
-    rot1 = np.array([[1.0, 0.0, 0.0],
-                        [0.0, cos_rot1, sin_rot1],
-                        [0.0, -sin_rot1, cos_rot1]])
+    rot1 = np.array(
+        [[1.0, 0.0, 0.0], [0.0, cos_rot1, sin_rot1], [0.0, -sin_rot1, cos_rot1]]
+    )
     # Rotation about horizontal axis: Note this rotation is left-handed
-    rot2 = np.array([[cos_rot2, 0.0, -sin_rot2],
-                        [0.0, 1.0, 0.0],
-                        [sin_rot2, 0.0, cos_rot2]])
+    rot2 = np.array(
+        [[cos_rot2, 0.0, -sin_rot2], [0.0, 1.0, 0.0], [sin_rot2, 0.0, cos_rot2]]
+    )
     # Rotation about z-axis: Note this rotation is right-handed
-    rot3 = np.array([[cos_rot3, -sin_rot3, 0.0],
-                        [sin_rot3, cos_rot3, 0.0],
-                        [0.0, 0.0, 1.0]])
+    rot3 = np.array(
+        [[cos_rot3, -sin_rot3, 0.0], [sin_rot3, cos_rot3, 0.0], [0.0, 0.0, 1.0]]
+    )
     rotation_matrix = np.dot(np.dot(rot3, rot2), rot1)
     return rotation_matrix
+
 
 def correct_geom(detector, params):
     """
@@ -256,7 +269,7 @@ def correct_geom(detector, params):
     if p3 is None:
         p3 = np.zeros_like(p1) + dist
     else:
-        p3 = (p3+dist).ravel()
+        p3 = (p3 + dist).ravel()
     coord_det = np.vstack((p1, p2, p3))
     coord_sample = np.dot(rotation_matrix(params), coord_det)
     x, y, z = coord_sample
@@ -264,6 +277,7 @@ def correct_geom(detector, params):
     y = np.reshape(y, detector.raw_shape)
     z = np.reshape(z, detector.raw_shape)
     return x, y, z
+
 
 def calculate_2theta(detector, params):
     """
@@ -280,8 +294,9 @@ def calculate_2theta(detector, params):
     ttha = np.zeros(detector.raw_shape)
     # loop through the panels
     for p in range(detector.n_modules):
-        ttha[p, :] = np.arctan2(np.sqrt(x[p]*x[p]+y[p]*y[p]), z[p])
+        ttha[p, :] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
     return ttha
+
 
 def get_radius_map(detector):
     """
@@ -291,7 +306,7 @@ def get_radius_map(detector):
     Parameters
     ----------
     detector  : pyFAI.Detector
-        pyFAI detector object 
+        pyFAI detector object
 
     Returns
     -------
@@ -299,8 +314,9 @@ def get_radius_map(detector):
         map of pixels' radii
     """
     y, x, _ = detector.calc_cartesian_positions()
-    r = np.sqrt(x ** 2 + y ** 2)
+    r = np.sqrt(x**2 + y**2)
     return r
+
 
 def radial_profile(powder, detector):
     """
@@ -330,6 +346,7 @@ def radial_profile(powder, detector):
     r_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     return radialprofile, r_centers
 
+
 def pix2q(pixels, distance, wavelength):
     """
     Convert distance from number of pixels from detector center to q-space.
@@ -351,6 +368,7 @@ def pix2q(pixels, distance, wavelength):
     theta = np.arctan2(pixels, distance)
     qs = 4.0 * np.pi * np.sin(theta / 2.0) / (wavelength * 1e10)
     return qs
+
 
 class BayesGeomOpt:
     """
@@ -419,7 +437,7 @@ class BayesGeomOpt:
     def create_search_space(self, bounds, center, res):
         """
         Dynamically discretize the search space based on bounds.
-        
+
         Parameters
         ----------
         bounds : dict
@@ -428,7 +446,7 @@ class BayesGeomOpt:
             Center values for each parameter
         res : dict
             Resolution per parameter
-        
+
         Returns
         -------
         X : np.ndarray
@@ -448,8 +466,12 @@ class BayesGeomOpt:
             else:
                 full_params[p] = np.array([center[p]])
 
-        X = np.array(np.meshgrid(*[full_params[p] for p in self.order])).T.reshape(-1, len(self.order))
-        X_search = np.array(np.meshgrid(*[search_params[p] for p in self.space])).T.reshape(-1, len(self.space))
+        X = np.array(np.meshgrid(*[full_params[p] for p in self.order])).T.reshape(
+            -1, len(self.order)
+        )
+        X_search = np.array(
+            np.meshgrid(*[search_params[p] for p in self.space])
+        ).T.reshape(-1, len(self.space))
         self.mins = np.min(X_search, axis=0)
         self.maxs = np.max(X_search, axis=0)
         X_norm = 2 * (X_search - self.mins) / (self.maxs - self.mins) - 1
@@ -481,7 +503,9 @@ class BayesGeomOpt:
         """
         if prior:
             means = [center[p] for p in self.space]
-            cov = np.diag([((bounds[p][1] - bounds[p][0]) / 5) ** 2 for p in self.space])
+            cov = np.diag(
+                [((bounds[p][1] - bounds[p][0]) / 5) ** 2 for p in self.space]
+            )
             X_free = np.random.multivariate_normal(means, cov, n_samples)
             X_free = np.clip(X_free, self.mins, self.maxs)
             X_norm_samples = 2 * (X_free - self.mins) / (self.maxs - self.mins) - 1
@@ -499,7 +523,7 @@ class BayesGeomOpt:
     def score(self, sample, Imin, max_rings, rtol=1e-2):
         """
         Evaluate score at a given sampled geometry.
-        
+
         Parameters
         ----------
         sample : array-like
@@ -539,7 +563,7 @@ class BayesGeomOpt:
         """
         Evaluate geometry found by BO on pyFAI refinement tool
 
-        Parameters 
+        Parameters
         ----------
         best_param : list
             Best parameters found by Bayesian optimization
@@ -586,7 +610,6 @@ class BayesGeomOpt:
         params = sg.geometry_refinement.param
         return residual, score, params
 
-
     @ignore_warnings(category=ConvergenceWarning)
     def sync_bayes_opt(
         self,
@@ -630,7 +653,7 @@ class BayesGeomOpt:
         seed : int
             Random seed for reproducibility
         """
-        np.random.seed(seed+self.rank)
+        np.random.seed(seed + self.rank)
 
         # 1. Create Search Space
         X, X_norm = self.create_search_space(bounds, center, res)
@@ -643,7 +666,9 @@ class BayesGeomOpt:
             prior = True
         else:
             prior = False
-        X_samples, X_norm_samples = self.sample_initial_points(X, X_norm, center, bounds, n_samples, prior)
+        X_samples, X_norm_samples = self.sample_initial_points(
+            X, X_norm, center, bounds, n_samples, prior
+        )
 
         bo_history = {}
         y = np.zeros((n_samples))
@@ -727,7 +752,9 @@ class BayesGeomOpt:
         if self.rank == 0:
             best_idx = np.argmax(y_all)
             best_param = X_samples[best_idx]
-            residual, score, params = self.pyFAI_score(best_param, Imin, max_rings, rtol)
+            residual, score, params = self.pyFAI_score(
+                best_param, Imin, max_rings, rtol
+            )
             result = {
                 "history": history,
                 "params": params,
@@ -736,7 +763,7 @@ class BayesGeomOpt:
                 "best_idx": best_idx,
             }
             return result
-        
+
     @ignore_warnings(category=ConvergenceWarning)
     def async_bayes_opt(
         self,
@@ -780,7 +807,7 @@ class BayesGeomOpt:
         seed : int
             Random seed for reproducibility
         """
-        np.random.seed(seed+self.rank)
+        np.random.seed(seed + self.rank)
 
         # 1. Create Search Space
         X, X_norm = self.create_search_space(bounds, center, res)
@@ -793,7 +820,9 @@ class BayesGeomOpt:
             prior = True
         else:
             prior = False
-        X_samples, X_norm_samples = self.sample_initial_points(X, X_norm, center, bounds, n_samples, prior)
+        X_samples, X_norm_samples = self.sample_initial_points(
+            X, X_norm, center, bounds, n_samples, prior
+        )
 
         bo_history = {}
         y = np.zeros((n_samples))
@@ -808,13 +837,9 @@ class BayesGeomOpt:
         else:
             y_norm = y - np.mean(y)
 
-        kernel = RBF(
-            length_scale=0.3, length_scale_bounds=(0.2, 0.4)
-        ) * ConstantKernel(
+        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
             constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-        ) + WhiteKernel(
-            noise_level=0.001, noise_level_bounds="fixed"
-        )
+        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
         gp_model = GaussianProcessRegressor(kernel=kernel, random_state=seed)
         gp_model.fit(X_norm_samples, y_norm)
         visited_idx = list([])
@@ -857,7 +882,9 @@ class BayesGeomOpt:
             # 8. Evaluate best geometry using PyFAI refinement tool
             best_idx = np.argmax(y)
             best_param = X_samples[best_idx]
-            residual, score, params = self.pyFAI_score(best_param, Imin, max_rings, rtol)
+            residual, score, params = self.pyFAI_score(
+                best_param, Imin, max_rings, rtol
+            )
             result = {
                 "history": history,
                 "params": params,
@@ -1250,7 +1277,12 @@ class BayesGeomOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {detector.detname}", ha="left", va="center", fontsize=8
+            0.05,
+            0.7,
+            f"Detector {detector.detname}",
+            ha="left",
+            va="center",
+            fontsize=8,
         )
         ax1.text(
             0.05,
