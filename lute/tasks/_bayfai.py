@@ -622,7 +622,6 @@ class BayesGeomOpt:
         max_rings,
         rtol,
         beta=1.96,
-        prior=True,
         seed=0,
     ):
         """
@@ -648,8 +647,6 @@ class BayesGeomOpt:
             Relative tolerance in q-space for masking ring pixels
         beta : float
             Exploration-exploitation trade-off parameter for UCB
-        prior : bool
-            Use prior information for optimization
         seed : int
             Random seed for reproducibility
         """
@@ -657,7 +654,7 @@ class BayesGeomOpt:
 
         # 1. Create Search Space
         X, X_norm = self.create_search_space(bounds, center, res)
-        print(f"Rank {self.rank}: Search space size: {X.shape[0]}")
+        logger.info(f"Rank {self.rank}: Search space size: {X.shape[0]}")
 
         # 2. Sample Initial Points
         # Rank 0 will sample from a Gaussian prior on center
@@ -776,7 +773,6 @@ class BayesGeomOpt:
         max_rings,
         rtol,
         beta=1.96,
-        prior=True,
         seed=0,
     ):
         """
@@ -802,8 +798,6 @@ class BayesGeomOpt:
             Relative tolerance in q-space for masking ring pixels
         beta : float
             Exploration-exploitation trade-off parameter for UCB
-        prior : bool
-            Use prior information for optimization
         seed : int
             Random seed for reproducibility
         """
@@ -811,7 +805,7 @@ class BayesGeomOpt:
 
         # 1. Create Search Space
         X, X_norm = self.create_search_space(bounds, center, res)
-        print(f"Rank {self.rank}: Search space size: {X.shape[0]}")
+        logger.info(f"Rank {self.rank}: Search space size: {X.shape[0]}")
 
         # 2. Sample Initial Points
         # Rank 0 will sample from a Gaussian prior on center

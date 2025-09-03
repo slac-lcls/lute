@@ -74,18 +74,20 @@ class OptimizePyFAIGeometry(Task):
 
         # Run Bayesian Optimization
         optim_params = {
-            "center": self._task_parameters.center,
-            "bounds": self._task_parameters.bounds,
-            "res": self._task_parameters.resolution,
-            "n_samples": self._task_parameters.n_init,
-            "n_iterations": self._task_parameters.n_iter,
+            "n_samples": self._task_parameters.bo_params.n_samples,
+            "n_iterations": self._task_parameters.bo_params.n_iterations,
             "Imin": Imin,
-            "max_rings": self._task_parameters.max_rings,
-            "rtol": self._task_parameters.rtol,
-            "prior": self._task_parameters.prior,
-            "seed": self._task_parameters.seed,
+            "max_rings": self._task_parameters.bo_params.max_rings,
+            "rtol": self._task_parameters.bo_params.rtol,
+            "beta": self._task_parameters.bo_params.beta,
+            "seed": self._task_parameters.bo_params.seed,
         }
-        result = optimizer.sync_bayes_opt(**optim_params)
+        result = optimizer.sync_bayes_opt(
+            center=self._task_parameters.center,
+            bounds=self._task_parameters.bounds,
+            res=self._task_parameters.resolution,
+            **optim_params,
+        )
         if optimizer.rank == 0:
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")

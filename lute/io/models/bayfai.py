@@ -8,7 +8,7 @@ Classes:
 __all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
-from typing import Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union, Tuple
 from pydantic import BaseModel, Field
 
 from lute.io.models.base import TaskParameters
@@ -31,26 +31,6 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     class BayesGeomOptParameters(BaseModel):
         """Bayesian optimization hyperparameters."""
-
-        bounds: Dict[str, Union[float, Tuple[float, float]]] = Field(
-            {
-                "dist": (0.02, 0.6),
-                "poni1": (-0.01, 0.01),
-                "poni2": (-0.01, 0.01),
-            },
-            description="Bounds defining the parameter search space for the Bayesian optimization. All bound values are in meters.",
-        )
-
-        res: Optional[float] = Field(
-            None,
-            description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters. If None, set to the detector pixel size.",
-        )
-
-        max_rings: int = Field(
-            6,
-            description="Maximum number of rings to be used for the Bayesian optimization.",
-        )
-
         n_samples: int = Field(
             20,
             description="Number of random starts to initialize the Bayesian optimization.",
@@ -61,37 +41,70 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Number of iterations to run the Bayesian optimization.",
         )
 
-        kernel: str = Field(
-            "RBF",
-            description="Kernel to be used by the Gaussian Process for the Bayesian optimization. Currently supported: 'RBF', 'Matern'",
+        max_rings: int = Field(
+            10,
+            description="Maximum number of rings to consider during the score calculation.",
         )
 
-        prior: bool = Field(
-            True,
-            description="Flag to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
+        rtol: float = Field(
+            1e-2,
+            description="Relative tolerance for diffraction angle pixel masking.",
         )
 
-        af: str = Field(
-            "ucb",
-            description="Acquisition function to be used by the Bayesian optimization. \n Currently supported: Upper Confidence Bound 'ucb', \n Expected Improvement 'ei', \n Probability of Improvement 'poi'",
-        )
-
-        hyperparams: Dict[str, float] = Field(
-            {
-                "beta": 1.96,
-                "epsilon": 0.01,
-            },
-            description="Hyperparameters for the acquisition function. \n beta is the exploration parameter for the Upper Confidence Bound acquisition function. \n epsilon is the exploration parameter for the Expected Improvement and Probability of Improvement acquisition functions.",
+        beta: float = Field(
+            1.96,
+            description="Exploration parameter for the Upper Confidence Bound acquisition function.",
         )
 
         seed: Optional[int] = Field(
-            None,
+            0,
             description="Seed for the random number generator for reproducibility.",
         )
 
-    det_type: str = Field(
+    fixed: List[str] = Field(
+        ["rot3"],
+        description="List of parameters to be fixed during the optimization.",
+    )
+
+    center: Dict[str, float] = Field(
+        {
+            "dist": 0.1,
+            "poni1": 0.0,
+            "poni2": 0.0,
+            "rot1": 0.0,
+            "rot2": 0.0,
+            "rot3": 0.0
+        },
+        description="Center values for the parameters to be optimized.",
+    )
+
+    bounds: Dict[str, Union[float, Tuple[float, float]]] = Field(
+        {
+            "dist": (-0.05, 0.05),
+            "poni1": (-0.01, 0.01),
+            "poni2": (-0.01, 0.01),
+            "rot1": (-1, 1),
+            "rot2": (-1, 1),
+            "rot3": (-1, 1)
+        },
+        description="Bounds defining the parameter search space for the Bayesian optimization. Bound values are in meters for translations and radians for rotations.",
+    )
+
+    resolution: Dict[str, float] = Field(
+        {
+            "dist": 0.001,
+            "poni1": 0.0001,
+            "poni2": 0.0001,
+            "rot1": 0.1,
+            "rot2": 0.1,
+            "rot3": 0.1
+        },
+        description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters for translation and radians for rotations.",
+    )
+
+    detname: str = Field(
         "",
-        description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
+        description="Detector name. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Jungfrau05M', 'Jungfrau1M', 'Jungfrau4M', 'Jungfrau16M'",
     )
 
     in_file: str = Field(
@@ -104,9 +117,9 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Powder diffraction image path to be used for the calibration.",
     )
 
-    preprocess: Optional[str] = Field(
-        "Diagonal",
-        description="Preprocessing method to be used for the calibration. \nAvailable methods: Finite Differences Gradient Computation 'Finite', \n Diagonal Differences Gradient Computation 'Diagonal', \n Central Differences Gradient Computation 'Central', \n Laplacian of Gaussian Filtering 'Laplacian', \n No Preprocessing 'None', \n PyPCA Filtering yet to be implemented",
+    preprocess: bool = Field(
+        True,
+        description="Flag to enable or disable preprocessing for the calibration.",
     )
 
     calibrant: str = Field(
@@ -116,13 +129,13 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     out_file: str = Field(
         "",
-        description="Path to the output .data file containing the optimized detector geometry.",
+        description="Path to the output .data file that will contain the optimized detector geometry.",
         is_result=True,
     )
 
     bo_params: BayesGeomOptParameters = Field(
         BayesGeomOptParameters(),
-        description="Bayesian optimization parameters containing bounds and resolution for defining space search and hyperparameters.",
+        description="Bayesian optimization hyperparameters.",
     )
 
     _find_in_file_path = validate_calib_path("in_file")
