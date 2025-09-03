@@ -148,10 +148,10 @@ class OptimizePyFAIGeometry(Task):
             self._result.summary = []
             self._result.summary.append(
                 {
-                    "Detector distance (m)": f"{distance:.6f}",
+                    "Detector distance (m)": f"{params[0]:.6f}",
                     "Detector center (pix)": (
-                        f"{cx/self.pixel_size:.3f}",
-                        f"{cy/self.pixel_size:.3f}",
+                        f"{params[2]/calib_detector.pixel_size:.3f}",
+                        f"{params[1]/calib_detector.pixel_size:.3f}",
                     ),
                     "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
                     "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
