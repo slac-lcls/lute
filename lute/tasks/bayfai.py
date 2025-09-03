@@ -13,7 +13,13 @@ import os
 from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
-from lute.tasks._bayfai import BayesGeomOpt, generate_powder, build_detector, define_calibrant, update_geometry
+from lute.tasks._bayfai import (
+    BayesGeomOpt,
+    generate_powder,
+    build_detector,
+    define_calibrant,
+    update_geometry,
+)
 from lute.execution.logging import get_logger
 import logging
 from typing import Optional
@@ -25,6 +31,7 @@ import numpy.typing as npt
 import time  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
+
 
 class OptimizePyFAIGeometry(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
@@ -41,7 +48,11 @@ class OptimizePyFAIGeometry(Task):
         run = self._task_parameters.lute_config.run
 
         # Process Diffraction Powder
-        powder, Imin = generate_powder(self._task_parameters.powder, self._task_parameters.det_name, self._task_parameters.preprocess)
+        powder, Imin = generate_powder(
+            self._task_parameters.powder,
+            self._task_parameters.det_name,
+            self._task_parameters.preprocess,
+        )
         if powder is None:
             raise RuntimeError("Unable to extract powder. Cannot continue.")
 
@@ -78,8 +89,8 @@ class OptimizePyFAIGeometry(Task):
         if optimizer.rank == 0:
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
-            params = result['params']
-            residual = result['residual']
+            params = result["params"]
+            residual = result["residual"]
             logger.info(f"Detector Distance to Sample: {params[0]:.6f}")
             logger.info(f"Beam center: ({params[1]:.6f}, {params[2]:.6f})")
             logger.info(
