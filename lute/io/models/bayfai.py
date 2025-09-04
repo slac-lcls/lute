@@ -57,6 +57,11 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             description="Exploration parameter for the Upper Confidence Bound acquisition function.",
         )
 
+        radius: float = Field(
+            0.01,
+            description="Exclusion radius in the normalized parameter space for already visited points in acquisition function.",
+        )
+
         seed: Optional[int] = Field(
             0,
             description="Seed for the random number generator for reproducibility.",
@@ -81,9 +86,9 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     bounds: Dict[str, Union[float, Tuple[float, float]]] = Field(
         {
-            "dist": (-0.05, 0.05),
-            "poni1": (-0.01, 0.01),
-            "poni2": (-0.01, 0.01),
+            "dist": (-0.02, 0.02),
+            "poni1": (-0.005, 0.005),
+            "poni2": (-0.005, 0.005),
             "rot1": (-1, 1),
             "rot2": (-1, 1),
             "rot3": (-1, 1),

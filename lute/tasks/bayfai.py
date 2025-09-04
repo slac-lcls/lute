@@ -46,11 +46,12 @@ class OptimizePyFAIGeometry(Task):
         assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
         exp = self._task_parameters.lute_config.experiment
         run = self._task_parameters.lute_config.run
+        detname = self._task_parameters.detname
 
         # Process Diffraction Powder
         powder, Imin = generate_powder(
             self._task_parameters.powder,
-            self._task_parameters.det_name,
+            self._task_parameters.detname,
             self._task_parameters.preprocess,
         )
         if powder is None:
@@ -80,9 +81,10 @@ class OptimizePyFAIGeometry(Task):
             "max_rings": self._task_parameters.bo_params.max_rings,
             "rtol": self._task_parameters.bo_params.rtol,
             "beta": self._task_parameters.bo_params.beta,
+            "radius": self._task_parameters.bo_params.radius,
             "seed": self._task_parameters.bo_params.seed,
         }
-        result = optimizer.sync_bayes_opt(
+        result = optimizer.bayes_opt(
             center=self._task_parameters.center,
             bounds=self._task_parameters.bounds,
             res=self._task_parameters.resolution,

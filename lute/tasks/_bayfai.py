@@ -81,27 +81,27 @@ def preprocess_powder(powder, smooth=False):
     """
     powder[powder < 0] = 0
     if smooth:
-        calib = gaussian_filter(powder, sigma=1)
-        gradx_calib = np.zeros_like(powder)
-        grady_calib = np.zeros_like(powder)
         for p in range(powder.shape[0]):
-            gradx_calib[p, :-1, :-1] = (
-                calib[p, 1:, :-1]
-                - calib[p, :-1, :-1]
-                + calib[p, 1:, 1:]
-                - calib[p, :-1, 1:]
+            calib = gaussian_filter(powder[p], sigma=1)
+            gradx = np.zeros_like(calib)
+            grady = np.zeros_like(calib)
+            gradx[:-1, :-1] = (
+                calib[1:, :-1]
+                - calib[:-1, :-1]
+                + calib[1:, 1:]
+                - calib[:-1, 1:]
             ) / 2
-            grady_calib[p, :-1, :-1] = (
-                calib[p, :-1, 1:]
-                - calib[p, :-1, :-1]
-                + calib[p, 1:, 1:]
-                - calib[p, 1:, :-1]
+            grady[:-1, :-1] = (
+                calib[:-1, 1:]
+                - calib[:-1, :-1]
+                + calib[1:, 1:]
+                - calib[1:, :-1]
             ) / 2
-        powder = np.sqrt(gradx_calib**2 + grady_calib**2)
+            powder[p] = np.sqrt(gradx**2 + grady**2)
     return powder
 
 
-def min_intensity(powder, threshold):
+def min_intensity(powder):
     """
     Estimates minimal intensity for extracting key Bragg peaks
 
@@ -109,16 +109,26 @@ def min_intensity(powder, threshold):
     ----------
     powder : np.ndarray
         Powder image
-    threshold : float
-        Percentile for intensity thresholding
     """
     mean = np.mean(powder)
     std = np.std(powder)
     outlier = mean + 5 * std
     nice_pix = powder < outlier
-    Imin = np.percentile(powder[nice_pix], threshold)
+    SNRs = []
+    percents = np.arange(95, 100, 0.25)
+    for percent in percents:
+        pixels = powder[nice_pix]
+        threshold = np.percentile(pixels, percent)
+        signal = np.std(pixels[pixels >= threshold])
+        noise = np.std(pixels[pixels < threshold])
+        if noise > 0:
+            SNRs.append(signal / noise)
+        else:
+            SNRs.append(0)
+    percent = percents[np.argmax(SNRs)]
+    Imin = np.percentile(powder[nice_pix], percent)
     powder = np.clip(powder, 0, outlier)
-    return Imin
+    return powder, Imin
 
 
 def generate_powder(powder_path, detname, smooth=False):
@@ -136,7 +146,7 @@ def generate_powder(powder_path, detname, smooth=False):
     """
     powder = extract_powder(powder_path, detname)
     powder = preprocess_powder(powder, smooth)
-    Imin = min_intensity(powder, 95)
+    powder, Imin = min_intensity(powder)
     return powder, Imin
 
 
@@ -281,7 +291,7 @@ def correct_geom(detector, params):
 
 def calculate_2theta(detector, params):
     """
-    Calculate the 2theta angles for the detector based on the geometry parameters.
+    Calculate the 2θ angles for the detector based on the geometry parameters.
 
     Parameters
     ----------
@@ -291,11 +301,11 @@ def calculate_2theta(detector, params):
         6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
     """
     x, y, z = correct_geom(detector, params)
-    ttha = np.zeros(detector.raw_shape)
+    tth = np.zeros(detector.raw_shape)
     # loop through the panels
     for p in range(detector.n_modules):
-        ttha[p, :] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
-    return ttha
+        tth[p, :] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
+    return tth
 
 
 def get_radius_map(detector):
@@ -407,9 +417,9 @@ class BayesGeomOpt:
         self.stacked_powder = np.reshape(powder, detector.shape)
         self.calibrant = calibrant
         self.calibrant_name = os.path.splitext(os.path.basename(calibrant.filename))[0]
+        self.define_rings(calibrant)
         self.fixed = fixed
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
-        self.tth = np.array(calibrant.get_2th())
         self.space = []
         for p in self.order:
             if p not in self.fixed:
@@ -418,21 +428,117 @@ class BayesGeomOpt:
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
 
-    @staticmethod
-    def UCB(X, gp_model, visited_idx, beta=1.96):
-        y_pred, y_std = gp_model.predict(X, return_std=True)
-        ucb = y_pred + beta * y_std
-        ucb[visited_idx] = -np.inf
-        next = np.argmax(ucb)
-        return next
+    def define_rings(self, calibrant):
+        """
+        Define the bounds for each diffraction ring based on calibrant and wavelength.
 
-    @staticmethod
-    def q_UCB(X, gp_model, q, visited_idx, beta=1.96):
-        y_pred, y_std = gp_model.predict(X, return_std=True)
-        ucb = y_pred + beta * y_std
-        ucb[visited_idx] = -np.inf
-        top_next = np.argsort(ucb)[-q:]
-        return top_next
+        Parameters
+        ----------
+        calibrant : pyFAI.Calibrant
+            Calibrant object
+        """
+        tth = np.array([i for i in calibrant.get_2th() if i is not None])
+        self.tth = np.unique(tth)
+        tth_min = np.zeros_like(self.tth)
+        tth_max = np.zeros_like(self.tth)
+        delta = (self.tth[1:] - self.tth[:-1]) / 4.0
+        tth_max[:-1] = delta
+        tth_max[-1] = delta[-1]
+        tth_min[1:] = -delta
+        tth_min[0] = -delta[0]
+        tth_max += self.tth
+        tth_min += self.tth
+        self.tth_min = tth_min
+        self.tth_max = tth_max
+
+    def update_mask(self, mask, X, sample, radius=0.01):
+        """
+        Update the mask based on the distance to the sample point.
+
+        Parameters
+        ----------
+        mask : np.ndarray
+            Mask array to update
+        X : np.ndarray
+            Normalized Search space
+        sample : np.ndarray
+            Sample point in normalized space
+        radius : float
+            Radius for masking
+        """
+        dist = np.linalg.norm(X - sample, axis=1)
+        mask |= dist <= radius
+        return mask
+
+    def UCB(self, X, gp_model, visited, beta=1.96):
+        """
+        Upper Confidence Bound (UCB) acquisition function.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Normalized Search space
+        gp_model : GaussianProcessRegressor
+            Trained Gaussian Process model
+        visited : list
+            List of already visited points
+        beta : float
+            Exploration-exploitation trade-off parameter
+        radius : float
+            Minimum distance between points in normalized space
+        """
+        X_split = np.array_split(X, self.size)[self.rank]
+        y_pred, y_std = gp_model.predict(X_split, return_std=True)
+        ucb_split = y_pred + beta * y_std
+        self.comm.Barrier()
+        ucb = self.comm.gather(ucb_split, root=0)
+        if self.rank == 0:
+            ucb = np.concatenate(ucb)
+            if len(visited) > 0:
+                ucb[visited] = -np.inf
+            next = np.argmax(ucb)
+            visited.append(next)
+            return next, visited
+        return None, None
+
+    def q_UCB(self, X, gp_model, q, visited, beta=1.96, radius=0.01):
+        """
+        q-Upper Confidence Bound (q-UCB) acquisition function.
+        
+        Parameters
+        ----------
+        X : np.ndarray
+            Normalized Search space
+        gp_model : GaussianProcessRegressor
+            Trained Gaussian Process model
+        q : int
+            Number of points to select
+        visited : list
+            List of already visited points
+        beta : float
+            Exploration-exploitation trade-off parameter
+        radius : float
+            Minimum distance between points in normalized space
+        """
+        X_split = np.array_split(X, self.size)[self.rank]
+        y_pred, y_std = gp_model.predict(X_split, return_std=True)
+        ucb_split = y_pred + beta * y_std
+        self.comm.Barrier()
+        ucb = self.comm.gather(ucb_split, root=0)
+        if self.rank == 0:
+            ucb = np.concatenate(ucb)
+            if len(visited) > 0:
+                ucb[visited] = -np.inf
+            nexts = []
+            mask = np.zeros(X.shape[0], dtype=bool)
+            for _ in range(q):
+                next = np.argmax(ucb)
+                visited.append(next)
+                nexts.append(next)
+                mask = self.update_mask(mask, X, X[next], radius)
+                ucb[mask] = -np.inf
+            return nexts, visited
+        return None, None
 
     def create_search_space(self, bounds, center, res):
         """
@@ -520,7 +626,7 @@ class BayesGeomOpt:
             X_norm_samples = X_norm[idx_samples]
             return X_samples, X_norm_samples
 
-    def score(self, sample, Imin, max_rings, rtol=1e-2):
+    def score(self, sample, Imin, max_rings, rtol=5e-3):
         """
         Evaluate score at a given sampled geometry.
 
@@ -540,23 +646,37 @@ class BayesGeomOpt:
         score : float
             Scalar score for Bayesian optimization
         """
-        ttha = calculate_2theta(self.detector, sample)
-        min_ttha = np.min(ttha)
-        max_ttha = np.max(ttha)
-        valid_ttha = self.tth[(self.tth >= min_ttha) & (self.tth <= max_ttha)]
+        tth_map = calculate_2theta(self.detector, sample)
+        min_tth_det, max_tth_det = np.min(tth_map), np.max(tth_map)
+
+        rings_on_det = (self.tth >= min_tth_det) & (self.tth <= max_tth_det)
+        tths = self.tth[rings_on_det]
+        tth_min = self.tth_min[rings_on_det]
+        tth_max = self.tth_max[rings_on_det]
 
         score = 0.0
-        ring = 0
-        for tth_i in valid_ttha:
+        for ring in range(len(tths)):
             if ring >= max_rings:
-                return score / max_rings
-            mask = np.abs(ttha - tth_i) <= rtol * tth_i
-            pixels = self.powder[mask]
-            pixels = pixels[pixels >= Imin]
-            if len(pixels) != 0:
-                score += np.sum(pixels)
-            ring += 1
-        score /= max_rings
+                break
+            mask_ring = (tth_map >= tth_min[ring]) & (tth_map <= tth_max[ring])
+            if not np.any(mask_ring):
+                continue
+            pixels = self.powder[mask_ring]
+            mean = np.mean(pixels)
+            std = np.std(pixels)
+            threshold = mean + std
+            peaks = pixels[pixels >= threshold]
+            logger.info(
+                f"Ring {ring+1}: 2theta={np.degrees(tths[ring]):.2f} deg, "
+            )
+            logger.info(f"min tth: {np.degrees(tth_min[ring]):.2f} deg, max tth: {np.degrees(tth_max[ring]):.2f} deg")
+            logger.info(
+                f"Pixels: {len(pixels)}, Mean: {mean:.2f}, Std: {std:.2f}, "
+                f"Threshold: {threshold:.2f}, Peaks: {len(peaks)}"
+            )
+            if len(peaks) == 0:
+                continue
+            score += np.mean(peaks)
         return score
 
     def pyFAI_score(self, best_param, Imin, max_rings, rtol):
@@ -606,12 +726,13 @@ class BayesGeomOpt:
         score = self.score(best_param, Imin, max_rings, rtol)
         residual = 0
         if len(sg.geometry_refinement.data) > 0:
-            residual = sg.geometry_refinement.refine3(fix=["rot3", "wavelength"])
+            residual = sg.geometry_refinement.refine3(fix=["wavelength"])
         params = sg.geometry_refinement.param
+        self.gr = sg.geometry_refinement
         return residual, score, params
 
     @ignore_warnings(category=ConvergenceWarning)
-    def sync_bayes_opt(
+    def bayes_opt(
         self,
         center,
         bounds,
@@ -622,6 +743,7 @@ class BayesGeomOpt:
         max_rings,
         rtol,
         beta=1.96,
+        radius=0.01,
         seed=0,
     ):
         """
@@ -647,6 +769,8 @@ class BayesGeomOpt:
             Relative tolerance in q-space for masking ring pixels
         beta : float
             Exploration-exploitation trade-off parameter for UCB
+        radius : float
+            Exclusion radius in normalized space for already visited points
         seed : int
             Random seed for reproducibility
         """
@@ -654,43 +778,39 @@ class BayesGeomOpt:
 
         # 1. Create Search Space
         X, X_norm = self.create_search_space(bounds, center, res)
-        logger.info(f"Rank {self.rank}: Search space size: {X.shape[0]}")
+        if self.rank == 0:
+            logger.info(f"Search space size: {X.shape[0]} points")
 
         # 2. Sample Initial Points
-        # Rank 0 will sample from a Gaussian prior on center
-        # Other ranks will sample uniformly within search space
-        if self.rank == 0:
-            prior = True
-        else:
-            prior = False
+        prior = True
         X_samples, X_norm_samples = self.sample_initial_points(
             X, X_norm, center, bounds, n_samples, prior
         )
 
-        bo_history = {}
-        y = np.zeros((n_samples))
-
         # 3. Evaluate initial points
+        bo_history = {"params": [], "scores": []}
+        y = np.zeros((n_samples))
         for i in range(n_samples):
             y[i] = self.score(X_samples[i], Imin, max_rings, rtol)
-            bo_history[f"init_{i+1}"] = {"param": X_samples[i], "score": y[i]}
-
+            bo_history["params"].append(X_samples[i])
+            bo_history["scores"].append(y[i])
         self.comm.Barrier()
 
+        # 4. Gather initial scores on Rank 0
         X_samples_all = self.comm.gather(X_samples, root=0)
         X_norm_samples_all = self.comm.gather(X_norm_samples, root=0)
         y_all = self.comm.gather(y, root=0)
-
         if self.rank == 0:
-            X_samples_all = np.vstack(X_samples_all)
-            X_norm_samples_all = np.vstack(X_norm_samples_all)
-            y_all = np.concatenate(y_all)
-            y_all[np.isnan(y_all)] = 0
-            if np.std(y_all) != 0:
-                y_norm = (y_all - np.mean(y_all)) / np.std(y_all)
+            X_samples = np.vstack(X_samples_all)
+            X_norm_samples = np.vstack(X_norm_samples_all)
+            y = np.concatenate(y_all)
+            y[np.isnan(y)] = 0
+            if np.std(y) != 0:
+                y_norm = (y - np.mean(y)) / np.std(y)
             else:
-                y_norm = y_all - np.mean(y_all)
+                y_norm = y - np.mean(y)
 
+            # 5. Fit initial Gaussian Process and broadcast
             kernel = RBF(
                 length_scale=0.3, length_scale_bounds=(0.2, 0.4)
             ) * ConstantKernel(
@@ -698,195 +818,75 @@ class BayesGeomOpt:
             ) + WhiteKernel(
                 noise_level=0.001, noise_level_bounds="fixed"
             )
-            gp_model = GaussianProcessRegressor(kernel=kernel, random_state=seed)
-            gp_model.fit(X_norm_samples_all, y_norm)
-            visited_idx = list([])
+            gp_model = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=seed)
+            gp_model.fit(X_norm_samples, y_norm)
+        else:
+            gp_model = None
+        gp_model = self.comm.bcast(gp_model, root=0)
+        visited = list([])
 
         for i in tqdm(range(n_iterations)):
-            # 4. Rank 0 selects next points with q-UCB
-            if self.rank == 0:
-                nexts = self.q_UCB(X_norm, gp_model, self.size, visited_idx, beta)
-                next_points = X[nexts]
-                visited_idx.extend(nexts)
-            else:
-                next_points = None
+            # 6. Parallel q-UCB to select next points
+            nexts, visited = self.q_UCB(X_norm, gp_model, self.size, visited, beta, radius)
+            next = self.comm.scatter(nexts, root=0)
 
-            # 5. Scatter points to all ranks
-            next_point = self.comm.scatter(next_points, root=0)
-
-            # 6. Compute score locally
-            score = self.score(next_point, Imin, max_rings, rtol)
-            bo_history[f"iter_{i+1}"] = {"param": next_point, "score": score}
-
+            # 7. Compute score locally
+            score = self.score(X[next], Imin, max_rings, rtol)
+            bo_history["params"].append(X[next])
+            bo_history["scores"].append(score)
             self.comm.Barrier()
 
-            # 7. Gather scores on Rank 0
-            score_all = self.comm.gather(score, root=0)
-
+            # 8. Gather scores on Rank 0
+            scores = np.array(self.comm.gather(score, root=0))
             if self.rank == 0:
-                scores = np.array(score_all)
                 scores[np.isnan(scores)] = 0
-                y_all = np.concatenate([y_all, scores])
+                y = np.concatenate([y, scores])
                 X_samples = np.vstack([X_samples, X[nexts]])
                 X_norm_samples = np.vstack([X_norm_samples, X_norm[nexts]])
-                if np.std(y_all) != 0:
-                    y_norm = (y_all - np.mean(y_all)) / np.std(y_all)
+                if np.std(y) != 0:
+                    y_norm = (y - np.mean(y)) / np.std(y)
                 else:
-                    y_norm = y_all - np.mean(y_all)
+                    y_norm = y - np.mean(y)
 
-                # 8. Update Gaussian Process
+                # 9. Update Gaussian Process and broadcast
                 gp_model.fit(X_norm_samples, y_norm)
-
+            gp_model = self.comm.bcast(gp_model, root=0)
         self.comm.Barrier()
 
-        # 8. Collect BO history from each rank
-        bo_histories = self.comm.gather(bo_history, root=0)
+        # 10. Pick best points and refine with pyFAI
+        X_samples = self.comm.bcast(X_samples, root=0)
         if self.rank == 0:
-            for _ in range(self.size):
-                history = [bo_histories[r] for r in range(self.size)]
-
-        # 9. Evaluate best geometry using PyFAI refinement tool
-        if self.rank == 0:
-            best_idx = np.argmax(y_all)
-            best_param = X_samples[best_idx]
-            residual, score, params = self.pyFAI_score(
-                best_param, Imin, max_rings, rtol
-            )
-            result = {
-                "history": history,
-                "params": params,
-                "residual": residual,
-                "score": score,
-                "best_idx": best_idx,
-            }
-            return result
-
-    @ignore_warnings(category=ConvergenceWarning)
-    def async_bayes_opt(
-        self,
-        center,
-        bounds,
-        res,
-        n_samples,
-        n_iterations,
-        Imin,
-        max_rings,
-        rtol,
-        beta=1.96,
-        seed=0,
-    ):
-        """
-        Perform Bayesian Optimization on 5 geometric parameters.
-
-        Parameters
-        ----------
-        center : dict
-            Dictionary of the center values for each parameter
-        bounds : dict
-            Dictionary of the per-parameter bounds for the search space
-        res : dict
-            Dictionary of the per-parameter resolutions for the search space
-        n_samples : int
-            Number of initial samples to draw
-        n_iterations : int
-            Number of optimization iterations
-        Imin : float
-            Minimum intensity threshold
-        max_rings : int
-            Maximum number of rings to consider
-        rtol : float
-            Relative tolerance in q-space for masking ring pixels
-        beta : float
-            Exploration-exploitation trade-off parameter for UCB
-        seed : int
-            Random seed for reproducibility
-        """
-        np.random.seed(seed + self.rank)
-
-        # 1. Create Search Space
-        X, X_norm = self.create_search_space(bounds, center, res)
-        logger.info(f"Rank {self.rank}: Search space size: {X.shape[0]}")
-
-        # 2. Sample Initial Points
-        # Rank 0 will sample from a Gaussian prior on center
-        # Other ranks will sample uniformly within search space
-        if self.rank == 0:
-            prior = True
+            top_idx = np.argsort(y)[-self.size :]
         else:
-            prior = False
-        X_samples, X_norm_samples = self.sample_initial_points(
-            X, X_norm, center, bounds, n_samples, prior
+            top_idx = None
+        top = self.comm.scatter(top_idx, root=0)
+        best_param = X_samples[top]
+        residual, score, params = self.pyFAI_score(
+            best_param, Imin, max_rings, rtol
         )
-
-        bo_history = {}
-        y = np.zeros((n_samples))
-
-        # 3. Evaluate initial points
-        for i in range(n_samples):
-            y[i] = self.score(X_samples[i], Imin, max_rings, rtol)
-            bo_history[f"init_{i+1}"] = {"param": X_samples[i], "score": y[i]}
-
-        if np.std(y) != 0:
-            y_norm = (y - np.mean(y)) / np.std(y)
-        else:
-            y_norm = y - np.mean(y)
-
-        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
-            constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
-        gp_model = GaussianProcessRegressor(kernel=kernel, random_state=seed)
-        gp_model.fit(X_norm_samples, y_norm)
-        visited_idx = list([])
-
-        for i in tqdm(range(n_iterations)):
-            # 4. Rank 0 selects next points with q-UCB
-            next = self.UCB(X_norm, gp_model, visited_idx, beta)
-            next_point = X[next]
-            visited_idx.append(next)
-
-            # 5. Compute score
-            score = self.score(next_point, Imin, max_rings, rtol)
-            bo_history[f"iter_{i+1}"] = {"param": next_point, "score": score}
-
-            y = np.concatenate([y, [score]])
-            X_samples = np.vstack([X_samples, [X[next]]])
-            X_norm_samples = np.vstack([X_norm_samples, [X_norm[next]]])
-            if np.std(y) != 0:
-                y_norm = (y - np.mean(y)) / np.std(y)
-            else:
-                y_norm = y - np.mean(y)
-
-            # 6. Update Gaussian Process
-            gp_model.fit(X_norm_samples, y_norm)
-
+        logger.info(f"Rank {self.rank} best BO score: {score:.4f}, residual: {residual:.2e}")
         self.comm.Barrier()
 
-        # 7. Collect BO history from each rank
+        # 11. Gather results on Rank 0
         bo_histories = self.comm.gather(bo_history, root=0)
-        y_all = self.comm.gather(y, root=0)
-        X_samples_all = self.comm.gather(X_samples, root=0)
-        X_norm_samples_all = self.comm.gather(X_norm_samples, root=0)
+        residuals = np.array(self.comm.gather(residual, root=0))
+        scores = np.array(self.comm.gather(score, root=0))
+        params = np.array(self.comm.gather(params, root=0))
         if self.rank == 0:
-            for rank in range(self.size):
-                history = [bo_histories[r] for r in range(self.size)]
-            y = np.concatenate(y_all)
-            X_samples = np.vstack(X_samples_all)
-            X_norm_samples = np.vstack(X_norm_samples_all)
-
-            # 8. Evaluate best geometry using PyFAI refinement tool
-            best_idx = np.argmax(y)
-            best_param = X_samples[best_idx]
-            residual, score, params = self.pyFAI_score(
-                best_param, Imin, max_rings, rtol
-            )
+            history = [bo_histories[rank] for rank in range(self.size)]
+            best_rank = np.argmin(residuals)
+            best_residual = residuals[best_rank]
+            best_score = scores[best_rank]
+            best_params = params[best_rank]
             result = {
+                "params": best_params,
+                "residual": best_residual,
+                "score": best_score,
                 "history": history,
-                "params": params,
-                "residual": residual,
-                "score": score,
-                "best_idx": best_idx,
             }
-            return result
+        else:
+            result = None
+        return result
 
     def plot_bo_history(self, history, ax=None):
         """
@@ -903,7 +903,7 @@ class BayesGeomOpt:
             fig, ax = plt.subplots()
 
         for entry in history:
-            ax.plot(range(len(entry["score"])), entry["score"], "o-", linewidth=0.8)
+            ax.plot(range(len(entry["scores"])), entry["scores"], "o", markersize=0.5)
 
         ax.set_title("Bayesian Optimization History", fontsize=8)
         ax.set_xlabel("Iterations", fontsize=8)
@@ -1353,14 +1353,15 @@ class BayesGeomOpt:
         icol += 1
 
         # Plotting histogram of pixel intensities
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
         self.plot_hist_and_compute_stats(powder, self.exp, self.run, Imin, ax2)
-        icol = 0
         irow += 1
+        icol = 0
 
         # Plotting BO iterations
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
         self.plot_bo_history(history, ax3)
+        irow += 1
 
         # Plotting radial profiles with peaks
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
