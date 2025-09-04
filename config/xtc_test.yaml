@@ -1,18 +1,21 @@
 %YAML 1.3
 ---
 title: "Config to test Xtc conversion"
-experiment: "amo06516"
+experiment: "xpptut15"
 run: "90"
 date: "2025/08/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
-work_dir: "/sdf/scratch/users/k/kmecseki"
+work_dir: ""
 ...
 ---
-Xtc1to2:
-  exp: "amo06516"
-  run: "90"
-  mode: "idx"
-  detector: "pnccdFront"
-  geometry: "/reg/d/psdm/amo/amo06516/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/38-end.data"
+ConvertXtc1to2:          # All variables are given as strings
+  exp: "xpptut15"        # Experiment name
+  run: "291"             # Run number
+  mode: "idx"            # Mode
+  detector: "pnCCD"      # Detector's name
+  node_id: "1"            # Node ID for the detector
+  geometry: "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/290-292.data" # Geometry file
+  reshape: "True"        # True/False Reshape 2d arrays to 3d for certain detectors - Chuck
+  eventfile: "amo06516_r90_single_hits.csv"  # File with all the events of interest, leave as "" for all events
 ...

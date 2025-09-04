@@ -153,5 +153,5 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 # XTC
 #####
 
-Xtc1to2: Executor = Executor("Xtc1to2")
+Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 """Converts Xtc1 files to Xtc2 to use in psana2"""
