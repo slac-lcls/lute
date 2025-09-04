@@ -86,16 +86,10 @@ def preprocess_powder(powder, smooth=False):
             gradx = np.zeros_like(calib)
             grady = np.zeros_like(calib)
             gradx[:-1, :-1] = (
-                calib[1:, :-1]
-                - calib[:-1, :-1]
-                + calib[1:, 1:]
-                - calib[:-1, 1:]
+                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
             ) / 2
             grady[:-1, :-1] = (
-                calib[:-1, 1:]
-                - calib[:-1, :-1]
-                + calib[1:, 1:]
-                - calib[1:, :-1]
+                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
             ) / 2
             powder[p] = np.sqrt(gradx**2 + grady**2)
     return powder
@@ -504,7 +498,7 @@ class BayesGeomOpt:
     def q_UCB(self, X, gp_model, q, visited, beta=1.96, radius=0.01):
         """
         q-Upper Confidence Bound (q-UCB) acquisition function.
-        
+
         Parameters
         ----------
         X : np.ndarray
@@ -666,10 +660,10 @@ class BayesGeomOpt:
             std = np.std(pixels)
             threshold = mean + std
             peaks = pixels[pixels >= threshold]
+            logger.info(f"Ring {ring+1}: 2theta={np.degrees(tths[ring]):.2f} deg, ")
             logger.info(
-                f"Ring {ring+1}: 2theta={np.degrees(tths[ring]):.2f} deg, "
+                f"min tth: {np.degrees(tth_min[ring]):.2f} deg, max tth: {np.degrees(tth_max[ring]):.2f} deg"
             )
-            logger.info(f"min tth: {np.degrees(tth_min[ring]):.2f} deg, max tth: {np.degrees(tth_max[ring]):.2f} deg")
             logger.info(
                 f"Pixels: {len(pixels)}, Mean: {mean:.2f}, Std: {std:.2f}, "
                 f"Threshold: {threshold:.2f}, Peaks: {len(peaks)}"
@@ -818,7 +812,9 @@ class BayesGeomOpt:
             ) + WhiteKernel(
                 noise_level=0.001, noise_level_bounds="fixed"
             )
-            gp_model = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=seed)
+            gp_model = GaussianProcessRegressor(
+                kernel=kernel, n_restarts_optimizer=10, random_state=seed
+            )
             gp_model.fit(X_norm_samples, y_norm)
         else:
             gp_model = None
@@ -827,7 +823,9 @@ class BayesGeomOpt:
 
         for i in tqdm(range(n_iterations)):
             # 6. Parallel q-UCB to select next points
-            nexts, visited = self.q_UCB(X_norm, gp_model, self.size, visited, beta, radius)
+            nexts, visited = self.q_UCB(
+                X_norm, gp_model, self.size, visited, beta, radius
+            )
             next = self.comm.scatter(nexts, root=0)
 
             # 7. Compute score locally
@@ -861,10 +859,10 @@ class BayesGeomOpt:
             top_idx = None
         top = self.comm.scatter(top_idx, root=0)
         best_param = X_samples[top]
-        residual, score, params = self.pyFAI_score(
-            best_param, Imin, max_rings, rtol
+        residual, score, params = self.pyFAI_score(best_param, Imin, max_rings, rtol)
+        logger.info(
+            f"Rank {self.rank} best BO score: {score:.4f}, residual: {residual:.2e}"
         )
-        logger.info(f"Rank {self.rank} best BO score: {score:.4f}, residual: {residual:.2e}")
         self.comm.Barrier()
 
         # 11. Gather results on Rank 0
