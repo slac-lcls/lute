@@ -33,4 +33,6 @@ class ConvertXtc1to2Parameters(TaskParameters):
         description="Csv file with event numbers",
         flag_type="--",
     )
-    verify: str = Field("True", description="Verify data - for small data only", flag_type="--")
+    verify: str = Field(
+        "True", description="Verify data - for small data only", flag_type="--"
+    )
