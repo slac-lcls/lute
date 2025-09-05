@@ -16,6 +16,7 @@ from typing import List, cast
 
 logger: logging.Logger = get_logger(__name__)
 
+
 class ConvertXtc1to2(Task):
     """
     A task that launches two zmq subprocesses in two different conda environments
@@ -26,36 +27,37 @@ class ConvertXtc1to2(Task):
         super().__init__(params=params)
 
     def _run(self) -> None:
-        self._task_parameters = cast(
-                ConvertXtc1to2Parameters, self._task_parameters
-                )
+        self._task_parameters = cast(ConvertXtc1to2Parameters, self._task_parameters)
 
         logger.debug("Starting [XTC1 Sender] in psana 1")
 
         par: ConvertXtc1to2Parameters = self._task_parameters
 
-        zmq_process1_cmd: str = f'''
-            source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && \
-            python3 lute/tasks/util/xtc_push.py'''
-            # -e {par.exp} -r {par.run} -s {par.reshape} \
-            #-m {par.mode} -d {par.detector} -g {par.geometry} -f {par.eventfile}'''
-
+        zmq_process1_cmd: str = (
+            f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
+            f"python3 lute/tasks/util/xtc_push.py -e {par.exp} -r {par.run} -s {par.reshape} "
+            f"-m {par.mode} -d {par.detector} -g {par.geometry} -f {par.eventfile} "
+            f"-l {par.resolution}"
+        )
+        logger.debug(zmq_process1_cmd)
         result_p1: subprocess.Popen = self._start_zmq_proc(
-                zmq_process1_cmd, "[XTC1 Sender]"
-                )
+            zmq_process1_cmd, "[XTC1 Sender]"
+        )
 
         time.sleep(1)
 
         logger.debug("Starting [XTC2 Writer] in psana 2")
 
-        zmq_process2_cmd: str = f'''
-            source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && \
-            export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && \
-            python3 lute/tasks/util/xtc_pull.py -n {par.node_id}'''
-
+        # TEMP # This is needed until psana2 is updated to the latest version
+        zmq_process2_cmd: str = (
+            f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
+            f"export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && "
+            f"python3 lute/tasks/util/xtc_pull.py -n {par.node_id} -l {par.resolution}"
+        )
+        logger.debug(zmq_process2_cmd)
         result_p2: subprocess.Popen = self._start_zmq_proc(
-                zmq_process2_cmd, "[XTC2 Writer]"
-                )
+            zmq_process2_cmd, "[XTC2 Writer]"
+        )
 
         out_p1, err_p1 = result_p1.communicate()
         out_p2, err_p2 = result_p2.communicate()
@@ -68,11 +70,7 @@ class ConvertXtc1to2(Task):
     def _start_zmq_proc(self, cmd: List[str], name: str) -> subprocess.Popen:
         """Helper function to source the correct conda env and spawn a subprocess."""
         process: subprocess.Popen = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                shell=True,
-                text=True
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True
         )
         logger.debug(f"{name} started")
 

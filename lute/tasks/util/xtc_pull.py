@@ -10,8 +10,8 @@ from psana import DataSource
 from psana.dgramedit import DgramEdit, AlgDef, DetectorDef
 from psana.psexp import TransitionId
 
+
 class ZmqReceiver:
-    zmq_socket = None
 
     def __init__(self, socket: str) -> None:
         """
@@ -19,7 +19,7 @@ class ZmqReceiver:
         Bind to socket (e.g. tcp://127.0.0.1:5557) with PULL
         """
         context: zmq.Context = zmq.Context()
-        self.zmq_socket: zmq.Context.socket = context.socket(zmq.PULL)
+        self.zmq_socket: zmq.Socket = context.socket(zmq.PULL)
         self.zmq_socket.connect(socket)
 
     def recv_zipped_pickle(self, flags: int = 0, protocol: int = -1) -> Any:
@@ -28,7 +28,9 @@ class ZmqReceiver:
         p: bytes = zlib.decompress(z)
         return pickle.loads(p)
 
-    def recv_array(self, md: Any, flags: int = 0, copy: bool = True, track: bool = False) -> None:
+    def recv_array(
+        self, md: Any, flags: int = 0, copy: bool = True, track: bool = False
+    ) -> None:
         """Receive a numpy array"""
         msg: Any = self.zmq_socket.recv(flags=flags, copy=copy, track=track)
         buf: Any = memoryview(msg)
@@ -39,76 +41,88 @@ class ZmqReceiver:
         """Close zmq socket"""
         self.zmq_socket.close()
 
-def test_output(num_events: int) -> None:
+
+def test_output(num_events: int, resolution: str) -> None:
     """
     Psana1 reader saves the content as a hdf5, we compare this file to the data that we received.
     """
     print("[XTC2 Writer]: Testing")
     try:
-        f: h5py._hl.files.File = h5py.File('/sdf/scratch/users/k/kmecseki/out.hdf5', 'r')
-        pixel_position: h5py._hl.dataset.Dataset = f['pixel_position']
-        pixel_index_map: h5py._hl.dataset.Dataset = f['pixel_index_map']
-        data: h5py._hl.dataset.Dataset = f['data']
-        photon_energy: h5py._hl.dataset.Dataset = f['photon_energy']
+        f: h5py._hl.files.File = h5py.File(
+            "/sdf/scratch/users/k/kmecseki/out.hdf5", "r"
+        )
+        pixel_position: h5py._hl.dataset.Dataset = f["pixel_position"]
+        pixel_index_map: h5py._hl.dataset.Dataset = f["pixel_index_map"]
+        data: h5py._hl.dataset.Dataset = f["data"]
+        photon_energy: h5py._hl.dataset.Dataset = f["photon_energy"]
 
-        ds: DataSource = DataSource(files='/sdf/scratch/users/k/kmecseki/out.xtc2')
-        run: psana.psexp.run.RunSingleFile = next(ds.runs())
-        det: psana.Detector = run.Detector('xpppnccd')
+        ds: DataSource = DataSource(files="/sdf/scratch/users/k/kmecseki/out.xtc2")
+        run: Any = next(ds.runs())
+        det: Any = run.Detector("xpppnccd")
 
-        pp_det: psana.Detector = run.Detector('pixel_position')
-        pim_det: psana.Detector = run.Detector('pixel_index_map')
+        pp_det: Any = run.Detector("pixel_position")
+        pim_det: Any = run.Detector("pixel_index_map")
 
-        # Hard coded for now, if this is needed I can make reading the resolution more sophisticated
-        data_array: np.ndarray = np.zeros([num_events,4,512,512], dtype=np.float32)
-        photon_array: np.ndrray = np.zeros(num_events, dtype=np.float64)
-        
+        channels: int
+        res_x: int
+        res_y: int
+        channels, res_x, res_y = map(int, resolution.split("x"))
+        data_array: np.ndarray = np.zeros(
+            [num_events, channels, res_x, res_y], dtype=np.float32
+        )
+        photon_array: np.ndarray = np.zeros(num_events, dtype=np.float64)
+
         for i, evt in enumerate(run.events()):
-            data_array[i,:,:,:] = det.raw.calib(evt)
+            data_array[i, :, :, :] = det.raw.calib(evt)
             photon_array[i] = det.raw.photon_energy(evt)
             pixel_position_array = pp_det(evt)
             pixel_index_map_array = pim_det(evt)
-        assert np.array_equal(data,data_array)
+        assert np.array_equal(data, data_array)
         assert np.array_equal(photon_energy, photon_array)
         assert np.array_equal(pixel_position, pixel_position_array)
         assert np.array_equal(pixel_index_map, pixel_index_map_array)
         print("[XTC2 writer]: All test passed successfully")
 
-
     except (OSError, IOError) as e:
         print(f"Error opening hdf5 file: {e}")
-        f = None
 
 
-def save_dgramedit(
-    dg_edit: DgramEdit,
-    outbuf: bytearray,
-    outfile: BinaryIO
-    ) -> None:
+def save_dgramedit(dg_edit: DgramEdit, outbuf: bytearray, outfile: BinaryIO) -> None:
     """Save dgram edit to output buffer and write to file"""
     dg_edit.save(outbuf)
-    outfile.write(outbuf[:dg_edit.size])
+    outfile.write(outbuf[: dg_edit.size])
 
 
 if __name__ == "__main__":
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="Xtc2 writer",
-        description="Write received file as Xtc2 using psana2"
+        prog="Xtc2 writer", description="Write received file as Xtc2 using psana2"
     )
     parser.add_argument(
-        "-n", "--node-id",
+        "-n",
+        "--node-id",
         type=str,
         help="Node ID for the detector",
         default="1",
     )
+    parser.add_argument(
+        "-l",
+        "--resolution",
+        type=str,
+        help="Detector channels and resolution in the format: CxRxR",
+        default="4x512x512",
+    )
+    parser.add_argument(
+        "-v",
+        "--verify",
+        type=str,
+        help="Verify data at the end - only for small datasets that fit in memory",
+        default="1",
+    )
     args: argparse.Namespace = parser.parse_args()
-    
+
     # TEMP # Do we want to parametrize this?
-    namesId = {
-        "xpppnccd": 0,
-        "runinfo": 1,
-        "scan": 2
-    }
+    namesId = {"xpppnccd": 0, "runinfo": 1, "scan": 2}
 
     # Setup socket for zmq connection
     socket: str = "tcp://127.0.0.1:5557"
@@ -119,7 +133,7 @@ if __name__ == "__main__":
     outbuf: bytearray = bytearray(MEMSIZE)
 
     # Open output file for writing
-    ofname: str = '/sdf/scratch/users/k/kmecseki/out.xtc2'
+    ofname: str = "/sdf/scratch/users/k/kmecseki/out.xtc2"
     xtc2file: BinaryIO = open(ofname, "wb")
 
     # Create config, algorithm, and detector
@@ -150,9 +164,10 @@ if __name__ == "__main__":
         "pixel_index_map": (np.int16, 4),
     }
 
-
     # Create detetors
-    pnccd = config.Detector(det, alg, datadef, nodeId=int(args.node_id), namesId=namesId["xpppnccd"])
+    pnccd = config.Detector(
+        det, alg, datadef, nodeId=int(args.node_id), namesId=namesId["xpppnccd"]
+    )
     runinfo = config.Detector(
         runinfo_det,
         runinfo_alg,
@@ -183,27 +198,27 @@ if __name__ == "__main__":
             beginrun = DgramEdit(
                 transition_id=TransitionId.BeginRun,
                 config_dgramedit=config,
-                ts=config_timestamp + 1
+                ts=config_timestamp + 1,
             )
             runinfo.runinfo.expt = "xpptut15"
             runinfo.runinfo.runnum = 291
             beginrun.adddata(runinfo.runinfo)
-            scan.raw.pixel_position = obj['pixel_position']
-            scan.raw.pixel_index_map = obj['pixel_index_map']
+            scan.raw.pixel_position = obj["pixel_position"]
+            scan.raw.pixel_index_map = obj["pixel_index_map"]
             beginrun.adddata(scan.raw)
             save_dgramedit(beginrun, outbuf, xtc2file)
 
             beginstep = DgramEdit(
                 transition_id=TransitionId.BeginStep,
                 config_dgramedit=config,
-                ts=config_timestamp + 2
+                ts=config_timestamp + 2,
             )
             save_dgramedit(beginstep, outbuf, xtc2file)
 
             enable = DgramEdit(
                 transition_id=TransitionId.Enable,
                 config_dgramedit=config,
-                ts=config_timestamp + 3
+                ts=config_timestamp + 3,
             )
             save_dgramedit(enable, outbuf, xtc2file)
             current_timestamp = config_timestamp + 3
@@ -219,7 +234,8 @@ if __name__ == "__main__":
             endstep = DgramEdit(
                 transition_id=TransitionId.EndStep,
                 config_dgramedit=config,
-                ts=current_timestamp + 2)
+                ts=current_timestamp + 2,
+            )
             save_dgramedit(endstep, outbuf, xtc2file)
             endrun = DgramEdit(
                 transition_id=TransitionId.EndRun,
@@ -234,7 +250,7 @@ if __name__ == "__main__":
             d0 = DgramEdit(
                 transition_id=TransitionId.L1Accept,
                 config_dgramedit=config,
-                ts=obj["timestamp"]
+                ts=obj["timestamp"],
             )
             pnccd.raw.calib = obj["calib"]
             pnccd.raw.photon_energy = obj["photon_energy"]
@@ -244,4 +260,6 @@ if __name__ == "__main__":
     print("[XTC2 Writer]: Complete")
     xtc2file.close()
     zmq_recv.close()
-    test_output(num_events)
+    verify: bool = bool(int(args.verify))
+    if verify:
+        test_output(num_events, args.resolution)

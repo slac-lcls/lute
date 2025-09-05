@@ -14,6 +14,7 @@ import zmq
 
 from PSCalib.GeometryAccess import GeometryAccess
 
+
 class PsanaImg:
 
     def __init__(
@@ -48,11 +49,10 @@ class PsanaImg:
         )
 
         # set flag (for Chuck)
-        if bool(reshape):
+        if bool(int(reshape)):
             self.detector.do_reshape_2d_to_3d(flag=True)
 
-
-    def get(self, event_num: Union[int, str], calib: bool=False) -> np.ndarray:
+    def get(self, event_num: Union[int, str], calib: bool = False) -> np.ndarray:
         # Fetch the timestamp according to event number
         timestamp: psana.EventTime = self.timestamps[int(event_num)]
 
@@ -60,10 +60,11 @@ class PsanaImg:
         event: psana.Event = self.run_current.event(timestamp)
 
         # Fetch image data based on timestamp from detector
+        img: np.ndarray
         if calib:
-            img: np.ndarray = self.detector.calib(event)
+            img = self.detector.calib(event)
         else:
-            img: np.ndarray = self.detector.image(event)
+            img = self.detector.image(event)
         return img
 
     def timestamp(self, event_num: Union[str, int]) -> psana.EventTime:
@@ -95,18 +96,19 @@ class PsanaPhotonEnergy:
 
         # Try to get photon energy from ebeam
         ebeam: psana.Bld.BldDataEBeamV4 = self.ebeam_det.get(event)
+        photon_energy: float
         try:
-            photon_energy: float = ebeam.ebeamPhotonEnergy()
+            photon_energy = ebeam.ebeamPhotonEnergy()
         except AttributeError:
-            photon_energy: float = 0.0
+            photon_energy = 0.0
 
         return photon_energy
 
 
 class PsanaGeometry:
 
-    pixel_position = None
-    pixel_index_map = None
+    pixel_position: np.ndarray
+    pixel_index_map: np.ndarray
 
     def __init__(self, geom: str) -> None:
         """A getter that reads in lcls1-style geometry file.
@@ -114,10 +116,7 @@ class PsanaGeometry:
         Available info is set as class attributes.
         """
         cframe: int = 0  # fixed to psana style (1 is for lab conventions)
-        geometry: PSCalib.GeometryAccess.GeometryAccess = GeometryAccess(
-            geom,
-            cframe=cframe
-        )
+        geometry: GeometryAccess = GeometryAccess(geom, cframe=cframe)
 
         # Stores a tuple of x,y, and z coordinate arrays
         pixel_coords: tuple = geometry.get_pixel_coords(cframe=cframe)
@@ -134,20 +133,17 @@ class PsanaGeometry:
         # The shape of each axis is represented by five numbers (for this det)
         # e.g. (1,2,2,512,512). We calculate no. of panels by multiplying
         # all numbers except the last two (#pixel_x, #pixel_y).
-        panel_num: int = np.prod(temp[0].shape[:-2])
+        panel_num: np.integer = np.prod(temp[0].shape[:-2])
 
         shape: tuple = (panel_num, temp[0].shape[-2], temp[0].shape[-1])
-        pixel_position: np.ndarray = np.zeros(shape + (3,))     # x,y,z
-        pixel_index_map: np.ndarray = np.zeros(shape + (2,))    # x,y
+        pixel_position = np.zeros(shape + (3,), dtype=np.float32)  # x,y,z
+        pixel_index_map = np.zeros(shape + (2,), dtype=np.int16)  # x,y
 
         for n in range(3):
-            pixel_position[..., n]: np.ndarray = temp[n].reshape(shape)
+            pixel_position[..., n] = temp[n].reshape(shape).astype(np.float32)
 
         for n in range(2):
-            pixel_index_map[..., n]: np.ndarray = temp_index[n].reshape(shape)
-
-        pixel_index_map: np.ndarray = pixel_index_map.astype(np.int16)
-        pixel_position: np.ndarray = pixel_position.astype(np.float32)
+            pixel_index_map[..., n] = temp_index[n].reshape(shape).astype(np.int16)
 
         self.pixel_position: np.ndarray = pixel_position
         self.pixel_index_map: np.ndarray = pixel_index_map
@@ -155,40 +151,29 @@ class PsanaGeometry:
 
 class ZmqSender:
 
-    zmq_socket = None
-
-    def __init__(self, socket: zmq.Context.socket) -> None:
+    def __init__(self, socket: str) -> None:
         """
         A helper for sending messages using pyzmq.
         """
         context: zmq.Context = zmq.Context()
-        self.zmq_socket: zmq.Context.socket = context.socket(zmq.PUSH)
+        self.zmq_socket: zmq.Socket = context.socket(zmq.PUSH)
         self.zmq_socket.bind(socket)
 
-    def send_zipped_pickle(
-        self,
-        obj: dict,
-        flags: int = 0,
-        protocol: int = -1
-    ) -> bool:
+    def send_zipped_pickle(self, obj: dict, flags: int = 0, protocol: int = -1) -> None:
         """Pickle an object, and zip the pickle before sending it"""
         try:
             p: bytes = pickle.dumps(obj, protocol)
             z: bytes = zlib.compress(p)
-            return self.zmq_socket.send(z, flags=flags)
+            self.zmq_socket.send(z, flags=flags)
         except (pickle.PickleError, TypeError, zlib.error, zmq.ZMQError) as e:
             print(f"[XTC1 Sender]: Error during sending pickled object: {e}")
 
     def send_array(
-        self,
-        data: np.ndarray,
-        flags: int = 0,
-        copy: bool = True,
-        track: bool = False
-    ) -> bool:
+        self, data: np.ndarray, flags: int = 0, copy: bool = True, track: bool = False
+    ) -> None:
         """
         Send a NumPy array with metadata (dtype and shape) over a ZeroMQ socket.
-    
+
         Parameters:
             A (np.ndarray): Array to send.
             flags (int): ZMQ flags (e.g., zmq.SNDMORE).
@@ -206,25 +191,24 @@ class ZmqSender:
 
             # Send metadata then the actual array
             self.zmq_socket.send_json(md, flags | zmq.SNDMORE)
-            return self.zmq_socket.send(data, flags, copy=copy, track=track)
+            self.zmq_socket.send(data, flags, copy=copy, track=track)
 
         except (AttributeError, zmq.ZMQError, TypeError, ValueError) as e:
             print(f"[XTC1 Sender]: Error, failed to send array: {e}")
-
 
     def close(self) -> None:
         """Closes the zmq socket"""
         self.zmq_socket.close()
 
+
 if __name__ == "__main__":
 
-
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="Xtc1 reader",
-        description="Read in Xtc1 files using psana1"
+        prog="Xtc1 reader", description="Read in Xtc1 files using psana1"
     )
     parser.add_argument(
-        "-e", "--exp",
+        "-e",
+        "--exp",
         type=str,
         help="Experiment's name",
         default="xpptut15",
@@ -251,39 +235,49 @@ if __name__ == "__main__":
         default="Camp.0:pnCCD.0",
     )
     parser.add_argument(
+        "-l",
+        "--resolution",
+        type=str,
+        help="Detector channels and resolution in the format: CxRxR",
+        default="4x512x512",
+    )
+    parser.add_argument(
         "-g",
         "--geometry",
         type=str,
         help="Geometry file",
-        default=("/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/"
+        default=(
+            "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/"
             "Camp.0:pnCCD.0/geometry/290-292.data"
         ),
-    )
-    parser.add_argument(
-        "-f",
-        "--eventfile",
-        type=str,
-        help="File with the event numbers",
-        default="",
     )
     parser.add_argument(
         "-s",
         "--reshape",
         type=str,
         help="Reshape 2d detector images to 3d - Chuck",
-        default="",
+        default="1",
+    )
+    parser.add_argument(
+        "-f",
+        "--eventfile",
+        type=str,
+        help="File with the event numbers",
+        default="/sdf/scratch/users/k/kmecseki/test.csv",
     )
     parser.add_argument(
         "-v",
         "--verify",
         type=str,
         help="Verify data at the end - only for small datasets that fit in memory",
-        default="True",
+        default="1",
     )
 
     args: argparse.Namespace = parser.parse_args()
 
-    img_reader: PsanaImg = PsanaImg(args.exp, args.run, args.mode, args.detector, args.reshape)
+    img_reader: PsanaImg = PsanaImg(
+        args.exp, args.run, args.mode, args.detector, args.reshape
+    )
     phe_reader: PsanaPhotonEnergy = PsanaPhotonEnergy(args.exp, args.run, args.mode)
     gmt_reader: PsanaGeometry = PsanaGeometry(args.geometry)
 
@@ -295,28 +289,37 @@ if __name__ == "__main__":
 
     if args.eventfile == "":
         # All events
-        tss: List = img_reader.timestamps
+        tss = img_reader.timestamps
         event_num_list = list(range(len(tss)))
     else:
         event_num_list = []
-        with open(args.eventfile, newline='') as csvfile:
-            csvreader = csv.reader(csvfile, delimiter=',')
-            for row in csvreader:
-                event_num_list += list(map(int, row))
-
-    # Test override:
-    event_num_list = [290, 291]
+        try:
+            with open(args.eventfile, newline="") as csvfile:
+                csvreader = csv.reader(csvfile, delimiter=",")
+                for row in csvreader:
+                    event_num_list += list(map(int, row))
+        except FileNotFoundError:
+            print(f"Error: File not found: {args.eventfile}, using test numbers.")
+            event_num_list = [290, 291]
 
     total_events: int = len(event_num_list)
 
     zmq_send.zmq_socket.send_string(str(total_events))
 
-    verify: bool = bool(args.verify)
+    verify: bool = bool(int(args.verify))
+    data_array: np.ndarray
+    photon_array: np.ndarray
+    channels: int
+    res_x: int
+    res_y: int
+    channels, res_x, res_y = map(int, args.resolution.split("x"))
+
     if verify:
-        data_array: np.ndarray = np.zeros([total_events,4,512,512], dtype=np.float32)
-        photon_array: np.ndarray = np.zeros(total_events, dtype=np.float64)
+        # We need to store all in memory
+        data_array = np.zeros([total_events, channels, res_x, res_y], dtype=np.float32)
+        photon_array = np.zeros(total_events, dtype=np.float64)
     else:
-        data_array: np.ndarray = np.zeros([4,512,512], dtype=np.float32)
+        data_array = np.zeros([channels, res_x, res_y], dtype=np.float32)
 
     for i, event_num in enumerate(event_num_list):
         img: np.ndarray = img_reader.get(event_num, calib=True)
@@ -324,14 +327,14 @@ if __name__ == "__main__":
         ts: psana.EventTime = img_reader.timestamp(event_num)
 
         if verify:
-            data_array[i,:,:,:] = img
+            data_array[i, :, :, :] = img
             photon_array[i] = photon_energy
 
         if i == 0:
             # Send beginning timestamp - this will create config, beginrun,
             # beginstep, and enable on the client.
             start_dict: Dict[str, Any] = {
-                "start": True, 
+                "start": True,
                 "config_timestamp": ts.time() - 10,
                 "pixel_position": gmt_reader.pixel_position,
                 "pixel_index_map": gmt_reader.pixel_index_map,

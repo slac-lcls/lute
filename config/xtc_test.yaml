@@ -9,13 +9,15 @@ task_timeout: 600
 work_dir: ""
 ...
 ---
-ConvertXtc1to2:          # All variables are given as strings
-  exp: "xpptut15"        # Experiment name
-  run: "291"             # Run number
-  mode: "idx"            # Mode
-  detector: "pnCCD"      # Detector's name
-  node_id: "1"            # Node ID for the detector
+ConvertXtc1to2:              # All variables are given as strings
+  exp: "xpptut15"            # Experiment name
+  run: "291"                 # Run number
+  mode: "idx"                # Mode
+  detector: "Camp.0:pnCCD.0" # Detector's name
+  node_id: "1"               # Node ID for the detector
+  resolution: "4x512x512"    # Channels and resolution in CHxRXxRY format
   geometry: "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/290-292.data" # Geometry file
-  reshape: "True"        # True/False Reshape 2d arrays to 3d for certain detectors - Chuck
-  eventfile: "amo06516_r90_single_hits.csv"  # File with all the events of interest, leave as "" for all events
+  reshape: "1"               # 1=True/0=False Reshape 2d arrays to 3d for certain detectors - Chuck
+  eventfile: "/sdf/scratch/users/k/kmecseki/test.csv"  # File with all the events of interest, leave as "" for all events
+  verify: "1"                # 1=True/0=False Test data integrity (only if it fits in memory e.g. few events)
 ...
