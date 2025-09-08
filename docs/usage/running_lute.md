@@ -180,7 +180,16 @@ In order to run a DAG defined in this way, we pass the **path** to the YAML file
 
 Note that fewer options are currently supported for configuring the operators for each step of the DAG.  The slurm arguments can be replaced in their entirety using a custom `slurm_params` string but individual options cannot be modified.
 
-### Debug Environment Variables
+### Environment Variables
+A number of environment variables can be set to control certain aspects of LUTE behaviour.
+
+- `LUTE_USE_ZMQ`: By default, LUTE will use ZMQ for socket-based IPC between the `Task` and `Executor`. Setting `LUTE_USE_ZMQ=0` will switch to a `socket`-based implementation. There is feature parity between the two implementations.
+- `LUTE_USE_TCP`: Set to 1 to use TCP sockets. Otherwise will use Unix sockets.
+- `LUTE_DB_SPEC_VERSION`: Set to determine the database specification version. Either 1 or 2, currently.
+
+A number of other environment variables are used (`LUTE_PATH`, `LUTE_EXECUTOR_HOST`, as examples). These, however, are set internally and are not intended to be managed by users. They will appear in the database records, however.
+
+#### Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.
 
 Types of debug markers:
@@ -204,6 +213,6 @@ You can enable a marker by setting to 1, e.g. to enable the example marker above
 MYENVVAR=1 python -B run_task.py -t Tester -c config/test.yaml
 ```
 
-#### Currently used environment variables
+##### Currently used debug environment variables
 - `LUTE_DEBUG_EXIT_AT_YAML`: Exits the program after reading in a YAML configuration file and performing variable substitutions, but BEFORE Pydantic validation.
 - `LUTE_DEBUG_BEFORE_TPP_EXEC`: Exits the program after a ThirdPartyTask has prepared its submission command, but before `exec` is used to run it.

@@ -27,7 +27,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Dict, Any, Union, Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -39,6 +39,9 @@ from pydantic import (
     PrivateAttr,
 )
 from pydantic.dataclasses import dataclass
+from pydantic.schema import default_ref_template
+
+from lute.io.parameters import LUTE_PARAMETER_CONFIG_KEYS
 
 
 class AnalysisHeader(BaseModel):
@@ -183,6 +186,39 @@ class TaskParameters(BaseSettings):
         """Schema specification for output result. Will be passed to TaskResult."""
 
     lute_config: AnalysisHeader
+
+    @classmethod
+    def schema(
+        cls, by_alias: bool = True, ref_template: str = default_ref_template
+    ) -> Dict[str, Any]:
+        """Override the default schema to include Config information."""
+        schema: Dict[str, Any] = super().schema(
+            by_alias=by_alias, ref_template=ref_template
+        )
+        config_doc: Optional[str] = cls.Config.__doc__
+        if config_doc is None:
+            config_doc = "Internal LUTE Configuration objects."
+        config_title: str = "Internal LUTE TaskParameters Configuration Options."
+        config_schema_property: Dict[str, Any] = {
+            "title": config_title,
+            "description": config_doc,
+            "allOf": [{"$ref": "#/definitions/Config"}],
+        }
+        config_schema_definition: Dict[str, Any] = {
+            "title": "Config",
+            "type": "object",
+            "properties": {},
+        }
+        for key, val in vars(cls.Config).items():
+            if key in LUTE_PARAMETER_CONFIG_KEYS:
+                config_defn_entry: Dict[str, Any] = LUTE_PARAMETER_CONFIG_KEYS[key]
+                # Add the actual value as a constant now
+                config_defn_entry["const"] = val
+                config_schema_definition["properties"][key] = config_defn_entry
+        schema["properties"]["Config"] = config_schema_property
+        schema["definitions"]["Config"] = config_schema_definition
+
+        return schema
 
 
 @dataclass

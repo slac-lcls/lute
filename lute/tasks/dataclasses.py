@@ -16,11 +16,31 @@ __all__ = ["TaskResult", "TaskStatus", "DescribedAnalysis", "ElogSummaryPlots"]
 __author__ = "Gabriel Dorlhiac"
 
 import io
-from typing import Any, List, Dict, Optional, Union
+from typing import Any, List, Dict, Optional, Union, TYPE_CHECKING
 from dataclasses import dataclass
 from enum import Enum
 
-from lute.io.models.base import TaskParameters
+if TYPE_CHECKING:
+    from lute.io.models.base import TaskParameters
+else:
+    from lute.io.parameters import TaskParameters
+from lute.io.parameters import RowIds
+
+
+@dataclass
+class TaskParametersDBReference:
+    """Contains information about how to reconstruct a TaskParameters object.
+
+    Attributes:
+        db_dir (str): The path to the database containing the TaskParameters
+            schema definition.
+
+        row_ids (RowIds): The ids of the rows in the various tables required for
+            reconstructing the TaskParameters object.
+    """
+
+    db_dir: str
+    row_ids: RowIds
 
 
 class TaskStatus(Enum):
