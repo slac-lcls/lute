@@ -8,7 +8,7 @@ Classes:
 __all__ = ["OptimizePyFAIGeometryParameters"]
 __author__ = "Louis Conreux"
 
-from typing import Dict, Optional, Union, Tuple
+from typing import Dict, List, Tuple
 from pydantic import BaseModel, Field
 
 from lute.io.models.base import TaskParameters
@@ -17,7 +17,6 @@ from lute.io.models.validators import (
     validate_calib_path,
     validate_output_path,
 )
-
 
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
@@ -32,71 +31,90 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     class BayesGeomOptParameters(BaseModel):
         """Bayesian optimization hyperparameters."""
 
-        bounds: Dict[str, Union[float, Tuple[float, float]]] = Field(
-            {
-                "dist": (0.02, 0.6),
-                "poni1": (-0.01, 0.01),
-                "poni2": (-0.01, 0.01),
-            },
-            description="Bounds defining the parameter search space for the Bayesian optimization. All bound values are in meters.",
-        )
-
-        res: Optional[float] = Field(
-            None,
-            description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters. If None, set to the detector pixel size.",
-        )
-
-        max_rings: int = Field(
-            6,
-            description="Maximum number of rings to be used for the Bayesian optimization.",
-        )
-
         n_samples: int = Field(
             20,
-            description="Number of random starts to initialize the Bayesian optimization.",
+            description="Number of samples to initialize the Gaussian Process.",
         )
 
         n_iterations: int = Field(
             80,
-            description="Number of iterations to run the Bayesian optimization.",
+            description="Number of iterations of Bayesian Optimization",
         )
 
-        kernel: str = Field(
-            "RBF",
-            description="Kernel to be used by the Gaussian Process for the Bayesian optimization. Currently supported: 'RBF', 'Matern'",
+        max_rings: int = Field(
+            10,
+            description="Maximum number of rings to search for Bragg peaks.",
         )
 
         prior: bool = Field(
             True,
-            description="Flag to use a gaussian prior centered on the search space for the Bayesian optimization or randomly pick samples to initialize the Gaussian Process.",
+            description="Whether to sample initial points around the center of search space or randomly.",
         )
 
-        af: str = Field(
-            "ucb",
-            description="Acquisition function to be used by the Bayesian optimization. \n Currently supported: Upper Confidence Bound 'ucb', \n Expected Improvement 'ei', \n Probability of Improvement 'poi'",
+        beta: float = Field(
+            1.96,
+            description="Exploration-exploitation trade-off parameter for Upper Confidence Bound acquisition function.",
         )
 
-        hyperparams: Dict[str, float] = Field(
-            {
-                "beta": 1.96,
-                "epsilon": 0.01,
-            },
-            description="Hyperparameters for the acquisition function. \n beta is the exploration parameter for the Upper Confidence Bound acquisition function. \n epsilon is the exploration parameter for the Expected Improvement and Probability of Improvement acquisition functions.",
+        seed: int = Field(
+            0,
+            description="Random seed for reproducibility.",
         )
 
-        seed: Optional[int] = Field(
-            None,
-            description="Seed for the random number generator for reproducibility.",
-        )
+    center: Dict[str, float] = Field(
+        {
+            "dist": 0.1,
+            "poni1": 0.0,
+            "poni2": 0.0,
+            "rot1": 0.0,
+            "rot2": 0.0,
+            "rot3": 0.0,
+        },
+        description="Center of the search space for the detector geometry parameters.",
+    )
 
-    det_type: str = Field(
+    bounds: Dict[str, Tuple[float, float]] = Field(
+        {
+            "dist": (-0.05, 0.05),
+            "poni1": (-0.005, 0.005),
+            "poni2": (-0.005, 0.005),
+            "rot1": (-1.0, 1.0),
+            "rot2": (-1.0, 1.0),
+            "rot3": (-1.0, 1.0),
+        },
+        description="Bounds of the search space for the detector geometry parameters.",
+    )
+
+    resolutions: Dict[str, float] = Field(
+        {
+            "dist": 0.001,
+            "poni1": 0.0002,
+            "poni2": 0.0002,
+            "rot1": 0.1,
+            "rot2": 0.1,
+            "rot3": 0.1,
+        },
+        description="Resolution of the search space for the detector geometry parameters.",
+    )
+
+    fixed: List[str] = Field(
+        ["rot3"],
+        description="List of fixed parameters for the optimization.",
+    )
+
+    detname: str = Field(
         "",
-        description="Detector type. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Rayonix', 'Jungfrau1M', 'Jungfrau4M'",
+        description="Detector name",
     )
 
     in_file: str = Field(
         "",
-        description="Path to the input .data file containing the detector geometry info to be calibrated.",
+        description="Path to the input .data file containing the detector metrology to be calibrated.",
+    )
+
+    calibrant: str = Field(
+            "",
+            description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
     )
 
     powder: str = Field(
@@ -104,14 +122,9 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
         description="Powder diffraction image path to be used for the calibration.",
     )
 
-    preprocess: Optional[str] = Field(
-        "Diagonal",
-        description="Preprocessing method to be used for the calibration. \nAvailable methods: Finite Differences Gradient Computation 'Finite', \n Diagonal Differences Gradient Computation 'Diagonal', \n Central Differences Gradient Computation 'Central', \n Laplacian of Gaussian Filtering 'Laplacian', \n No Preprocessing 'None', \n PyPCA Filtering yet to be implemented",
-    )
-
-    calibrant: str = Field(
-        "",
-        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'LaB6', etc.",
+    preprocess: bool = Field(
+        True,
+        description="Whether to apply preprocessing to the powder diffraction image before calibration.",
     )
 
     out_file: str = Field(
