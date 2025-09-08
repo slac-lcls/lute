@@ -421,10 +421,10 @@ class BayFAIOpt:
         self.powder = powder
         self.stacked_powder = np.reshape(powder, detector.shape)
         self.calibrant = calibrant
+        self.calibrant_name = os.path.splitext(os.path.basename(calibrant.filename))[0][6:]
         self.fixed = fixed
         self.parallelized = ["dist"]
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
-        self.tth = np.array(calibrant.get_2th())
         self.space = []
         for p in self.order:
             if p not in self.fixed and p not in self.parallelized:
@@ -981,9 +981,9 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Residual vs Distance", fontsize=6)
 
-    def plot_hist_and_compute_stats(self, powder, exp, run, ax):
+    def plot_intensity_hist(self, powder, exp, run, Imin, ax):
         """
-        Plot histogram of pixel intensities and compute statistics
+        Plot histogram of pixel intensities in the powder image
 
         Parameters
         ----------
@@ -993,6 +993,8 @@ class BayFAIOpt:
             Experiment name
         run : int
             Run number
+        Imin : float
+            Minimum intensity threshold for identifying Bragg peaks
         ax : plt.Axes
             Matplotlib axes
         """
@@ -1028,11 +1030,11 @@ class BayFAIOpt:
             label=f"Mean + 2 Std Dev ({mean + 2 * std_dev:.2f})",
         )
         ax.axhline(
-            self.Imin,
+            Imin,
             color="purple",
             linestyle=":",
-            linewidth=1.5,
-            label=f"{self.q} th Percentile ({self.Imin:.2f})",
+            linewidth=2,
+            label=f"Threshold ({Imin:.2f})",
         )
         ax.set_xlim([0, 100000])
         ax.set_ylim([0, mean + 3 * std_dev])
@@ -1053,7 +1055,7 @@ class BayFAIOpt:
         distance,
     ):
         """
-        Create an interactive powder image with control points and calibrated rings.
+        Create an interactive powder image with calibrated overlapping 2θ rings.
 
         Parameters
         ----------
@@ -1118,10 +1120,10 @@ class BayFAIOpt:
             data={"x": x.ravel(), "y": y.ravel(), "intensity": powder.ravel()}
         )
 
-        _ = p.circle(
+        _ = p.scatter(
             x="x",
             y="y",
-            size=1,
+            size=,
             color={"field": "intensity", "transform": color_mapper},
             line_color=None,
             source=source,
@@ -1132,18 +1134,13 @@ class BayFAIOpt:
         )
         p.add_layout(color_bar, "right")
 
-        tth = self.calibrant.get_2th()
-        x = np.reshape(x, detector.raw_shape)
-        y = np.reshape(y, detector.raw_shape)
-        z = np.reshape(z, detector.raw_shape)
-
+        ttha = calculate_2theta(detector)
         for i in range(detector.n_modules):
-            ttha = np.arctan2(np.sqrt(x[i] * x[i] + y[i] * y[i]), z[i])
             p.contour(
                 x=x[i],
                 y=y[i],
                 z=ttha,
-                levels=tth,
+                levels=np.array(self.calibrant.get_2th()),
                 line_color="red",
                 line_width=3,
                 line_dash="dashed",
@@ -1153,12 +1150,12 @@ class BayFAIOpt:
         d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
         closest_pixel_index = np.argmin(d)
         closest_pixel = d.flatten()[closest_pixel_index]
-        closest_q = self.r2q(closest_pixel, distance)
+        closest_q = r2q(closest_pixel, distance, self.calibrant.wavelength)
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(d)
         furthest_pixel = d.flatten()[furthest_pixel_index]
-        furthest_q = self.r2q(furthest_pixel, distance)
+        furthest_q = r2q(furthest_pixel, distance, self.calibrant.wavelength)
         furthest_resol = 2 * np.pi / furthest_q
 
         d_left = abs(cx - xmin)
@@ -1167,9 +1164,9 @@ class BayFAIOpt:
         d_top = abs(cy - ymax)
         border_distances = [d_left, d_right, d_bottom, d_top]
         border_pixel = max(border_distances)
-        border_q = self.pix2q(border_pixel, distance)
+        border_q = r2q(border_pixel, distance, self.calibrant.wavelength)
         border_resol = 2 * np.pi / border_q
-        border_2_q = self.pix2q(border_pixel / 2, distance)
+        border_2_q = r2q(border_pixel / 2, distance, self.calibrant.wavelength)
         border_2_resol = 2 * np.pi / border_2_q
 
         circles_data = [
@@ -1226,6 +1223,7 @@ class BayFAIOpt:
     def create_diagnostics_panel(
         self,
         powder,
+        Imin,
         detector,
         distance,
         low_resolution=None,
@@ -1278,7 +1276,7 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.det_type}", ha="left", va="center", fontsize=8
+            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
@@ -1356,14 +1354,14 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_hist_and_compute_stats(powder, self.exp, self.run, ax2)
+        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax2)
         icol = 0
         irow += 1
 
         # Plotting radial profiles with peaks
         ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
         profile, radii = azimuthal_integration(powder, detector)
-        qs = r2q(radii, distance)
+        qs = r2q(radii, distance, self.calibrant.wavelength)
         self.plot_radial_integration(qs, profile, self.calibrant, ax3)
         irow += 1
 

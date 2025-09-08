@@ -105,6 +105,7 @@ class OptimizePyFAIGeometry(Task):
             )
             diagnostics_plot = optimizer.create_diagnostics_panel(
                 powder=optimizer.powder,
+                Imin=Imin,
                 detector=calib_detector,
                 distance=distance,
                 low_resolution=low_res,
