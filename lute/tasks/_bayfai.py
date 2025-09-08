@@ -70,7 +70,9 @@ def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
     return powder
 
 
-def preprocess_powder(powder: npt.NDArray[np.float64], smooth: bool = False) -> npt.NDArray[np.float64]:
+def preprocess_powder(
+    powder: npt.NDArray[np.float64], smooth: bool = False
+) -> npt.NDArray[np.float64]:
     """
     Preprocess extracted powder for enhancing optimization
 
@@ -88,19 +90,14 @@ def preprocess_powder(powder: npt.NDArray[np.float64], smooth: bool = False) -> 
             gradx = np.zeros_like(calib)
             grady = np.zeros_like(calib)
             gradx[:-1, :-1] = (
-                calib[1:, :-1]
-                - calib[:-1, :-1]
-                + calib[1:, 1:]
-                - calib[:-1, 1:]
+                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
             ) / 2
             grady[:-1, :-1] = (
-                calib[:-1, 1:]
-                - calib[:-1, :-1]
-                + calib[1:, 1:]
-                - calib[1:, :-1]
+                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
             ) / 2
             powder[p] = np.sqrt(gradx**2 + grady**2)
     return powder
+
 
 def generate_powder(powder_path, detname, smooth=False):
     """
@@ -421,7 +418,9 @@ class BayFAIOpt:
         self.powder = powder
         self.stacked_powder = np.reshape(powder, detector.shape)
         self.calibrant = calibrant
-        self.calibrant_name = os.path.splitext(os.path.basename(calibrant.filename))[0][6:]
+        self.calibrant_name = os.path.splitext(os.path.basename(calibrant.filename))[0][
+            6:
+        ]
         self.fixed = fixed
         self.parallelized = ["dist"]
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
@@ -465,8 +464,8 @@ class BayFAIOpt:
         dist : float
             The distance assigned to this MPI rank
         """
-        low = center["dist"] - res["dist"] * (self.size-1) / 2
-        high = center["dist"] + res["dist"] * (self.size-1) / 2
+        low = center["dist"] - res["dist"] * (self.size - 1) / 2
+        high = center["dist"] + res["dist"] * (self.size - 1) / 2
         distances = np.linspace(low, high, self.size)
         self.distances = distances
         dist = distances[self.rank]
@@ -475,7 +474,7 @@ class BayFAIOpt:
     def create_search_space(self, dist, center, bounds, res):
         """
         Discretize the search space for the free parameters.
-        
+
         Parameters
         ----------
         dist : float
@@ -508,8 +507,12 @@ class BayFAIOpt:
             else:
                 full_params[p] = np.array([center[p]])
 
-        X = np.array(np.meshgrid(*[full_params[p] for p in self.order])).T.reshape(-1, len(self.order))
-        X_search = np.array(np.meshgrid(*[search_params[p] for p in self.space])).T.reshape(-1, len(self.space))
+        X = np.array(np.meshgrid(*[full_params[p] for p in self.order])).T.reshape(
+            -1, len(self.order)
+        )
+        X_search = np.array(
+            np.meshgrid(*[search_params[p] for p in self.space])
+        ).T.reshape(-1, len(self.space))
         self.mins = np.min(X_search, axis=0)
         self.maxs = np.max(X_search, axis=0)
         X_norm = 2 * (X_search - self.mins) / (self.maxs - self.mins) - 1
@@ -541,7 +544,9 @@ class BayFAIOpt:
         """
         if prior:
             means = [center[p] for p in self.space]
-            cov = np.diag([(np.abs((bounds[p][1] - bounds[p][0])) / 5) ** 2 for p in self.space])
+            cov = np.diag(
+                [(np.abs((bounds[p][1] - bounds[p][0])) / 5) ** 2 for p in self.space]
+            )
             X_free = np.random.multivariate_normal(means, cov, n_samples)
             X_free = np.clip(X_free, self.mins, self.maxs)
             X_norm_samples = 2 * (X_free - self.mins) / (self.maxs - self.mins) - 1
@@ -559,7 +564,7 @@ class BayFAIOpt:
     def score(self, sample, Imin, max_rings):
         """
         Evaluate score at a given sampled geometry.
-        
+
         Parameters
         ----------
         sample : array-like
@@ -600,7 +605,7 @@ class BayFAIOpt:
         """
         Evaluate geometry found by BO on pyFAI refinement tool
 
-        Parameters 
+        Parameters
         ----------
         best_param : list
             Best parameters found by Bayesian optimization
@@ -728,13 +733,9 @@ class BayFAIOpt:
             y_norm = y - np.mean(y)
 
         # 4. Initialize the Gaussian Process model
-        kernel = RBF(
-            length_scale=0.3, length_scale_bounds=(0.2, 0.4)
-        ) * ConstantKernel(
+        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
             constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-        ) + WhiteKernel(
-            noise_level=0.001, noise_level_bounds="fixed"
-        )
+        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
         gp_model = GaussianProcessRegressor(
             kernel=kernel, n_restarts_optimizer=10, random_state=0
         )
@@ -820,7 +821,9 @@ class BayFAIOpt:
             Random seed for reproducibility
         """
         dist = self.distribute_distances(center, res)
-        logger.info(f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m")
+        logger.info(
+            f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
+        )
 
         bayfai_hyperparams = {
             "n_samples": n_samples,
@@ -1539,9 +1542,11 @@ class BayFAIOpt:
         ax.set_ylabel("Y-axis (m)", fontsize=8)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
-        ax.set_title(f"Run {self.run} - {self.detname} - {self.calibrant_name}", fontsize=8)
+        ax.set_title(
+            f"Run {self.run} - {self.detname} - {self.calibrant_name}", fontsize=8
+        )
         ax.set_aspect("equal")
-    
+
     def create_summary_plot(
         self,
         powder,
@@ -1620,9 +1625,7 @@ class BayFAIOpt:
         masked_powder = powder
         profile, radii = azimuthal_integration(masked_powder, detector)
         qs = r2q(radii, distance, self.calibrant.wavelength)
-        self.plot_radial_integration(
-            qs, profile, self.calibrant, ax=ax2
-        )
+        self.plot_radial_integration(qs, profile, self.calibrant, ax=ax2)
         irow += 1
         icol = 0
 

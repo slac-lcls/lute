@@ -18,6 +18,7 @@ from lute.io.models.validators import (
     validate_output_path,
 )
 
+
 class OptimizePyFAIGeometryParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
@@ -113,8 +114,8 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
     )
 
     calibrant: str = Field(
-            "",
-            description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
+        "",
+        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
     )
 
     powder: str = Field(

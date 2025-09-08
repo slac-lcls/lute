@@ -11,7 +11,13 @@ __author__ = "Louis Conreux"
 
 from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
 from lute.tasks._bayfai import BayFAIOpt
-from lute.tasks._bayfai import build_detector, generate_powder, min_intensity, define_calibrant, update_geometry
+from lute.tasks._bayfai import (
+    build_detector,
+    generate_powder,
+    min_intensity,
+    define_calibrant,
+    update_geometry,
+)
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger
@@ -118,7 +124,7 @@ class OptimizePyFAIGeometry(Task):
                 bo_history=optimizer.bo_history,
                 detector=calib_detector,
                 distance=distance,
-                plot=plot
+                plot=plot,
             )
             pn.extension("matplotlib", "bokeh")
             plots = pn.Row(
