@@ -937,6 +937,7 @@ class BayFAIOpt:
             color="red",
             linestyle="--",
             label=f"Threshold score: {self.thrsh}",
+            linewidth=0.8,
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
@@ -959,19 +960,21 @@ class BayFAIOpt:
             Matplotlib axes
         """
         residuals = self.scan["residual"]
-        ax.plot(distances, residuals)
+        ax.plot(distances, residuals, linewidth=0.8)
         best_dist = distances[self.index]
         ax.axvline(
             best_dist,
             color="green",
             linestyle="--",
             label=f"Best distance (m): {best_dist:.3f}",
+            linewidth=0.8,
         )
         ax.axvline(
             refined_dist,
             color="red",
             linestyle="--",
             label=f"Refined distance (m): {refined_dist:.3f}",
+            linewidth=0.8,
         )
         ax.legend(fontsize=6)
         ax.set_yscale("log")
@@ -1123,7 +1126,7 @@ class BayFAIOpt:
         _ = p.scatter(
             x="x",
             y="y",
-            size=,
+            size=3,
             color={"field": "intensity", "transform": color_mapper},
             line_color=None,
             source=source,
@@ -1373,6 +1376,297 @@ class BayFAIOpt:
         # Plotting residual scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
         self.plot_residual_distance_scan(self.distances, distance, ax6)
+
+        fig.tight_layout()
+
+        if plot != "":
+            fig.savefig(plot, dpi=100)
+        return fig
+
+    def plot_powder_and_resolution(self, powder, detector, distance, ax=None):
+        """
+        Plot the powder image with calibrated overlapping 2θ rings.
+
+        Parameters
+        ----------
+        powder : np.ndarray
+            Powder image
+        detector : PyFAI(Detector)
+            Corrected PyFAI detector object
+        distance : float
+            Distance of the detector
+        """
+        if ax is None:
+            _fig, ax = plt.subplots()
+        y, x, z = detector.calc_cartesian_positions()
+        if z is None:
+            z = np.zeros_like(x)
+        z += distance
+
+        xmin, xmax = x.min(), x.max()
+        ymin, ymax = y.min(), y.max()
+        if xmin < 0 and ymin < 0 and xmax > 0 and ymax > 0:
+            ax.set_xlim(xmin * 1.1, xmax * 1.1)
+            ax.set_ylim(ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax < 0:
+            ax.set_xlim(xmin * 1.1, xmax * 0.9)
+            ax.set_ylim(ymin * 1.1, ymax * 0.9)
+        elif xmin < 0 and ymin > 0 and xmax > 0 and ymax > 0:
+            ax.set_xlim(xmin * 1.1, xmax * 1.1)
+            ax.set_ylim(ymin * 0.9, ymax * 1.1)
+        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax > 0:
+            ax.set_xlim(xmin * 0.9, xmax * 1.1)
+            ax.set_ylim(ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin < 0 and xmax > 0 and ymax < 0:
+            ax.set_xlim(xmin * 1.1, xmax * 1.1)
+            ax.set_ylim(ymin * 1.1, ymax * 0.9)
+        elif xmin < 0 and ymin < 0 and xmax < 0 and ymax > 0:
+            ax.set_xlim(xmin * 1.1, xmax * 0.9)
+            ax.set_ylim(ymin * 1.1, ymax * 1.1)
+        elif xmin < 0 and ymin > 0 and xmax < 0 and ymax > 0:
+            ax.set_xlim(xmin * 1.1, xmax * 0.9)
+            ax.set_ylim(ymin * 0.9, ymax * 1.1)
+        elif xmin > 0 and ymin < 0 and xmax > 0 and ymax < 0:
+            ax.set_xlim(xmin * 0.9, xmax * 1.1)
+            ax.set_ylim(ymin * 1.1, ymax * 0.9)
+        elif xmin > 0 and ymin > 0 and xmax > 0 and ymax > 0:
+            ax.set_xlim(xmin * 0.9, xmax * 1.1)
+            ax.set_ylim(ymin * 0.9, ymax * 1.1)
+
+        img = ax.scatter(
+            x.ravel(),
+            y.ravel(),
+            c=powder.ravel(),
+            s=3,
+            edgecolors=None,
+            linewidth=0,
+            vmin=np.percentile(powder, 5),
+            vmax=np.percentile(powder, 95),
+        )
+        cbar = plt.colorbar(img, ax=ax, orientation="vertical")
+        cbar.set_label("Intensity", fontsize=8)
+        cbar.ax.tick_params(labelsize=6)
+        tth = self.calibrant.get_2th()
+        ttha = calculate_2theta(detector)
+        for i in range(detector.n_modules):
+            ax.contour(
+                x[i],
+                y[i],
+                ttha[i],
+                levels=tth,
+                cmap="autumn",
+                linewidths=1,
+                linestyles="dashed",
+            )
+
+        sign_x = np.sign(np.mean(x))
+        sign_y = np.sign(np.mean(y))
+        radii = calculate_radius(detector)
+
+        closest_pixel_index = np.argmin(radii)
+        closest_pixel = radii.flatten()[closest_pixel_index]
+        closest_q = r2q(closest_pixel, distance, self.calibrant.wavelength)
+        closest_resol = 2 * np.pi / closest_q
+
+        furthest_pixel_index = np.argmax(radii)
+        furthest_pixel = radii.flatten()[furthest_pixel_index]
+        furthest_q = r2q(furthest_pixel, distance, self.calibrant.wavelength)
+        furthest_resol = 2 * np.pi / furthest_q
+
+        d_left = abs(xmin)
+        d_right = abs(xmax)
+        d_bottom = abs(ymin)
+        d_top = abs(ymax)
+        border_distances = [d_left, d_right, d_bottom, d_top]
+        border_pixel = max(border_distances)
+        border_q = r2q(border_pixel, distance, self.calibrant.wavelength)
+        border_resol = 2 * np.pi / border_q
+        border_2_q = r2q(border_pixel / 2, distance, self.calibrant.wavelength)
+        border_2_resol = 2 * np.pi / border_2_q
+
+        circle_closest = plt.Circle(
+            (0, 0), closest_pixel, color="green", linestyle="dashed", fill=False
+        )
+        ax.add_artist(circle_closest)
+        ax.text(
+            sign_x * closest_pixel / np.sqrt(2),
+            sign_y * closest_pixel / np.sqrt(2),
+            f"{closest_resol:.3f} \u00c5",
+            color="red",
+            fontsize=8,
+            ha="left",
+        )
+
+        circle_furthest = plt.Circle(
+            (0, 0), furthest_pixel, color="green", linestyle="dashed", fill=False
+        )
+        ax.add_artist(circle_furthest)
+        ax.text(
+            sign_x * furthest_pixel / np.sqrt(2),
+            sign_y * furthest_pixel / np.sqrt(2),
+            f"{furthest_resol:.3f} \u00c5",
+            color="red",
+            fontsize=8,
+            ha="left",
+        )
+
+        circle_border = plt.Circle(
+            (0, 0), border_pixel, color="green", linestyle="dashed", fill=False
+        )
+        ax.add_artist(circle_border)
+        ax.text(
+            sign_x * border_pixel / np.sqrt(2),
+            sign_y * border_pixel / np.sqrt(2),
+            f"{border_resol:.3f} \u00c5",
+            color="red",
+            fontsize=8,
+            ha="left",
+        )
+
+        circle_border_2 = plt.Circle(
+            (0, 0), border_pixel / 2, color="green", linestyle="dashed", fill=False
+        )
+        ax.add_artist(circle_border_2)
+        ax.text(
+            sign_x * border_pixel / (2 * np.sqrt(2)),
+            sign_y * border_pixel / (2 * np.sqrt(2)),
+            f"{border_2_resol:.3f} \u00c5",
+            color="red",
+            fontsize=8,
+            ha="left",
+        )
+        ax.set_xlabel("X-axis (m)", fontsize=8)
+        ax.set_ylabel("Y-axis (m)", fontsize=8)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title(f"Run {self.run} - {self.detname} - {self.calibrant_name}", fontsize=8)
+        ax.set_aspect("equal")
+    
+    def create_summary_plot(
+        self,
+        powder,
+        Imin,
+        bo_history,
+        detector,
+        distance,
+        plot="",
+    ):
+        """
+        Create a summary plot with the results of the Bayesian Optimization.
+
+        Parameters
+        ----------
+        powder : np.ndarray
+            Powder image
+        Imin : float
+            Minimum intensity threshold for identifying Bragg peaks
+        bo_history : dict
+            Dictionary containing the history of optimization
+        detector : PyFAI(Detector)
+            Corrected PyFAI detector object
+        distance : float
+            Refined distance
+        plot : str
+            Path to save plot
+        """
+        fig = plt.figure(figsize=(9, 12), dpi=300)
+        nrow, ncol = 4, 3
+        irow, icol = 0, 0
+
+        # Labelling experiment and run number
+        ax1 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        rect = patches.Rectangle(
+            (0, 0),
+            1,
+            1,
+            transform=ax1.transAxes,
+            color="lightgrey",
+            alpha=0.3,
+        )
+        ax1.add_patch(rect)
+        ax1.text(
+            0.05,
+            0.9,
+            f"Experiment {self.exp}",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
+        ax1.text(
+            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
+        )
+        ax1.text(
+            0.05,
+            0.6,
+            f"Calibrant {self.calibrant_name}",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.5,
+            f"Distance = {distance:.4f} m",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.axis("off")
+        icol += 1
+
+        # Plotting radial profiles with peaks
+        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        masked_powder = powder
+        profile, radii = azimuthal_integration(masked_powder, detector)
+        qs = r2q(radii, distance, self.calibrant.wavelength)
+        self.plot_radial_integration(
+            qs, profile, self.calibrant, ax=ax2
+        )
+        irow += 1
+        icol = 0
+
+        # Plotting assembled powder with resolutions
+        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2, colspan=2)
+        self.plot_powder_and_resolution(powder, detector, distance, ax=ax3)
+        icol = +2
+
+        # Plotting histogram of pixel intensities
+        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
+        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax4)
+        irow += 2
+        icol = 0
+
+        # Plotting BO convergence
+        ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        scores = bo_history["scores"]
+        ax5.plot(scores, linewidth=0.8)
+        ax5.set_xticks(np.arange(len(scores), step=20))
+        ax5.axvline(
+            self.scan["best_idx"][self.index],
+            color="green",
+            linestyle="--",
+            label=f"Best score at n={self.scan['best_idx'][self.index]}",
+        )
+        ax5.set_xlabel("Iterations", fontsize=8)
+        ax5.set_ylabel("BO Score", fontsize=8)
+        ax5.legend(fontsize=8)
+        ax5.tick_params(axis="x", labelsize=6)
+        ax5.tick_params(axis="y", labelsize=6)
+        ax5.set_title(
+            f"Bayesian Opt, best score: {self.scan['score'][self.index]}",
+            fontsize=8,
+        )
+        icol += 1
+
+        # Plotting score scan over distance
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_score_distance_scan(self.distances, ax6)
+        icol += 1
+
+        # Plotting residual scan over distance
+        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
+        self.plot_residual_distance_scan(self.distances, distance, ax7)
 
         fig.tight_layout()
 
