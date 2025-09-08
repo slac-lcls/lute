@@ -692,12 +692,15 @@ class BayFAIOpt:
         """
         np.random.seed(seed)
 
+        # 1. Create the search space
         X, X_norm = self.create_search_space(dist, center, bounds, res)
 
+        # 2. Sample initial points
         X_samples, X_norm_samples = self.sample_initial_points(
             X, X_norm, center, bounds, n_samples, prior
         )
 
+        # 3. Evaluate the initial points
         bo_history = {"params": [], "scores": []}
         y = np.zeros((n_samples))
         for i in range(n_samples):
@@ -724,6 +727,7 @@ class BayFAIOpt:
         else:
             y_norm = y - np.mean(y)
 
+        # 4. Initialize the Gaussian Process model
         kernel = RBF(
             length_scale=0.3, length_scale_bounds=(0.2, 0.4)
         ) * ConstantKernel(
@@ -737,13 +741,14 @@ class BayFAIOpt:
         gp_model.fit(X_norm_samples, y_norm)
         visited_idx = list([])
 
+        # 5. Run the Bayesian Optimization loop
         for i in range(n_iterations):
-            # 1. Generate the Acquisition Function values using the Gaussian Process Regressor
+            # 6. Select the next point to evaluate
             next = self.UCB(X_norm, gp_model, visited_idx, beta)
             next_sample = X[next]
             visited_idx.append(next)
 
-            # 3. Compute the score of the new set of parameters
+            # 7. Compute the score of the next point
             score = self.score(next_sample, Imin, max_rings)
             y = np.append(y, [score], axis=0)
             bo_history["params"].append(next_sample)
@@ -755,9 +760,10 @@ class BayFAIOpt:
             else:
                 y_norm = y - np.mean(y)
 
-            # 4. Update the Gaussian Process Regressor
+            # 8. Update the Gaussian Process model
             gp_model.fit(X_norm_samples, y_norm)
 
+        # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
         residual, score, params = self.pyFAI_score(best_param, Imin, max_rings)
@@ -784,7 +790,11 @@ class BayFAIOpt:
         seed=0,
     ):
         """
-        From guessed initial geometry, optimize the geometry using Bayesian Optimization on pyFAI package
+        Run BayFAI optimization.
+        Split the distance parameter across MPI ranks.
+        Run Bayesian Optimization on each rank with fixed distance.
+        Perform pyFAI least-squares refinement for each rank's best geometry.
+        Optimal geometry is chosen based on the lowest residual among ranks.
 
         Parameters
         ----------
