@@ -56,7 +56,7 @@ class BayFAI(Task):
             shape=powder.shape,
         )
         calibrant = define_calibrant(
-            calibrant=self._task_parameters.calibrant,
+            calibrant_name=self._task_parameters.calibrant,
             exp=exp,
             run=run,
         )
@@ -98,7 +98,7 @@ class BayFAI(Task):
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
-            plot = f"{fig_folder}/bayFAI_diagnostics_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            plot = f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
             calib_detector = update_geometry(optimizer, self._task_parameters.out_file)
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(

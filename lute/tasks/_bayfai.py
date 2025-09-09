@@ -29,6 +29,7 @@ import psana  # type: ignore
 import logging
 import numpy as np
 import numpy.typing as npt
+from typing import Optional, Union, Any
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from matplotlib import lines  # type: ignore
@@ -111,7 +112,7 @@ def preprocess_powder(
     return powder
 
 
-def generate_powder(powder_path, detname, smooth=False):
+def generate_powder(powder_path: str, detname: str, smooth: bool = False) -> npt.NDArray[np.float64]:
     """
     Generate a preprocessed powder image from smalldata reduction.
 
@@ -129,7 +130,7 @@ def generate_powder(powder_path, detname, smooth=False):
     return powder
 
 
-def min_intensity(powder):
+def min_intensity(powder: npt.NDArray[np.float64]) -> float:
     """
     Define minimal intensity for identifying Bragg peaks.
 
@@ -159,7 +160,7 @@ def min_intensity(powder):
     return Imin
 
 
-def build_detector(in_file, shape):
+def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
     """
     Read the metrology data and build a pyFAI detector object.
 
@@ -183,7 +184,7 @@ def build_detector(in_file, shape):
     return detector
 
 
-def update_geometry(optimizer, out_file):
+def update_geometry(optimizer: Any, out_file: str) -> pyFAI.detectors.Detector:
     """
     Update the geometry and write a new .poni, .geom and .data file
 
@@ -215,7 +216,7 @@ def update_geometry(optimizer, out_file):
     return detector
 
 
-def define_calibrant(calibrant, exp, run):
+def define_calibrant(calibrant_name: str, exp: str, run: Union[str, int]) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
 
@@ -230,21 +231,22 @@ def define_calibrant(calibrant, exp, run):
     """
     ds_args = f"exp={exp}:run={run}:idx"
     ds = psana.DataSource(ds_args)
-    runner = next(ds.runs())
-    evt = runner.event(runner.times()[0])
+    runs = next(ds.runs())
+    evt = runs.event(runs.times()[0])
     photon_energy = None
+    calibrant = CALIBRANT_FACTORY(calibrant_name)
     try:
-        photon_energy = psana.Detector("EBeam").get(evt).ebeamPhotonEnergy()
+        det_photon_energy = runs.Detector("EBeam")
+        photon_energy = det_photon_energy.get(evt).ebeamPhotonEnergy()
         wavelength = 1.23984197386209e-06 / photon_energy
     except Exception:
         wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
         photon_energy = 1.23984197386209e-06 / wavelength
-    calibrant = CALIBRANT_FACTORY(calibrant)
     calibrant.wavelength = wavelength
     return calibrant
 
 
-def rotation_matrix(params):
+def rotation_matrix(params: list) -> np.ndarray:
     """
     Compute and return the detector tilts as a single rotation matrix
 
@@ -275,7 +277,7 @@ def rotation_matrix(params):
     return rotation_matrix
 
 
-def correct_geom(detector, params=None):
+def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = None):
     """
     Correct the geometry given a set of geometry parameters.
 
@@ -305,7 +307,7 @@ def correct_geom(detector, params=None):
     return x, y, z
 
 
-def calculate_2theta(detector, params=None):
+def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
     """
     Calculate the 2θ angles for the detector based on the geometry parameters.
 
@@ -323,7 +325,7 @@ def calculate_2theta(detector, params=None):
     return tth
 
 
-def calculate_radius(detector, params=None):
+def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
     """
     Calculate the radius for each pixel based on the geometry parameters.
 
@@ -346,7 +348,7 @@ def calculate_radius(detector, params=None):
     return r
 
 
-def azimuthal_integration(powder, detector, params=None):
+def azimuthal_integration(powder: npt.NDArray[np.float64], detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> tuple:
     """
     Compute the radial intensity profile of an image.
 
@@ -371,7 +373,7 @@ def azimuthal_integration(powder, detector, params=None):
     return radialprofile, r_centers
 
 
-def r2q(radii, distance, wavelength):
+def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
     """
     Convert pixel radii to scattering vector magnitude q.
 

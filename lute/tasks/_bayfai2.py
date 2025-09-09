@@ -33,7 +33,7 @@ import psana.detector.UtilsCalib as uc  # type: ignore
 import logging
 import numpy as np
 import numpy.typing as npt
-from typing import Optional
+from typing import Optional, Union, Any
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from matplotlib import lines  # type: ignore
@@ -192,7 +192,7 @@ def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
     return detector
 
 
-def update_geometry(optimizer: BayFAIOpt, out_file: str):
+def update_geometry(optimizer: Any, out_file: str):
     """
     Update the geometry and write a new .poni, .geom and .data file
 
@@ -224,7 +224,7 @@ def update_geometry(optimizer: BayFAIOpt, out_file: str):
     return detector
 
 
-def define_calibrant(calibrant: str, exp: str, run: int) -> pyFAI.calibrant.Calibrant:
+def define_calibrant(calibrant_name: str, exp: str, run: Union[str, int]) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
 
@@ -240,7 +240,7 @@ def define_calibrant(calibrant: str, exp: str, run: int) -> pyFAI.calibrant.Cali
     ds = DataSource(exp=exp, run=run)
     runs = next(ds.runs())
     evt = next(runs.events())
-    calibrant = CALIBRANT_FACTORY(calibrant)
+    calibrant = CALIBRANT_FACTORY(calibrant_name)
     try:
         det_photon_energy = runs.Detector("ebeamh")
         photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(evt)
