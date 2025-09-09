@@ -45,12 +45,12 @@ class BayFAI2(Task):
         assert isinstance(self._task_parameters, BayFAIParameters)
         exp = self._task_parameters.lute_config.experiment
         run = self._task_parameters.lute_config.run
-        detname = self._task_parameters.det_name
+        detname = self._task_parameters.detname
         powder = generate_powder(
             powder_path=self._task_parameters.powder,
             detname=detname,
             smooth=self._task_parameters.preprocess,
-        )
+        )   
         detector = build_detector(
             in_file=self._task_parameters.in_file,
             shape=powder.shape,
@@ -81,7 +81,7 @@ class BayFAI2(Task):
         optimizer.bayfai_opt(
             center=self._task_parameters.center,
             bounds=self._task_parameters.bounds,
-            res=self._task_parameters.resolution,
+            res=self._task_parameters.resolutions,
             **bayfai_hyperparams,
         )
         if optimizer.rank == 0:

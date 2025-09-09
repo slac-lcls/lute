@@ -26,39 +26,40 @@ from lute.execution.logging import get_logger
 
 import os
 from psana import DataSource  # type: ignore
-from psana.pscalib.calib.MDB_CLI import *
-import psana.pscalib.calib.MDBUtils as mu
-import psana.pscalib.calib.MDBWebUtils as wu
-import psana.detector.UtilsCalib as uc
-
-cc = wu.cc
+from psana.pscalib.calib.MDB_CLI import *  # type: ignore
+import psana.pscalib.calib.MDBUtils as mu  # type: ignore
+import psana.pscalib.calib.MDBWebUtils as wu  # type: ignore
+import psana.detector.UtilsCalib as uc  # type: ignore
 import logging
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib import lines
+from typing import Optional
+import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.patches as patches  # type: ignore 
+from matplotlib import lines  # type: ignore
 from bokeh.plotting import figure  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
-import h5py
-from scipy.ndimage import gaussian_filter
-import pyFAI
-from pyFAI.geometry import Geometry
-from pyFAI.goniometer import SingleGeometry
-from pyFAI.geometryRefinement import GeometryRefinement
+import h5py  # type: ignore
+from scipy.ndimage import gaussian_filter  # type: ignore
+import pyFAI  # type: ignore
+from pyFAI.geometry import Geometry  # type: ignore
+from pyFAI.goniometer import SingleGeometry  # type: ignore
+from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
-from sklearn.utils._testing import ignore_warnings
-from sklearn.exceptions import ConvergenceWarning
+from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
+from sklearn.utils._testing import ignore_warnings  # type: ignore
+from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from mpi4py import MPI
 
 from LCLSGeom.psana2.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana  # type: ignore
 
 pyFAI.use_opencl = False
+
+cc = wu.cc
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -117,7 +118,7 @@ def preprocess_powder(
     return powder
 
 
-def generate_powder(powder_path, detname, smooth=False):
+def generate_powder(powder_path: str, detname: str, smooth: bool = False) -> npt.NDArray[np.float64]:
     """
     Generate a preprocessed powder image from smalldata reduction.
 
@@ -135,7 +136,7 @@ def generate_powder(powder_path, detname, smooth=False):
     return powder
 
 
-def min_intensity(powder):
+def min_intensity(powder: npt.NDArray[np.float64]) -> float:
     """
     Define minimal intensity for identifying Bragg peaks.
 
@@ -165,7 +166,7 @@ def min_intensity(powder):
     return Imin
 
 
-def build_detector(in_file, shape):
+def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
     """
     Read the metrology data and build a pyFAI detector object.
 
@@ -189,13 +190,13 @@ def build_detector(in_file, shape):
     return detector
 
 
-def update_geometry(optimizer, out_file):
+def update_geometry(optimizer: BayFAIOpt, out_file: str):
     """
     Update the geometry and write a new .poni, .geom and .data file
 
     Parameters
     ----------
-    optimizer : BayesGeomOpt
+    optimizer : BayFAIOpt
         Optimizer object
     out_file : str
         Path to the output file
@@ -221,7 +222,7 @@ def update_geometry(optimizer, out_file):
     return detector
 
 
-def define_calibrant(calibrant, exp, run):
+def define_calibrant(calibrant: str, exp: str, run: int) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
 
@@ -250,7 +251,7 @@ def define_calibrant(calibrant, exp, run):
     return calibrant
 
 
-def rotation_matrix(params):
+def rotation_matrix(params: list) -> np.ndarray:
     """
     Compute and return the detector tilts as a single rotation matrix
 
@@ -281,7 +282,7 @@ def rotation_matrix(params):
     return rotation_matrix
 
 
-def correct_geom(detector, params=None):
+def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list]=None):
     """
     Correct the geometry given a set of geometry parameters.
 
@@ -311,7 +312,7 @@ def correct_geom(detector, params=None):
     return x, y, z
 
 
-def calculate_2theta(detector, params=None):
+def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
     """
     Calculate the 2θ angles for the detector based on the geometry parameters.
 
@@ -329,7 +330,7 @@ def calculate_2theta(detector, params=None):
     return tth
 
 
-def calculate_radius(detector, params=None):
+def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
     """
     Calculate the radius for each pixel based on the geometry parameters.
 
@@ -352,7 +353,7 @@ def calculate_radius(detector, params=None):
     return r
 
 
-def azimuthal_integration(powder, detector, params=None):
+def azimuthal_integration(powder: npt.NDArray[np.float64], detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> tuple:
     """
     Compute the radial intensity profile of an image.
 
@@ -377,7 +378,7 @@ def azimuthal_integration(powder, detector, params=None):
     return radialprofile, r_centers
 
 
-def r2q(radii, distance, wavelength):
+def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
     """
     Convert pixel radii to scattering vector magnitude q.
 

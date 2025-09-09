@@ -29,25 +29,25 @@ import psana  # type: ignore
 import logging
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib import lines
+import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.patches as patches  # type: ignore
+from matplotlib import lines  # type: ignore
 from bokeh.plotting import figure  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
-import h5py
-from scipy.ndimage import gaussian_filter
-import pyFAI
-from pyFAI.geometry import Geometry
-from pyFAI.goniometer import SingleGeometry
-from pyFAI.geometryRefinement import GeometryRefinement
+import h5py  # type: ignore
+from scipy.ndimage import gaussian_filter  # type: ignore
+import pyFAI  # type: ignore
+from pyFAI.geometry import Geometry  # type: ignore
+from pyFAI.goniometer import SingleGeometry  # type: ignore
+from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
-from sklearn.utils._testing import ignore_warnings
-from sklearn.exceptions import ConvergenceWarning
+from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
+from sklearn.utils._testing import ignore_warnings  # type: ignore
+from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from mpi4py import MPI
 
 from LCLSGeom.psana.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana  # type: ignore
