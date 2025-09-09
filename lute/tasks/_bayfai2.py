@@ -35,7 +35,7 @@ import numpy as np
 import numpy.typing as npt
 from typing import Optional
 import matplotlib.pyplot as plt  # type: ignore
-import matplotlib.patches as patches  # type: ignore 
+import matplotlib.patches as patches  # type: ignore
 from matplotlib import lines  # type: ignore
 from bokeh.plotting import figure  # type: ignore
 from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSource  # type: ignore
@@ -118,7 +118,9 @@ def preprocess_powder(
     return powder
 
 
-def generate_powder(powder_path: str, detname: str, smooth: bool = False) -> npt.NDArray[np.float64]:
+def generate_powder(
+    powder_path: str, detname: str, smooth: bool = False
+) -> npt.NDArray[np.float64]:
     """
     Generate a preprocessed powder image from smalldata reduction.
 
@@ -282,7 +284,7 @@ def rotation_matrix(params: list) -> np.ndarray:
     return rotation_matrix
 
 
-def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list]=None):
+def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = None):
     """
     Correct the geometry given a set of geometry parameters.
 
@@ -312,7 +314,9 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list]=None
     return x, y, z
 
 
-def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
+def calculate_2theta(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
     """
     Calculate the 2θ angles for the detector based on the geometry parameters.
 
@@ -330,7 +334,9 @@ def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] 
     return tth
 
 
-def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
+def calculate_radius(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
     """
     Calculate the radius for each pixel based on the geometry parameters.
 
@@ -353,7 +359,11 @@ def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] 
     return r
 
 
-def azimuthal_integration(powder: npt.NDArray[np.float64], detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> tuple:
+def azimuthal_integration(
+    powder: npt.NDArray[np.float64],
+    detector: pyFAI.detectors.Detector,
+    params: Optional[list] = None,
+) -> tuple:
     """
     Compute the radial intensity profile of an image.
 

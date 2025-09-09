@@ -50,7 +50,7 @@ class BayFAI2(Task):
             powder_path=self._task_parameters.powder,
             detname=detname,
             smooth=self._task_parameters.preprocess,
-        )   
+        )
         detector = build_detector(
             in_file=self._task_parameters.in_file,
             shape=powder.shape,
