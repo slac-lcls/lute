@@ -224,7 +224,9 @@ def update_geometry(optimizer: Any, out_file: str):
     return detector
 
 
-def define_calibrant(calibrant_name: str, exp: str, run: Union[str, int]) -> pyFAI.calibrant.Calibrant:
+def define_calibrant(
+    calibrant_name: str, exp: str, run: Union[str, int]
+) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
 

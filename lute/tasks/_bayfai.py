@@ -112,7 +112,9 @@ def preprocess_powder(
     return powder
 
 
-def generate_powder(powder_path: str, detname: str, smooth: bool = False) -> npt.NDArray[np.float64]:
+def generate_powder(
+    powder_path: str, detname: str, smooth: bool = False
+) -> npt.NDArray[np.float64]:
     """
     Generate a preprocessed powder image from smalldata reduction.
 
@@ -216,7 +218,9 @@ def update_geometry(optimizer: Any, out_file: str) -> pyFAI.detectors.Detector:
     return detector
 
 
-def define_calibrant(calibrant_name: str, exp: str, run: Union[str, int]) -> pyFAI.calibrant.Calibrant:
+def define_calibrant(
+    calibrant_name: str, exp: str, run: Union[str, int]
+) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
 
@@ -307,7 +311,9 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     return x, y, z
 
 
-def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
+def calculate_2theta(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
     """
     Calculate the 2θ angles for the detector based on the geometry parameters.
 
@@ -325,7 +331,9 @@ def calculate_2theta(detector: pyFAI.detectors.Detector, params: Optional[list] 
     return tth
 
 
-def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> np.ndarray:
+def calculate_radius(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
     """
     Calculate the radius for each pixel based on the geometry parameters.
 
@@ -348,7 +356,11 @@ def calculate_radius(detector: pyFAI.detectors.Detector, params: Optional[list] 
     return r
 
 
-def azimuthal_integration(powder: npt.NDArray[np.float64], detector: pyFAI.detectors.Detector, params: Optional[list] = None) -> tuple:
+def azimuthal_integration(
+    powder: npt.NDArray[np.float64],
+    detector: pyFAI.detectors.Detector,
+    params: Optional[list] = None,
+) -> tuple:
     """
     Compute the radial intensity profile of an image.
 
