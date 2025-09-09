@@ -12,7 +12,7 @@ For building and running workflows using SLURM and Airflow, the following compon
   - `JIDSlurmOperator`
 
 ## Launch/Submission Scripts
-## `launch_airflow.py`
+### `launch_airflow.py`
 Sends a request to an Airflow instance to submit a specific DAG (workflow). This script prepares an HTTP request with the appropriate parameters in a specific format.
 
 A request involves the following information, most of which is retrieved automatically:
@@ -51,11 +51,14 @@ launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test]
 - `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm.sh` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
 
 
-**Lifetime**
+#### Lifetime
+
 This script will run for the entire duration of the **workflow (DAG)**. After making the initial request of Airflow to launch the DAG, it will enter a status update loop which will keep track of each individual job (each job runs one managed `Task`)  submitted by Airflow. At the end of each job it will collect the log file, in addition to providing a few other status updates/debugging messages, and append it to its own log. This allows all logging for the entire workflow (DAG) to be inspected from an individual file. This is particularly useful when running via the eLog, because only a single log file is displayed.
 
 ### `submit_launch_airflow.sh`
-This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the `launch_airflow.py` job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the `launch_airflow.py` script to run on the S3DF batch nodes. Usage of this script is mostly identical to `launch_airflow.py`. All the arguments are passed transparently to the underlying Python script with the exception of the first argument which **must** be the location of the underlying `launch_airflow.py` script. The wrapper will simply launch a batch job using minimal resources (1 core). While the primary purpose of the script is to allow running from the eLog, it is also an useful wrapper generally, to be able to submit the previous script as a SLURM job.
+This script is only necessary when running from the eLog using the ARP. The initial job submitted by the ARP can not have a duration of longer than 30 seconds, as it will then time out. As the `launch_airflow.py` job will live for the entire duration of the workflow, which is often much longer than 30 seconds, the solution was to have a wrapper which submits the `launch_airflow.py` script to run on the S3DF batch nodes. That said, it is generally advantageous to use it even when running from the command-line as it creates a SLURM job for the `launch_airflow.py` script, instead of requiring interactively running it. 
+
+Usage of this script is mostly identical to `launch_airflow.py`. All the arguments are passed transparently to the underlying Python script with the exception of the first argument which **must** be the location of the underlying `launch_airflow.py` script. The wrapper will simply launch a batch job using minimal resources (1 core). While the primary purpose of the script is to allow running from the eLog, it is also an useful wrapper generally, to be able to submit the previous script as a SLURM job.
 
 Usage:
 
@@ -63,7 +66,7 @@ Usage:
 submit_launch_airflow.sh /path/to/launch_airflow.py -c <path_to_config_yaml> -w <workflow_name> [--debug] [--test] [-e <exp>] [-r <run>] [SLURM_ARGS]
 ```
 
-## `submit_slurm.sh`
+### `submit_slurm.sh`
 Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single **managed** `Task` at a time. The usage is as follows:
 ```bash
 submit_slurm.sh -c <path_to_config_yaml> -t <MANAGED_task_name> [--debug] [SLURM_ARGS ...]
@@ -97,6 +100,7 @@ Therefore, running a typical Airflow DAG involves the following steps:
 8. The Airflow server will then launch the next step of the DAG, and so on, until every step has been executed.
 
 Currently, the following `Operator`s are maintained:
+
 - `JIDSlurmOperator`: The standard `Operator`. Each instance has a one-to-one correspondance with a LUTE **managed** `Task`.
 
 ### `JIDSlurmOperator` arguments
@@ -176,9 +180,35 @@ task1 >> task3
 
 As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.
 
-**Note:** Your DAG will not be available to Airflow until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [[dynamic workflows page][dynamic_workflows]], or discuss having the DAG pushed directly to the test Airflow instance.
+**Note:** Your DAG will not be available to the production Airflow instance until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [dynamic workflows page](dynamic_workflows.md), or work against the test Airflow instance described below.
 
-### More Advanced Patterns: Branching based on run type
+### `psdag` repository and the production vs test Airflow instances
+
+Airflow runs in the S3DF k8s cluster without access to the filesystem on S3DF, or any knowledge of the LUTE repository. In order for workflows to become available to use via Airflow, the DAG definitions (the Python files described above) must be synced to the instance. This is currently accomplished using an additional repository: [psdag](https://github.com/slac-lcls/psdag). The structure of the repository is as follows:
+
+- There are three top-level directories - we are concerned only with the `lute` directory, which is a replica of the `workflows/airflow` directory in the actual LUTE repository.
+    - `btx-dev`
+    - `btx`
+    - `lute`
+- There are two branches
+    - `main`
+    - `test`
+
+The `main` branch is git-synced regularly (every minute or so) to the **production** Airflow instance. The `test` branch is likewise git-synced regularly to the **test** Airflow instance. In general, the `main` branch should NOT be pushed to directly. There are CI GitHub actions in place in the LUTE repository which will automatically push updates to this branch anytime a PR is merged in LUTE. The `test` branch can be pushed to for development purposes. In general there are no scheduled synchronizations between these two branches. On occassion we will go through and synchronize them manually where appropriate.
+
+In order to use the `test` branch for development the general operating procedure is:
+
+1. Clone `slac-lcls/psdag`
+2. Checkout the `test` branch (Make sure to be on the test branch!)
+3. Copy over your new DAG from `workflows/airflow` in the LUTE repository, or manually edit the file if it already is available on the `test` branch in `psdag`.
+4. Push your changes
+
+After pushing, your DAG (or updates) should be available via the `test` Airflow instance in about 1 minute, assuming there are no errors in the DAG definition (syntax or otherwise). To use the `test` instance, pass the `--test` flag to `launch_airflow.py`/`submit_launch_airflow.sh`.
+
+If you need permission to access the `psdag` repository, reach out to the core maintainers.
+
+### More Advanced Patterns
+#### Branching based on run type
 Additional run time information can be passed along in the Airflow context on a submission-by-submission basis. This information can be used to implement more complex logic into the DAG definition.
 
 A current example of this is the `run_type` parameter. This would usually be a special signifier provided to the eLog at the time the DAQ starts recording a run to identify the type of data the run contains. The Airflow launch script supports optionally overriding the type, either for testing, or for some other specific behaviour implemented in the workflow.

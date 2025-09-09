@@ -1,7 +1,7 @@
 """Models for NeXuS related Tasks.
 
 Classes:
-    ConvertSMDToNexusParameters(ThirdPartyParameters): Parameters to convert
+    ConvertSMDToNexusParameters(TaskParameters): Parameters to convert
         smalldata_tools HDF5 file to CCTBX compatible NeXuS file.
 """
 
@@ -12,40 +12,29 @@ from typing import Any, Dict, Union
 
 from pydantic import Field, validator
 
-from lute.io.models.base import ThirdPartyParameters
+from lute.io.models.base import TaskParameters
 
 
-class ConvertSMDToNexusParameters(ThirdPartyParameters):
+class ConvertSMDToNexusParameters(TaskParameters):
     """Parameters for running a conversion of smalldata HDF5 to NEXUS HDF5."""
 
-    class Config(ThirdPartyParameters.Config):
+    class Config(TaskParameters.Config):
         """Identical to super-class Config but includes a result."""
 
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
 
-        result_from_params: str = ""
-        """Defines a result from the parameters. Use a validator to do so."""
-
-    executable: str = Field("python", description="Python executable.", flag_type="")
-    convertor_script: str = Field(
-        description="smd to nexus conversion script from Derek Mendez.", flag_type=""
-    )
     input: str = Field(
         "",
         description="Path to input smd .h5 file.",
-        flag_type="--",
-        rename_param="psanah5",
     )
-    geom: str = Field(description="Detector geometry file (.expt).", flag_type="--")
+    geom: str = Field(description="Detector geometry file (.expt).")
     output: str = Field(
         "",
         description="Path to output Nexus (.h5) file.",
-        flag_type="--",
-        rename_param="nexus",
         is_result=True,
     )
-    flip: bool = Field(False, description="Flag to flip.", flag_type="--")
+    flip: bool = Field(False, description="Flag to flip.")
 
     @validator("input", always=True)
     def validate_input_path(cls, input: str, values: Dict[str, Any]) -> str:
