@@ -1,14 +1,14 @@
 import argparse
-import h5py
+import h5py # type: ignore
 import numpy as np
 import pickle
 from typing import Any, BinaryIO
 import zmq
 import zlib
 
-from psana import DataSource
-from psana.dgramedit import DgramEdit, AlgDef, DetectorDef
-from psana.psexp import TransitionId
+from psana import DataSource # type: ignore
+from psana.dgramedit import DgramEdit, AlgDef, DetectorDef # type: ignore
+from psana.psexp import TransitionId # type: ignore
 
 
 class ZmqReceiver:
