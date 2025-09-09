@@ -3,6 +3,7 @@
 Classes:
     - BayFAIParameters:
         Parameters for running BayFAI
+"""
 
 __all__ = ["BayFAIParameters"]
 __author__ = "Louis Conreux"
