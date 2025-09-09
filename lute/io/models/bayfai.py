@@ -1,11 +1,10 @@
 """Models for optimizing detector geometry using PyFAI and Bayesian optimization.
 
 Classes:
-    - OptimizePyFAIGeometryParameters(TaskParameters):
-        Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
-"""
+    - BayFAIParameters:
+        Parameters for running BayFAI
 
-__all__ = ["OptimizePyFAIGeometryParameters"]
+__all__ = ["BayFAIParameters"]
 __author__ = "Louis Conreux"
 
 from typing import Dict, List, Tuple
@@ -19,7 +18,7 @@ from lute.io.models.validators import (
 )
 
 
-class OptimizePyFAIGeometryParameters(TaskParameters):
+class BayFAIParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
     The Bayesian Optimization has default hyperparameters that can be overriden by the user.

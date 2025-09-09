@@ -150,11 +150,11 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
 
-# PyFAI
+# BayFAI
 #######
-PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
-"""Optimize LCLS1 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization. (psana)."""
-PyFAIGeometryOptimizer.update_environment(
+BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
@@ -162,14 +162,14 @@ PyFAIGeometryOptimizer.update_environment(
     }
 )
 
-PyFAIGeometryOptimizer2: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry2")
+BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI2")
 """Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
-PyFAIGeometryOptimizer2.update_environment(
+BayFAIOptimizer2.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
         "PS_SRV_NODES": "0",
         "PS_EB_NODES": "1",
-        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom/src",
+        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
     }
 )

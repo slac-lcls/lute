@@ -2,11 +2,17 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    BayesGeomOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization
+    BayFAIOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization.
 
+Functions:
+    - build_detector: build a PyFAI detector from a .data file.
+    - generate_powder: generate a powder diffraction image from a .data file.
+    - min_intensity: find the minimum intensity in a powder diffraction image.
+    - define_calibrant: define the calibrant for a powder diffraction image.
+    - update_geometry: update the detector geometry based on the optimization results.
 """
 
-__all__ = ["BayesGeomOpt"]
+__all__ = ["BayFAIOpt", "build_detector", "generate_powder", "min_intensity", "define_calibrant", "update_geometry"]
 __author__ = "Louis Conreux"
 
 from lute.execution.logging import get_logger
@@ -25,7 +31,6 @@ from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
 import h5py
 from scipy.ndimage import gaussian_filter
-from tqdm import tqdm
 import pyFAI
 from pyFAI.geometry import Geometry
 from pyFAI.goniometer import SingleGeometry
@@ -38,7 +43,7 @@ from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from mpi4py import MPI
 
-from LCLSGeom.psana.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana
+from LCLSGeom.psana.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -1574,7 +1579,7 @@ class BayFAIOpt:
         plot : str
             Path to save plot
         """
-        fig = plt.figure(figsize=(9, 12), dpi=300)
+        fig = plt.figure(figsize=(9, 12), dpi=100)
         nrow, ncol = 4, 3
         irow, icol = 0, 0
 
@@ -1636,7 +1641,7 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax4)
+        self.plot_intensity_hist(powder, self.exp, self.run , Imin, ax4)
         irow += 2
         icol = 0
 
@@ -1644,7 +1649,7 @@ class BayFAIOpt:
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
         scores = bo_history["scores"]
         ax5.plot(scores, linewidth=0.8)
-        ax5.set_xticks(np.arange(len(scores), step=20))
+        ax5.set_xticks(np.arange(0, len(scores), step=20))
         ax5.axvline(
             self.scan["best_idx"][self.index],
             color="green",

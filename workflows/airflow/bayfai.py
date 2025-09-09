@@ -1,6 +1,6 @@
-"""Run geometry optimization for centering detector on the beam.
+"""BayFAI Optimization Airflow Workflow.
 
-Performs a Bayesian Optimization coupled with pyFAI least squares fitting of distance, beam center and tilt angles.
+Run BayFAI optimization after producing a powder image with SmallData.
 
 Note:
     The task_id MUST match the managed task name when defining DAGs - it is used
@@ -50,13 +50,13 @@ smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", d
 
 smd_producer2: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer2", dag=dag)
 
-geom_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer", dag=dag)
+bayfai_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer", dag=dag)
 
-geom_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer2", dag=dag)
+bayfai_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer2", dag=dag)
 
 # Branch Workflow depending on available psana version
 psana1v2_brancher >> [smd_producer, smd_producer2]
 
-smd_producer >> geom_optimizer
+smd_producer >> bayfai_optimizer
 
-smd_producer2 >> geom_optimizer2
+smd_producer2 >> bayfai_optimizer2

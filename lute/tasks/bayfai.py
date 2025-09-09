@@ -2,14 +2,14 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    OptimizePyFAIGeom: optimize detector geometry using PyFAI coupled with Bayesian Optimization
+    BayFAI: optimize detector geometry using PyFAI coupled with Bayesian Optimization
 
 """
 
-__all__ = ["OptimizePyFAIGeometry"]
+__all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
-from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
+from lute.io.models.bayfai import BayFAIParameters
 from lute.tasks._bayfai import BayFAIOpt
 from lute.tasks._bayfai import (
     build_detector,
@@ -34,17 +34,17 @@ from LCLSGeom.common.geometry import get_beam_center  # type: ignore
 logger: logging.Logger = get_logger(__name__)
 
 
-class OptimizePyFAIGeometry(Task):
+class BayFAI(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
     def __init__(
-        self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
+        self, *, params: BayFAIParameters, use_mpi: bool = True
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
         start_time = time.time()
-        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+        assert isinstance(self._task_parameters, BayFAIParameters)
         exp = self._task_parameters.lute_config.experiment
         run = self._task_parameters.lute_config.run
         detname = self._task_parameters.det_name
