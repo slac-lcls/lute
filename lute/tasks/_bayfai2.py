@@ -12,7 +12,14 @@ Functions:
     - update_geometry: update the detector geometry based on the optimization results.
 """
 
-__all__ = ["BayFAIOpt", "build_detector", "generate_powder", "min_intensity", "define_calibrant", "update_geometry"]
+__all__ = [
+    "BayFAIOpt",
+    "build_detector",
+    "generate_powder",
+    "min_intensity",
+    "define_calibrant",
+    "update_geometry",
+]
 __author__ = "Louis Conreux"
 
 from lute.execution.logging import get_logger
@@ -23,6 +30,7 @@ from psana.pscalib.calib.MDB_CLI import *
 import psana.pscalib.calib.MDBUtils as mu
 import psana.pscalib.calib.MDBWebUtils as wu
 import psana.detector.UtilsCalib as uc
+
 cc = wu.cc
 import logging
 import numpy as np
@@ -48,7 +56,7 @@ from sklearn.utils._testing import ignore_warnings
 from sklearn.exceptions import ConvergenceWarning
 from mpi4py import MPI
 
-from LCLSGeom.psana2.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana # type: ignore
+from LCLSGeom.psana2.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana  # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -1658,7 +1666,7 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_intensity_hist(powder, self.exp, self.run , Imin, ax4)
+        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax4)
         irow += 2
         icol = 0
 
