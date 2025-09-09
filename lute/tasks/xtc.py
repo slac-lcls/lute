@@ -1,9 +1,12 @@
 """
-Classes related to converting xtc1 files to xtc2.
+Task for converting xtc1 files to xtc2 format using zmq-based communication
+between psana1 and psana2 environments.
 
 Classes:
-    Xtc: class for working with xtc files, mainly to convert xtc1 to xtc2.
-         Based on Mona's converter from https://github.com/monarin/xtc1to2
+    - ConvertXtc1to2(Task): Convert xtc1 files to xtc2 format.
+
+Based on Mona's converter:
+    https://github.com/monarin/xtc1to2
 """
 
 import logging
@@ -12,7 +15,7 @@ import time
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
 from lute.tasks.task import Task
-from typing import List, cast
+from typing import cast
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -20,7 +23,15 @@ logger: logging.Logger = get_logger(__name__)
 class ConvertXtc1to2(Task):
     """
     A task that launches two zmq subprocesses in two different conda environments
-    (old psana and new psana) to convert (old) Xtc1 files to (new) Xtc2 files.
+    (old psana and new psana) to convert (old) xtc1 files to (new) xtc2 files.
+
+    This involves:
+        - Process 1: Opening the xtc1 data using psana1 environment.
+        - Process 2: Receives and writes xtc2 data using psana2 environment.
+        - ZeroMQ used for communication between the processes.
+
+    Args:
+        params (ConvertXtc1to2Parameters): Configuration for the conversion task.
     """
 
     def __init__(self, *, params: ConvertXtc1to2Parameters) -> None:
@@ -28,18 +39,15 @@ class ConvertXtc1to2(Task):
 
     def _run(self) -> None:
         self._task_parameters = cast(ConvertXtc1to2Parameters, self._task_parameters)
-
-        logger.debug("Starting [XTC1 Sender] in psana 1")
-
         par: ConvertXtc1to2Parameters = self._task_parameters
 
+        logger.debug("Starting [XTC1 Sender] in psana 1")
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"python3 lute/tasks/util/xtc_push.py -e {par.exp} -r {par.run} -s {par.reshape} "
-            f"-m {par.mode} -d {par.detector} -g {par.geometry} -f {par.eventfile} "
-            f"-l {par.resolution}"
+            f"python3 lute/tasks/util/xtc_push.py -e {par.exp} -r {par.run} -m {par.mode} "
+            f"-d {par.detector} -g {par.geometry} -f {par.eventfile} -l {par.resolution} "
+            f"-v {par.verify} -t {par.testfile}"
         )
-        logger.debug(zmq_process1_cmd)
         result_p1: subprocess.Popen = self._start_zmq_proc(
             zmq_process1_cmd, "[XTC1 Sender]"
         )
@@ -47,14 +55,12 @@ class ConvertXtc1to2(Task):
         time.sleep(1)
 
         logger.debug("Starting [XTC2 Writer] in psana 2")
-
-        # TEMP # This is needed until psana2 is updated to the latest version
+        # TODO: This is needed until psana2 is updated to the latest version
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
             f"export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && "
             f"python3 lute/tasks/util/xtc_pull.py -n {par.node_id} -l {par.resolution}"
         )
-        logger.debug(zmq_process2_cmd)
         result_p2: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"
         )
@@ -67,11 +73,13 @@ class ConvertXtc1to2(Task):
         logger.debug(f"[XTC2 Writer] Output:\n{out_p2}")
         logger.error(f"[XTC2 Writer] Error::\n{err_p2}")
 
-    def _start_zmq_proc(self, cmd: List[str], name: str) -> subprocess.Popen:
+    def _start_zmq_proc(self, cmd: str, name: str) -> subprocess.Popen:
         """Helper function to source the correct conda env and spawn a subprocess."""
+
         process: subprocess.Popen = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True
         )
         logger.debug(f"{name} started")
+        logger.debug(f"Command: {cmd}")
 
         return process

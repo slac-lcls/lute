@@ -17,7 +17,7 @@ ConvertXtc1to2:              # All variables are given as strings
   node_id: "1"               # Node ID for the detector
   resolution: "4x512x512"    # Channels and resolution in CHxRXxRY format
   geometry: "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/290-292.data" # Geometry file
-  reshape: "1"               # 1=True/0=False Reshape 2d arrays to 3d for certain detectors - Chuck
   eventfile: "/sdf/scratch/users/k/kmecseki/test.csv"  # File with all the events of interest, leave as "" for all events
   verify: "1"                # 1=True/0=False Test data integrity (only if it fits in memory e.g. few events)
+  testfile: "/sdf/scratch/users/k/kmecseki/out.hdf5" # Path to HDF5 file for writing test output data (used only if --verify=1)
 ...

@@ -23,11 +23,10 @@ class ConvertXtc1to2Parameters(TaskParameters):
         flat_type="--",
     )
     geometry: str = Field(
-        "/reg/d/psdm/amo/amo06516/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/38-end.data",
+        "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/Camp.0:pnCCD.0/geometry/290-292.data",
         description="Geometry file",
         flag_type="--",
     )
-    reshape: str = Field("True", description="Reshape 2d to 3d flag", flag_type="--")
     eventfile: str = Field(
         "/sdf/scratch/users/k/kmecseki/test.csv",
         description="Csv file with event numbers",
@@ -35,4 +34,9 @@ class ConvertXtc1to2Parameters(TaskParameters):
     )
     verify: str = Field(
         "True", description="Verify data - for small data only", flag_type="--"
+    )
+    testfile: str = Field(
+        "True",
+        description="Path to test output HDF5 file (only if --verify=1)",
+        flag_type="--",
     )

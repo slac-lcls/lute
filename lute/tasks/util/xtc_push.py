@@ -1,4 +1,4 @@
-"""Starts Zmq process to send xtc1 file.
+"""Xtc1 zmq Sender. Intended to run in psana 1 environment.
 
 Based on Mona's converter from https://github.com/monarin/xtc1to2
 """
@@ -15,42 +15,35 @@ import zmq
 from PSCalib.GeometryAccess import GeometryAccess
 
 
+# Helper Classes
+################
+
+
 class PsanaImg:
 
-    def __init__(
-        self,
-        exp: str,
-        run: str,
-        mode: str,
-        detector_name: str,
-        reshape: str,
-    ) -> None:
+    def __init__(self, exp: str, run: str, mode: str, detector_name: str) -> None:
         """
         It serves as an image accessing layer based on the data management system
         psana in LCLS.
 
         Args:
             exp (str): Experiment's name
+
             run (str): Run number
+
             mode (str): Mode
+
             detector_name (str): Name of the detector
-            reshape (str): True/False whether to reshape 2d arrays to 3d - Chuck
         """
 
-        # Set up data source
+        # Set up Data source and Detector
         self.datasource_id: str = f"exp={exp}:run={run}:{mode}"
         self.datasource: psana._Datasource = psana.DataSource(self.datasource_id)
         self.run_current: psana.Run = next(self.datasource.runs())
         self.timestamps: Tuple[psana.EventTime, ...] = self.run_current.times()
-
-        # Set up detector
         self.detector: psana.Detector.AreaDetector.AreaDetector = psana.Detector(
             detector_name
         )
-
-        # set flag (for Chuck)
-        if bool(int(reshape)):
-            self.detector.do_reshape_2d_to_3d(flag=True)
 
     def get(self, event_num: Union[int, str], calib: bool = False) -> np.ndarray:
         # Fetch the timestamp according to event number
@@ -77,6 +70,13 @@ class PsanaPhotonEnergy:
     def __init__(self, exp: str, run: str, mode: str) -> None:
         """
         Uses psana1 ebeam and epicsStore to retrieve photon energy.
+
+        Args:
+            exp (str): Experiment's name
+
+            run (str): Run number
+
+            mode (str): Mode
         """
         # Set up data source
         self.datasource_id: str = f"exp={exp}:run={run}:{mode}"
@@ -114,6 +114,9 @@ class PsanaGeometry:
         """A getter that reads in lcls1-style geometry file.
         Use this access info from  geometry file (*-end.data).
         Available info is set as class attributes.
+
+        Args:
+            geom (str): Geometry file's path
         """
         cframe: int = 0  # fixed to psana style (1 is for lab conventions)
         geometry: GeometryAccess = GeometryAccess(geom, cframe=cframe)
@@ -154,6 +157,9 @@ class ZmqSender:
     def __init__(self, socket: str) -> None:
         """
         A helper for sending messages using pyzmq.
+
+        Args:
+            socket (str): Socket string e.g. "tcp://127.0.0.1:5557"
         """
         context: zmq.Context = zmq.Context()
         self.zmq_socket: zmq.Socket = context.socket(zmq.PUSH)
@@ -161,6 +167,7 @@ class ZmqSender:
 
     def send_zipped_pickle(self, obj: dict, flags: int = 0, protocol: int = -1) -> None:
         """Pickle an object, and zip the pickle before sending it"""
+
         try:
             p: bytes = pickle.dumps(obj, protocol)
             z: bytes = zlib.compress(p)
@@ -175,12 +182,17 @@ class ZmqSender:
         Send a NumPy array with metadata (dtype and shape) over a ZeroMQ socket.
 
         Parameters:
-            A (np.ndarray): Array to send.
+
+            data (np.ndarray): Array to send.
+
             flags (int): ZMQ flags (e.g., zmq.SNDMORE).
+
             copy (bool): Whether to copy the message.
+
             track (bool): Whether to track the message.
 
         Returns:
+
             bool: True if the message was successfully sent, False otherwise.
         """
         try:
@@ -207,26 +219,10 @@ if __name__ == "__main__":
         prog="Xtc1 reader", description="Read in Xtc1 files using psana1"
     )
     parser.add_argument(
-        "-e",
-        "--exp",
-        type=str,
-        help="Experiment's name",
-        default="xpptut15",
+        "-e", "--exp", type=str, help="Experiment's name", default="xpptut15"
     )
-    parser.add_argument(
-        "-r",
-        "--run",
-        type=str,
-        help="Run number",
-        default="291",
-    )
-    parser.add_argument(
-        "-m",
-        "--mode",
-        type=str,
-        help="Mode",
-        default="idx",
-    )
+    parser.add_argument("-r", "--run", type=str, help="Run number", default="291")
+    parser.add_argument("-m", "--mode", type=str, help="Mode", default="idx")
     parser.add_argument(
         "-d",
         "--detector",
@@ -252,18 +248,11 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "-s",
-        "--reshape",
-        type=str,
-        help="Reshape 2d detector images to 3d - Chuck",
-        default="1",
-    )
-    parser.add_argument(
         "-f",
         "--eventfile",
         type=str,
         help="File with the event numbers",
-        default="/sdf/scratch/users/k/kmecseki/test.csv",
+        default="/sdf/scratch/users/k/kmecseki/lute_temp/test.csv",
     )
     parser.add_argument(
         "-v",
@@ -272,11 +261,21 @@ if __name__ == "__main__":
         help="Verify data at the end - only for small datasets that fit in memory",
         default="1",
     )
+    parser.add_argument(
+        "-t",
+        "--testfile",
+        type=str,
+        help="Path to HDF5 file for writing test output data (used only if --verify=1)",
+        default="/sdf/scratch/users/k/kmecseki/out.hdf5",
+    )
 
     args: argparse.Namespace = parser.parse_args()
 
     img_reader: PsanaImg = PsanaImg(
-        args.exp, args.run, args.mode, args.detector, args.reshape
+        args.exp,
+        args.run,
+        args.mode,
+        args.detector,
     )
     phe_reader: PsanaPhotonEnergy = PsanaPhotonEnergy(args.exp, args.run, args.mode)
     gmt_reader: PsanaGeometry = PsanaGeometry(args.geometry)
@@ -366,7 +365,7 @@ if __name__ == "__main__":
     if verify:
         import h5py
 
-        with h5py.File("/sdf/scratch/users/k/kmecseki/out.hdf5", "w") as f:
+        with h5py.File(args.testfile, "w") as f:
             f.create_dataset("pixel_position", data=gmt_reader.pixel_position)
             f.create_dataset("pixel_index_map", data=gmt_reader.pixel_index_map)
             f.create_dataset("data", data=data_array)
