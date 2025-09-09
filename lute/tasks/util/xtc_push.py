@@ -6,13 +6,13 @@ Based on Mona's converter from https://github.com/monarin/xtc1to2
 import argparse
 import csv
 import numpy as np
-import psana # type: ignore
+import psana  # type: ignore
 import pickle
 from typing import Any, Dict, List, Tuple, Union
 import zlib
 import zmq
 
-from PSCalib.GeometryAccess import GeometryAccess # type: ignore
+from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 
 
 # Helper Classes
@@ -363,7 +363,7 @@ if __name__ == "__main__":
     zmq_send.close()
 
     if verify:
-        import h5py # type: ignore
+        import h5py  # type: ignore
 
         with h5py.File(args.testfile, "w") as f:
             f.create_dataset("pixel_position", data=gmt_reader.pixel_position)
