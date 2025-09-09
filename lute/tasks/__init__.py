@@ -90,7 +90,7 @@ def import_task(task_name: str) -> Type[Task]:
         from .bayfai import BayFAI
 
         return BayFAI
-    
+
     if task_name == "BayFAI2":
         from .bayfai2 import BayFAI2
 
