@@ -96,4 +96,9 @@ def import_task(task_name: str) -> Type[Task]:
 
         return ConvertSMDToNexus
 
+    if task_name == "ConvertXtc1to2":
+        from .xtc import ConvertXtc1to2
+
+        return ConvertXtc1to2
+
     raise TaskNotFoundError

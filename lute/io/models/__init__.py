@@ -12,3 +12,4 @@ from .tests import *
 from .mpi_tests import *
 from .geometry import *
 from .nexus import *
+from .xtc import *
