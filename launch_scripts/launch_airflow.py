@@ -270,7 +270,7 @@ if __name__ == "__main__":
         os.environ["RUN_NUM"] = args.run
 
         os.environ["Authorization"] = _request_arp_token(args.experiment)
-        os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
+        os.environ["ARP_JOB_ID"] = uuid.uuid4().hex[:24]
 
     wf_name: str
     use_custom_defn: bool

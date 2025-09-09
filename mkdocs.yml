@@ -9,7 +9,10 @@ nav:
       - Running LUTE: "usage/running_lute.md"
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
-      - Creating a new Task: "development/new_task.md"
+      - Creating a new Task:
+          - Overview: "development/new_task/overview.md"
+          - First Party: "development/new_task/first_party.md"
+          - Third Party: "development/new_task/third_party.md"
       - Creating a new Workflow:
           - Overview: "development/creating_workflows.md"
           - With Airflow: "development/creating_workflows_airflow.md"
@@ -53,12 +56,21 @@ nav:
               - mpi_tests: "source/io/models/mpi_tests.md"
           - config: "source/io/config.md"
           - db: "source/io/db.md"
-          - _sqlite: "source/io/_sqlite.md"
+          - _db:
+              - common_sqlite: "source/io/_db/common_sqlite.md"
+              - v2:
+                  - api: "source/io/_db/v2/api.md"
+                  - _sqlite: "source/io/_db/v2/_sqlite.md"
+              - v1:
+                  - api: "source/io/_db/v1/api.md"
+                  - _sqlite: "source/io/_db/v1/_sqlite.md"
           - elog: "source/io/elog.md"
           - exceptions: "source/io/exceptions.md"
 
   - Design and Specifications:
-      - Database: "design/database.md"
+      - Database:
+          - API v0.2: "design/database_v2.md"
+          - API v0.1: "design/database.md"
 plugins:
 - search
 #- gen-files:

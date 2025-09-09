@@ -10,7 +10,9 @@ __author__ = "Gabriel Dorlhiac"
 
 import sqlite3
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Optional
+
+from lute.io._db.common_sqlite import compare_cols, does_table_exist, get_table_cols
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -18,118 +20,6 @@ else:
     logging.basicConfig(level=logging.INFO)
 
 logger: logging.Logger = logging.getLogger(__name__)
-
-
-def _does_table_exist(con: sqlite3.Connection, table_name: str) -> bool:
-    """Check whether a table exists.
-
-    Args:
-        con (sqlite3.Connection): Database connection.
-
-        table_name (str): The table to check for.
-
-    Returns:
-        does_exist (bool): Whether the table exists.
-    """
-    res: sqlite3.Cursor = con.execute(
-        f"SELECT name FROM sqlite_master WHERE name='{table_name}'"
-    )
-    if res.fetchone() is None:
-        return False
-    else:
-        return True
-
-
-def _get_tables(con: sqlite3.Connection) -> List[str]:
-    """Retrieve a list of all tables in a database.
-
-    Args:
-        con (sqlite3.Connection): Database connection.
-
-    Returns:
-        tables (List[str]): A list of database tables.
-    """
-    # sql: str = "SELECT name FROM sqlite_schema"
-    sql: str = (
-        "SELECT name FROM sqlite_schema "
-        "WHERE type = 'table' "
-        "AND name NOT LIKE 'sqlite_%'"
-    )
-    with con:
-        res: sqlite3.Cursor = con.execute(sql)
-
-    tables: List[str] = [table[0] for table in res.fetchall()]
-    return tables
-
-
-def _get_table_cols(con: sqlite3.Connection, table_name: str) -> Dict[str, str]:
-    """Retrieve the columns currently present in a table.
-
-    Args:
-        con (sqlite3.Connection): Database connection.
-
-        table_name (str): The table's name.
-
-    Returns:
-        cols (Dict[str, str]): A dictionary of column names and types.
-    """
-    res: sqlite3.Cursor = con.execute(f"PRAGMA table_info({table_name})")
-    # Retrieves: list = [col_id, col_name, col_type, -, default_val, -]
-    table_info: List[Tuple[int, str, str, int, str, int]] = res.fetchall()
-
-    cols: Dict[str, str] = {col[1]: col[2] for col in table_info}
-    return cols
-
-
-def _get_all_rows_for_table(
-    con: sqlite3.Connection, table_name: str
-) -> List[Tuple[Any, ...]]:
-    """Return all rows for a requested table.
-
-    Args:
-        con (sqlite3.Connection): Database connection.
-
-        table_name (str): The table's name.
-
-    Returns:
-        rows (List[Tuple[Any, ...]]): ALL rows for a table.
-    """
-    sql: str = f'SELECT * FROM "{table_name}"'
-    with con:
-        res: sqlite3.Cursor = con.execute(sql)
-
-    rows: List[Tuple[Any, ...]] = res.fetchall()
-    return rows
-
-
-def _compare_cols(
-    cols1: Dict[str, str], cols2: Dict[str, str]
-) -> Optional[Dict[str, str]]:
-    """Compare whether two sets of columns are identical.
-
-    The comparison is unidirectional - This function tests for columns present
-    in `cols2` which are not present in `cols1`, but NOT vice versa. Switch the
-    order of the arguments in order to retrieve the other comparison.
-
-    Args:
-        cols1 (Dict[str, str]): Dictionary of first set of column names and
-            types.
-
-        cols2 (Dict[str, str]): Dictionary of second set of column names and
-            types.
-
-    Returns:
-        diff (Dict[str, str] | None): Any columns present in `cols2` which
-            are not present in `cols1`. If `cols2` has no entries which are
-            not present in `cols1`, returns `None`.
-    """
-    diff: Dict[str, str] = {}
-
-    for col_name in cols2.keys():
-        if col_name not in cols1.keys():
-            diff[col_name] = cols2[col_name]
-
-    return diff if diff else None
 
 
 def _make_task_table(
@@ -154,11 +44,11 @@ def _make_task_table(
     """
     sql: str
     # Check existence explicitly because may need to modify...
-    if _does_table_exist(con, task_name):
+    if does_table_exist(con, task_name):
         # Compare current columns vs new columns - the same Task can have
         # different number of parameters -> May need to adjust cols.
-        current_cols: Dict[str, str] = _get_table_cols(con, task_name)
-        if diff := _compare_cols(current_cols, columns):
+        current_cols: Dict[str, str] = get_table_cols(con, task_name)
+        if diff := compare_cols(current_cols, columns):
             for col in diff.items():
                 sql = f'ALTER TABLE {task_name} ADD COLUMN "{col[0]}" {col[1]}'
                 logger.debug(f"_make_task_table[ALTER]: {sql}")
@@ -179,7 +69,7 @@ def _make_task_table(
     logger.debug(f"_make_task_table[CREATE]: {sql}")
     with con:
         con.execute(sql)
-    return _does_table_exist(con, task_name)
+    return does_table_exist(con, task_name)
 
 
 def _make_shared_table(
@@ -200,7 +90,7 @@ def _make_shared_table(
     sql: str = f"CREATE TABLE IF NOT EXISTS {db_str}"
     with con:
         con.execute(sql)
-    return _does_table_exist(con, table_name)
+    return does_table_exist(con, table_name)
 
 
 def _add_task_entry(

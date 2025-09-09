@@ -43,7 +43,7 @@ def setup_smd2_env() -> Dict[str, str]:
             cpus_per_node = [int(c) for c in cpus_per_node_str.split(",")]
             nodes = str(len(cpus_per_node))
             # Take average for cores_per_node??
-            cores_per_node = str(sum(cpus_per_node) / len(cpus_per_node))
+            cores_per_node = str(sum(cpus_per_node) // len(cpus_per_node))
             mpi_slots = sum(cpus_per_node) - 1
             # cores_per_node: Optional[str] = os.getenv("SLURM_TASKS_PER_NODE")
         # else not running in SLURM
