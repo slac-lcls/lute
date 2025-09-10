@@ -73,24 +73,42 @@ def import_function(func_name: str, api_version: int) -> Callable:
     return func
 
 
+def api_unavailable(func_name: str, api_version: int) -> Callable:
+    """Raise an error if function was not supported by the API version."""
+
+    def wrapper(*args, **kwargs) -> None:
+        raise NotImplementedError(
+            f"Function {func_name} not available with DB version {api_version}"
+        )
+
+    return wrapper
+
+
 record_analysis_db: Callable = lazy_import("record_analysis_db", LUTE_DB_SPEC_VERSION)
 read_latest_db_entry: Callable = lazy_import(
     "read_latest_db_entry", LUTE_DB_SPEC_VERSION
 )
 
+import_or_raise: Callable
 if LUTE_DB_SPEC_VERSION == 0x000002:
-    record_parameters_db: Callable = lazy_import(
-        "record_parameters_db", LUTE_DB_SPEC_VERSION
-    )
-    update_analysis_db: Callable = lazy_import(
-        "update_analysis_db", LUTE_DB_SPEC_VERSION
-    )
-    get_executions_summary: Callable = lazy_import(
-        "get_executions_summary", LUTE_DB_SPEC_VERSION
-    )
-    get_task_parameters_summary: Callable = lazy_import(
-        "get_task_parameters_summary", LUTE_DB_SPEC_VERSION
-    )
-    get_task_parameters_defn_and_params: Callable = lazy_import(
-        "get_task_parameters_defn_and_params", LUTE_DB_CURRENT_SPEC_VERSION
-    )
+    import_or_raise = lazy_import
+elif LUTE_DB_SPEC_VERSION == 0x000001:
+    import_or_raise = api_unavailable
+else:
+    import_or_raise = api_unavailable
+
+record_parameters_db: Callable = import_or_raise(
+    "record_parameters_db", LUTE_DB_SPEC_VERSION
+)
+update_analysis_db: Callable = import_or_raise(
+    "update_analysis_db", LUTE_DB_SPEC_VERSION
+)
+get_executions_summary: Callable = import_or_raise(
+    "get_executions_summary", LUTE_DB_SPEC_VERSION
+)
+get_task_parameters_summary: Callable = import_or_raise(
+    "get_task_parameters_summary", LUTE_DB_SPEC_VERSION
+)
+get_task_parameters_defn_and_params: Callable = import_or_raise(
+    "get_task_parameters_defn_and_params", LUTE_DB_CURRENT_SPEC_VERSION
+)
