@@ -18,16 +18,18 @@ Exceptions:
 
 __all__ = [
     "record_analysis_db",
+    "record_parameters_db",
     "read_latest_db_entry",
 ]
 __author__ = "Gabriel Dorlhiac"
 
+import json
 import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from lute.execution.logging import get_logger
-from lute.io.models.base import TaskParameters
+from lute.io.parameters import RowIds, TaskParameters
 from lute.tasks.dataclasses import DescribedAnalysis
 
 if __debug__:
@@ -59,6 +61,8 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
     import sqlite3
     from ._sqlite import create_tables, add_execution
 
+    from lute.io.models.base import TaskParameters
+
     assert isinstance(cfg.task_parameters, TaskParameters)
     try:
         assert hasattr(cfg.task_parameters, "lute_config")
@@ -81,6 +85,78 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         try:
             create_tables(con=con)
             add_execution(con=con, cfg=cfg)
+        except sqlite3.OperationalError as err:
+            logger.error(f"Database storage error: {err}")
+    try:
+        os.chmod(db_path, 0o664)
+    except Exception:
+        logger.error("Cannot setup permissions on database!")
+
+
+def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
+    """Write all tables that are possible using only the TaskParameters.
+
+    This function is intended to be called at the Task layer, prior to completing
+    execution. It allows saving state into the database.
+
+    The entries are then intended to be updated by the Executor upon completion
+    with all information which was excluded.
+
+    Args:
+        params (TaskParameters): The TaskParameters object - fully validated.
+    """
+    import sqlite3
+    from ._sqlite import create_tables, add_placeholder_execution
+
+    from lute.io.models.base import TaskParameters
+
+    assert isinstance(params, TaskParameters)
+    try:
+        assert hasattr(params, "lute_config")
+        work_dir: str = params.lute_config.work_dir
+    except AttributeError:
+        logger.error(
+            (
+                "Unable to access TaskParameters object. Likely wasn't created. "
+                "Cannot store result."
+            )
+        )
+        return
+    assert hasattr(params, "lute_config")
+    del params.lute_config.work_dir
+
+    db_path: str = f"{work_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
+    create_tables(con=con)
+    with con:
+        try:
+            create_tables(con=con)
+            row_ids: Optional[RowIds] = add_placeholder_execution(
+                con=con, params=params
+            )
+        except sqlite3.OperationalError as err:
+            logger.error(f"Database storage error: {err}")
+            row_ids = None
+    try:
+        os.chmod(db_path, 0o664)
+    except Exception:
+        logger.error("Cannot setup permissions on database!")
+    params.lute_config.work_dir = work_dir
+    return row_ids
+
+
+def update_analysis_db(cfg: DescribedAnalysis, row_ids: RowIds) -> None:
+    import sqlite3
+    from ._sqlite import update_execution
+
+    assert cfg.task_parameters is not None
+    db_dir: str = cfg.task_parameters.lute_config.work_dir
+    del cfg.task_parameters.lute_config.work_dir
+    db_path: str = f"{db_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
+    with con:
+        try:
+            update_execution(con=con, cfg=cfg, row_ids=row_ids)
         except sqlite3.OperationalError as err:
             logger.error(f"Database storage error: {err}")
     try:
@@ -132,8 +208,18 @@ def read_latest_db_entry(
             if for_run is not None:
                 cond["run"] = str(for_run)
 
+            new_param: str = param
+            is_result: bool = False
+            if "result." in param:
+                new_param = param.split(".")[1]
+                is_result = True
+
             return select_param_from_db(
-                con=con, task_name=task_name, param_name=param, condition=cond
+                con=con,
+                task_name=task_name,
+                param_name=new_param,
+                condition=cond,
+                is_result=is_result,
             )
         except sqlite3.OperationalError as err:
             logger.error(f"Cannot retrieve value {param} due to: {err}")
@@ -200,3 +286,39 @@ def get_task_parameters_summary(
     con: sqlite3.Connection = sqlite3.Connection(db_path)
     with con:
         return task_parameters_summary(con=con, task_name=task_name)
+
+
+def get_task_parameters_defn_and_params(
+    db_dir: str,
+    row_ids: RowIds,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Return a TaskParameters definition, and the param/value pairs.
+
+    Args:
+        db_dir (str): Database location.
+
+        row_ids (RowIds): The ids in the various tables to reconstruct the
+            TaskParameters definition and the various parameters.
+
+    Returns:
+        definition (Dict[str, Any]): The TaskParameters definition (JSON schema).
+
+        param_values (Dict[str, Any]): The parameter: value dictionary.
+    """
+    import sqlite3
+    from ._sqlite import get_task_parameters_definition_and_params
+
+    db_path: str = f"{db_dir}/lute.db"
+    con: sqlite3.Connection = sqlite3.Connection(db_path)
+    with con:
+        rows: List[Tuple[str, str, str]] = get_task_parameters_definition_and_params(
+            con=con, row_ids=row_ids
+        )
+        definition: Dict[str, Any] = {}
+        param_values: Dict[str, Any] = {}
+        for row in rows:
+            if not definition:
+                definition = json.loads(row[0])
+            param_values[row[1]] = json.loads(row[2])
+
+    return definition, param_values
