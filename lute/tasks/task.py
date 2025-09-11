@@ -207,7 +207,13 @@ class Task(ABC):
         if os.getenv("LUTE_CONFIGPATH") is not None:
             # Guard w/ environment variable that is set only by Executor - don't
             # SIGSTOP if Task is running without Executor
-            os.kill(os.getpid(), signal.SIGSTOP)
+            if self._use_mpi:
+                comm = MPI.COMM_WORLD
+                rank = comm.Get_rank()
+                if rank == 0:
+                    os.kill(os.getppid(), signal.SIGSTOP)
+            else:
+                os.kill(os.getpid(), signal.SIGSTOP)
 
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
