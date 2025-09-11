@@ -9,15 +9,29 @@ Classes:
 __all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
+import psana
+
+if hasattr(psana, "xtc_version"):
+    from lute.tasks._bayfai2 import BayFAIOpt
+    from lute.tasks._bayfai2 import (
+        build_detector,
+        generate_powder,
+        min_intensity,
+        define_calibrant,
+        update_geometry,
+    )
+else:
+    from lute.tasks._bayfai import BayFAIOpt
+    from lute.tasks._bayfai import (
+        build_detector,
+        generate_powder,
+        min_intensity,
+        define_calibrant,
+        update_geometry,
+    )
+
 from lute.io.models.bayfai import BayFAIParameters
-from lute.tasks._bayfai import BayFAIOpt
-from lute.tasks._bayfai import (
-    build_detector,
-    generate_powder,
-    min_intensity,
-    define_calibrant,
-    update_geometry,
-)
+
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger
@@ -25,8 +39,6 @@ from lute.execution.logging import get_logger
 import os
 import logging
 import panel as pn  # type: ignore
-import numpy as np
-import numpy.typing as npt
 import time  # type: ignore
 
 from LCLSGeom.common.geometry import get_beam_center  # type: ignore

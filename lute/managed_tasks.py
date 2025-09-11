@@ -162,7 +162,7 @@ BayFAIOptimizer.update_environment(
     }
 )
 
-BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI2")
+BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
 """Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
 BayFAIOptimizer2.update_environment(
     {
