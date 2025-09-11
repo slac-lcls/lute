@@ -155,3 +155,9 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 
 Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 """Converts Xtc1 files to Xtc2 to use in psana2"""
+
+# Cheetah
+#########
+
+CheetahRunner: Executor = Executor("RunCheetah")
+"""Run Cheetah task."""
