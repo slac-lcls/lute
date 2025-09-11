@@ -13,6 +13,9 @@ $(basename "$0"):
           Display this message.
         -t|--taskname
           Name of the LUTE managed Task to run.
+        --psana2
+          Use Psana2 for the base environment. The core infrastructure runs in
+          Both psana1 and psana2.
 
     NOTE: This script does not parse SLURM arguments, but a number of them are
           mandatory. All additional arguments are transparently passed to SLURM.
@@ -72,6 +75,10 @@ do
         DEBUG=1
         shift
         ;;
+    --psana2)
+        USE_PSANA2=1
+        shift
+        ;;
     *)
         POS+=("$1")
         shift
@@ -122,7 +129,13 @@ else
 fi
 
 # By default source the psana environment since most Tasks will use it.
-source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+if [[ ${USE_PSANA2} ]]; then
+    echo "Using a Psana2 base environment."
+    source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
+else
+    echo "Using a Psana1 base environment."
+    source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+fi
 
 export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
 EXECUTABLE="${LUTE_PATH}run_task.py"

@@ -21,6 +21,7 @@ class FlowConf(TypedDict):
     slurm_params: List[str]
     workflow: Dict[str, Any]
     run_type: Optional[str]
+    is_daq2: Optional[bool]
 
 
 class FlowRequestDict(TypedDict):
