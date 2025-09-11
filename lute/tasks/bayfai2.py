@@ -121,9 +121,11 @@ class BayFAI2(Task):
             _ = optimizer.create_summary_plot(
                 powder=optimizer.powder,
                 Imin=Imin,
-                bo_history=optimizer.bo_history,
                 detector=calib_detector,
                 distance=distance,
+                low_resolution=low_res,
+                high_resolution=high_res,
+                border_resolution=border_res,
                 plot=plot,
             )
             pn.extension("matplotlib", "bokeh")
