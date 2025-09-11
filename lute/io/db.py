@@ -110,5 +110,5 @@ get_task_parameters_summary: Callable = import_or_raise(
     "get_task_parameters_summary", LUTE_DB_SPEC_VERSION
 )
 get_task_parameters_defn_and_params: Callable = import_or_raise(
-    "get_task_parameters_defn_and_params", LUTE_DB_CURRENT_SPEC_VERSION
+    "get_task_parameters_defn_and_params", LUTE_DB_SPEC_VERSION
 )
