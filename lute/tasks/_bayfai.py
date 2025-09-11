@@ -492,9 +492,9 @@ class BayFAIOpt:
         dist : float
             The distance assigned to this MPI rank
         """
-        low = center["dist"] - res["dist"] * self.size  / 2
+        low = center["dist"] - res["dist"] * self.size / 2
         high = center["dist"] + res["dist"] * self.size / 2
-        distances = np.linspace(low, high-res["dist"], self.size)
+        distances = np.linspace(low, high - res["dist"], self.size)
         self.distances = distances
         dist = distances[self.rank]
         return dist
@@ -797,7 +797,9 @@ class BayFAIOpt:
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
         residual, score, params = self.pyFAI_score(best_param, Imin, max_rings)
-        logger.info(f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}")
+        logger.info(
+            f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}"
+        )
         result = {
             "bo_history": bo_history,
             "params": params,
@@ -968,7 +970,7 @@ class BayFAIOpt:
         iters = np.arange(len(bo_history[0]["scores"]))
         for r in range(len(bo_history)):
             score = bo_history[r]["scores"]
-            ax.plot(iters, score, marker="o", markersize=1, linestyle='None', alpha=0.6)
+            ax.plot(iters, score, marker="o", markersize=1, linestyle="None", alpha=0.6)
         ax.plot(
             iters,
             self.bo_history["scores"],
@@ -979,7 +981,7 @@ class BayFAIOpt:
             color="black",
             markerfacecolor="red",
             markeredgecolor="black",
-            label=f"Best Distance (m): {distances[self.index]:.3f}"
+            label=f"Best Distance (m): {distances[self.index]:.3f}",
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
@@ -1000,7 +1002,7 @@ class BayFAIOpt:
             Matplotlib axes
         """
         scores = self.scan["score"]
-        ax.plot(distances, scores, linewidth=0.8, color='black')
+        ax.plot(distances, scores, linewidth=0.8, color="black")
         ax.axhline(
             self.thrsh,
             color="red",
@@ -1029,7 +1031,7 @@ class BayFAIOpt:
             Matplotlib axes
         """
         residuals = self.scan["residual"]
-        ax.plot(distances, residuals, linewidth=0.8, color='black')
+        ax.plot(distances, residuals, linewidth=0.8, color="black")
         best_dist = distances[self.index]
         ax.axvline(
             best_dist,
