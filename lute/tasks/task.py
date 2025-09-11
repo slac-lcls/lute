@@ -210,6 +210,7 @@ class Task(ABC):
             if self._use_mpi:
                 comm = MPI.COMM_WORLD
                 rank = comm.Get_rank()
+                comm.Barrier()
                 if rank == 0:
                     os.kill(os.getppid(), signal.SIGSTOP)
             else:
