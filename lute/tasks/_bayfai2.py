@@ -169,7 +169,7 @@ def min_intensity(powder: npt.NDArray[np.float64]) -> float:
 
 
 def build_LCLS2_detector(
-    exp: str, run: Union[str, int], detname: str
+    exp: str, run: int, detname: str
 ) -> pyFAI.detectors.Detector:
     """
     Read the metrology data and build a pyFAI detector object.

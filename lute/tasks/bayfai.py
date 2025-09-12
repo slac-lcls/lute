@@ -58,7 +58,7 @@ class BayFAI(Task):
         start_time = time.time()
         assert isinstance(self._task_parameters, BayFAIParameters)
         exp = self._task_parameters.lute_config.experiment
-        run = self._task_parameters.lute_config.run
+        run = int(self._task_parameters.lute_config.run)
         detname = self._task_parameters.detname
         powder = generate_powder(
             powder_path=self._task_parameters.powder,
