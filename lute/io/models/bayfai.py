@@ -1,0 +1,146 @@
+"""Models for optimizing detector geometry using PyFAI and Bayesian optimization.
+
+Classes:
+    - BayFAIParameters:
+        Parameters for running BayFAI
+"""
+
+__all__ = ["BayFAIParameters"]
+__author__ = "Louis Conreux"
+
+from typing import Dict, List, Tuple
+from pydantic import BaseModel, Field
+
+from lute.io.models.base import TaskParameters
+from lute.io.models.validators import (
+    validate_smd_path,
+    validate_calib_path,
+    validate_output_path,
+)
+
+
+class BayFAIParameters(TaskParameters):
+    """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
+
+    The Bayesian Optimization has default hyperparameters that can be overriden by the user.
+    """
+
+    class Config(TaskParameters.Config):
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    class BayesGeomOptParameters(BaseModel):
+        """Bayesian optimization hyperparameters."""
+
+        n_samples: int = Field(
+            20,
+            description="Number of samples to initialize the Gaussian Process.",
+        )
+
+        n_iterations: int = Field(
+            80,
+            description="Number of iterations of Bayesian Optimization",
+        )
+
+        max_rings: int = Field(
+            10,
+            description="Maximum number of rings to search for Bragg peaks.",
+        )
+
+        prior: bool = Field(
+            True,
+            description="Whether to sample initial points around the center of search space or randomly.",
+        )
+
+        beta: float = Field(
+            1.96,
+            description="Exploration-exploitation trade-off parameter for Upper Confidence Bound acquisition function.",
+        )
+
+        seed: int = Field(
+            0,
+            description="Random seed for reproducibility.",
+        )
+
+    center: Dict[str, float] = Field(
+        {
+            "dist": 0.1,
+            "poni1": 0.0,
+            "poni2": 0.0,
+            "rot1": 0.0,
+            "rot2": 0.0,
+            "rot3": 0.0,
+        },
+        description="Center of the search space for the detector geometry parameters.",
+    )
+
+    bounds: Dict[str, Tuple[float, float]] = Field(
+        {
+            "dist": (-0.05, 0.05),
+            "poni1": (-0.005, 0.005),
+            "poni2": (-0.005, 0.005),
+            "rot1": (-1.0, 1.0),
+            "rot2": (-1.0, 1.0),
+            "rot3": (-1.0, 1.0),
+        },
+        description="Bounds of the search space for the detector geometry parameters.",
+    )
+
+    resolutions: Dict[str, float] = Field(
+        {
+            "dist": 0.001,
+            "poni1": 0.0002,
+            "poni2": 0.0002,
+            "rot1": 0.1,
+            "rot2": 0.1,
+            "rot3": 0.1,
+        },
+        description="Resolution of the search space for the detector geometry parameters.",
+    )
+
+    fixed: List[str] = Field(
+        ["rot3"],
+        description="List of fixed parameters for the optimization.",
+    )
+
+    detname: str = Field(
+        "",
+        description="Detector name",
+    )
+
+    in_file: str = Field(
+        "",
+        description="Path to the input .data file containing the detector metrology to be calibrated.",
+    )
+
+    calibrant: str = Field(
+        "",
+        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
+    )
+
+    powder: str = Field(
+        "",
+        description="Powder diffraction image path to be used for the calibration.",
+    )
+
+    preprocess: bool = Field(
+        True,
+        description="Whether to apply preprocessing to the powder diffraction image before calibration.",
+    )
+
+    out_file: str = Field(
+        "",
+        description="Path to the output .data file that will contain the optimized detector geometry.",
+        is_result=True,
+    )
+
+    bo_params: BayesGeomOptParameters = Field(
+        BayesGeomOptParameters(),
+        description="Bayesian optimization hyperparameters.",
+    )
+
+    _find_in_file_path = validate_calib_path("in_file")
+
+    _find_smd_path = validate_smd_path("powder")
+
+    _find_out_file_path = validate_output_path("out_file")
