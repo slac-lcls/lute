@@ -461,7 +461,7 @@ class BayFAIOpt:
         for p in self.order:
             if p not in self.fixed and p not in self.parallelized:
                 self.space.append(p)
-        self.ds = DataSource(exp=exp, run=run, skip_calib_load='all')
+        self.ds = DataSource(exp=exp, run=run, skip_calib_load="all")
         group: MPI.Group = self.ds.comms._bd_only_group
         self.comm = MPI.COMM_WORLD.Create_group(group)
         if self.comm != MPI.COMM_NULL:
