@@ -865,7 +865,7 @@ class BayFAIOpt:
         seed : int
             Random seed for reproducibility
         """
-        if self.bd.comms.bd_comm.Get_rank() == 0:
+        if self.ds.comms.bd_comm.Get_rank() == 0:
             return
 
         if self.comm != MPI.COMM_NULL:
