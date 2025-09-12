@@ -20,6 +20,7 @@ if hasattr(psana, "xtc_version"):
         define_calibrant,
         update_geometry,
     )
+
     IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
@@ -30,6 +31,7 @@ else:
         define_calibrant,
         update_geometry,
     )
+
     IS_PSANA2 = False
 
 from lute.io.models.bayfai import BayFAIParameters
