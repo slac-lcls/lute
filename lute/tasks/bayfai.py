@@ -14,21 +14,23 @@ import psana
 if hasattr(psana, "xtc_version"):
     from lute.tasks._bayfai2 import BayFAIOpt
     from lute.tasks._bayfai2 import (
-        build_detector,
+        build_LCLS2_detector,
         generate_powder,
         min_intensity,
         define_calibrant,
         update_geometry,
     )
+    IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
     from lute.tasks._bayfai import (
-        build_detector,
+        build_LCLS1_detector,
         generate_powder,
         min_intensity,
         define_calibrant,
         update_geometry,
     )
+    IS_PSANA2 = False
 
 from lute.io.models.bayfai import BayFAIParameters
 
@@ -40,8 +42,6 @@ import os
 import logging
 import panel as pn  # type: ignore
 import time  # type: ignore
-
-from LCLSGeom.common.geometry import get_beam_center  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -63,10 +63,17 @@ class BayFAI(Task):
             detname=detname,
             smooth=self._task_parameters.preprocess,
         )
-        detector = build_detector(
-            in_file=self._task_parameters.in_file,
-            shape=powder.shape,
-        )
+        if IS_PSANA2:
+            detector = build_LCLS2_detector(
+                exp=exp,
+                run=run,
+                detname=detname,
+            )
+        else:
+            detector = build_LCLS1_detector(
+                in_file=self._task_parameters.in_file,
+                shape=powder.shape,
+            )
         calibrant = define_calibrant(
             calibrant_name=self._task_parameters.calibrant,
             exp=exp,
@@ -99,10 +106,13 @@ class BayFAI(Task):
         if optimizer.rank == 0:
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
-            params = result["params"]
-            residual = result["residual"]
-            logger.info(f"Detector Distance to Sample: {params[0]:.6f}")
-            logger.info(f"Beam center: ({params[1]:.6f}, {params[2]:.6f})")
+            params = optimizer.params
+            residual = optimizer.residual
+            distance = params[0]
+            cx = params[1]
+            cy = params[2]
+            logger.info(f"Detector Distance to Sample: {distance:.6f}")
+            logger.info(f"Beam center ({cx:.6f}, {cy:.6f})")
             logger.info(
                 f"Rotations: \u03b8x = ({params[3]:.2e}, \u03b8y = {params[4]:.2e}, \u03b8z = {params[5]:.2e})"
             )

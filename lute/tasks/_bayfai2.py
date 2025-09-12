@@ -168,7 +168,7 @@ def min_intensity(powder: npt.NDArray[np.float64]) -> float:
     return Imin
 
 
-def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
+def build_LCLS2_detector(exp: str, run: Union[str, int], detname: str) -> pyFAI.detectors.Detector:
     """
     Read the metrology data and build a pyFAI detector object.
 
@@ -185,8 +185,9 @@ def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
         Configured pyFAI detector object
     """
     psana_to_pyfai = PsanaToPyFAI(
-        in_file=in_file,
-        shape=shape,
+        exp=exp,
+        run=run,
+        detname=detname,
     )
     detector = psana_to_pyfai.detector
     return detector

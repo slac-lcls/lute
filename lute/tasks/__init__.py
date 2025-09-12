@@ -91,11 +91,6 @@ def import_task(task_name: str) -> Type[Task]:
 
         return BayFAI
 
-    if task_name == "BayFAI2":
-        from .bayfai2 import BayFAI2
-
-        return BayFAI2
-
     if task_name == "OptimizeAgBhGeometryExhaustive":
         from .geometry import OptimizeAgBhGeometryExhaustive
 

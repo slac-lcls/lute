@@ -159,7 +159,7 @@ def generate_powder(powder_path, detname, smooth=False):
     return powder, Imin
 
 
-def build_detector(in_file, shape):
+def build_LCLS1_detector(in_file, shape):
     """
     Read the metrology data and build a pyFAI detector object.
 
