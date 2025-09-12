@@ -424,7 +424,7 @@ class BayFAIOpt:
     powder : np.ndarray
         Powder pattern data
     calibrant : PyFAI.Calibrant
-        Calibrant object
+        PyFAI calibrant object
     fixed : list
         List of parameters to keep fixed during optimization
     """
@@ -459,6 +459,8 @@ class BayFAIOpt:
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
+        if self.rank == 0:
+            logger.info(f"Getting {self.size} processes for BayFAIOpt task")
 
     @staticmethod
     def UCB(X, gp_model, visited_idx, beta=1.96):
@@ -1110,8 +1112,7 @@ class BayFAIOpt:
         ax.set_xticklabels([])
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title(
-            f"Histogram of Pixel Intensities \n for {self.exp} run {self.run}",
-            fontsize=6,
+            f"Histogram of Pixel Intensities \n for {self.exp} run {self.run}", fontsize=6
         )
         ax.legend(fontsize=6)
 

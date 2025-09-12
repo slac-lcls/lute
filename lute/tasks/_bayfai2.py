@@ -461,14 +461,14 @@ class BayFAIOpt:
         for p in self.order:
             if p not in self.fixed and p not in self.parallelized:
                 self.space.append(p)
-        self.ds = DataSource(exp=exp, run=run)
+        self.ds = DataSource(exp=exp, run=run, skip_calib_load='all')
         group: MPI.Group = self.ds.comms._bd_only_group
         self.comm = MPI.COMM_WORLD.Create_group(group)
         if self.comm != MPI.COMM_NULL:
             self.rank = self.comm.Get_rank()
             self.size = self.comm.Get_size()
             if self.rank == 0:
-                logger.info(f"Getting {self.size} processes for BayFAIOpt psana2 task")
+                logger.info(f"Getting {self.size} processes for BayFAIOpt task")
         else:
             self.rank = -1
             self.size = -1
