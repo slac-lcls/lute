@@ -82,6 +82,11 @@ CCTBXIndexer: Executor = Executor("IndexCCTBXXFEL")
 """Runs crystallographic indexing using cctbx.xfel."""
 CCTBXIndexer.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
 
+SMDToNexusConvertor: Executor = Executor("ConvertSMDToNexus")
+"""Convert smalldata HDF5 to NEXUS HDF5 for use by CCTBX."""
+SMDToNexusConvertor.shell_source(
+    "/sdf/group/lcls/ds/tools/cctbx-psana2/build/conda_setpaths.sh"
+)
 CrystFELIndexer: Executor = Executor("IndexCrystFEL")
 """Runs crystallographic indexing using CrystFEL."""
 CrystFELIndexer.update_environment(
@@ -145,14 +150,26 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
 
-# PyFAI
+# BayFAI
 #######
-PyFAIGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizePyFAIGeometry")
-"""Optimize detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
-PyFAIGeometryOptimizer.update_environment(
+BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
+        "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
+    }
+)
+
+BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer2.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PS_SRV_NODES": "0",
+        "PS_EB_NODES": "1",
         "PYTHONPATH": "/sdf/home/l/lconreux/LCLSGeom",
     }
 )

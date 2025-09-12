@@ -50,10 +50,6 @@ from enum import Enum
 from typing import Any, Optional, Set, List, Union, Tuple, cast
 from typing_extensions import Self
 
-USE_ZMQ: bool = True
-if USE_ZMQ:
-    import zmq
-
 LUTE_SIGNALS: Set[str] = {
     "NO_PICKLE_MODE",
     "TASK_STARTED",
@@ -76,6 +72,23 @@ else:
     os.environ["PYTHONWARNINGS"] = "ignore"
 
 logger: logging.Logger = logging.getLogger(__name__)
+zmq_env: Optional[str] = os.getenv("LUTE_USE_ZMQ")
+USE_ZMQ: bool
+if zmq_env is None:
+    logger.debug("Preference of ZMQ usage not specified. Defaulting to using ZMQ.")
+    try:
+        import zmq
+
+        USE_ZMQ = True
+    except ModuleNotFoundError:
+        logger.warning("ZMQ not found. Will use `socket` implementation.")
+        USE_ZMQ = False
+elif zmq_env == "0":
+    logger.debug("Requested use of `socket` over ZMQ for IPC.")
+    USE_ZMQ = False
+else:
+    logger.debug("Requested use of ZMQ for IPC.")
+    USE_ZMQ = True
 
 
 class Party(Enum):
@@ -423,12 +436,18 @@ class SocketCommunicator(Communicator):
         """
         self._data_socket: Union[socket.socket, zmq.sugar.socket.Socket]
         self.desc: str
+        use_tcp: Optional[str] = os.getenv("LUTE_USE_TCP")
+        sock_type: str
+        if use_tcp is not None:
+            sock_type = "TCP"
+        else:
+            sock_type = "Unix"
         if USE_ZMQ:
-            self.desc = "Communicates using ZMQ through TCP or Unix sockets."
+            self.desc = f"Communicates using ZMQ through {sock_type} sockets."
             self._context: zmq.Context = zmq.Context()
             self._data_socket = self._create_socket_zmq()
         else:
-            self.desc = "Communicates through a TCP or Unix socket."
+            self.desc = f"Communicates through {sock_type} sockets."
             self._data_socket = self._create_socket_raw()
             self._data_socket.settimeout(SocketCommunicator.ACCEPT_TIMEOUT)
 

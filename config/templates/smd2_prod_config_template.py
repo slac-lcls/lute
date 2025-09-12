@@ -91,6 +91,56 @@ def get_droplet2photon(run):
     return ret_dict
 {% endif %}
 
+{%- if getDropletParams is defined and getDropletParams %}
+def get_droplet(run):
+    if isinstance(run,str):
+        run=int(run)
+    ret_dict = {}
+    if run>0:
+        droplet_dict = {}
+{% for detector, params in getDropletParams.items() %}
+        droplet_dict['name'] = {{ params['name'] }}
+        #droplet_dict['mask'] = None # have to pass full array
+        droplet_dict['threshold'] = {{ params['threshold'] }}
+        droplet_dict['thresholdLow'] = {{ params['thresholdLow'] }}
+        droplet_dict['thresADU'] = {{ params['thresADU'] }}
+        droplet_dict['useRms'] = {{ params['useRms'] }}
+        droplet_dict['nData'] = {{ params['nData'] }}
+
+        ret_dict['{{ detector }}'] = droplet_dict
+{% endfor %}
+    return ret_dict
+{% endif %}
+
+{%- if getAzIntParams is defined and getAzIntParams %}
+def get_azav(run):
+    if isinstance(run,str):
+        run=int(run)
+    ret_dict = {}
+    if run>0:
+        az_dict = {}
+{% for detector, params in getAzIntParams.items() %}
+        az_dict['eBeam'] = {{ params['eBeam'] }}
+        az_dict['center'] = {{ params['center'] }}
+        az_dict['dis_to_sam'] = {{ params['dis_to_sam'] }}
+        az_dict['tx'] = {{ params['tx'] }}
+        az_dict['ty'] = {{ params['ty'] }}
+
+        ret_dict['{{ detector }}'] = az_dict
+{% endfor %}
+    return ret_dict
+{% endif %}
+
+{%- if detSumAlgos is defined and detSumAlgos %}
+def get_sum_algos(run):
+    ret_dict = {}
+    if run > 0:
+{% for detector, params in detSumAlgos.items() %}
+        ret_dict['{{ detector }}'] = {{ params }}
+{% endfor %}
+    return ret_dict
+{% endif %}
+
 ##########################################################
 # run independent parameters
 ##########################################################

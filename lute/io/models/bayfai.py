@@ -1,14 +1,14 @@
 """Models for optimizing detector geometry using PyFAI and Bayesian optimization.
 
 Classes:
-    - OptimizePyFAIGeometryParameters(TaskParameters):
-        Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
+    - BayFAIParameters:
+        Parameters for running BayFAI
 """
 
-__all__ = ["OptimizePyFAIGeometryParameters"]
+__all__ = ["BayFAIParameters"]
 __author__ = "Louis Conreux"
 
-from typing import List, Dict, Optional, Union, Tuple
+from typing import Dict, List, Tuple
 from pydantic import BaseModel, Field
 
 from lute.io.models.base import TaskParameters
@@ -19,7 +19,7 @@ from lute.io.models.validators import (
 )
 
 
-class OptimizePyFAIGeometryParameters(TaskParameters):
+class BayFAIParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
     The Bayesian Optimization has default hyperparameters that can be overriden by the user.
@@ -34,43 +34,33 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
         n_samples: int = Field(
             20,
-            description="Number of random starts to initialize the Bayesian optimization.",
+            description="Number of samples to initialize the Gaussian Process.",
         )
 
         n_iterations: int = Field(
             80,
-            description="Number of iterations to run the Bayesian optimization.",
+            description="Number of iterations of Bayesian Optimization",
         )
 
         max_rings: int = Field(
             10,
-            description="Maximum number of rings to consider during the score calculation.",
+            description="Maximum number of rings to search for Bragg peaks.",
         )
 
-        rtol: float = Field(
-            1e-2,
-            description="Relative tolerance for diffraction angle pixel masking.",
+        prior: bool = Field(
+            True,
+            description="Whether to sample initial points around the center of search space or randomly.",
         )
 
         beta: float = Field(
             1.96,
-            description="Exploration parameter for the Upper Confidence Bound acquisition function.",
+            description="Exploration-exploitation trade-off parameter for Upper Confidence Bound acquisition function.",
         )
 
-        radius: float = Field(
-            0.01,
-            description="Exclusion radius in the normalized parameter space for already visited points in acquisition function.",
-        )
-
-        seed: Optional[int] = Field(
+        seed: int = Field(
             0,
-            description="Seed for the random number generator for reproducibility.",
+            description="Random seed for reproducibility.",
         )
-
-    fixed: List[str] = Field(
-        ["rot3"],
-        description="List of parameters to be fixed during the optimization.",
-    )
 
     center: Dict[str, float] = Field(
         {
@@ -81,41 +71,51 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
             "rot2": 0.0,
             "rot3": 0.0,
         },
-        description="Center values for the parameters to be optimized.",
+        description="Center of the search space for the detector geometry parameters.",
     )
 
-    bounds: Dict[str, Union[float, Tuple[float, float]]] = Field(
+    bounds: Dict[str, Tuple[float, float]] = Field(
         {
-            "dist": (-0.02, 0.02),
+            "dist": (-0.05, 0.05),
             "poni1": (-0.005, 0.005),
             "poni2": (-0.005, 0.005),
-            "rot1": (-1, 1),
-            "rot2": (-1, 1),
-            "rot3": (-1, 1),
+            "rot1": (-1.0, 1.0),
+            "rot2": (-1.0, 1.0),
+            "rot3": (-1.0, 1.0),
         },
-        description="Bounds defining the parameter search space for the Bayesian optimization. Bound values are in meters for translations and radians for rotations.",
+        description="Bounds of the search space for the detector geometry parameters.",
     )
 
-    resolution: Dict[str, float] = Field(
+    resolutions: Dict[str, float] = Field(
         {
             "dist": 0.001,
-            "poni1": 0.0001,
-            "poni2": 0.0001,
+            "poni1": 0.0002,
+            "poni2": 0.0002,
             "rot1": 0.1,
             "rot2": 0.1,
             "rot3": 0.1,
         },
-        description="Resolution of the grid used to discretize the parameter search space. Resolution is defined in meters for translation and radians for rotations.",
+        description="Resolution of the search space for the detector geometry parameters.",
+    )
+
+    fixed: List[str] = Field(
+        ["rot3"],
+        description="List of fixed parameters for the optimization.",
     )
 
     detname: str = Field(
         "",
-        description="Detector name. Currently supported: 'ePix10k2M', 'ePix10kaQuad', 'Jungfrau05M', 'Jungfrau1M', 'Jungfrau4M', 'Jungfrau16M'",
+        description="Detector name",
     )
 
     in_file: str = Field(
         "",
-        description="Path to the input .data file containing the detector geometry info to be calibrated.",
+        description="Path to the input .data file containing the detector metrology to be calibrated.",
+    )
+
+    calibrant: str = Field(
+        "",
+        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
     )
 
     powder: str = Field(
@@ -125,12 +125,7 @@ class OptimizePyFAIGeometryParameters(TaskParameters):
 
     preprocess: bool = Field(
         True,
-        description="Flag to enable or disable preprocessing for the calibration.",
-    )
-
-    calibrant: str = Field(
-        "",
-        description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'LaB6', etc.",
+        description="Whether to apply preprocessing to the powder diffraction image before calibration.",
     )
 
     out_file: str = Field(

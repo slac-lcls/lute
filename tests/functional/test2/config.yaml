@@ -6,11 +6,10 @@ run: 650
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
-work_dir: "/path/to/work/dir"
+work_dir: "/tmp"
 ...
 ---
 SubmitSMD:
-  SubmitSMD:
   # Command line arguments
   producer: "{{ work_dir }}/smalldata_tools/lcls1_producers/smd_producer.py"
   run: "{{ run }}"

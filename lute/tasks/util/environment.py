@@ -13,27 +13,67 @@ from typing import List, Dict, Optional
 
 
 def setup_smd2_env() -> Dict[str, str]:
-    """Setup environment variables smalldata_tools uses with psana2."""
+    """Setup environment variables smalldata_tools uses with psana2.
+
+    Tries to setup psana2 environment variables controlling the distribution of
+    SRV, BD, and EB ranks automatically based on the SLURM allocation. If run
+    without SLURM, it sets all relevant variables to 1. If the environment variables
+    were intentionally set it will return those values instead.
+
+    It will also write a host file to specify mpi slots to make sure rank 0 is on the
+    first node.
+
+    Returns:
+        psana_vars (Dict[str,str]): Dictionary of relevant psana environment variables.
+    """
     # partition: str = ...
     psana_vars: Dict[str, str] = {}
+    # These values are the requests - may not be defined if --nodes and
+    # --ntasks-per-node were not passed.
     nodes: Optional[str] = os.getenv("SLURM_NNODES")
     cores_per_node: Optional[str] = os.getenv("SLURM_NTASKS_PER_NODE")
-    # If above are None, not running in SLURM
-    # Must run with --nodes=X and --ntasks-per-node=Y for SLURM
-    if nodes is None or cores_per_node is None:
-        psana_vars["PS_SRV_NODES"] = "1"
-        psana_vars["PS_EB_NODES"] = "1"
-        return psana_vars
-    mpi_slots: int = int(cores_per_node) * int(nodes) - 1
-    default_srv_cores: int = 16 * int(nodes)
 
-    srv_cores: int = default_srv_cores
+    mpi_slots: int
+    # Can get the above information from other vars
+    if nodes is None or cores_per_node is None:
+        cpus_per_node_str: Optional[str] = os.getenv("SLURM_JOB_CPUS_PER_NODE")
+        cpus_per_node: List[int] = []
+        if cpus_per_node_str:
+            # str has format of 6,4,6,2,... for each node in allocation
+            cpus_per_node = [int(c) for c in cpus_per_node_str.split(",")]
+            nodes = str(len(cpus_per_node))
+            # Take average for cores_per_node??
+            cores_per_node = str(sum(cpus_per_node) // len(cpus_per_node))
+            mpi_slots = sum(cpus_per_node) - 1
+            # cores_per_node: Optional[str] = os.getenv("SLURM_TASKS_PER_NODE")
+        # else not running in SLURM
+        else:
+            psana_vars["PS_SRV_NODES"] = "1"
+            psana_vars["PS_EB_NODES"] = "1"
+            return psana_vars
+    else:
+        mpi_slots = int(cores_per_node) * int(nodes) - 1
+
+    # default_srv_cores: int = 16 * int(nodes)
+    # Try to convert above for the case where no nodes were specified explicitly
+    default_srv_cores: int = (int(cores_per_node) // 8 + 1) * int(nodes)
+
+    # Check if the environment has been overridden, otherwise use default value
+    srv_cores: int
+    if (env_srv_cores := os.getenv("PS_SRV_NODES")) is not None:
+        srv_cores = int(env_srv_cores)
+    else:
+        srv_cores = default_srv_cores
 
     default_eb_cores: int = (mpi_slots - srv_cores) // 16
-    eb_cores: int = default_eb_cores
+    eb_cores: str
+    if (env_eb_cores := os.getenv("PS_EB_NODES")) is not None:
+        eb_cores = env_eb_cores
+    else:
+        eb_cores = str(default_eb_cores)
 
     psana_vars["PS_SRV_NODES"] = str(srv_cores)
-    psana_vars["PS_EB_NODES"] = str(eb_cores)
+    psana_vars["PS_EB_NODES"] = eb_cores
 
     slurm_job_nodelist: Optional[str] = os.getenv("SLURM_JOB_NODELIST")
     if slurm_job_nodelist is None:
@@ -55,6 +95,8 @@ def setup_smd2_env() -> Dict[str, str]:
             else:
                 f.write(f"{host_list[i]}\n")
 
+    # This calculation may not work of --ntasks-per-node is not passed
+    # But on the other hand, I cannot find PS_N_RANKS used in psana code.
     n_ranks: int = int(cores_per_node) * (int(nodes) - 1) + 1
 
     psana_vars["PS_HOST_FILE"] = host_file

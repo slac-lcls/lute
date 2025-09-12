@@ -1,6 +1,6 @@
-"""Run geometry optimization for centering detector on the beam.
+"""BayFAI Optimization Airflow Workflow.
 
-Performs a Bayesian Optimization coupled with pyFAI least squares fitting of distance, beam center and tilt angles.
+Run BayFAI optimization after producing a powder image with SmallData.
 
 Note:
     The task_id MUST match the managed task name when defining DAGs - it is used
@@ -13,29 +13,50 @@ Note:
     internally, so a DAG "lute_test" can be triggered by asking for "test"
 """
 
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import Any, Dict
+
 from airflow import DAG
+from airflow.decorators import task
+
 from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
-description: str = (
-    "Run geometry optimization based on given calibrant. Produce powder using "
-    "smalldata_tools."
-)
+description: str = "Optimize detector geometry given a produced powder image."
 
 dag: DAG = DAG(
     dag_id=dag_id,
-    start_date=datetime(2024, 9, 3),
+    start_date=datetime(2000, 4, 10),
     schedule_interval=None,
     description=description,
     is_paused_upon_creation=False,
 )
 
+@task.branch(task_id="Psana1v2Brancher")
+def psana1v2_branch_func(**context) -> str:
+    if "dag_run" in context:
+        conf: Dict[str, Any] = context["dag_run"].conf
+        if "is_daq2" in conf:
+            if conf["is_daq2"]:
+                return "SmallDataProducer2"
+            elif conf["is_daq2"] is None:
+                raise ValueError("Could not determine psana version: Unknown DAQ state")
+    return "SmallDataProducer"
+
+psana1v2_brancher = psana1v2_branch_func()
+
 smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", dag=dag)
 
-geom_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="PyFAIGeometryOptimizer", dag=dag)
+smd_producer2: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer2", dag=dag)
 
+bayfai_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer", dag=dag)
 
-# Powder production and geometry optimization
-smd_producer >> geom_optimizer
+bayfai_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer2", dag=dag)
+
+# Branch Workflow depending on available psana version
+psana1v2_brancher >> [smd_producer, smd_producer2]
+
+smd_producer >> bayfai_optimizer
+
+smd_producer2 >> bayfai_optimizer2

@@ -2,15 +2,36 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    OptimizePyFAIGeom: optimize detector geometry using PyFAI coupled with Bayesian Optimization
+    BayFAI: optimize detector geometry using PyFAI coupled with Bayesian Optimization
 
 """
 
-__all__ = ["OptimizePyFAIGeometry"]
+__all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
-import os
-from lute.io.models.bayfai import OptimizePyFAIGeometryParameters
+import psana
+
+if hasattr(psana, "xtc_version"):
+    from lute.tasks._bayfai2 import BayFAIOpt
+    from lute.tasks._bayfai2 import (
+        build_detector,
+        generate_powder,
+        min_intensity,
+        define_calibrant,
+        update_geometry,
+    )
+else:
+    from lute.tasks._bayfai import BayFAIOpt
+    from lute.tasks._bayfai import (
+        build_detector,
+        generate_powder,
+        min_intensity,
+        define_calibrant,
+        update_geometry,
+    )
+
+from lute.io.models.bayfai import BayFAIParameters
+
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.tasks._bayfai import (
@@ -21,50 +42,45 @@ from lute.tasks._bayfai import (
     update_geometry,
 )
 from lute.execution.logging import get_logger
-import logging
-from typing import Optional
 
-import h5py  # type: ignore
+import os
+import logging
 import panel as pn  # type: ignore
-import numpy as np
-import numpy.typing as npt
 import time  # type: ignore
+
+from LCLSGeom.common.geometry import get_beam_center  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
 
-class OptimizePyFAIGeometry(Task):
+class BayFAI(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
-    def __init__(
-        self, *, params: OptimizePyFAIGeometryParameters, use_mpi: bool = True
-    ) -> None:
+    def __init__(self, *, params: BayFAIParameters, use_mpi: bool = True) -> None:
         super().__init__(params=params, use_mpi=use_mpi)
 
     def _run(self) -> None:
         start_time = time.time()
-        assert isinstance(self._task_parameters, OptimizePyFAIGeometryParameters)
+        assert isinstance(self._task_parameters, BayFAIParameters)
         exp = self._task_parameters.lute_config.experiment
         run = self._task_parameters.lute_config.run
         detname = self._task_parameters.detname
-
-        # Process Diffraction Powder
-        powder, Imin = generate_powder(
-            self._task_parameters.powder,
-            self._task_parameters.detname,
-            self._task_parameters.preprocess,
+        powder = generate_powder(
+            powder_path=self._task_parameters.powder,
+            detname=detname,
+            smooth=self._task_parameters.preprocess,
         )
-        if powder is None:
-            raise RuntimeError("Unable to extract powder. Cannot continue.")
-
-        # Build Detector
-        detector = build_detector(self._task_parameters.in_file, powder.shape)
-
-        # Setup Calibrant
-        calibrant = define_calibrant(self._task_parameters.calibrant, exp, run)
-
-        # Initialize Optimizer
-        optimizer = BayesGeomOpt(
+        detector = build_detector(
+            in_file=self._task_parameters.in_file,
+            shape=powder.shape,
+        )
+        calibrant = define_calibrant(
+            calibrant_name=self._task_parameters.calibrant,
+            exp=exp,
+            run=run,
+        )
+        Imin = min_intensity(powder)
+        optimizer = BayFAIOpt(
             exp=exp,
             run=run,
             detector=detector,
@@ -72,23 +88,20 @@ class OptimizePyFAIGeometry(Task):
             calibrant=calibrant,
             fixed=self._task_parameters.fixed,
         )
-
-        # Run Bayesian Optimization
-        optim_params = {
+        bayfai_hyperparams = {
             "n_samples": self._task_parameters.bo_params.n_samples,
             "n_iterations": self._task_parameters.bo_params.n_iterations,
             "Imin": Imin,
             "max_rings": self._task_parameters.bo_params.max_rings,
-            "rtol": self._task_parameters.bo_params.rtol,
+            "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
-            "radius": self._task_parameters.bo_params.radius,
             "seed": self._task_parameters.bo_params.seed,
         }
-        result = optimizer.bayes_opt(
+        optimizer.bayfai_opt(
             center=self._task_parameters.center,
             bounds=self._task_parameters.bounds,
-            res=self._task_parameters.resolution,
-            **optim_params,
+            res=self._task_parameters.resolutions,
+            **bayfai_hyperparams,
         )
         if optimizer.rank == 0:
             logger.info("Optimization complete")
@@ -105,21 +118,31 @@ class OptimizePyFAIGeometry(Task):
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
-            plot = f"{fig_folder}/bayFAI_{exp}_r{run:0>4}.png"
+            plot = (
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
+            )
             calib_detector = update_geometry(optimizer, self._task_parameters.out_file)
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
                     detector=calib_detector,
-                    distance=params[0],
+                    distance=distance,
                 )
             )
             diagnostics_plot = optimizer.create_diagnostics_panel(
-                history=result["history"],
                 powder=optimizer.powder,
-                detector=calib_detector,
-                distance=params[0],
                 Imin=Imin,
+                detector=calib_detector,
+                distance=distance,
+                low_resolution=low_res,
+                high_resolution=high_res,
+                border_resolution=border_res,
+            )
+            _ = optimizer.create_summary_plot(
+                powder=optimizer.powder,
+                Imin=Imin,
+                detector=calib_detector,
+                distance=distance,
                 low_resolution=low_res,
                 high_resolution=high_res,
                 border_resolution=border_res,
@@ -154,8 +177,8 @@ class OptimizePyFAIGeometry(Task):
                 {
                     "Detector distance (m)": f"{params[0]:.6f}",
                     "Detector center (pix)": (
-                        f"{params[2]/calib_detector.pixel_size:.3f}",
-                        f"{params[1]/calib_detector.pixel_size:.3f}",
+                        f"{cx/detector.pixel_size:.3f}",
+                        f"{cy/detector.pixel_size:.3f}",
                     ),
                     "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
                     "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
