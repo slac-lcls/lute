@@ -34,13 +34,6 @@ from lute.io.models.bayfai import BayFAIParameters
 
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
-from lute.tasks._bayfai import (
-    BayesGeomOpt,
-    generate_powder,
-    build_detector,
-    define_calibrant,
-    update_geometry,
-)
 from lute.execution.logging import get_logger
 
 import os
