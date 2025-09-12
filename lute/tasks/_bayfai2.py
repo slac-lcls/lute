@@ -226,7 +226,7 @@ def update_geometry(optimizer: Any, out_file: str):
 
 
 def define_calibrant(
-    calibrant_name: str, exp: str, run: Union[str, int]
+    calibrant_name: str, exp: str, run: int
 ) -> pyFAI.calibrant.Calibrant:
     """
     Define calibrant for optimization with appropriate wavelength
@@ -240,7 +240,7 @@ def define_calibrant(
     run : int
         Run number
     """
-    ds = DataSource(exp=exp, run=run)
+    ds = DataSource(exp=exp, run=run, skip_calib_load='all')
     runs = next(ds.runs())
     evt = next(runs.events())
     calibrant = CALIBRANT_FACTORY(calibrant_name)
