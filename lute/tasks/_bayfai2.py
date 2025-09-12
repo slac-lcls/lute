@@ -916,7 +916,7 @@ class BayFAIOpt:
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
-            self.score = self.scan["score"][index]
+            self.best_score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
             self.gr = GeometryRefinement(
                 calibrant=self.calibrant,
@@ -971,7 +971,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=4)
         ax.tick_params(axis="y", labelsize=4)
 
-    def plot_bo_history(self, bo_history, distances, ax):
+    def plot_bo_history(self, ax):
         """
         Plot the Bayesian Optimization history across all ranks
 
@@ -979,11 +979,10 @@ class BayFAIOpt:
         ----------
         bo_history : dict
             Dictionary containing the BO history with keys 'params' and 'scores' for each rank-distance
-        distances : np.array
-            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
+        bo_history = self.scan["bo_history"]
         iters = np.arange(len(bo_history[0]["scores"]))
         for r in range(len(bo_history)):
             score = bo_history[r]["scores"]
@@ -998,7 +997,7 @@ class BayFAIOpt:
             color="black",
             markerfacecolor="red",
             markeredgecolor="black",
-            label=f"Best Distance (m): {distances[self.index]:.3f}",
+            label=f"Best Distance (m): {self.distances[self.index]:.3f}",
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
@@ -1007,19 +1006,16 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Bayesian Optimization History", fontsize=6)
 
-    def plot_score_distance_scan(self, distances, ax):
+    def plot_score_distance_scan(self, ax):
         """
         Plot the score scan over distance
 
         Parameters
         ----------
-        distances : np.array
-            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
-        scores = self.scan["score"]
-        ax.plot(distances, scores, linewidth=0.8, color="black")
+        ax.plot(self.distances, self.scan["score"], linewidth=0.8, color="black")
         ax.axhline(
             self.thrsh,
             color="red",
@@ -1034,22 +1030,19 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Bragg Peaks Found vs Distance", fontsize=6)
 
-    def plot_residual_distance_scan(self, distances, refined_dist, ax):
+    def plot_residual_distance_scan(self, refined_dist, ax):
         """
         Plot the residual scan over distance
 
         Parameters
         ----------
-        distances : np.array
-            Array of distances
         refined_dist : float
             Refined distance
         ax : plt.Axes
             Matplotlib axes
         """
-        residuals = self.scan["residual"]
-        ax.plot(distances, residuals, linewidth=0.8, color="black")
-        best_dist = distances[self.index]
+        ax.plot(self.distances, self.scan["residual"], linewidth=0.8, color="black")
+        best_dist = self.distances[self.index]
         ax.axvline(
             best_dist,
             color="green",
@@ -1071,7 +1064,7 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("PyFAI Residual vs Distance", fontsize=6)
 
-    def plot_intensity_hist(self, powder, exp, run, Imin, ax):
+    def plot_intensity_hist(self, powder, Imin, ax):
         """
         Plot histogram of pixel intensities in the powder image
 
@@ -1134,7 +1127,7 @@ class BayFAIOpt:
         ax.set_xticklabels([])
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title(
-            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
+            f"Histogram of Pixel Intensities \n for {self.exp} run {self.run}", fontsize=6
         )
         ax.legend(fontsize=6)
 
@@ -1567,7 +1560,7 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax2)
+        self.plot_intensity_hist(powder, Imin, ax2)
         icol = 0
         irow += 1
 
@@ -1580,12 +1573,12 @@ class BayFAIOpt:
 
         # Plotting score scan over distance
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_bo_history(self.scan["bo_history"], self.distances, ax5)
+        self.plot_bo_history(ax5)
         icol += 1
 
         # Plotting residual scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_residual_distance_scan(self.distances, distance, ax6)
+        self.plot_residual_distance_scan(distance, ax6)
 
         fig.tight_layout()
 
@@ -1609,6 +1602,8 @@ class BayFAIOpt:
 
         Parameters
         ----------
+        history : list
+            List of BO history
         powder : np.ndarray
             Powder image
         Imin : float
@@ -1743,23 +1738,23 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax4)
+        self.plot_intensity_hist(powder, Imin, ax4)
         irow += 2
         icol = 0
 
         # Plotting BO convergence
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_bo_history(self.scan["bo_history"], self.distances, ax5)
+        self.plot_bo_history(ax5)
         icol += 1
 
         # Plotting score scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_score_distance_scan(self.distances, ax6)
+        self.plot_score_distance_scan(ax6)
         icol += 1
 
         # Plotting residual scan over distance
-        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        self.plot_residual_distance_scan(self.distances, distance, ax7)
+        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_residual_distance_scan(distance, ax7)
 
         fig.tight_layout()
 

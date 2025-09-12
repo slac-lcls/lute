@@ -83,337 +83,6 @@ def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
     return powder
 
 
-def preprocess_powder(powder, smooth=False):
-    """
-    Preprocess extracted powder for enhancing optimization
-
-    Parameters
-    ----------
-    powder : npt.NDArray[np.float64]
-        Powder image to use for calibration
-    smooth : bool, optional
-        If True, apply smoothing to the powder image.
-    """
-    powder[powder < 0] = 0
-    if smooth:
-        for p in range(powder.shape[0]):
-            calib = gaussian_filter(powder[p], sigma=1)
-            gradx = np.zeros_like(calib)
-            grady = np.zeros_like(calib)
-            gradx[:-1, :-1] = (
-                calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
-            ) / 2
-            grady[:-1, :-1] = (
-                calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
-            ) / 2
-            powder[p] = np.sqrt(gradx**2 + grady**2)
-    return powder
-
-
-def min_intensity(powder):
-    """
-    Estimates minimal intensity for extracting key Bragg peaks
-
-    Parameters
-    ----------
-    powder : np.ndarray
-        Powder image
-    """
-    mean = np.mean(powder)
-    std = np.std(powder)
-    outlier = mean + 5 * std
-    nice_pix = powder < outlier
-    SNRs = []
-    percents = np.arange(95, 100, 0.25)
-    for percent in percents:
-        pixels = powder[nice_pix]
-        threshold = np.percentile(pixels, percent)
-        signal = np.std(pixels[pixels >= threshold])
-        noise = np.std(pixels[pixels < threshold])
-        if noise > 0:
-            SNRs.append(signal / noise)
-        else:
-            SNRs.append(0)
-    percent = percents[np.argmax(SNRs)]
-    Imin = np.percentile(powder[nice_pix], percent)
-    powder = np.clip(powder, 0, outlier)
-    return powder, Imin
-
-
-def generate_powder(powder_path, detname, smooth=False):
-    """
-    Generate the assembled powder plot and cache it.
-
-    Parameters
-    ----------
-    powder_path : str
-        Path to the h5 file containing the powder data.
-    detname : str
-        Name of the detector
-    smooth : bool, optional
-        If True, apply smoothing to the powder image.
-    """
-    powder = extract_powder(powder_path, detname)
-    powder = preprocess_powder(powder, smooth)
-    powder, Imin = min_intensity(powder)
-    return powder, Imin
-
-
-def build_LCLS1_detector(in_file, shape):
-    """
-    Read the metrology data and build a pyFAI detector object.
-
-    Parameters
-    ----------
-    in_file : str
-        Path to the input file
-    shape : tuple
-        Shape of the detector (n_modules, fs_dim, ss_dim)
-
-    Returns
-    -------
-    pyFAI.Detector
-        Configured pyFAI detector object
-    """
-    psana_to_pyfai = PsanaToPyFAI(
-        in_file=in_file,
-        shape=shape,
-    )
-    detector = psana_to_pyfai.detector
-    return detector
-
-
-def update_geometry(optimizer, out_file):
-    """
-    Update the geometry and write a new .poni, .geom and .data file
-
-    Parameters
-    ----------
-    optimizer : BayesGeomOpt
-        Optimizer object
-    out_file : str
-        Path to the output file
-    """
-    path = os.path.dirname(out_file)
-    poni_file = os.path.join(path, f"r{optimizer.run:0>4}.poni")
-    optimizer.gr.save(poni_file)
-    PyFAIToPsana(
-        in_file=poni_file,
-        detector=optimizer.detector,
-        out_file=out_file,
-    )
-    geom_file = os.path.join(path, f"r{optimizer.run:0>4}.geom")
-    PsanaToCrystFEL(
-        in_file=out_file,
-        out_file=geom_file,
-    )
-    psana_to_pyfai = PsanaToPyFAI(
-        in_file=out_file,
-        shape=optimizer.detector.raw_shape,
-    )
-    detector = psana_to_pyfai.detector
-    return detector
-
-
-def define_calibrant(calibrant, exp, run):
-    """
-    Define calibrant for optimization with appropriate wavelength
-
-    Parameters
-    ----------
-    calibrant : str
-        Name of the calibrant
-    exp : str
-        Name of the experiment
-    run : int
-        Run number
-    """
-    ds_args = f"exp={exp}:run={run}:idx"
-    ds = psana.DataSource(ds_args)
-    runner = next(ds.runs())
-    evt = runner.event(runner.times()[0])
-    photon_energy = None
-    try:
-        photon_energy = psana.Detector("EBeam").get(evt).ebeamPhotonEnergy()
-        wavelength = 1.23984197386209e-06 / photon_energy
-    except Exception:
-        wavelength = ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
-        photon_energy = 1.23984197386209e-06 / wavelength
-    calibrant = CALIBRANT_FACTORY(calibrant)
-    calibrant.wavelength = wavelength
-    return calibrant
-
-
-def rotation_matrix(params):
-    """
-    Compute and return the detector tilts as a single rotation matrix
-
-    Parameters
-    ----------
-    params : list
-        Detector parameters found by PyFAI calibration
-    """
-    cos_rot1 = np.cos(params[3])
-    cos_rot2 = np.cos(params[4])
-    cos_rot3 = np.cos(params[5])
-    sin_rot1 = np.sin(params[3])
-    sin_rot2 = np.sin(params[4])
-    sin_rot3 = np.sin(params[5])
-    # Rotation about vertical axis: Note this rotation is left-handed
-    rot1 = np.array(
-        [[1.0, 0.0, 0.0], [0.0, cos_rot1, sin_rot1], [0.0, -sin_rot1, cos_rot1]]
-    )
-    # Rotation about horizontal axis: Note this rotation is left-handed
-    rot2 = np.array(
-        [[cos_rot2, 0.0, -sin_rot2], [0.0, 1.0, 0.0], [sin_rot2, 0.0, cos_rot2]]
-    )
-    # Rotation about z-axis: Note this rotation is right-handed
-    rot3 = np.array(
-        [[cos_rot3, -sin_rot3, 0.0], [sin_rot3, cos_rot3, 0.0], [0.0, 0.0, 1.0]]
-    )
-    rotation_matrix = np.dot(np.dot(rot3, rot2), rot1)
-    return rotation_matrix
-
-
-def correct_geom(detector, params):
-    """
-    Correct the geometry based on the given parameters found by PyFAI calibration
-    """
-    p1, p2, p3 = detector.calc_cartesian_positions()
-    dist = params[0]
-    poni1 = params[1]
-    poni2 = params[2]
-    p1 = (p1 - (detector.pixel_size / 2) - poni1).ravel()
-    p2 = (p2 - (detector.pixel_size / 2) - poni2).ravel()
-    if p3 is None:
-        p3 = np.zeros_like(p1) + dist
-    else:
-        p3 = (p3 + dist).ravel()
-    coord_det = np.vstack((p1, p2, p3))
-    coord_sample = np.dot(rotation_matrix(params), coord_det)
-    x, y, z = coord_sample
-    x = np.reshape(x, detector.raw_shape)
-    y = np.reshape(y, detector.raw_shape)
-    z = np.reshape(z, detector.raw_shape)
-    return x, y, z
-
-
-def calculate_2theta(detector, params):
-    """
-    Calculate the 2θ angles for the detector based on the geometry parameters.
-
-    Parameters
-    ----------
-    detector : pyFAI.detectors.Detector
-        PyFAI detector object containing pixel index map and shape information.
-    params : list
-        6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
-    """
-    x, y, z = correct_geom(detector, params)
-    tth = np.zeros(detector.raw_shape)
-    # loop through the panels
-    for p in range(detector.n_modules):
-        tth[p, :] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
-    return tth
-
-
-def get_radius_map(detector):
-    """
-    Compute each pixel's radius for an array with input shape and center.
-    Detector is assumed to be calibrated.
-
-    Parameters
-    ----------
-    detector  : pyFAI.Detector
-        pyFAI detector object
-
-    Returns
-    -------
-    r : numpy.ndarray, with input shape
-        map of pixels' radii
-    """
-    y, x, _ = detector.calc_cartesian_positions()
-    r = np.sqrt(x**2 + y**2)
-    return r
-
-
-def radial_profile(powder, detector):
-    """
-    Compute the radial intensity profile of an image.
-    Detector is assumed to be calibrated.
-
-    Parameters
-    ----------
-    powder : numpy.ndarray, shape (n,m)
-        detector image
-    detector : pyFAI.Detector
-        PyFAI detector object
-
-    Returns
-    -------
-    radialprofile : numpy.ndarray, 1d
-        radial intensity profile of input image
-    """
-    r = get_radius_map(detector)
-    intensity, bin_edges = np.histogram(
-        r.ravel(), bins=1000, range=(r.min(), r.max()), weights=powder.ravel()
-    )
-    count, _ = np.histogram(r.ravel(), bins=bin_edges)
-    radialprofile = np.divide(
-        intensity, count, out=np.zeros_like(intensity), where=count != 0
-    )
-    r_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-    return radialprofile, r_centers
-
-
-def pix2q(pixels, distance, wavelength):
-    """
-    Convert distance from number of pixels from detector center to q-space.
-
-    Parameters
-    ----------
-    pixels : numpy.ndarray, 1d
-        distance in meter from beam center
-    distance : float
-        detector distance in meter
-    wavelength : float
-        X-ray wavelength in meter
-
-    Returns
-    -------
-    qs: numpy.ndarray, 1d
-        magnitude of q-vector in per Angstrom
-    """
-    theta = np.arctan2(pixels, distance)
-    qs = 4.0 * np.pi * np.sin(theta / 2.0) / (wavelength * 1e10)
-    return qs
-
-
-def extract_powder(powder_path: str, detname: str) -> npt.NDArray[np.float64]:
-    """
-    Extract a powder image from smalldata analysis.
-
-    Parameters
-    ----------
-    powder_path : str
-        Path to the h5 file containing the powder data.
-
-    Returns
-    -------
-    powder : npt.NDArray[np.float64]
-        The extracted powder image.
-    """
-    with h5py.File(powder_path) as h5:
-        try:
-            powder = h5[f"Sums/{detname}_calib_max"][()]
-        except KeyError:
-            logger.warning(
-                f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
-            )
-            powder = h5[f"Sums/{detname}_calib"][()]
-    return powder
-
-
 def preprocess_powder(
     powder: npt.NDArray[np.float64], smooth: bool = False
 ) -> npt.NDArray[np.float64]:
@@ -493,7 +162,7 @@ def min_intensity(powder: npt.NDArray[np.float64]) -> float:
     return Imin
 
 
-def build_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
+def build_LCLS1_detector(in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
     """
     Read the metrology data and build a pyFAI detector object.
 
@@ -1230,7 +899,7 @@ class BayFAIOpt:
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
-            self.score = self.scan["score"][index]
+            self.best_score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
             self.gr = GeometryRefinement(
                 calibrant=self.calibrant,
@@ -1285,7 +954,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=4)
         ax.tick_params(axis="y", labelsize=4)
 
-    def plot_bo_history(self, bo_history, distances, ax):
+    def plot_bo_history(self, ax):
         """
         Plot the Bayesian Optimization history across all ranks
 
@@ -1293,11 +962,10 @@ class BayFAIOpt:
         ----------
         bo_history : dict
             Dictionary containing the BO history with keys 'params' and 'scores' for each rank-distance
-        distances : np.array
-            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
+        bo_history = self.scan["bo_history"]
         iters = np.arange(len(bo_history[0]["scores"]))
         for r in range(len(bo_history)):
             score = bo_history[r]["scores"]
@@ -1312,7 +980,7 @@ class BayFAIOpt:
             color="black",
             markerfacecolor="red",
             markeredgecolor="black",
-            label=f"Best Distance (m): {distances[self.index]:.3f}",
+            label=f"Best Distance (m): {self.distances[self.index]:.3f}",
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
@@ -1321,19 +989,16 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Bayesian Optimization History", fontsize=6)
 
-    def plot_score_distance_scan(self, distances, ax):
+    def plot_score_distance_scan(self, ax):
         """
         Plot the score scan over distance
 
         Parameters
         ----------
-        distances : np.array
-            Array of distances
         ax : plt.Axes
             Matplotlib axes
         """
-        scores = self.scan["score"]
-        ax.plot(distances, scores, linewidth=0.8, color="black")
+        ax.plot(self.distances, self.scan["score"], linewidth=0.8, color="black")
         ax.axhline(
             self.thrsh,
             color="red",
@@ -1348,22 +1013,19 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("Bragg Peaks Found vs Distance", fontsize=6)
 
-    def plot_residual_distance_scan(self, distances, refined_dist, ax):
+    def plot_residual_distance_scan(self, refined_dist, ax):
         """
         Plot the residual scan over distance
 
         Parameters
         ----------
-        distances : np.array
-            Array of distances
         refined_dist : float
             Refined distance
         ax : plt.Axes
             Matplotlib axes
         """
-        residuals = self.scan["residual"]
-        ax.plot(distances, residuals, linewidth=0.8, color="black")
-        best_dist = distances[self.index]
+        ax.plot(self.distances, self.scan["residual"], linewidth=0.8, color="black")
+        best_dist = self.distances[self.index]
         ax.axvline(
             best_dist,
             color="green",
@@ -1385,7 +1047,7 @@ class BayFAIOpt:
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title("PyFAI Residual vs Distance", fontsize=6)
 
-    def plot_intensity_hist(self, powder, exp, run, Imin, ax):
+    def plot_intensity_hist(self, powder, Imin, ax):
         """
         Plot histogram of pixel intensities in the powder image
 
@@ -1448,7 +1110,7 @@ class BayFAIOpt:
         ax.set_xticklabels([])
         ax.tick_params(axis="y", labelsize=4)
         ax.set_title(
-            f"Histogram of Pixel Intensities \n for {exp} run {run}", fontsize=6
+            f"Histogram of Pixel Intensities \n for {self.exp} run {self.run}", fontsize=6
         )
         ax.legend(fontsize=6)
 
@@ -1881,7 +1543,7 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax2)
+        self.plot_intensity_hist(powder, Imin, ax2)
         icol = 0
         irow += 1
 
@@ -1894,12 +1556,12 @@ class BayFAIOpt:
 
         # Plotting score scan over distance
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_bo_history(self.scan["bo_history"], self.distances, ax5)
+        self.plot_bo_history(ax5)
         icol += 1
 
         # Plotting residual scan over distance
         ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_residual_distance_scan(self.distances, distance, ax6)
+        self.plot_residual_distance_scan(distance, ax6)
 
         fig.tight_layout()
 
@@ -2059,33 +1721,23 @@ class BayFAIOpt:
 
         # Plotting histogram of pixel intensities
         ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), rowspan=2)
-        self.plot_intensity_hist(powder, self.exp, self.run, Imin, ax4)
+        self.plot_intensity_hist(powder, Imin, ax4)
         irow += 2
         icol = 0
 
         # Plotting BO convergence
         ax5 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_bo_history(self.scan["bo_history"], self.distances, ax5)
+        self.plot_bo_history(ax5)
         icol += 1
 
-        # Plotting histogram of pixel intensities
-        ax2 = plt.subplot2grid((nrow, ncol), (irow, icol))
-        self.plot_hist_and_compute_stats(powder, self.exp, self.run, Imin, ax2)
-        irow += 1
-        icol = 0
+        # Plotting score scan over distance
+        ax6 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_score_distance_scan(ax6)
+        icol += 1
 
-        # Plotting BO iterations
-        ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
-        self.plot_bo_history(history, ax3)
-        irow += 1
-
-        # Plotting radial profiles with peaks
-        ax4 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
-        profile, radii = radial_profile(powder, detector)
-        qs = pix2q(radii, distance, self.calibrant.wavelength)
-        self.plot_radial_integration(
-            qs, profile, error=None, calibrant=self.calibrant, ax=ax4
-        )
+        # Plotting residual scan over distance
+        ax7 = plt.subplot2grid((nrow, ncol), (irow, icol))
+        self.plot_residual_distance_scan(distance, ax7)
 
         fig.tight_layout()
 

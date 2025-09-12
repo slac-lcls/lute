@@ -1050,7 +1050,7 @@ class Executor(BaseExecutor):
         ) -> Optional[bool]:
             if isinstance(msg.contents, str):
                 # This should be log formatted already
-                print(msg.contents)
+                print(msg.contents,flush=True)
                 return True
             return False
 
