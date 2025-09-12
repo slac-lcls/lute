@@ -240,7 +240,7 @@ def define_calibrant(
     run : int
         Run number
     """
-    ds = DataSource(exp=exp, run=run, skip_calib_load='all')
+    ds = DataSource(exp=exp, run=run, skip_calib_load="all")
     runs = next(ds.runs())
     evt = next(runs.events())
     calibrant = CALIBRANT_FACTORY(calibrant_name)
