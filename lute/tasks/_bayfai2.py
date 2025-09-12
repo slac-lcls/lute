@@ -188,7 +188,7 @@ def build_LCLS2_detector(
     """
     psana_to_pyfai = PsanaToPyFAI(
         exp=exp,
-        run=run,
+        run_num=run,
         detname=detname,
     )
     detector = psana_to_pyfai.detector
