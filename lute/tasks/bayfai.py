@@ -14,22 +14,12 @@ import psana
 if hasattr(psana, "xtc_version"):
     from lute.tasks._bayfai2 import BayFAIOpt
     from lute.tasks._bayfai2 import (
-        build_LCLS2_detector,
-        generate_powder,
-        min_intensity,
-        define_calibrant,
-        update_geometry,
     )
 
     IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
     from lute.tasks._bayfai import (
-        build_LCLS1_detector,
-        generate_powder,
-        min_intensity,
-        define_calibrant,
-        update_geometry,
     )
 
     IS_PSANA2 = False
@@ -104,7 +94,7 @@ class BayFAI(Task):
             plot = (
                 f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
-            calib_detector = update_geometry(optimizer, self._task_parameters.out_file)
+            calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
