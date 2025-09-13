@@ -57,44 +57,22 @@ class BayFAI(Task):
     def _run(self) -> None:
         start_time = time.time()
         assert isinstance(self._task_parameters, BayFAIParameters)
-        exp = self._task_parameters.lute_config.experiment
-        run = int(self._task_parameters.lute_config.run)
-        detname = self._task_parameters.detname
-        powder = generate_powder(
-            powder_path=self._task_parameters.powder,
-            detname=detname,
-            smooth=self._task_parameters.preprocess,
-        )
-        if IS_PSANA2:
-            detector = build_LCLS2_detector(
-                exp=exp,
-                run=run,
-                detname=detname,
-            )
-        else:
-            detector = build_LCLS1_detector(
-                in_file=self._task_parameters.in_file,
-                shape=powder.shape,
-            )
-        calibrant = define_calibrant(
-            calibrant_name=self._task_parameters.calibrant,
-            exp=exp,
-            run=run,
-        )
-        Imin = min_intensity(powder)
         optimizer = BayFAIOpt(
-            exp=exp,
-            run=run,
-            detector=detector,
-            powder=powder,
-            calibrant=calibrant,
+            exp=self._task_parameters.lute_config.experiment,
+            run=int(self._task_parameters.lute_config.run),
+        )
+        Imin = optimizer.setup(
+            powder=self._task_parameters.powder,
+            detname=self._task_parameters.detname,
+            calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
+            in_file=self._task_parameters.in_file,
         )
         bayfai_hyperparams = {
             "n_samples": self._task_parameters.bo_params.n_samples,
             "n_iterations": self._task_parameters.bo_params.n_iterations,
-            "Imin": Imin,
             "max_rings": self._task_parameters.bo_params.max_rings,
+            "Imin": Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
             "seed": self._task_parameters.bo_params.seed,

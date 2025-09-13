@@ -241,19 +241,7 @@ def define_calibrant(
         Run number
     """
     ds = DataSource(exp=exp, run=run, skip_calib_load="all")
-    runs = next(ds.runs())
-    evt = next(runs.events())
-    calibrant = CALIBRANT_FACTORY(calibrant_name)
-    try:
-        det_photon_energy = runs.Detector("ebeamh")
-        photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(evt)
-        wavelength = 1.23984197386209e-06 / photon_energy
-    except Exception:
-        det_wavelength = runs.Detector("SIOC:SYS0:ML00:AO192")
-        wavelength = det_wavelength(evt) * 1e-9
-        photon_energy = 1.23984197386209e-06 / wavelength
-    calibrant.wavelength = wavelength
-    return calibrant
+
 
 
 def rotation_matrix(params: list) -> np.ndarray:
@@ -424,43 +412,15 @@ class BayFAIOpt:
         Experiment name
     run : int
         Run number
-    detector : PyFAI.Detector
-        PyFAI detector object
-    powder : np.ndarray
-        Powder pattern data
-    calibrant : PyFAI.Calibrant
-        Calibrant object
-    fixed : list
-        List of parameters to keep fixed during optimization
     """
 
     def __init__(
         self,
         exp,
         run,
-        detector,
-        powder,
-        calibrant,
-        fixed,
     ):
         self.exp = exp
         self.run = run
-        self.detname = detector.name
-        self.detector = detector
-        self.powder = powder
-        self.stacked_powder = np.reshape(powder, detector.shape)
-        self.calibrant = calibrant
-        self.calibrant_name = os.path.splitext(os.path.basename(calibrant.filename))[0][
-            6:
-        ]
-        self.tth = np.array(self.calibrant.get_2th())
-        self.fixed = fixed
-        self.parallelized = ["dist"]
-        self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
-        self.space = []
-        for p in self.order:
-            if p not in self.fixed and p not in self.parallelized:
-                self.space.append(p)
         self.ds = DataSource(exp=exp, run=run, skip_calib_load="all")
         group: MPI.Group = self.ds.comms._bd_only_group
         self.comm = MPI.COMM_WORLD.Create_group(group)
@@ -488,6 +448,222 @@ class BayFAIOpt:
         ucb[visited_idx] = -np.inf
         top_next = np.argsort(ucb)[-q:]
         return top_next
+
+    def setup(self, powder, detname, calibrant, fixed, in_file=None):
+        """
+        Setup the BayFAI optimization.
+
+        Parameters
+        ----------
+        powder : str
+            Path to the powder image to use for calibration
+        detname : str
+            Name of the detector
+        calibrant : PyFAI.Calibrant
+            PyFAI calibrant object
+        fixed : list
+            List of parameters to keep fixed during optimization
+        in_file : str, optional
+            Path to the input geometry file
+        """
+        self.powder = self.generate_powder(powder, detname)
+        self.detector = self.build_detector(detname)
+        self.stacked_powder = np.reshape(self.powder, self.detector.shape)
+        self.calibrant = self.define_calibrant(calibrant)
+        self.Imin = self.min_intensity(self.powder)
+        self.set_search_space(fixed)
+
+    def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
+        """
+        Extract a powder image from smalldata analysis.
+
+        Parameters
+        ----------
+        powder_path : str
+            Path to the h5 file containing the powder data.
+
+        Returns
+        -------
+        powder : npt.NDArray[np.float64]
+            The extracted powder image.
+        """
+        with h5py.File(powder_path) as h5:
+            try:
+                powder = h5[f"Sums/{detname}_calib_max"][()]
+            except KeyError:
+                logger.warning(
+                    f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
+                )
+                powder = h5[f"Sums/{detname}_calib"][()]
+        return powder
+
+    def preprocess_powder(
+        self, powder: npt.NDArray[np.float64], smooth: bool = False
+    ) -> npt.NDArray[np.float64]:
+        """
+        Preprocess extracted powder for enhancing optimization
+
+        Parameters
+        ----------
+        powder : npt.NDArray[np.float64]
+            Powder image to use for calibration
+        smooth : bool, optional
+            If True, apply smoothing to the powder image.
+        """
+        powder[powder < 0] = 0
+        if smooth:
+            for p in range(powder.shape[0]):
+                calib = gaussian_filter(powder[p], sigma=1)
+                gradx = np.zeros_like(calib)
+                grady = np.zeros_like(calib)
+                gradx[:-1, :-1] = (
+                    calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
+                ) / 2
+                grady[:-1, :-1] = (
+                    calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
+                ) / 2
+                powder[p] = np.sqrt(gradx**2 + grady**2)
+        return powder
+
+    def generate_powder(
+        self, powder_path: str, detname: str, smooth: bool = False
+    ) -> npt.NDArray[np.float64]:
+        """
+        Generate a preprocessed powder image from smalldata reduction.
+
+        Parameters
+        ----------
+        powder_path : str
+            Path to the h5 file containing the powder data.
+        detname : str
+            Name of the detector
+        smooth : bool, optional
+            If True, apply smoothing to the powder image.
+        """
+        powder = self.extract_powder(powder_path, detname)
+        powder = self.preprocess_powder(powder, smooth)
+        return powder
+
+    def min_intensity(self, powder: npt.NDArray[np.float64]) -> float:
+        """
+        Define minimal intensity for identifying Bragg peaks.
+
+        The minimal intensity is chosen so that the Signal to Noise Ratio (SNR) is maximized
+        Signal is defined as the standard deviation of the pixels above the threshold
+        Noise is defined as the standard deviation of the pixels below the threshold
+
+        Parameters
+        ----------
+        powder : np.ndarray
+            Powder image
+        """
+        mean = np.mean(powder)
+        threshold = mean + 5 * np.std(powder)
+        nice_pix = powder < threshold
+        SNRs = []
+        Imins = np.arange(95, 100, 0.25)
+        for Imin in Imins:
+            threshold = np.percentile(powder[nice_pix], Imin)
+            signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
+            signal = np.std(signal_pixels)
+            noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
+            noise = np.std(noise_pixels)
+            SNRs.append(signal / noise)
+        q = Imins[np.argmax(SNRs)]
+        Imin = np.percentile(powder[nice_pix], q)
+        return Imin
+
+    def build_detector(self, detname: str) -> pyFAI.detectors.Detector:
+        """
+        Read the metrology data and build a pyFAI detector object.
+
+        Parameters
+        ----------
+        detname : str
+            Name of the detector
+
+        Returns
+        -------
+        pyFAI.Detector
+            Configured pyFAI detector object
+        """
+        psana_to_pyfai = PsanaToPyFAI(
+            exp=self.exp,
+            run_num=self.run,
+            detname=detname,
+        )
+        detector = psana_to_pyfai.detector
+        return detector
+
+    def update_geometry(self, out_file: str) -> pyFAI.detectors.Detector:
+        """
+        Update the geometry and write a new .poni, .geom and .data file
+
+        Parameters
+        ----------
+        optimizer : BayesGeomOpt
+            Optimizer object
+        out_file : str
+            Path to the output file
+        """
+        path = os.path.dirname(out_file)
+        poni_file = os.path.join(path, f"r{self.run:0>4}.poni")
+        self.gr.save(poni_file)
+        PyFAIToPsana(
+            in_file=poni_file,
+            detector=self.detector,
+            out_file=out_file,
+        )
+        geom_file = os.path.join(path, f"r{self.run:0>4}.geom")
+        PsanaToCrystFEL(
+            in_file=out_file,
+            out_file=geom_file,
+        )
+        psana_to_pyfai = PsanaToPyFAI(
+            in_file=out_file,
+            shape=self.detector.raw_shape,
+        )
+        detector = psana_to_pyfai.detector
+        return detector
+
+    def define_calibrant(self, calibrant_name: str) -> pyFAI.calibrant.Calibrant:
+        """
+        Define calibrant for optimization with appropriate wavelength
+
+        Parameters
+        ----------
+        calibrant_name : str
+            Name of the calibrant
+        """
+        runs = next(self.ds.runs())
+        evt = next(runs.events())
+        calibrant = CALIBRANT_FACTORY(calibrant_name)
+        try:
+            det_photon_energy = runs.Detector("ebeamh")
+            photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(evt)
+            wavelength = 1.23984197386209e-06 / photon_energy
+        except Exception:
+            det_wavelength = runs.Detector("SIOC:SYS0:ML00:AO192")
+            wavelength = det_wavelength(evt) * 1e-9
+            photon_energy = 1.23984197386209e-06 / wavelength
+        calibrant.wavelength = wavelength
+        return calibrant
+
+    def set_search_space(self, fixed: list) -> None:
+        """
+        Define the search space for the free parameters.
+
+        Parameters
+        ----------
+        fixed : list
+            List of parameters to keep fixed during optimization
+        """
+        self.space = []
+        parallelized = ["dist"]
+        self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
+        for p in self.order:
+            if p not in fixed and p not in parallelized:
+                self.space.append(p)
 
     def distribute_distances(self, center, res):
         """
