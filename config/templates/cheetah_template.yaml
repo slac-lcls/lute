@@ -7,18 +7,18 @@ data_retrieval_layer:
   psana_calibration_directory: "{{ cheetah_subconfig.data_retrieval_layer.psana_calibration_directory }}"
   data_sources:
     timestamp:
-      type: TimestampPsana
+      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.timestamp.type }}
     event_id:
-      type: EventIdPsana
+      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.event_id.type }}
     detector_data:
-      type: AreaDetectorPsana
-      psana_name: epix10k2M
-      calibration: true
+      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_data.type }}
+      psana_name: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_data.psana_name }}
+      calibration: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_data.calibration }}
     detector_distance:
-      type: EpicsVariablePsana
-      psana_name: detector_z
+      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_distance.type }}
+      psana_name: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_distance.psana_name }}
     beam_energy:
-      type: BeamEnergyFromEpicsVariablePsana
+      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.beam_energy.type }}
 
 cheetah:
   processed_directory: "{{ cheetah_subconfig.cheetah.processed_directory }}"
