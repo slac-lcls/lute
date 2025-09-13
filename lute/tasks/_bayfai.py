@@ -260,7 +260,7 @@ class BayFAIOpt:
         ucb[visited_idx] = -np.inf
         top_next = np.argsort(ucb)[-q:]
         return top_next
-    
+
     def setup(self, powder, detname, calibrant, fixed, in_file):
         """
         Setup the BayFAI optimization.
