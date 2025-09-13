@@ -150,8 +150,8 @@ class BayFAI(Task):
                 {
                     "Detector distance (m)": f"{params[0]:.6f}",
                     "Detector center (pix)": (
-                        f"{cx/detector.pixel_size:.3f}",
-                        f"{cy/detector.pixel_size:.3f}",
+                        f"{cx/optimizer.detector.pixel_size:.3f}",
+                        f"{cy/optimizer.detector.pixel_size:.3f}",
                     ),
                     "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
                     "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
