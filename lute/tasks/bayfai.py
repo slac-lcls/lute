@@ -13,15 +13,9 @@ import psana
 
 if hasattr(psana, "xtc_version"):
     from lute.tasks._bayfai2 import BayFAIOpt
-    from lute.tasks._bayfai2 import (
-    )
-
     IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
-    from lute.tasks._bayfai import (
-    )
-
     IS_PSANA2 = False
 
 from lute.io.models.bayfai import BayFAIParameters
