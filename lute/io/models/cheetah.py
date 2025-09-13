@@ -73,35 +73,18 @@ class RunCheetahParameters(ThirdPartyParameters):
             class DataSourcesParameters(BaseModel):
                 """Parameters for the data retrieval layer data sources subfields."""
 
-                class DataSourceTimestampParameters(BaseModel):
-                    """Data retrieval layer, datasource timestamp parameters."""
-
-                    type: Optional[str] = Field("TimestampPsana", flat_type="")
-
-                class DataSourceEventIdParameters(BaseModel):
-                    """Data retrieval layer, datasource event id parameters."""
-
-                    type: Optional[str] = Field("EventIdPsana", flat_type="")
-
                 class DataSourceDetectorDataParameters(BaseModel):
                     """Data retrieval layer, datasource detector data parameters."""
 
-                    type: Optional[str] = Field("AreaDetectorPsana", flat_type="")
                     psana_name: Optional[str] = Field("epix10k2M", flat_type="")
-                    calibratin: Optional[str] = Field("true", flat_type="")
+                    calibration: Optional[str] = Field("true", flat_type="")
 
                 class DataSourceDetectorDistanceParameters(BaseModel):
                     """Data retrieval layer, datasource detector distance parameters."""
 
                     type: Optional[str] = Field("EpicsVariablePsana", flat_type="")
                     psana_name: Optional[str] = Field("detector_z", flat_type="")
-
-                class DataSourceBeamEnergyParameters(BaseModel):
-                    """Data retrieval layer, datasource beam energy parameters."""
-
-                    type: Optional[str] = Field(
-                        "BeamEnergyFromEpicsVariablePsana", flat_type=""
-                    )
+                    value: Optional[str] = Field("DetectorDistanceValue", flat_type="")
 
         class CheetahParameters(BaseModel):
             """Parameters for Cheetah."""
