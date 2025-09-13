@@ -13,10 +13,8 @@ import psana
 
 if hasattr(psana, "xtc_version"):
     from lute.tasks._bayfai2 import BayFAIOpt
-    IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
-    IS_PSANA2 = False
 
 from lute.io.models.bayfai import BayFAIParameters
 
@@ -45,9 +43,9 @@ class BayFAI(Task):
             exp=self._task_parameters.lute_config.experiment,
             run=int(self._task_parameters.lute_config.run),
         )
-        Imin = optimizer.setup(
-            powder=self._task_parameters.powder,
+        optimizer.setup(
             detname=self._task_parameters.detname,
+            powder=self._task_parameters.powder,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
             in_file=self._task_parameters.in_file,
@@ -56,7 +54,7 @@ class BayFAI(Task):
             "n_samples": self._task_parameters.bo_params.n_samples,
             "n_iterations": self._task_parameters.bo_params.n_iterations,
             "max_rings": self._task_parameters.bo_params.max_rings,
-            "Imin": Imin,
+            "Imin": optimizer.Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
             "seed": self._task_parameters.bo_params.seed,

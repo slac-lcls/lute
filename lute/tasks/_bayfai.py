@@ -261,16 +261,16 @@ class BayFAIOpt:
         top_next = np.argsort(ucb)[-q:]
         return top_next
 
-    def setup(self, powder, detname, calibrant, fixed, in_file):
+    def setup(self, detname, powder, calibrant, fixed, in_file):
         """
         Setup the BayFAI optimization.
 
         Parameters
         ----------
-        powder : str
-            Path to the powder image to use for calibration
         detname : str
             Name of the detector
+        powder : str
+            Path to the powder image to use for calibration
         calibrant : PyFAI.Calibrant
             PyFAI calibrant object
         fixed : list
@@ -287,9 +287,8 @@ class BayFAIOpt:
         self.detector = self.build_detector(in_file, self.powder.shape)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         self.calibrant = self.define_calibrant(calibrant)
-        Imin = self.min_intensity(self.powder)
+        self.Imin = self.min_intensity(self.powder)
         self.set_search_space(fixed)
-        return Imin
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
         """
