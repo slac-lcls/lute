@@ -23,19 +23,13 @@ RunCheetah:                       # All variables are given as strings
     data_retrieval_layer:
       psana_calibration_directory: "/sdf/data/lcls/ds/xpp/xpptut15/calib/"
       data_sources:
-        timestamp:
-          type: "TimestampPsana"
-        event_id:
-          type: "EventIdPsana"
         detector_data:
-          type: "AreaDetectorPsana"
           psana_name: "epix10k2M"
           calibration: "true"
         detector_distance:
           type: "EpicsVariablePsana"
           psana_name: "detector_z"
-        beam_energy:
-          type: "BeamEnergyFromEpicsVariablePsana"
+          value: "DetectorDistanceValue"
     cheetah:
       processed_directory: "/sdf/data/lcls/ds/xpp/xpptut15/results"
       processed_filename_prefix: "{{experiment}}-{{run}}"
