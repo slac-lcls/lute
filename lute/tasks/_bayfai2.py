@@ -298,13 +298,12 @@ class BayFAIOpt:
         in_file : str, optional
             Path to the input geometry file
         """
-        if self.comm != MPI.COMM_NULL:
-            self.powder = self.generate_powder(powder, detname)
-            self.detector = self.build_detector(detname)
-            self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-            self.calibrant = self.define_calibrant(calibrant)
-            self.Imin = self.min_intensity(self.powder)
-            self.set_search_space(fixed)
+        self.powder = self.generate_powder(powder, detname)
+        self.detector = self.build_detector(detname)
+        self.stacked_powder = np.reshape(self.powder, self.detector.shape)
+        self.calibrant = self.define_calibrant(calibrant)
+        self.Imin = self.min_intensity(self.powder)
+        self.set_search_space(fixed)
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
         """
@@ -468,18 +467,19 @@ class BayFAIOpt:
             Name of the calibrant
         """
         calibrant = CALIBRANT_FACTORY(calibrant_name)
-        if self.rank == 0:
-            try:
-                det_photon_energy = self.runs.Detector("ebeamh")
-                photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
-                wavelength = 1.23984197386209e-06 / photon_energy
-            except Exception:
-                det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
-                wavelength = det_wavelength(self.evt) * 1e-9
-        else:
-            wavelength = None
-        wavelength = self.comm.bcast(wavelength, root=0)
-        calibrant.wavelength = wavelength
+        if self.comm != MPI.COMM_NULL:
+            if self.rank == 0:
+                try:
+                    det_photon_energy = self.runs.Detector("ebeamh")
+                    photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
+                    wavelength = 1.23984197386209e-06 / photon_energy
+                except Exception:
+                    det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
+                    wavelength = det_wavelength(self.evt) * 1e-9
+            else:
+                wavelength = None
+            wavelength = self.comm.bcast(wavelength, root=0)
+            calibrant.wavelength = wavelength
         return calibrant
 
     def set_search_space(self, fixed: list) -> None:
