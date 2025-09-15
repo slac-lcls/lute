@@ -298,9 +298,6 @@ class BayFAIOpt:
         in_file : str, optional
             Path to the input geometry file
         """
-        if self.ds.comms.bd_comm.Get_rank() == 0:
-            pass
-
         if self.comm != MPI.COMM_NULL:
             self.powder = self.generate_powder(powder, detname)
             self.detector = self.build_detector(detname)
