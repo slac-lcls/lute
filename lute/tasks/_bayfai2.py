@@ -467,6 +467,8 @@ class BayFAIOpt:
         """
         self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
+        if self.ds.comms.bd_comm.Get_rank() == 0:
+            return calibrant
         if self.comm != MPI.COMM_NULL:
             if self.rank == 0:
                 try:
@@ -874,6 +876,9 @@ class BayFAIOpt:
         seed : int
             Random seed for reproducibility
         """
+        if self.ds.comms.bd_comm.Get_rank() == 0:
+            return
+
         if self.comm != MPI.COMM_NULL:
             dist = self.distribute_distances(center, res)
             logger.info(
