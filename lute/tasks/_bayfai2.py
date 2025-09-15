@@ -466,6 +466,7 @@ class BayFAIOpt:
         calibrant_name : str
             Name of the calibrant
         """
+        self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
         if self.comm != MPI.COMM_NULL:
             if self.rank == 0:
@@ -1263,7 +1264,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            f"Run {self.run} - {self.detname} - {self.calibrant_name}", fontsize=8
+            f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}", fontsize=8
         )
         ax.set_aspect("equal")
 
@@ -1319,7 +1320,7 @@ class BayFAIOpt:
             ylim = (ymin * 0.9, ymax * 1.1)
 
         p = figure(
-            title=f"Run {self.run} - {self.detname} - {self.calibrant_name}",
+            title=f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}",
             x_axis_label="X-axis (m)",
             y_axis_label="Y-axis (m)",
             width=1200,
@@ -1492,7 +1493,7 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
+            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
@@ -1656,7 +1657,7 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
+            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,

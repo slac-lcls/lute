@@ -456,6 +456,7 @@ class BayFAIOpt:
         run : int
             Run number
         """
+        self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
         try:
             det_photon_energy = Detector("EBeam")
@@ -1179,13 +1180,14 @@ class BayFAIOpt:
             vmax=np.percentile(powder, 95),
         )
 
+        tth = np.array(self.calibrant.get_tth())
         ttha = calculate_2theta(detector, params=[distance, 0, 0, 0, 0, 0])
         for i in range(detector.n_modules):
             ax.contour(
                 x[i],
                 y[i],
                 ttha[i],
-                levels=self.tth,
+                levels=tth,
                 cmap="autumn",
                 linewidths=1,
                 linestyles="dashed",
@@ -1243,7 +1245,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            f"Run {self.run} - {self.detname} - {self.calibrant_name}", fontsize=8
+            f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}", fontsize=8
         )
         ax.set_aspect("equal")
 
@@ -1299,7 +1301,7 @@ class BayFAIOpt:
             ylim = (ymin * 0.9, ymax * 1.1)
 
         p = figure(
-            title=f"Run {self.run} - {self.detname} - {self.calibrant_name}",
+            title=f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}",
             x_axis_label="X-axis (m)",
             y_axis_label="Y-axis (m)",
             width=1200,
@@ -1329,13 +1331,14 @@ class BayFAIOpt:
             color_mapper=color_mapper, width=8, location=(0, 0), title="Intensity"
         )
 
+        tth = np.array(self.calibrant.get_tth())
         ttha = calculate_2theta(detector, params=[distance, 0, 0, 0, 0, 0])
         for i in range(detector.n_modules):
             p.contour(
                 x=x[i],
                 y=y[i],
                 z=ttha[i],
-                levels=self.tth,
+                levels=tth,
                 line_color="red",
                 line_width=3,
                 line_dash="dashed",
@@ -1472,7 +1475,7 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
+            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
@@ -1636,7 +1639,7 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detname}", ha="left", va="center", fontsize=8
+            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
         )
         ax1.text(
             0.05,
