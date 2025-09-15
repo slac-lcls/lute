@@ -274,7 +274,14 @@ class BayFAIOpt:
         top_next = np.argsort(ucb)[-q:]
         return top_next
 
-    def setup(self, detname: str, powder: str, calibrant: str, fixed: list, in_file: Optional[str] = None):
+    def setup(
+        self,
+        detname: str,
+        powder: str,
+        calibrant: str,
+        fixed: list,
+        in_file: Optional[str] = None,
+    ):
         """
         Setup the BayFAI optimization.
 
