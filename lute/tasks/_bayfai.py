@@ -108,8 +108,8 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
         dist = params[0]
         poni1 = params[1]
         poni2 = params[2]
-        x = (x - (detector.pixel_size / 2) - poni1).ravel()
-        y = (y - (detector.pixel_size / 2) - poni2).ravel()
+        x = (x - poni1).ravel()
+        y = (y - poni2).ravel()
         if z is None:
             z = np.zeros_like(x) + dist
         else:
