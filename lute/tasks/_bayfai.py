@@ -1180,7 +1180,7 @@ class BayFAIOpt:
             vmax=np.percentile(powder, 95),
         )
 
-        tth = np.array(self.calibrant.get_tth())
+        tth = np.array(self.calibrant.get_2th())
         ttha = calculate_2theta(detector, params=[distance, 0, 0, 0, 0, 0])
         for i in range(detector.n_modules):
             ax.contour(
@@ -1332,7 +1332,7 @@ class BayFAIOpt:
             color_mapper=color_mapper, width=8, location=(0, 0), title="Intensity"
         )
 
-        tth = np.array(self.calibrant.get_tth())
+        tth = np.array(self.calibrant.get_2th())
         ttha = calculate_2theta(detector, params=[distance, 0, 0, 0, 0, 0])
         for i in range(detector.n_modules):
             p.contour(
