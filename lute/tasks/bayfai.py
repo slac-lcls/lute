@@ -96,7 +96,7 @@ class BayFAI(Task):
             )
             diagnostics_plot = optimizer.create_diagnostics_panel(
                 powder=optimizer.powder,
-                Imin=Imin,
+                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
                 low_resolution=low_res,
@@ -105,7 +105,7 @@ class BayFAI(Task):
             )
             _ = optimizer.create_summary_plot(
                 powder=optimizer.powder,
-                Imin=Imin,
+                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
                 low_resolution=low_res,

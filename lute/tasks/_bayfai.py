@@ -29,7 +29,6 @@ from lute.execution.logging import get_logger
 
 import os
 from psana import DataSource, Detector  # type: ignore
-import logging
 import numpy as np
 import numpy.typing as npt
 from typing import Optional, Union, Any
@@ -54,7 +53,7 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from mpi4py import MPI
 
-from LCLSGeom.psana.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana  # type: ignore
+from LCLSGeom.psana.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -239,6 +238,8 @@ class BayFAIOpt:
         self.exp = exp
         self.run = run
         self.ds = DataSource(f"exp={exp}:run={run}:idx")
+        self.runs = next(self.ds.runs())
+        self.evt = self.runs.event(self.runs.times()[0])
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
@@ -284,7 +285,7 @@ class BayFAIOpt:
             Minimum intensity value for identifying Bragg peaks
         """
         self.powder = self.generate_powder(powder, detname)
-        self.detector = self.build_detector(in_file, self.powder.shape)
+        self.detector = self.build_detector(in_file)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         self.calibrant = self.define_calibrant(calibrant)
         self.Imin = self.min_intensity(self.powder)
@@ -390,16 +391,14 @@ class BayFAIOpt:
         Imin = np.percentile(powder[nice_pix], q)
         return Imin
 
-    def build_detector(self, in_file: str, shape: tuple) -> pyFAI.detectors.Detector:
+    def build_detector(self, in_file: str) -> pyFAI.detectors.Detector:
         """
         Read the metrology data and build a pyFAI detector object.
 
         Parameters
         ----------
         in_file : str
-            Path to the input file
-        shape : tuple
-            Shape of the detector (n_modules, fs_dim, ss_dim)
+            Path to the Geometry .data file
 
         Returns
         -------
@@ -408,7 +407,6 @@ class BayFAIOpt:
         """
         psana_to_pyfai = PsanaToPyFAI(
             in_file=in_file,
-            shape=shape,
         )
         detector = psana_to_pyfai.detector
         return detector
@@ -433,13 +431,13 @@ class BayFAIOpt:
             out_file=out_file,
         )
         geom_file = os.path.join(path, f"r{self.run:0>4}.geom")
-        PsanaToCrystFEL(
-            in_file=out_file,
+        PyFAIToCrystFEL(
+            in_file=poni_file,
+            detector=self.detector,
             out_file=geom_file,
         )
         psana_to_pyfai = PsanaToPyFAI(
             in_file=out_file,
-            shape=self.detector.raw_shape,
         )
         detector = psana_to_pyfai.detector
         return detector
@@ -457,14 +455,12 @@ class BayFAIOpt:
         run : int
             Run number
         """
-        runs = next(self.ds.runs())
-        evt = runs.event(runs.times()[0])
         photon_energy = None
         wavelength = None
         calibrant = CALIBRANT_FACTORY(calibrant_name)
         try:
             det_photon_energy = Detector("EBeam")
-            photon_energy = det_photon_energy.get(evt).ebeamPhotonEnergy()
+            photon_energy = det_photon_energy.get(self.evt).ebeamPhotonEnergy()
             wavelength = 1.23984197386209e-06 / photon_energy
         except Exception:
             wavelength = self.ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9

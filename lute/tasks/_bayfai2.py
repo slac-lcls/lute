@@ -30,7 +30,6 @@ from psana.pscalib.calib.MDB_CLI import *  # type: ignore
 import psana.pscalib.calib.MDBUtils as mu  # type: ignore
 import psana.pscalib.calib.MDBWebUtils as wu  # type: ignore
 import psana.detector.UtilsCalib as uc  # type: ignore
-import logging
 import numpy as np
 import numpy.typing as npt
 from typing import Optional, Union, Any
@@ -55,7 +54,7 @@ from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from mpi4py import MPI
 
-from LCLSGeom.psana2.converter import PsanaToPyFAI, PsanaToCrystFEL, PyFAIToPsana  # type: ignore
+from LCLSGeom.psana2.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL  # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -242,6 +241,7 @@ class BayFAIOpt:
         self.exp = exp
         self.run = run
         self.ds = DataSource(exp=exp, run=run, skip_calib_load="all")
+        self.runs = next(self.ds.runs())
         group: MPI.Group = self.ds.comms._bd_only_group
         self.comm = MPI.COMM_WORLD.Create_group(group)
         if self.comm != MPI.COMM_NULL:
@@ -249,6 +249,10 @@ class BayFAIOpt:
             self.size = self.comm.Get_size()
             if self.rank == 0:
                 logger.info(f"Getting {self.size} processes for BayFAIOpt task")
+                evt = next(self.runs.events())
+            else:
+                evt = None
+            self.evt = self.comm.bcast(evt, root=0)
         else:
             self.rank = -1
             self.size = -1
@@ -407,10 +411,9 @@ class BayFAIOpt:
         pyFAI.Detector
             Configured pyFAI detector object
         """
+        detector = self.runs.Detector(detname)
         psana_to_pyfai = PsanaToPyFAI(
-            exp=self.exp,
-            run_num=self.run,
-            detname=detname,
+            input=detector,
         )
         detector = psana_to_pyfai.detector
         return detector
@@ -435,13 +438,13 @@ class BayFAIOpt:
             out_file=out_file,
         )
         geom_file = os.path.join(path, f"r{self.run:0>4}.geom")
-        PsanaToCrystFEL(
-            in_file=out_file,
+        PyFAIToCrystFEL(
+            in_file=poni_file,
+            detector=self.detector,
             out_file=geom_file,
         )
         psana_to_pyfai = PsanaToPyFAI(
-            in_file=out_file,
-            shape=self.detector.raw_shape,
+            input=out_file,
         )
         detector = psana_to_pyfai.detector
         return detector
@@ -455,16 +458,14 @@ class BayFAIOpt:
         calibrant_name : str
             Name of the calibrant
         """
-        runs = next(self.ds.runs())
-        evt = next(runs.events())
         calibrant = CALIBRANT_FACTORY(calibrant_name)
         try:
-            det_photon_energy = runs.Detector("ebeamh")
-            photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(evt)
+            det_photon_energy = self.runs.Detector("ebeamh")
+            photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
             wavelength = 1.23984197386209e-06 / photon_energy
         except Exception:
-            det_wavelength = runs.Detector("SIOC:SYS0:ML00:AO192")
-            wavelength = det_wavelength(evt) * 1e-9
+            det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
+            wavelength = det_wavelength(self.evt) * 1e-9
             photon_energy = 1.23984197386209e-06 / wavelength
         calibrant.wavelength = wavelength
         return calibrant
