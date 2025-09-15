@@ -121,6 +121,7 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     z = np.reshape(z, detector.raw_shape)
     return x, y, z
 
+
 def calculate_2theta(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
 ) -> np.ndarray:
