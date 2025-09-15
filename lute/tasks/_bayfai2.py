@@ -298,12 +298,16 @@ class BayFAIOpt:
         in_file : str, optional
             Path to the input geometry file
         """
-        self.powder = self.generate_powder(powder, detname)
-        self.detector = self.build_detector(detname)
-        self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.calibrant = self.define_calibrant(calibrant)
-        self.Imin = self.min_intensity(self.powder)
-        self.set_search_space(fixed)
+        if self.ds.comms.bd_comm.Get_rank() == 0:
+            pass
+
+        if self.comm != MPI.COMM_NULL:
+            self.powder = self.generate_powder(powder, detname)
+            self.detector = self.build_detector(detname)
+            self.stacked_powder = np.reshape(self.powder, self.detector.shape)
+            self.calibrant = self.define_calibrant(calibrant)
+            self.Imin = self.min_intensity(self.powder)
+            self.set_search_space(fixed)
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
         """
