@@ -245,7 +245,6 @@ class BayFAIOpt:
         self.exp = exp
         self.run = run
         self.ds = DataSource(exp=exp, run=run, skip_calib_load="all")
-        self.runs = next(self.ds.runs())
         group: MPI.Group = self.ds.comms._bd_only_group
         self.comm = MPI.COMM_WORLD.Create_group(group)
         if self.comm != MPI.COMM_NULL:
@@ -253,6 +252,7 @@ class BayFAIOpt:
             self.size = self.comm.Get_size()
             if self.rank == 0:
                 logger.info(f"Getting {self.size} processes for BayFAIOpt task")
+                self.runs = next(self.ds.runs())
                 self.evt = next(self.runs.events())
         else:
             self.rank = -1
@@ -476,8 +476,6 @@ class BayFAIOpt:
             except Exception:
                 det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
                 wavelength = det_wavelength(self.evt) * 1e-9
-        else:
-            wavelength = None
         wavelength = self.comm.bcast(wavelength, root=0)
         calibrant.wavelength = wavelength
         return calibrant
