@@ -468,21 +468,18 @@ class BayFAIOpt:
         """
         self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
-        if self.ds.comms.bd_comm.Get_rank() == 0:
-            return calibrant
-        if self.comm != MPI.COMM_NULL:
-            if self.rank == 0:
-                try:
-                    det_photon_energy = self.runs.Detector("ebeamh")
-                    photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
-                    wavelength = 1.23984197386209e-06 / photon_energy
-                except Exception:
-                    det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
-                    wavelength = det_wavelength(self.evt) * 1e-9
-            else:
-                wavelength = None
-            wavelength = self.comm.bcast(wavelength, root=0)
-            calibrant.wavelength = wavelength
+        if self.rank == 0:
+            try:
+                det_photon_energy = self.runs.Detector("ebeamh")
+                photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
+                wavelength = 1.23984197386209e-06 / photon_energy
+            except Exception:
+                det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
+                wavelength = det_wavelength(self.evt) * 1e-9
+        else:
+            wavelength = None
+        wavelength = self.comm.bcast(wavelength, root=0)
+        calibrant.wavelength = wavelength
         return calibrant
 
     def set_search_space(self, fixed: list) -> None:
@@ -877,42 +874,38 @@ class BayFAIOpt:
         seed : int
             Random seed for reproducibility
         """
-        if self.ds.comms.bd_comm.Get_rank() == 0:
-            return
+        dist = self.distribute_distances(center, res)
+        logger.info(
+            f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
+        )
 
-        if self.comm != MPI.COMM_NULL:
-            dist = self.distribute_distances(center, res)
-            logger.info(
-                f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
-            )
+        bayfai_hyperparams = {
+            "n_samples": n_samples,
+            "n_iterations": n_iterations,
+            "Imin": Imin,
+            "max_rings": max_rings,
+            "beta": beta,
+            "prior": prior,
+            "seed": seed,
+        }
 
-            bayfai_hyperparams = {
-                "n_samples": n_samples,
-                "n_iterations": n_iterations,
-                "Imin": Imin,
-                "max_rings": max_rings,
-                "beta": beta,
-                "prior": prior,
-                "seed": seed,
-            }
+        results = self.bayes_opt_distance(
+            dist,
+            center,
+            bounds,
+            res,
+            **bayfai_hyperparams,
+        )
 
-            results = self.bayes_opt_distance(
-                dist,
-                center,
-                bounds,
-                res,
-                **bayfai_hyperparams,
-            )
+        self.comm.Barrier()
 
-            self.comm.Barrier()
-
-            self.scan = {}
-            self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
-            self.scan["params"] = self.comm.gather(results["params"], root=0)
-            self.scan["residual"] = self.comm.gather(results["residual"], root=0)
-            self.scan["score"] = self.comm.gather(results["score"], root=0)
-            self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
-            self.finalize()
+        self.scan = {}
+        self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
+        self.scan["params"] = self.comm.gather(results["params"], root=0)
+        self.scan["residual"] = self.comm.gather(results["residual"], root=0)
+        self.scan["score"] = self.comm.gather(results["score"], root=0)
+        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.finalize()
 
     def finalize(self):
         if self.rank == 0:
