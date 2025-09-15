@@ -5,20 +5,23 @@ Classes:
     BayFAIOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization.
 
 Functions:
-    - build_detector: build a PyFAI detector from a .data file.
-    - generate_powder: generate a powder diffraction image from a .data file.
-    - min_intensity: find the minimum intensity in a powder diffraction image.
-    - define_calibrant: define the calibrant for a powder diffraction image.
-    - update_geometry: update the detector geometry based on the optimization results.
+    Miscellaneous functions for geometry-related calculations:
+    - rotation_matrix: Compute and return the detector tilts as a single rotation matrix
+    - correct_geom: Correct the geometry given a set of geometry parameters.
+    - calculate_2theta: Calculate the 2θ angles for the detector based on the geometry parameters.
+    - calculate_radius: Calculate the radius for each pixel based on the geometry parameters.
+    - azimuthal_integration: Compute the radial intensity profile of an image.
+    - r2q: Convert pixel radii to scattering vector magnitude q.
 """
 
 __all__ = [
     "BayFAIOpt",
-    "build_detector",
-    "generate_powder",
-    "min_intensity",
-    "define_calibrant",
-    "update_geometry",
+    "rotation_matrix",
+    "correct_geom",
+    "calculate_2theta",
+    "calculate_radius",
+    "azimuthal_integration",
+    "r2q",
 ]
 __author__ = "Louis Conreux"
 
@@ -32,7 +35,8 @@ import psana.pscalib.calib.MDBWebUtils as wu  # type: ignore
 import psana.detector.UtilsCalib as uc  # type: ignore
 import numpy as np
 import numpy.typing as npt
-from typing import Optional, Union, Any
+from typing import Optional
+import logging
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from matplotlib import lines  # type: ignore
@@ -270,7 +274,7 @@ class BayFAIOpt:
         top_next = np.argsort(ucb)[-q:]
         return top_next
 
-    def setup(self, detname, powder, calibrant, fixed, in_file=None):
+    def setup(self, detname: str, powder: str, calibrant: str, fixed: list, in_file: Optional[str] = None):
         """
         Setup the BayFAI optimization.
 

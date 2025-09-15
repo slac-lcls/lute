@@ -31,7 +31,8 @@ import os
 from psana import DataSource, Detector  # type: ignore
 import numpy as np
 import numpy.typing as npt
-from typing import Optional, Union, Any
+from typing import Optional
+import logging
 import matplotlib.pyplot as plt  # type: ignore
 import matplotlib.patches as patches  # type: ignore
 from matplotlib import lines  # type: ignore
