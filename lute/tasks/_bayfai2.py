@@ -875,9 +875,6 @@ class BayFAIOpt:
         seed : int
             Random seed for reproducibility
         """
-        if self.ds.comms.bd_comm.Get_rank() == 0:
-            return
-
         if self.comm != MPI.COMM_NULL:
             dist = self.distribute_distances(center, res)
             logger.info(
