@@ -69,8 +69,8 @@ class BayFAI(Task):
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
             params = optimizer.params
+            distance = optimizer.get_distance(params)
             residual = optimizer.residual
-            distance = params[0]
             cx = params[1]
             cy = params[2]
             logger.info(f"Detector Distance to Sample: {distance:.6f}")

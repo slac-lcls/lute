@@ -127,7 +127,6 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     z = np.reshape(z, detector.raw_shape)
     return x, y, z
 
-
 def calculate_2theta(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
 ) -> np.ndarray:
@@ -936,6 +935,26 @@ class BayFAIOpt:
                 detector=self.detector,
                 wavelength=self.calibrant.wavelength,
             )
+
+    def get_distance(self, params: Optional[list] = None) -> float:
+        """
+        Get the distance for each pixel based on the geometry parameters.
+
+        Parameters
+        ----------
+        detector : pyFAI.detectors.Detector
+            PyFAI detector object
+        params : list, optional
+            6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
+
+        Returns
+        -------
+        distance : float
+            sample-to-detector distance in meters
+        """
+        _, _, z = correct_geom(self.detector, params)
+        distance = np.mean(z)
+        return distance
 
     def plot_radial_integration(self, qs, radial, calibrant, ax=None):
         """
