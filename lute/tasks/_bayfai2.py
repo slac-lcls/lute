@@ -249,10 +249,7 @@ class BayFAIOpt:
             self.size = self.comm.Get_size()
             if self.rank == 0:
                 logger.info(f"Getting {self.size} processes for BayFAIOpt task")
-                evt = next(self.runs.events())
-            else:
-                evt = None
-            self.evt = self.comm.bcast(evt, root=0)
+                self.evt = next(self.runs.events())
         else:
             self.rank = -1
             self.size = -1
@@ -459,14 +456,17 @@ class BayFAIOpt:
             Name of the calibrant
         """
         calibrant = CALIBRANT_FACTORY(calibrant_name)
-        try:
-            det_photon_energy = self.runs.Detector("ebeamh")
-            photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
-            wavelength = 1.23984197386209e-06 / photon_energy
-        except Exception:
-            det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
-            wavelength = det_wavelength(self.evt) * 1e-9
-            photon_energy = 1.23984197386209e-06 / wavelength
+        if self.rank == 0:
+            try:
+                det_photon_energy = self.runs.Detector("ebeamh")
+                photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
+                wavelength = 1.23984197386209e-06 / photon_energy
+            except Exception:
+                det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
+                wavelength = det_wavelength(self.evt) * 1e-9
+        else:
+            wavelength = None
+        wavelength = self.comm.bcast(wavelength, root=0)
         calibrant.wavelength = wavelength
         return calibrant
 

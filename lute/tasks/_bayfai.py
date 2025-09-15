@@ -455,8 +455,6 @@ class BayFAIOpt:
         run : int
             Run number
         """
-        photon_energy = None
-        wavelength = None
         calibrant = CALIBRANT_FACTORY(calibrant_name)
         try:
             det_photon_energy = Detector("EBeam")
@@ -464,7 +462,6 @@ class BayFAIOpt:
             wavelength = 1.23984197386209e-06 / photon_energy
         except Exception:
             wavelength = self.ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192") * 1e-9
-            photon_energy = 1.23984197386209e-06 / wavelength
         calibrant.wavelength = wavelength
         return calibrant
 
