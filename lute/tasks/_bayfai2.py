@@ -1264,7 +1264,8 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}", fontsize=8
+            f"Run {self.run} - {self.detector.detname} - {self.calibrant_name}",
+            fontsize=8,
         )
         ax.set_aspect("equal")
 
@@ -1493,7 +1494,12 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
+            0.05,
+            0.7,
+            f"Detector {self.detector.detname}",
+            ha="left",
+            va="center",
+            fontsize=8,
         )
         ax1.text(
             0.05,
@@ -1657,7 +1663,12 @@ class BayFAIOpt:
         )
         ax1.text(0.05, 0.8, f"Run {self.run}", ha="left", va="center", fontsize=8)
         ax1.text(
-            0.05, 0.7, f"Detector {self.detector.detname}", ha="left", va="center", fontsize=8
+            0.05,
+            0.7,
+            f"Detector {self.detector.detname}",
+            ha="left",
+            va="center",
+            fontsize=8,
         )
         ax1.text(
             0.05,
