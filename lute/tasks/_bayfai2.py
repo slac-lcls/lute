@@ -255,17 +255,23 @@ class BayFAIOpt:
         self._bd_root_in_world: int = bd_group.Translate_ranks([0], world_group)[0]
         if bd_comm != MPI.COMM_NULL:
             if bd_comm.Get_rank() == 0:
-                self.evt = next(self.runs.events()) # First event is accessed on BD root
+                self.evt = next(
+                    self.runs.events()
+                )  # First event is accessed on BD root
             else:
                 self.evt = None
-            bd_comm.Barrier() # Make sure BD root has read the event
+            bd_comm.Barrier()  # Make sure BD root has read the event
             try:
-                _ = next(self.runs.events()) # To EB node to exit, access on all other BD nodes
+                _ = next(
+                    self.runs.events()
+                )  # To EB node to exit, access on all other BD nodes
             except StopIteration:
                 ...
         else:
             try:
-                self.evt = next(self.runs.events()) # Recover processes on SMD0 and EB nodes
+                self.evt = next(
+                    self.runs.events()
+                )  # Recover processes on SMD0 and EB nodes
             except StopIteration:
                 self.evt = None
         if self.rank == 0:
@@ -418,7 +424,9 @@ class BayFAIOpt:
         Imin = np.percentile(powder[nice_pix], q)
         return Imin
 
-    def build_detector(self, detname: str, in_file: Optional[str] = None) -> pyFAI.detectors.Detector:
+    def build_detector(
+        self, detname: str, in_file: Optional[str] = None
+    ) -> pyFAI.detectors.Detector:
         """
         Read the metrology data and build a pyFAI detector object.
 
