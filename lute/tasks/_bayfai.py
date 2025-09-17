@@ -288,8 +288,8 @@ class BayFAIOpt:
         self.powder = self.generate_powder(powder, detname)
         self.detector = self.build_detector(in_file)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.calibrant = self.define_calibrant(calibrant)
         self.Imin = self.min_intensity(self.powder)
+        self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:

@@ -244,19 +244,32 @@ class BayFAIOpt:
     ):
         self.exp = exp
         self.run = run
-        self.ds = DataSource(exp=exp, run=run, skip_calib_load="all")
+        self.ds = DataSource(exp=exp, run=run, skip_calib_load="all", max_events=1)
         self.runs = next(self.ds.runs())
-        group: MPI.Group = self.ds.comms._bd_only_group
-        self.comm = MPI.COMM_WORLD.Create_group(group)
-        if self.comm != MPI.COMM_NULL:
-            self.rank = self.comm.Get_rank()
-            self.size = self.comm.Get_size()
-            if self.rank == 0:
-                logger.info(f"Getting {self.size} processes for BayFAIOpt task")
-                self.evt = next(self.runs.events())
+        self.comm = MPI.COMM_WORLD
+        self.rank = self.comm.Get_rank()
+        self.size = self.comm.Get_size()
+        world_group: MPI.Group = self.comm.Get_group()
+        bd_group: MPI.Group = self.ds.comms._bd_only_group
+        bd_comm = self.comm.Create_group(bd_group)
+        self._bd_root_in_world: int = bd_group.Translate_ranks([0], world_group)[0]
+        if bd_comm != MPI.COMM_NULL:
+            if bd_comm.Get_rank() == 0:
+                self.evt = next(self.runs.events()) # First event is accessed on BD root
+            else:
+                self.evt = None
+            bd_comm.Barrier() # Make sure BD root has read the event
+            try:
+                _ = next(self.runs.events()) # To EB node to exit, access on all other BD nodes
+            except StopIteration:
+                ...
         else:
-            self.rank = -1
-            self.size = -1
+            try:
+                self.evt = next(self.runs.events()) # Recover processes on SMD0 and EB nodes
+            except StopIteration:
+                self.evt = None
+        if self.rank == 0:
+            logger.info(f"Getting {self.size} processes for BayFAIOpt task")
 
     @staticmethod
     def UCB(X, gp_model, visited_idx, beta=1.96):
@@ -299,10 +312,10 @@ class BayFAIOpt:
             Path to the input geometry file
         """
         self.powder = self.generate_powder(powder, detname)
-        self.detector = self.build_detector(detname)
+        self.detector = self.build_detector(detname, in_file)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.calibrant = self.define_calibrant(calibrant)
         self.Imin = self.min_intensity(self.powder)
+        self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
@@ -405,7 +418,7 @@ class BayFAIOpt:
         Imin = np.percentile(powder[nice_pix], q)
         return Imin
 
-    def build_detector(self, detname: str) -> pyFAI.detectors.Detector:
+    def build_detector(self, detname: str, in_file: Optional[str] = None) -> pyFAI.detectors.Detector:
         """
         Read the metrology data and build a pyFAI detector object.
 
@@ -419,6 +432,12 @@ class BayFAIOpt:
         pyFAI.Detector
             Configured pyFAI detector object
         """
+        if in_file:
+            psana_to_pyfai = PsanaToPyFAI(
+                input=in_file,
+            )
+            detector = psana_to_pyfai.detector
+            return detector
         detector = self.runs.Detector(detname)
         psana_to_pyfai = PsanaToPyFAI(
             input=detector,
@@ -468,7 +487,7 @@ class BayFAIOpt:
         """
         self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
-        if self.rank == 0:
+        if self.rank == self._bd_root_in_world:
             try:
                 det_photon_energy = self.runs.Detector("ebeamh")
                 photon_energy = det_photon_energy.raw.ebeamPhotonEnergy(self.evt)
@@ -476,7 +495,9 @@ class BayFAIOpt:
             except Exception:
                 det_wavelength = self.runs.Detector("SIOC:SYS0:ML00:AO192")
                 wavelength = det_wavelength(self.evt) * 1e-9
-        wavelength = self.comm.bcast(wavelength, root=0)
+        else:
+            wavelength = None
+        wavelength = self.comm.bcast(wavelength, root=self._bd_root_in_world)
         calibrant.wavelength = wavelength
         return calibrant
 
@@ -872,38 +893,39 @@ class BayFAIOpt:
         seed : int
             Random seed for reproducibility
         """
-        dist = self.distribute_distances(center, res)
-        logger.info(
-            f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
-        )
+        if self.comm != MPI.COMM_NULL:
+            dist = self.distribute_distances(center, res)
+            logger.info(
+                f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
+            )
 
-        bayfai_hyperparams = {
-            "n_samples": n_samples,
-            "n_iterations": n_iterations,
-            "Imin": Imin,
-            "max_rings": max_rings,
-            "beta": beta,
-            "prior": prior,
-            "seed": seed,
-        }
+            bayfai_hyperparams = {
+                "n_samples": n_samples,
+                "n_iterations": n_iterations,
+                "Imin": Imin,
+                "max_rings": max_rings,
+                "beta": beta,
+                "prior": prior,
+                "seed": seed,
+            }
 
-        results = self.bayes_opt_distance(
-            dist,
-            center,
-            bounds,
-            res,
-            **bayfai_hyperparams,
-        )
+            results = self.bayes_opt_distance(
+                dist,
+                center,
+                bounds,
+                res,
+                **bayfai_hyperparams,
+            )
 
-        self.comm.Barrier()
+            self.comm.Barrier()
 
-        self.scan = {}
-        self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
-        self.scan["params"] = self.comm.gather(results["params"], root=0)
-        self.scan["residual"] = self.comm.gather(results["residual"], root=0)
-        self.scan["score"] = self.comm.gather(results["score"], root=0)
-        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
-        self.finalize()
+            self.scan = {}
+            self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
+            self.scan["params"] = self.comm.gather(results["params"], root=0)
+            self.scan["residual"] = self.comm.gather(results["residual"], root=0)
+            self.scan["score"] = self.comm.gather(results["score"], root=0)
+            self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+            self.finalize()
 
     def finalize(self):
         if self.rank == 0:
