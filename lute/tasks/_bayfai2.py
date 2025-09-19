@@ -540,7 +540,7 @@ class BayFAIOpt:
         low = center["dist"] - res["dist"] * self.size / 2
         high = center["dist"] + res["dist"] * self.size / 2
         distances = np.linspace(low, high - res["dist"], self.size)
-        distances = np.round(distances*10000, decimals=0) / 10000
+        distances = np.round(distances * 10000, decimals=0) / 10000
         self.distances = distances
         dist = distances[self.rank]
         return dist

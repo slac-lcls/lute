@@ -122,6 +122,7 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     z = np.reshape(z, detector.raw_shape)
     return x, y, z
 
+
 def calculate_q(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
 ) -> np.ndarray:
@@ -139,6 +140,7 @@ def calculate_q(
     wavelength = detector.wavelength
     q = 4.0 * np.pi * np.sin(tth / 2.0) / (wavelength * 1e10)
     return q
+
 
 def calculate_2theta(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
@@ -289,7 +291,7 @@ class BayFAIOpt:
         calibrant: str,
         fixed: list,
         in_file: Optional[str] = None,
-        ):
+    ):
         """
         Setup the BayFAI optimization.
 
@@ -523,7 +525,7 @@ class BayFAIOpt:
         low = center["dist"] - res["dist"] * self.size / 2
         high = center["dist"] + res["dist"] * self.size / 2
         distances = np.linspace(low, high - res["dist"], self.size)
-        distances = np.round(distances*10000, decimals=0) / 10000
+        distances = np.round(distances * 10000, decimals=0) / 10000
         self.distances = distances
         dist = distances[self.rank]
         return dist
