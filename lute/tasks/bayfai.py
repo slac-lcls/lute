@@ -46,6 +46,7 @@ class BayFAI(Task):
         optimizer.setup(
             detname=self._task_parameters.detname,
             powder=self._task_parameters.powder,
+            smooth=self._task_parameters.preprocess,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
             in_file=self._task_parameters.in_file,

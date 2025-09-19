@@ -43,7 +43,7 @@ class BayFAIParameters(TaskParameters):
         )
 
         max_rings: int = Field(
-            10,
+            6,
             description="Maximum number of rings to search for Bragg peaks.",
         )
 
@@ -79,21 +79,21 @@ class BayFAIParameters(TaskParameters):
             "dist": (-0.05, 0.05),
             "poni1": (-0.005, 0.005),
             "poni2": (-0.005, 0.005),
-            "rot1": (-1.0, 1.0),
-            "rot2": (-1.0, 1.0),
-            "rot3": (-1.0, 1.0),
+            "rot1": (-0.1, 0.1),
+            "rot2": (-0.1, 0.1),
+            "rot3": (-0.1, 0.1),
         },
         description="Bounds of the search space for the detector geometry parameters.",
     )
 
     resolutions: Dict[str, float] = Field(
         {
-            "dist": 0.001,
-            "poni1": 0.0002,
-            "poni2": 0.0002,
-            "rot1": 0.1,
-            "rot2": 0.1,
-            "rot3": 0.1,
+            "dist": 0.0005,
+            "poni1": 0.0001,
+            "poni2": 0.0001,
+            "rot1": 0.02,
+            "rot2": 0.02,
+            "rot3": 0.02,
         },
         description="Resolution of the search space for the detector geometry parameters.",
     )

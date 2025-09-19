@@ -25,6 +25,7 @@ __all__ = [
 ]
 __author__ = "Louis Conreux"
 
+from matplotlib.animation import FuncAnimation
 from lute.execution.logging import get_logger
 
 import os
@@ -121,6 +122,23 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     z = np.reshape(z, detector.raw_shape)
     return x, y, z
 
+def calculate_q(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
+    """
+    Calculate the q-vectors for each pixel based on the geometry parameters.
+
+    Parameters
+    ----------
+    detector : pyFAI.detectors.Detector
+        PyFAI detector object containing pixel coordinates to be corrected.
+    params : list, optional
+        6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
+    """
+    tth = calculate_2theta(detector, params)
+    wavelength = detector.wavelength
+    q = 4.0 * np.pi * np.sin(tth / 2.0) / (wavelength * 1e10)
+    return q
 
 def calculate_2theta(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
@@ -263,7 +281,15 @@ class BayFAIOpt:
         top_next = np.argsort(ucb)[-q:]
         return top_next
 
-    def setup(self, detname, powder, calibrant, fixed, in_file):
+    def setup(
+        self,
+        detname: str,
+        powder: str,
+        smooth: bool,
+        calibrant: str,
+        fixed: list,
+        in_file: Optional[str] = None,
+        ):
         """
         Setup the BayFAI optimization.
 
@@ -273,6 +299,8 @@ class BayFAIOpt:
             Name of the detector
         powder : str
             Path to the powder image to use for calibration
+        smooth : bool
+            If True, apply smoothing to the powder image
         calibrant : PyFAI.Calibrant
             PyFAI calibrant object
         fixed : list
@@ -285,7 +313,7 @@ class BayFAIOpt:
         Imin : float
             Minimum intensity value for identifying Bragg peaks
         """
-        self.powder = self.generate_powder(powder, detname)
+        self.powder = self.generate_powder(powder, detname, smooth)
         self.detector = self.build_detector(in_file)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         self.Imin = self.min_intensity(self.powder)
@@ -332,16 +360,9 @@ class BayFAIOpt:
         powder[powder < 0] = 0
         if smooth:
             for p in range(powder.shape[0]):
-                calib = gaussian_filter(powder[p], sigma=1)
-                gradx = np.zeros_like(calib)
-                grady = np.zeros_like(calib)
-                gradx[:-1, :-1] = (
-                    calib[1:, :-1] - calib[:-1, :-1] + calib[1:, 1:] - calib[:-1, 1:]
-                ) / 2
-                grady[:-1, :-1] = (
-                    calib[:-1, 1:] - calib[:-1, :-1] + calib[1:, 1:] - calib[1:, :-1]
-                ) / 2
-                powder[p] = np.sqrt(gradx**2 + grady**2)
+                bkg = gaussian_filter(powder[p], sigma=2)
+                powder[p] = powder[p] - bkg
+                powder[p][powder[p] < 0] = 0
         return powder
 
     def generate_powder(
@@ -502,6 +523,7 @@ class BayFAIOpt:
         low = center["dist"] - res["dist"] * self.size / 2
         high = center["dist"] + res["dist"] * self.size / 2
         distances = np.linspace(low, high - res["dist"], self.size)
+        distances = np.round(distances*10000, decimals=0) / 10000
         self.distances = distances
         dist = distances[self.rank]
         return dist
@@ -987,8 +1009,8 @@ class BayFAIOpt:
 
         Parameters
         ----------
-        bo_history : dict
-            Dictionary containing the BO history with keys 'params' and 'scores' for each rank-distance
+        bo_history : list
+            List of all the BO histories with keys 'params' and 'scores' for each rank-distance
         ax : plt.Axes
             Matplotlib axes
         """
@@ -999,7 +1021,7 @@ class BayFAIOpt:
             ax.plot(iters, score, marker="o", markersize=1, linestyle="None", alpha=0.6)
         ax.plot(
             iters,
-            self.bo_history["scores"],
+            bo_history[self.index]["scores"],
             marker="o",
             markersize=3,
             linestyle="--",
