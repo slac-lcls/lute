@@ -291,7 +291,7 @@ class BayFAIOpt:
         calibrant: str,
         fixed: list,
         in_file: str,
-        ):
+    ):
         """
         Setup the BayFAI optimization.
 
