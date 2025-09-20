@@ -367,9 +367,22 @@ class BayFAIOpt:
         powder[powder < 0] = 0
         if smooth:
             for p in range(powder.shape[0]):
-                bkg = gaussian_filter(powder[p], sigma=2)
-                powder[p] = powder[p] - bkg
-                powder[p][powder[p] < 0] = 0
+                calib = powder[p]
+                gradx = np.zeros_like(calib)
+                grady = np.zeros_like(calib)
+
+                # Interior points: central difference (2nd order)
+                gradx[1:-1, :] = (calib[2:, :] - calib[:-2, :]) / 2.0
+                grady[:, 1:-1] = (calib[:, 2:] - calib[:, :-2]) / 2.0
+
+                # Edges: forward/backward difference
+                gradx[0, :] = calib[1, :] - calib[0, :]
+                gradx[-1, :] = calib[-1, :] - calib[-2, :]
+                grady[:, 0] = calib[:, 1] - calib[:, 0]
+                grady[:, -1] = calib[:, -1] - calib[:, -2]
+
+                # Gradient magnitude
+                powder[p] = np.sqrt(gradx**2 + grady**2)
         return powder
 
     def generate_powder(
@@ -1169,7 +1182,7 @@ class BayFAIOpt:
             linewidth=2,
             label=f"Threshold ({Imin:.2f})",
         )
-        ax.set_xlim([0, 100000])
+        ax.set_xlim([0, 1000000])
         ax.set_ylim([0, mean + 3 * std_dev])
         ax.set_ylabel("Pixel Intensity", fontsize=6)
         ax.set_xlabel("Frequency", fontsize=6)

@@ -72,7 +72,8 @@ def validate_smd_path(smd_path_name: str):
 
 
 def validate_calib_path(calib_path_name: str):
-    """Finds the path to a valid calibration file or raises an error."""
+    """Finds the path to a valid calibration file (psana1).
+    If no calib folder found, returns empty string (psana2)."""
 
     def _validate_calib_path(
         cls, calib_path: str, values: Dict[str, Any]
@@ -98,22 +99,16 @@ def validate_calib_path(calib_path_name: str):
 
 
 def validate_output_path(output_path_name: str):
-    """Finds the path to a valid output file or raises an error."""
+    """Dynamically generates the output path for the geometry optimization results."""
 
     def _validate_output_path(cls, output_path: str, values: Dict[str, Any]) -> str:
         if output_path == "":
-            exp: str = values["lute_config"].experiment
-            run: int = int(values["lute_config"].run)
-            try:
-                det_type: str = values["det_type"]
-            except KeyError:
-                det_type = values["detname"]
-            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib/"
-            src = source_from_det_info(det_type.lower(), exp[:3])
-            group = group_from_det_type(det_type.lower())
-            calib_type = "geometry"
-            calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
-            output_run_path = os.path.join(calib_dir, f"{run}-end.data")
+            work_dir = values["lute_config"].work_dir
+            run = int(values["lute_config"].run)
+            geom_dir = os.path.join(work_dir, "geom")
+            if not os.path.exists(geom_dir):
+                os.makedirs(geom_dir)
+            output_run_path = os.path.join(geom_dir, f"{run}-end.data")
             return output_run_path
         return output_path
 
