@@ -77,8 +77,8 @@ class BayFAIParameters(TaskParameters):
     bounds: Dict[str, Tuple[float, float]] = Field(
         {
             "dist": (-0.05, 0.05),
-            "poni1": (-0.005, 0.005),
-            "poni2": (-0.005, 0.005),
+            "poni1": (-0.01, 0.01),
+            "poni2": (-0.01, 0.01),
             "rot1": (-0.1, 0.1),
             "rot2": (-0.1, 0.1),
             "rot3": (-0.1, 0.1),
@@ -91,7 +91,7 @@ class BayFAIParameters(TaskParameters):
             "dist": 0.0005,
             "poni1": 0.0001,
             "poni2": 0.0001,
-            "rot1": 0.02,
+            "rot1": 0.02
             "rot2": 0.02,
             "rot3": 0.02,
         },

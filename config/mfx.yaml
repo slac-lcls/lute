@@ -132,18 +132,13 @@ SubmitSMD:
   # calib_dropped_square for every detector. You can add processing algorithms for
   # single detectors (e.g. epix10k2M or Rayonix) as below, or add algorithms which
   # will apply to every detector defined in detnames by placing them under "all"
-  #detSumAlgos:
-  #  all:
-  #    - "calib"
-  #    - "calib_dropped"
-  #    - "calib_dropped_square"
-  #    - "calib_thresADU1"
-  #  epix10k2M:
-  #    - "calib_thresADU5"
-  #    - "calib_max"
-  #  Rayonix:
-  #    - "calib_skipFirst_thresADU1"
-  #    - "calib_skipFirst_max"
+  detSumAlgos:
+    all:
+      - "calib"
+      - "calib_dropped"
+      - "calib_dropped_square"
+      - "calib_thresADU1"
+      - "calib_max"
   #getROIs:
   #  jungfrau1M:   # Change to detector name
   #    ROIs: [[[1, 2], [157, 487], [294, 598]]]
@@ -261,4 +256,22 @@ AnalyzeSmallDataXES:
   #invert_xes_axes: false   # Switch projection axis for spectrum. Default projects along 1
   #rot_angle: null          # If not null, rotate images by N degrees before projection
   #batch_size: 0            # If not 0, load images in batches of N. Helps OOM.
+
+###########
+# BayFAI
+###########
+BayFAI:
+  fixed:
+  - "rot1"
+  - "rot2"
+  - "rot3"
+  center:
+    dist: 0.1               # Fill this section with rough estimates
+    poni1: 0.0
+    poni2: 0.0
+    rot1: 0.0
+    rot2: 0.0
+    rot3: 0.0
+  calibrant: "AgBh"           # Fill this line with calibrant name (AgBh, LaB6...)
+  detname: "jungfrau"         # Fill this line with detector name (epix10k2M, jungfrau...)
 ...

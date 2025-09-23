@@ -240,6 +240,8 @@ if __name__ == "__main__":
             ncores = 2
         elif args.workflow in ("smd_summaries", "smd_xes"):
             ncores = 5
+        elif args.workflow == "bayfai":
+            ncores = 101
         else:
             ncores = 120
         logger.warning(
@@ -263,6 +265,14 @@ if __name__ == "__main__":
             "trigger": "RUN_PARAM_IS_VALUE",
             "run_param_name": "SmallData",
             "run_param_value": "done",
+            "location": "S3DF",
+            "parameters": param_string,
+        }
+    elif args.workflow == "bayfai":
+        main_workflow = {
+            "name": "lute_bayfai",
+            "executable": arp_executable,
+            "trigger": "MANUAL",
             "location": "S3DF",
             "parameters": param_string,
         }
