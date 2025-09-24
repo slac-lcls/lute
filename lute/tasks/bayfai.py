@@ -30,6 +30,9 @@ import os
 import logging
 import panel as pn  # type: ignore
 import time  # type: ignore
+from typing import Union
+
+Opt = Union[BayFAIOpt, BayFAIOpt2]
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -44,12 +47,12 @@ class BayFAI(Task):
         start_time = time.time()
         assert isinstance(self._task_parameters, BayFAIParameters)
         if IS_PSANA2:
-            optimizer = BayFAIOpt2(
+            optimizer: Opt = BayFAIOpt2(
                 exp=self._task_parameters.lute_config.experiment,
                 run=int(self._task_parameters.lute_config.run),
             )
         else:
-            optimizer = BayFAIOpt(
+            optimizer: Opt = BayFAIOpt(
                 exp=self._task_parameters.lute_config.experiment,
                 run=int(self._task_parameters.lute_config.run),
             )
