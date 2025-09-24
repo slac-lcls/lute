@@ -25,7 +25,6 @@ __all__ = [
 ]
 __author__ = "Louis Conreux"
 
-from matplotlib.animation import FuncAnimation
 from lute.execution.logging import get_logger
 
 import os

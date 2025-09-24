@@ -9,10 +9,10 @@ Classes:
 __all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
-import psana
+import psana  # type: ignore
 
 if hasattr(psana, "xtc_version"):
-    from lute.tasks._bayfai2 import BayFAIOpt
+    from lute.tasks._bayfai2 import BayFAIOpt2
 
     IS_PSANA2 = True
 else:
@@ -43,10 +43,16 @@ class BayFAI(Task):
     def _run(self) -> None:
         start_time = time.time()
         assert isinstance(self._task_parameters, BayFAIParameters)
-        optimizer = BayFAIOpt(
-            exp=self._task_parameters.lute_config.experiment,
-            run=int(self._task_parameters.lute_config.run),
-        )
+        if IS_PSANA2:
+            optimizer = BayFAIOpt2(
+                exp=self._task_parameters.lute_config.experiment,
+                run=int(self._task_parameters.lute_config.run),
+            )
+        else:
+            optimizer = BayFAIOpt(
+                exp=self._task_parameters.lute_config.experiment,
+                run=int(self._task_parameters.lute_config.run),
+            )
         optimizer.setup(
             detname=self._task_parameters.detname,
             powder=self._task_parameters.powder,

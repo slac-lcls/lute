@@ -15,7 +15,7 @@ Functions:
 """
 
 __all__ = [
-    "BayFAIOpt",
+    "BayFAIOpt2",
     "rotation_matrix",
     "correct_geom",
     "calculate_2theta",
@@ -29,7 +29,6 @@ from lute.execution.logging import get_logger
 
 import os
 from psana import DataSource  # type: ignore
-from psana.pscalib.calib.MDB_CLI import *  # type: ignore
 import psana.pscalib.calib.MDBUtils as mu  # type: ignore
 import psana.pscalib.calib.MDBWebUtils as wu  # type: ignore
 import psana.detector.UtilsCalib as uc  # type: ignore
@@ -225,7 +224,7 @@ def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
     return qs
 
 
-class BayFAIOpt:
+class BayFAIOpt2:
     """
     Class to run BayFAI optimization on a powder image.
 
@@ -518,7 +517,7 @@ class BayFAIOpt:
             "dettype": det_type,
             "dbsuffix": "testgeom",  # Exclude if not needed
         }
-        resp = wu.deploy_constants(
+        _ = wu.deploy_constants(
             data,
             self.exp,
             longname,
