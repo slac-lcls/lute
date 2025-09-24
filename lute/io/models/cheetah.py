@@ -54,9 +54,6 @@ class RunCheetahParameters(ThirdPartyParameters):
     class CheetahSubconfigParameters(BaseModel):
         """Parameters for OM Cheetah itself."""
 
-        class Config(BaseModel.Config):
-            extra: str = "allow"
-
         class OmParameters(BaseModel):
             """Parameters for OM layers"""
 

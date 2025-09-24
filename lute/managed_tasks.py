@@ -160,6 +160,7 @@ Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 
 CheetahRunner: Executor = Executor("RunCheetah")
 """Run Cheetah task."""
+CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/om/om-071725/bin/activate-om")
 
 # BayFAI
 #######

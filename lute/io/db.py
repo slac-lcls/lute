@@ -85,6 +85,13 @@ def api_unavailable(func_name: str, api_version: int) -> Callable:
 
 
 record_analysis_db: Callable = lazy_import("record_analysis_db", LUTE_DB_SPEC_VERSION)
+update_analysis_db: Callable = lazy_import("update_analysis_db", LUTE_DB_SPEC_VERSION)
+record_parameters_db: Callable = lazy_import(
+    "record_parameters_db", LUTE_DB_SPEC_VERSION
+)
+get_task_parameters_defn_and_params: Callable = lazy_import(
+    "get_task_parameters_defn_and_params", LUTE_DB_CURRENT_SPEC_VERSION
+)
 read_latest_db_entry: Callable = lazy_import(
     "read_latest_db_entry", LUTE_DB_SPEC_VERSION
 )
