@@ -13,8 +13,10 @@ import psana
 
 if hasattr(psana, "xtc_version"):
     from lute.tasks._bayfai2 import BayFAIOpt
+    IS_PSANA2 = True
 else:
     from lute.tasks._bayfai import BayFAIOpt
+    IS_PSANA2 = False
 
 from lute.io.models.bayfai import BayFAIParameters
 
@@ -88,6 +90,8 @@ class BayFAI(Task):
                 f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
+            if IS_PSANA2:
+                optimizer.upload_geometry(self._task_parameters.out_file, self._task_parameters.detname)
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
@@ -160,7 +164,7 @@ class BayFAI(Task):
             )
             self._result.summary.append(
                 ElogSummaryPlots(
-                    f"Geometry_Fit/r{self._task_parameters.lute_config.run:0>4}", plots
+                    f"Geometry_Fit/r{self._task_parameters.lute_config.run:0>4}/{self._task_parameters.detname}", plots
                 )
             )
             self._result.task_status = TaskStatus.COMPLETED

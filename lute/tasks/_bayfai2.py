@@ -480,6 +480,53 @@ class BayFAIOpt:
         detector = psana_to_pyfai.detector
         return detector
 
+    def upload_geometry(self, out_file: str, detname: str) -> None:
+        """
+        Upload the geometry to the calibration database.
+
+        Parameters
+        ----------
+        out_file : str
+            Path to the output .data file
+        detname : str
+            Name of the detector
+        """
+        ctype = "geometry"
+        dtype = "str"
+        data = mu.data_from_file(out_file, ctype, dtype, verb="DEBUG")
+        detector = self.runs.Detector(detname)
+        longname: str = detector.raw._uniqueid
+        shortname: str = uc.detector_name_short(longname)
+        det_type: str = detector._dettype
+        run_orig: int = self.run
+        run_beg: int = 0 
+        run_end: str = "end"
+        run: int = run_beg
+        kwa = {
+            "iofname": out_file,
+            "experiment": self.exp,
+            "ctype": ctype,
+            "dtype": dtype,
+            "detector": shortname,
+            "shortname": shortname,
+            "detname": detname,
+            "longname": longname,
+            "run": run,
+            "run_beg": run_beg,
+            "run_end": run_end,
+            "run_orig": run_orig,
+            "dettype": det_type,
+            "dbsuffix": "testgeom",  # Exclude if not needed
+        }
+        resp = wu.deploy_constants(
+            data,
+            self.exp,
+            longname,
+            url=cc.URL_KRB,
+            krbheaders=cc.KRBHEADERS,
+            **kwa,
+        )
+
     def define_calibrant(self, calibrant_name: str) -> pyFAI.calibrant.Calibrant:
         """
         Define calibrant for optimization with appropriate wavelength
