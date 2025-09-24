@@ -30,9 +30,6 @@ import os
 import logging
 import panel as pn  # type: ignore
 import time  # type: ignore
-from typing import Union
-
-Opt = Union[BayFAIOpt, BayFAIOpt2]
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -47,12 +44,12 @@ class BayFAI(Task):
         start_time = time.time()
         assert isinstance(self._task_parameters, BayFAIParameters)
         if IS_PSANA2:
-            optimizer: Opt = BayFAIOpt2(
+            optimizer = BayFAIOpt2(
                 exp=self._task_parameters.lute_config.experiment,
                 run=int(self._task_parameters.lute_config.run),
             )
         else:
-            optimizer: Opt = BayFAIOpt(
+            optimizer = BayFAIOpt(
                 exp=self._task_parameters.lute_config.experiment,
                 run=int(self._task_parameters.lute_config.run),
             )
@@ -101,10 +98,9 @@ class BayFAI(Task):
                 f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
             )
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
-            if IS_PSANA2:
-                optimizer.upload_geometry(
-                    self._task_parameters.out_file, self._task_parameters.detname
-                )
+            optimizer.upload_geometry(
+                self._task_parameters.out_file, self._task_parameters.detname
+            )
             powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,

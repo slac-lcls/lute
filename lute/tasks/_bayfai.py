@@ -464,6 +464,19 @@ class BayFAIOpt:
         )
         detector = psana_to_pyfai.detector
         return detector
+    
+    def upload_geometry(self, out_file: str, detname: str) -> None:
+        """
+        Upload the optimized geometry to the experiment database.
+
+        Parameters
+        ----------
+        out_file : str
+            Path to the output file
+        detname : str
+            Name of the detector
+        """
+        pass
 
     def define_calibrant(self, calibrant_name: str) -> pyFAI.calibrant.Calibrant:
         """
