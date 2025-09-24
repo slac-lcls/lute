@@ -91,7 +91,7 @@ class BayFAIParameters(TaskParameters):
             "dist": 0.0005,
             "poni1": 0.0001,
             "poni2": 0.0001,
-            "rot1": 0.02
+            "rot1": 0.02,
             "rot2": 0.02,
             "rot3": 0.02,
         },
