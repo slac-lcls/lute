@@ -50,9 +50,9 @@ smd_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer", d
 
 smd_producer2: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer2", dag=dag)
 
-bayfai_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer", dag=dag)
+bayfai_optimizer: JIDSlurmOperator = JIDSlurmOperator(max_cores=101, task_id="BayFAIOptimizer", dag=dag)
 
-bayfai_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=120, task_id="BayFAIOptimizer2", dag=dag)
+bayfai_optimizer2: JIDSlurmOperator = JIDSlurmOperator(max_cores=101, task_id="BayFAIOptimizer2", dag=dag)
 
 # Branch Workflow depending on available psana version
 psana1v2_brancher >> [smd_producer, smd_producer2]
