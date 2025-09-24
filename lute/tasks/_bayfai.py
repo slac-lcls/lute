@@ -464,7 +464,7 @@ class BayFAIOpt:
         )
         detector = psana_to_pyfai.detector
         return detector
-    
+
     def upload_geometry(self, out_file: str, detname: str) -> None:
         """
         Upload the optimized geometry to the experiment database.
