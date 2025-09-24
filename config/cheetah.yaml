@@ -1,0 +1,40 @@
+%YAML 1.3
+---
+title: "Config to run Cheetah task"
+experiment: "xpptut15"
+run: "291"
+date: "2025/09/05"
+lute_version: 0.1      # Do not be change unless need to force older version
+task_timeout: 5
+work_dir: ""
+...
+---
+RunCheetah:                       # All variables are given as strings
+  exp: "{{ experiment }}"         # Experiment name
+  run: "{{ run }}"                # Run number
+  dir: "/some/path"               # Path to raw_directory
+  executable: "/sdf/group/lcls/ds/tools/openmpi-5.0.6/bin/mpirun"              # Path to exectuable
+  n_processes: 1                  # Number of processes to launch
+  om_executable: "/sdf/group/lcls/ds/tools/om/om/om-071725/bin/om_monitor.py"  # om executable
+  om_config: "/sdf/scratch/users/k/kmecseki/cheetah/cheetah_testconfig.yaml"   # OM Config file
+  cheetah_subconfig:
+    om:
+      processing_layer: "CheetahProcessing"
+    data_retrieval_layer:
+      psana_calibration_directory: "/sdf/data/lcls/ds/xpp/xpptut15/calib/"
+    cheetah:
+      processed_directory: "/sdf/data/lcls/ds/xpp/xpptut15/results"
+      processed_filename_prefix: "{{experiment}}-{{run}}"
+      class_sums_filename_prefix: "{{run}}"
+    crystallography:
+      geometry_file: "/sdf/scratch/users/k/kmecseki/cheetah/test.geom"
+      responding_url: null
+    peakfinder8_peak_detection:
+      adc_threshold: 100.0
+      minimum_snr: 5.0
+      min_pixel_count: 1
+      max_pixel_count: 30
+      local_bg_radius: 4
+      bad_pixel_map_filename: null
+      min_res: 80
+      max_res: 800
