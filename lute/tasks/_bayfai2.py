@@ -499,7 +499,7 @@ class BayFAIOpt:
         shortname: str = uc.detector_name_short(longname)
         det_type: str = detector._dettype
         run_orig: int = self.run
-        run_beg: int = 0 
+        run_beg: int = 0
         run_end: str = "end"
         run: int = run_beg
         kwa = {
