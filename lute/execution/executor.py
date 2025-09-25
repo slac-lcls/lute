@@ -631,6 +631,7 @@ class BaseExecutor(ABC):
             logger.debug("Absolute path to subprocess_task.py not found.")
             lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
             os.environ.update({"LUTE_PATH": lute_path})
+            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
         executable_path: str = f"{lute_path}/subprocess_task.py"
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
