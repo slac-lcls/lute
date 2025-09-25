@@ -308,7 +308,6 @@ if __name__ == "__main__":
         "Authorization": jid_authorization,
     }
     base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
-    run_doc_url: str
     run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
     run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
     resp = requests.get(run_doc_url, headers=elog_auth)
