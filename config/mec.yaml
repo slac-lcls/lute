@@ -45,7 +45,7 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  #detnames: []
+  #detnames: ["Epix10kaQuad0", "Epix10kaQuad1", "Epix10kaQuad2", "Epix10kaQuad3"]
   #epicsPV: []
   #ttCalib: []
   # Provide detector image sum algorithms.

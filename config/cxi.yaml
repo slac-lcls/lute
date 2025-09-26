@@ -45,7 +45,7 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  #detnames: []
+  #detnames: ["jungfrau4M"]
   #epicsPV: []
   #ttCalib: []
   # Provide detector image sum algorithms.
