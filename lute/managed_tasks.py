@@ -157,7 +157,6 @@ Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 
 # Cheetah
 #########
-
 CheetahRunner: Executor = Executor("RunCheetah")
 """Run Cheetah task."""
 CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/setup-om.sh")

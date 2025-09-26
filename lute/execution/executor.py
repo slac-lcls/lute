@@ -448,25 +448,26 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_env.update(env_update)
             return
 
-        if "PATH" in env:
-            sep: str = os.pathsep
-            if update_path == "prepend":
-                env["PATH"] = (
-                    f"{env['PATH']}{sep}{self._analysis_desc.task_env['PATH']}"
-                )
-            elif update_path == "append":
-                env["PATH"] = (
-                    f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
-                )
-            elif update_path == "overwrite":
-                pass
-            else:
-                raise ValueError(
-                    (
-                        f"{update_path} is not a valid option for `update_path`!"
-                        " Options are: prepend, append, overwrite."
+        for key in ("PATH", "PYTHONPATH"):
+            if key in env and key in self._analysis_desc.task_env:
+                sep: str = os.pathsep
+                if update_path == "prepend":
+                    env[key] = (
+                        f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
                     )
-                )
+                elif update_path == "append":
+                    env["PATH"] = (
+                        f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
+                    )
+                elif update_path == "overwrite":
+                    pass
+                else:
+                    raise ValueError(
+                        (
+                            f"{update_path} is not a valid option for `update_path`!"
+                            " Options are: prepend, append, overwrite."
+                        )
+                    )
         self._analysis_desc.task_env.update(env)
 
     def shell_source(self, env: str) -> None:
