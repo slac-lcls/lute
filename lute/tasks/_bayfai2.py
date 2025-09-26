@@ -515,7 +515,6 @@ class BayFAIOpt2:
             "run_end": run_end,
             "run_orig": run_orig,
             "dettype": det_type,
-            "dbsuffix": "testgeom",  # Exclude if not needed
         }
         _ = wu.deploy_constants(
             data,
