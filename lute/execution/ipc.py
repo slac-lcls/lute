@@ -221,7 +221,12 @@ class PipeCommunicator(Communicator):
             if self._use_pickle:
                 try:
                     contents = pickle.loads(raw_contents)
-                except (pickle.UnpicklingError, ValueError, EOFError):
+                except (
+                    pickle.UnpicklingError,
+                    ValueError,
+                    EOFError,
+                    ModuleNotFoundError,
+                ):
                     logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
                     self._use_pickle = False
                     contents = self._safe_unpickle_decode(raw_contents)
@@ -294,9 +299,10 @@ class PipeCommunicator(Communicator):
                     logger.debug(
                         f"PipeCommunicator has truncated message. Unable to retrieve {missing_bytes} bytes."
                     )
-        except (pickle.UnpicklingError, ValueError, EOFError):
+        except (pickle.UnpicklingError, ValueError, EOFError, ModuleNotFoundError):
             # Pickle may also throw a ValueError, e.g. this bytes: b"Found! \n"
             # Pickle may also throw an EOFError, eg. this bytes: b"F0\n"
+            # Pickle may also throw a ModuleNotFoundError, e.g. this bytes: b"co\nco\n"
             try:
                 contents = maybe_mixed.decode()
             except UnicodeDecodeError as err2:

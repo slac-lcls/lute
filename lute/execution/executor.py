@@ -200,6 +200,9 @@ class BaseExecutor(ABC):
         self._task_timeout: Optional[int] = None
         self._task_time0: Optional[float] = None
         self._row_ids: Optional[RowIds] = None
+        self._delayed_update_env_args: Optional[
+            Tuple[Union[Dict[str, str], Callable[[], Dict[str, str]]], str]
+        ] = None
 
     def add_tasklet(
         self,
@@ -433,29 +436,37 @@ class BaseExecutor(ABC):
                 "prepend" is the default option. If PATH is not present in the
                 current environment, the new PATH is used without modification.
         """
+        self._delayed_update_env_args = (env, update_path)
+
+    def _update_environment(
+        self,
+        env: Union[Dict[str, str], Callable[[], Dict[str, str]]],
+        update_path: str = "prepend",
+    ) -> None:
         if callable(env):
             env_update: Dict[str, str] = env()
-            os.environ.update(env_update)
             self._analysis_desc.task_env.update(env_update)
             return
 
-        for key in ("PATH", "PYTHONPATH"):
-            if key in env and key in self._analysis_desc.task_env:
-                sep: str = os.pathsep
-                if update_path == "prepend":
-                    env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
-                elif update_path == "append":
-                    env[key] = f"{self._analysis_desc.task_env[key]}{sep}{env[key]}"
-                elif update_path == "overwrite":
-                    pass
-                else:
-                    raise ValueError(
-                        (
-                            f"{update_path} is not a valid option for `update_path`!"
-                            " Options are: prepend, append, overwrite."
-                        )
+        if "PATH" in env:
+            sep: str = os.pathsep
+            if update_path == "prepend":
+                env["PATH"] = (
+                    f"{env['PATH']}{sep}{self._analysis_desc.task_env['PATH']}"
+                )
+            elif update_path == "append":
+                env["PATH"] = (
+                    f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
+                )
+            elif update_path == "overwrite":
+                pass
+            else:
+                raise ValueError(
+                    (
+                        f"{update_path} is not a valid option for `update_path`!"
+                        " Options are: prepend, append, overwrite."
                     )
-        os.environ.update(env)
+                )
         self._analysis_desc.task_env.update(env)
 
     def shell_source(self, env: str) -> None:
@@ -620,13 +631,19 @@ class BaseExecutor(ABC):
         if lute_path is None:
             logger.debug("Absolute path to subprocess_task.py not found.")
             lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
-            self.update_environment({"LUTE_PATH": lute_path})
+            os.environ.update({"LUTE_PATH": lute_path})
+            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
         executable_path: str = f"{lute_path}/subprocess_task.py"
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
 
+        # Prevent all managed tasks from affecting each others environments
         if self._shell_source_script is not None:
             self._shell_source()
+
+        if self._delayed_update_env_args is not None:
+            self._update_environment(*self._delayed_update_env_args)
+
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
         self._task_time0 = time.monotonic()
