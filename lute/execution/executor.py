@@ -452,9 +452,7 @@ class BaseExecutor(ABC):
             if key in env and key in self._analysis_desc.task_env:
                 sep: str = os.pathsep
                 if update_path == "prepend":
-                    env[key] = (
-                        f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
-                    )
+                    env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
                 elif update_path == "append":
                     env["PATH"] = (
                         f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
