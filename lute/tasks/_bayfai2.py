@@ -351,7 +351,10 @@ class BayFAIOpt2:
         return powder
 
     def preprocess_powder(
-        self, powder: npt.NDArray[np.float64], mask: npt.NDArray[np.integer], smooth: bool = False
+        self,
+        powder: npt.NDArray[np.float64],
+        mask: npt.NDArray[np.integer],
+        smooth: bool = False,
     ) -> npt.NDArray[np.float64]:
         """
         Preprocess extracted powder for enhancing optimization
