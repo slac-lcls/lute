@@ -346,7 +346,7 @@ class BayFAIOpt:
         return powder
 
     def preprocess_powder(
-        self, powder: npt.NDArray[np.float64], smooth: bool = False
+        self, powder: npt.NDArray[np.float64], mask: npt.NDArray[np.integer], smooth: bool = False
     ) -> npt.NDArray[np.float64]:
         """
         Preprocess extracted powder for enhancing optimization
@@ -355,15 +355,19 @@ class BayFAIOpt:
         ----------
         powder : npt.NDArray[np.float64]
             Powder image to use for calibration
+        mask : npt.NDArray[np.integer]
+            Pixel mask to apply to the powder image
         smooth : bool, optional
             If True, apply smoothing to the powder image.
         """
         powder[powder < 0] = 0
+        powder[mask == 0] = 0
         if smooth:
             for p in range(powder.shape[0]):
                 bkg = gaussian_filter(powder[p], sigma=4)
                 powder[p] = powder[p] - bkg
                 powder[p][powder[p] < 0] = 0
+            powder[mask == 0] = 0
         return powder
 
     def generate_powder(
@@ -381,8 +385,9 @@ class BayFAIOpt:
         smooth : bool, optional
             If True, apply smoothing to the powder image.
         """
+        mask = self.detector.geo.get_pixel_mask(mbits=3)
         powder = self.extract_powder(powder_path, detname)
-        powder = self.preprocess_powder(powder, smooth)
+        powder = self.preprocess_powder(powder, mask, smooth)
         return powder
 
     def min_intensity(self, powder: npt.NDArray[np.float64]) -> float:
