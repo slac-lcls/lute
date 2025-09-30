@@ -54,6 +54,17 @@ class RunCheetahParameters(ThirdPartyParameters):
                     psana_name: Optional[str] = Field("detector_z", flat_type="")
                     value: Optional[str] = Field("DetectorDistanceValue", flat_type="")
 
+                detector_data: Optional[DataSourceDetectorDataParameters] = Field(
+                    None,
+                    description="Fields for accessing the detector data (images) via psana.",
+                )
+                detector_distance: Optional[DataSourceDetectorDistanceParameters] = (
+                    Field(
+                        None,
+                        description="Fields for accessing the detector distance via psana.",
+                    )
+                )
+
             psana_calibration_directory: Optional[str] = Field(
                 "/sdf/data/lcls/ds/xpp/xpptut15/calib/",
                 description="Location of the psana1 calibration directory.",

@@ -71,6 +71,7 @@ peakfinder8_peak_detection:
   bad_pixel_map_hdf5_path: "/data/data"
   min_res: "{{ peakfinder8_peak_detection.min_res }}"
   max_res: "{{ peakfinder8_peak_detection.max_res }}"
+{% endif %}
 
 {%- if compression is defined and compression %}
 compression:
