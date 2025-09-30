@@ -1,10 +1,12 @@
 om:
   parallelization_layer: MpiParallelization
   data_retrieval_layer: PsanaDataEventHandler
-  processing_layer: {{ cheetah_subconfig.om.processing_layer }}
+  processing_layer: "{{ om.processing_layer }}"
 
+
+{%- if data_retrieval_layer is defined and data_retrieval_layer %}
 data_retrieval_layer:
-  psana_calibration_directory: "{{ cheetah_subconfig.data_retrieval_layer.psana_calibration_directory }}"
+  psana_calibration_directory: "{{ data_retrieval_layer.psana_calibration_directory }}"
   data_sources:
     timestamp:
       type: TimestampPsana2
@@ -12,17 +14,19 @@ data_retrieval_layer:
       type: EventIdPsana2
     detector_data:
       type: AreaDetectorPsana2
-      psana_name: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_data.psana_name }}
-      calibration: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_data.calibration }}
+      psana_name: "{{ data_retrieval_layer.data_sources.detector_data.psana_name }}"
+      calibration: "{{ data_retrieval_layer.data_sources.detector_data.calibration }}"
     detector_distance:
-      type: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_distance.type }}
-      psana_name: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_distance.psana_name }}
-      value: {{ cheetah_subconfig.data_retrieval_layer.data_sources.detector_distance.value }}
+      type: "{{ data_retrieval_layer.data_sources.detector_distance.type }}"
+      psana_name: "{{ data_retrieval_layer.data_sources.detector_distance.psana_name }}"
+      value: "{{ data_retrieval_layer.data_sources.detector_distance.value }}"
     beam_energy:
       type: EpicsVariablePsana2
+{%- endif %}
 
+{%- if cheetah is defined and cheetah %}
 cheetah:
-  processed_directory: "{{ cheetah_subconfig.cheetah.processed_directory }}"
+  processed_directory: "{{ cheetah.processed_directory }}"
   processed_filename_prefix: "{{ exp }}-{{ run }}"
   processed_filename_extension: "cxi"
   write_class_sums: true
@@ -40,27 +44,41 @@ cheetah:
     detector_distance: "/LCLS/detector_1/EncoderValue"
     timestamp: "/LCLS/timestamp"
     peak_list: "/entry_1/result_1"
+{% endif %}
 
+{%- if crystallography is defined and crystallography %}
 crystallography:
-  geometry_file: "{{ cheetah_subconfig.crystallography.geometry_file }}"
+  geometry_file: "{{ crystallography.geometry_file }}"
   min_num_peaks_for_hit: 10
   max_num_peaks_for_hit: 5000
   running_average_window_size: 200
   geometry_is_optimized: false
   speed_report_interval: 100
-  responding_url: "ipc://{{ cheetah_subconfig.crystallography.responding_url }}/ipc-socket"
+  responding_url: "ipc://{{ crystallography.responding_url }}/ipc-socket"
   external_data_request_list_size: 80
   data_broadcast_interval: 0
+{% endif %}
 
+{%- if peakfinder8_peak_detection is defined and peakfinder8_peak_detection %}
 peakfinder8_peak_detection:
   max_num_peaks: 2048
-  adc_threshold: {{ cheetah_subconfig.peakfinder8_peak_detection.adc_threshold }}
-  minimum_snr: {{ cheetah_subconfig.peakfinder8_peak_detection.minimum_snr }}
-  min_pixel_count: {{ cheetah_subconfig.peakfinder8_peak_detection.min_pixel_count }}
-  max_pixel_count: {{ cheetah_subconfig.peakfinder8_peak_detection.max_pixel_count }}
-  local_bg_radius: {{ cheetah_subconfig.peakfinder8_peak_detection.local_bg_radius }}
-  bad_pixel_map_filename: "{{mask_file}}"
-  bad_pixel_map_hdf5_path: /data/data
-  min_res: {{ cheetah_subconfig.peakfinder8_peak_detection.min_res }}
-  max_res: {{ cheetah_subconfig.peakfinder8_peak_detection.max_res }}
-  
+  adc_threshold: "{{ peakfinder8_peak_detection.adc_threshold }}"
+  minimum_snr: "{{ peakfinder8_peak_detection.minimum_snr }}"
+  min_pixel_count: "{{ peakfinder8_peak_detection.min_pixel_count }}"
+  max_pixel_count: "{{ peakfinder8_peak_detection.max_pixel_count }}"
+  local_bg_radius: "{{ peakfinder8_peak_detection.local_bg_radius }}"
+  bad_pixel_map_filename: "{{ mask_file }}"
+  bad_pixel_map_hdf5_path: "/data/data"
+  min_res: "{{ peakfinder8_peak_detection.min_res }}"
+  max_res: "{{ peakfinder8_peak_detection.max_res }}"
+
+{%- if compression is defined and compression %}
+compression:
+  run_compression: "{{ compression.run_compression }}"
+  backend: "{{ compression.backend }}"
+  compression_parameters:
+    compressor: "{{ compression.compression_parameters.compressor }}"
+    abs_error: "{{ compression.compression_parameters.abs_error }}"
+    bin_size: "{{ compression.compression_parameters.bin_size }}"
+    roi_window_size: "{{ compression.compression_parameters.roi_window_size }}"
+{% endif %}
