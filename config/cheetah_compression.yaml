@@ -6,23 +6,29 @@ run: "27"
 date: "2025/09/29"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 600
-work_dir: ""
+work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
 ---
 RunCheetah:                       # All variables are given as strings
   exp: "{{ experiment }}"         # Experiment name
   run: "{{ run }}"                # Run number
   dir: "/some/path"               # Path to raw_directory
-  executable: "/sdf/group/lcls/ds/tools/openmpi-5.0.6/bin/mpirun"              # Path to exectuable
-  n_processes: 1                  # Number of processes to launch
-  om_executable: "/sdf/group/lcls/ds/tools/om/om/om-071725/bin/om_monitor.py"  # om executable
-  om_config: "/sdf/data/lcls/ds/mfx/mfx100903824/scratch/dorlhiac/cheetah.yaml"
+  executable: "/sdf/group/lcls/ds/tools/om/conda/ana-4.0.66-py311-miniom/bin/mpirun"
+  n_processes: 3                  # Number of processes to launch
+  om_executable: "/sdf/scratch/users/d/dorlhiac/work/om_rel/bin/om_monitor"
+  om_config: "/sdf/scratch/users/d/dorlhiac/work/cheetah_tests/cheetah_config.yaml"
+  lute_template_cfg:
+    template_name: "cheetah_template.yaml"
+    output_path: "/sdf/scratch/users/d/dorlhiac/work/cheetah_tests/cheetah_config.yaml"
   cheetah_subconfig:
     om:
       processing_layer: "CheetahProcessing"
     data_retrieval_layer:
-      psana_calibration_directory: "/sdf/data/lcls/ds/mfx/mfx10090384/calib"
       data_sources:
+        timestamp:
+          type: "TimestampPsana"
+        event_id:
+          type: "EventIdPsana"
         detector_data:
           psana_name: "epix10k2M"
           calibration: "true"
@@ -32,8 +38,8 @@ RunCheetah:                       # All variables are given as strings
           value: "DetectorDistanceValue"
     cheetah:
       processed_directory: "/sdf/data/lcls/ds/mfx/mfx100903824/results"
-      processed_filename_prefix: "{{experiment}}-{{run}}"
-      class_sums_filename_prefix: "{{run}}"
+      processed_filename_prefix: "{{ experiment }}-{{ run }}"
+      class_sums_filename_prefix: "{{ run }}"
     crystallography:
       geometry_file: "/sdf/data/lcls/ds/mfx/mfx100903824/scratch/dorlhiac/test.geom"
       responding_url: null

@@ -7,7 +7,7 @@ Classes:
 
 __all__ = ["RunCheetahParameters"]
 
-
+import os
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, root_validator
@@ -30,9 +30,17 @@ class RunCheetahParameters(ThirdPartyParameters):
         class OmParameters(BaseModel):
             """Parameters for OM layers"""
 
-            processing_layer: Optional[str] = Field(
-                "",
-                flag_type="",
+            parallelization_layer: str = Field(
+                default="MpiParallelization",
+                description="",
+            )
+            data_retrieval_layer: str = Field(
+                default="PsanaDataEventHandler",
+                description="",
+            )
+            processing_layer: str = Field(
+                default="CheetahProcessing",
+                description="",
             )
 
         class DataRetrievalLayerParameters(BaseModel):
@@ -41,116 +49,258 @@ class RunCheetahParameters(ThirdPartyParameters):
             class DataSourcesParameters(BaseModel):
                 """Parameters for the data retrieval layer data sources subfields."""
 
+                class DataSourceTimestamp(BaseModel):
+                    """Parameters for retrieving the event ID."""
+
+                    type: Optional[str] = Field(
+                        default="TimestampPsana",
+                        description="Timestamp object for the retrieval layer.",
+                    )
+                    psana_name: str = Field(default="EventID", description="")
+
+                class DataSourceEventId(BaseModel):
+                    """Parameters for retrieving the event ID."""
+
+                    type: str = Field(
+                        default="EventIdPsana",
+                        description="Event ID object for the retrieval layer.",
+                    )
+
                 class DataSourceDetectorDataParameters(BaseModel):
                     """Data retrieval layer, datasource detector data parameters."""
 
-                    psana_name: Optional[str] = Field("epix10k2M", flat_type="")
-                    calibration: Optional[str] = Field("true", flat_type="")
+                    type: str = Field(default="AreaDetectorPsana", description="")
+                    psana_name: str = Field(default="epix10k2M", description="")
+                    calibration: bool = Field(default=True, description="")
 
                 class DataSourceDetectorDistanceParameters(BaseModel):
                     """Data retrieval layer, datasource detector distance parameters."""
 
-                    type: Optional[str] = Field("EpicsVariablePsana", flat_type="")
-                    psana_name: Optional[str] = Field("detector_z", flat_type="")
-                    value: Optional[str] = Field("DetectorDistanceValue", flat_type="")
+                    type: str = Field(default="EpicsVariablePsana", description="")
+                    psana_name: str = Field(default="detector_z", description="")
+                    value: str = Field(default="DetectorDistanceValue", description="")
 
-                detector_data: Optional[DataSourceDetectorDataParameters] = Field(
-                    None,
+                class DataSourceBeamEnergy(BaseModel):
+                    """Parameters for retrieving the event ID."""
+
+                    type: Optional[str] = Field(
+                        default="BeamEnergyPsana",
+                        description="Beam energy object for the retrieval layer.",
+                    )
+
+                timestamp: DataSourceTimestamp = Field(
+                    description="Fields for timestamp retrieval."
+                )
+                event_id: DataSourceEventId = Field(
+                    description="Fields for event ID retrieval."
+                )
+                detector_data: DataSourceDetectorDataParameters = Field(
                     description="Fields for accessing the detector data (images) via psana.",
                 )
-                detector_distance: Optional[DataSourceDetectorDistanceParameters] = (
-                    Field(
-                        None,
-                        description="Fields for accessing the detector distance via psana.",
-                    )
+                detector_distance: DataSourceDetectorDistanceParameters = Field(
+                    description="Fields for accessing the detector distance via psana.",
+                )
+                beam_energy: DataSourceBeamEnergy = Field(
+                    default=DataSourceBeamEnergy(),
+                    description="Fields for beam energy retrieval.",
                 )
 
-            psana_calibration_directory: Optional[str] = Field(
-                "/sdf/data/lcls/ds/xpp/xpptut15/calib/",
-                description="Location of the psana1 calibration directory.",
-            )
             data_sources: Optional[DataSourcesParameters] = Field(
-                None, description="Configuration for data source retrieval."
+                default=None, description="Configuration for data source retrieval."
             )
 
         class CheetahParameters(BaseModel):
             """Parameters for Cheetah."""
 
-            processed_directory: Optional[str] = Field(
-                "/sdf/data/lcls/ds/xpp/xpptut15/results",
-                flag_type="",
+            class CheetahHDF5Parameters(BaseModel):
+                detector_data: str = Field(
+                    default="/entry_1/data_1/data",
+                    description="",
+                )
+                event_id: str = Field(
+                    default="/LCLS/fiducial",
+                    description="",
+                )
+                beam_energy: str = Field(
+                    default="/LCLS/photon_energy_eV",
+                    description="",
+                )
+                detector_distance: str = Field(
+                    default="/LCLS/detector_1/EncoderValue",
+                    description="",
+                )
+                timestamp: str = Field(
+                    default="/LCLS/timestamp",
+                    description="",
+                )
+                peak_list: str = Field(
+                    default="/entry_1/result_1",
+                    description="",
+                )
+
+            processed_directory: str = Field(
+                description="",
             )
-            processed_filename_prefix: Optional[str] = Field(
-                "xpptut15-092",
-                flag_type="",
+            processed_filename_prefix: str = Field(
+                description="",
             )
-            class_sums_filename_prefix: Optional[str] = Field(
-                "92",
-                flag_type="",
+            processed_filename_extension: str = Field(
+                default="cxi",
+                description="",
+            )
+            write_class_sums: bool = Field(
+                default=True,
+                description="",
+            )
+            class_sums_update_interval: int = Field(
+                default=5,
+                description="",
+            )
+            class_sums_sending_interval: int = Field(
+                default=-1,
+                description="",
+            )
+            class_sums_filename_prefix: str = Field(
+                default="sums",
+                description="",
+            )
+            status_file_update_interval: int = Field(
+                default=100,
+                description="",
+            )
+            hdf5_file_data_type: str = Field(
+                default="float32",
+                description="",
+            )
+            hdf5_file_compression: Optional[Literal["gzip", "bitshuffle_with_zstd"]] = (
+                Field(
+                    default=None,
+                    description="",
+                )
+            )
+            hdf5_file_gzip_compression_level: int = Field(
+                default=4,
+                description="",
+            )
+            hdf5_file_zstd_compression_level: int = Field(
+                default=3,
+                description="",
+            )
+            hdf5_file_compression_shuffle: bool = Field(
+                default=False,
+                description="",
+            )
+            hdf5_file_max_num_peaks: int = Field(
+                default=2048,
+                description="",
+            )
+            hdf5_fields: CheetahHDF5Parameters = Field(
+                default=CheetahHDF5Parameters(),
+                description="",
+            )
+            external_data_request_list_size: int = Field(
+                default=20,
+                description="",
+            )
+            responding_url: Optional[str] = Field(
+                default=None,
+                description="",
             )
 
         class CrystallographyParameters(BaseModel):
             """Parameters for Crystallography."""
 
             geometry_file: Optional[str] = Field(
-                "/sdf/scratch/users/k/kmecseki/cheetah/test.geom",
-                flag_type="",
+                default="/sdf/scratch/users/k/kmecseki/cheetah/test.geom",
+                description="",
             )
-            responding_url: Optional[str] = Field(
-                "",
-                flag_type="",
+            min_num_peaks_for_hit: Optional[int] = Field(default=10, description="")
+            max_num_peaks_for_hit: Optional[int] = Field(
+                default=5000,
+                description="",
+            )
+            running_average_window_size: Optional[int] = Field(
+                default=200, description=""
+            )
+            geometry_is_optimized: Optional[bool] = Field(
+                default=False,
+                description="",
+            )
+            speed_report_interval: Optional[int] = Field(
+                default=100,
+                description="",
+            )
+            data_broadcast_interval: Optional[int] = Field(
+                default=0,
+                description="",
             )
 
         class Peakfinder8PeakDetectionParameters(BaseModel):
             """Parameters for peak finder 8 peak detection."""
 
-            adc_threshold: Optional[float] = Field(
-                100.0,
-                flag_type="",
+            max_num_peaks: int = Field(
+                default=2048,
+                description="",
             )
-            minimum_snr: Optional[float] = Field(
-                5.0,
-                flag_type="",
+            adc_threshold: float = Field(
+                default=100.0,
+                description="",
             )
-            min_pixel_count: Optional[int] = Field(
-                1,
-                flag_type="",
+            minimum_snr: float = Field(
+                default=5.0,
+                description="",
             )
-            max_pixel_count: Optional[int] = Field(
-                30,
-                flag_type="",
+            min_pixel_count: int = Field(
+                default=1,
+                description="",
             )
-            local_bg_radius: Optional[int] = Field(
-                4,
-                flag_type="",
+            max_pixel_count: int = Field(
+                default=30,
+                description="",
+            )
+            local_bg_radius: int = Field(
+                default=4,
+                description="",
+            )
+            min_res: int = Field(
+                default=80,
+                description="",
+            )
+            max_res: int = Field(
+                default=800,
+                description="",
+            )
+            fast_mode: bool = Field(
+                default=False,
+                description="",
+            )
+            num_pixel_per_bin_in_radial_statistics: int = Field(
+                default=100,
+                description="",
             )
             bad_pixel_map_filename: Optional[str] = Field(
-                "",
-                flag_type="",
+                default=None,
+                description="",
             )
-            min_res: Optional[int] = Field(
-                80,
-                flag_type="",
-            )
-            max_res: Optional[int] = Field(
-                800,
-                flag_type="",
+            bad_pixel_map_hdf5_path: Optional[str] = Field(
+                default="/data/data",
+                description="",
             )
 
         class DataCompressionParameters(BaseModel):
             run_compression: bool = Field(
-                False,
+                default=False,
                 description="Whether to enable compression.",
             )
             backend: Optional[Literal["roibinsz"]] = Field(
-                None,
+                default=None,
                 description=(
                     "The compression backend to use. Currently only RoiBinSz "
                     "with libpressio is available."
                 ),
             )
             compression_parameters: Optional[SZCompressorParameters] = Field(
-                None,
+                default=None,
                 description="The actual compression parameters. Varies by backend.",
             )
 
@@ -168,25 +318,33 @@ class RunCheetahParameters(ThirdPartyParameters):
                         )
                 return values
 
-        om: Optional[OmParameters] = Field(None, description="Global options for OM.")
-        data_retrieval_layer: Optional[DataRetrievalLayerParameters] = Field(
-            None,
+        om: OmParameters = Field(OmParameters(), description="Global options for OM.")
+        data_retrieval_layer: DataRetrievalLayerParameters = Field(
+            default=DataRetrievalLayerParameters(),
             description="Options for configuring the data retrieval.",
         )
-        cheetah: Optional[CheetahParameters] = Field(
-            None, description="Cheetah specific parameters (like output directories)."
+        cheetah: CheetahParameters = Field(
+            default=CheetahParameters(
+                processed_directory=(
+                    f'/sdf/data/lcls/ds/{os.getenv("EXPERIMENT","xpptut15")[:3]}/'
+                    f'{os.getenv("EXPERIMENT","xpptut15")}/results'
+                ),
+                processed_filename_prefix=(
+                    f'{os.getenv("EXPERIMENT","xpptut15")}-{os.getenv("RUN_NUM","9999")}'
+                ),
+            ),
+            description="Cheetah specific parameters (like output directories).",
         )
-        crystallography: Optional[CrystallographyParameters] = Field(
-            None, description="Generic crystallography parameters, like geometry file."
+        crystallography: CrystallographyParameters = Field(
+            default=CrystallographyParameters(),
+            description="Generic crystallography parameters, like geometry file.",
         )
-        peakfinder8_peak_detection: Optional[Peakfinder8PeakDetectionParameters] = (
-            Field(
-                None,
-                description="Peakfinder8 peak finding algorithm specific parameters.",
-            )
+        peakfinder8_peak_detection: Peakfinder8PeakDetectionParameters = Field(
+            default=Peakfinder8PeakDetectionParameters(),
+            description="Peakfinder8 peak finding algorithm specific parameters.",
         )
         compression: Optional[DataCompressionParameters] = Field(
-            None, description="Data compression parameters."
+            default=None, description="Data compression parameters."
         )
 
     _set_cheetah_template_parameters = template_parameter_validator("cheetah_subconfig")
@@ -205,6 +363,11 @@ class RunCheetahParameters(ThirdPartyParameters):
     om_executable: str = Field(
         "/sdf/group/lcls/ds/tools/om/om/om-071725/bin/om_monitor.py",
         description="OM Cheetah binary.",
+        flag_type="",
+    )
+    source: str = Field(
+        "exp=mfx100903824:run=27",
+        description="Data source string.",
         flag_type="",
     )
     om_config: str = Field(
