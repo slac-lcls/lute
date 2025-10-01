@@ -324,7 +324,6 @@ def main() -> None:
 
         resp = requests.get(flow_run_state_endpoint, auth=auth)
         state = resp.json()["state_type"]
-        task_run_id = resp.json()["state"]["state_details"]["task_run_id"]
 
 if __name__ == "__main__":
     main()
