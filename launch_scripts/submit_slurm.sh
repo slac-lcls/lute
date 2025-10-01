@@ -13,6 +13,9 @@ $(basename "$0"):
           Display this message.
         -t|--taskname
           Name of the LUTE managed Task to run.
+        --psana2
+          Use Psana2 for the base environment. The core infrastructure runs in
+          Both psana1 and psana2.
 
     NOTE: This script does not parse SLURM arguments, but a number of them are
           mandatory. All additional arguments are transparently passed to SLURM.
@@ -72,6 +75,10 @@ do
         DEBUG=1
         shift
         ;;
+    --psana2)
+        USE_PSANA2=1
+        shift
+        ;;
     *)
         POS+=("$1")
         shift
@@ -122,33 +129,32 @@ else
 fi
 
 # By default source the psana environment since most Tasks will use it.
-source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
-
-# activate LUTE
-EXECUTABLE="run_task.py"
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)"
-# LUTE_PATH is really only used for clones not installations
-export LUTE_PATH="$(echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g)"
-
-if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
-    # Running from a clone: /path/to/lute/launch_scripts
-    EXECUTABLE="${LUTE_PATH}run_task.py"
+if [[ ${USE_PSANA2} ]]; then
+    echo "Using a Psana2 base environment."
+    source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
 else
-    # Running from an installation: /path/to/lute/bin
-    source "${SCRIPT_DIR}/activate_installation"
-    EXECUTABLE=$(which run_task.py)
-    # ideally would use run_task instead of python run_task.py but need
-    # a non-hacky way to provide python arguments to shebang (e.g. -O)
+    echo "Using a Psana1 base environment."
+    source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
 
-DEBUG_PRINT="Running in debug mode -verbose logging."
-NON_DEBUG_PRINT="Running in standard mode."
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null )"
+export LUTE_PATH="$( echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g )"
+EXECUTABLE="run_task.py"
+
+if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
+    EXECUTABLE="${LUTE_PATH}run_task.py"
+else
+    # Running from installation
+    source "${SCRIPT_DIR}/activate_installation"
+    EXECUTABLE="$(which run_task)"
+fi
+
 
 if [[ ${DEBUG} ]]; then
-    echo $DEBUG_PRINT
+    echo "Running in debug mode - verbose logging."
     CMD="python -B ${EXECUTABLE} -c ${CONFIGPATH} -t ${TASK}"
 else
-    echo $NON_DEBUG_PRINT
+    echo "Running in standard mode."
     CMD="python -OB ${EXECUTABLE} -c ${CONFIGPATH} -t ${TASK}"
 fi
 

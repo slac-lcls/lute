@@ -152,7 +152,7 @@ def create_control_doc(
     lute_location: str = conf.get(
         "lute_location", "/sdf/group/lcls/ds/tools/lute/latest"
     )
-    executable_subdir: str = conf.get("executable_subdir", "launch_scripts")
+    executable_subdir: str = conf.get("executable_subdir","launch_scripts")
     lute_params: LuteParams = conf.get("lute_params", {})
 
     if lute_params == {}:
@@ -167,6 +167,10 @@ def create_control_doc(
         lute_param_str = f"--taskname {lute_task_id} --config {config_path} --debug"
     else:
         lute_param_str = f"--taskname {lute_task_id} --config {config_path}"
+
+    is_daq2: Optional[bool] = conf.get("is_daq2", False)
+    if is_daq2:
+        lute_param_str = f"{lute_param_str} --psana2"
 
     kerb_file: Optional[str] = conf.get("kerb_file")
     if kerb_file is not None:

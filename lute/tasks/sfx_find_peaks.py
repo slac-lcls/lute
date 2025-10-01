@@ -462,13 +462,12 @@ def write_master_file(
             powder_hits = f["entry_1/data_1/powderHits"][:].copy()
             powder_misses = f["entry_1/data_1/powderMisses"][:].copy()
         else:
+            assert powder_misses is not None
             powder_hits = numpy.maximum(
-                cast(NDArray[numpy.float64], powder_hits),
-                f["entry_1/data_1/powderHits"][:].copy(),
+                powder_hits, f["entry_1/data_1/powderHits"][:].copy()
             )
             powder_misses = numpy.maximum(
-                cast(NDArray[numpy.float64], powder_misses),
-                f["entry_1/data_1/powderMisses"][:].copy(),
+                powder_misses, f["entry_1/data_1/powderMisses"][:].copy()
             )
         f.close()
 

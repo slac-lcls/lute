@@ -11,19 +11,30 @@ __author__ = "Gabriel Dorlhiac"
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Union, Type, TextIO, Optional
+from typing import Any, Dict, List, Optional, TextIO, Type, Union, TYPE_CHECKING
 import os
 import warnings
 import signal
 import sys
 
-from lute.io.models.base import (
-    TaskParameters,
-    ThirdPartyParameters,
-    TemplateParameters,
-    TemplateConfig,
-    AnalysisHeader,
-)
+import lute.execution.subprocess_utils
+
+if TYPE_CHECKING or lute.execution.subprocess_utils.USE_PYDANTIC_MODELS:
+    from lute.io.models.base import (
+        TaskParameters,
+        ThirdPartyParameters,
+        TemplateParameters,
+        TemplateConfig,
+        AnalysisHeader,
+    )
+else:
+    from lute.io.parameters import (
+        TaskParameters,
+        ThirdPartyParameters,
+        TemplateParameters,
+        TemplateConfig,
+        AnalysisHeader,
+    )
 from lute.execution.ipc import (
     Message,
     PipeCommunicator,
@@ -31,7 +42,8 @@ from lute.execution.ipc import (
     Communicator,
 )
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
-from lute.tasks.dataclasses import TaskResult, TaskStatus
+from lute.io.parameters import RowIds
+from lute.tasks.dataclasses import TaskParametersDBReference, TaskResult, TaskStatus
 
 if __debug__:
     warnings.simplefilter("default")
@@ -65,7 +77,13 @@ class Task(ABC):
         name (str): The name of the Task.
     """
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        params: TaskParameters,
+        use_mpi: bool = False,
+        row_ids: Optional[RowIds] = None,
+    ) -> None:
         """Initialize a Task.
 
         Args:
@@ -78,6 +96,12 @@ class Task(ABC):
                 This determines the behaviour and timing of certain signals
                 and ensures appropriate barriers are placed to not end
                 processing until all ranks have finished.
+
+            row_ids (Optional[RowIds]): If provided the parameter object was stored
+                by the Task layer. Instead of sending a `TaskParameters` object, a
+                set of row_ids will be sent. This is because the Executor does not
+                know how the `lute.io.parameters.TaskParameters` was constructed,
+                so with the RowIds it will be reconstruct it itself.
         """
         self.name: str = str(type(self)).split("'")[1].split(".")[-1]
         self._result: TaskResult = TaskResult(
@@ -112,6 +136,7 @@ class Task(ABC):
                     category=UserWarning,
                 )
         self._use_mpi: bool = use_mpi
+        self._row_ids: Optional[RowIds] = row_ids
 
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
@@ -159,9 +184,14 @@ class Task(ABC):
 
     def _signal_start(self) -> None:
         """Send the signal that the Task will begin shortly."""
-        start_msg: Message = Message(
-            contents=self._task_parameters, signal="TASK_STARTED"
-        )
+        msg_contents: Union[TaskParameters, TaskParametersDBReference]
+        if self._row_ids is not None:
+            msg_contents = TaskParametersDBReference(
+                db_dir=self._task_parameters.lute_config.work_dir, row_ids=self._row_ids
+            )
+        else:
+            msg_contents = self._task_parameters
+        start_msg: Message = Message(contents=msg_contents, signal="TASK_STARTED")
         self._result.task_status = TaskStatus.RUNNING
         if self._use_mpi:
             from mpi4py import MPI
@@ -178,7 +208,14 @@ class Task(ABC):
         if os.getenv("LUTE_CONFIGPATH") is not None:
             # Guard w/ environment variable that is set only by Executor - don't
             # SIGSTOP if Task is running without Executor
-            os.kill(os.getpid(), signal.SIGSTOP)
+            if self._use_mpi:
+                comm = MPI.COMM_WORLD
+                rank = comm.Get_rank()
+                if rank == 0:
+                    os.kill(os.getppid(), signal.SIGSTOP)
+                comm.Barrier()
+            else:
+                os.kill(os.getpid(), signal.SIGSTOP)
 
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
@@ -302,6 +339,7 @@ class ThirdPartyTask(Task):
             py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
             template_dir = f"{lute_path}/lib/{py_ver}/site-packages/config/templates"
             if not os.path.exists(template_dir):
+                # Did not install and running from clone of repo
                 template_dir = f"{lute_path}/config/templates"
         environment: Environment = Environment(loader=FileSystemLoader(template_dir))
         template: Template = environment.get_template(template_name)

@@ -55,6 +55,11 @@ def database_setup(full_path: str) -> None:
     Args:
         full_path (str): The full path to the file to touch.
     """
+    if os.path.exists(full_path):
+        logger.error(
+            f"LUTE database already exists at: {full_path}. Will not overwrite, exiting."
+        )
+        sys.exit(-1)
     touch(full_path)
     os.chmod(full_path, 0o664)
 
@@ -231,6 +236,11 @@ if __name__ == "__main__":
         os.makedirs(lute_output_dir, mode=0o777)
         os.chmod(lute_output_dir, 0o777)
     config_path: str = f"{lute_output_dir}/{hutch}_lute.yaml"
+    if os.path.exists(config_path):
+        logger.error(
+            f"Configuration YAML already exists at: {config_path}. Will not overwrite, exiting."
+        )
+        sys.exit(-1)
     if not os.path.exists(std_hutch_config):
         shutil.copy(std_test_config, config_path)
     else:

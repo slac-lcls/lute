@@ -1,4 +1,4 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.63-py3/bin/python
+#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
 
 """Script submitted by Automated Run Processor (ARP) to trigger an Airflow DAG.
 
@@ -8,15 +8,16 @@ begin running the tasks of the specified directed acyclic graph (DAG).
 
 __author__ = "Gabriel Dorlhiac"
 
-import sys
-import os
-import uuid
-import getpass
-import datetime
-import logging
 import argparse
+import collections
+import datetime
+import getpass
+import logging
+import os
+import sys
+import uuid
 import time
-from typing import Dict, Union, List, Optional, Any, cast, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -49,6 +50,8 @@ class DagRunConf(TypedDict):
     lute_params: Dict[str, Union[str, bool]]
     slurm_params: List[str]
     workflow: Dict[str, Any]
+    run_type: Optional[str]
+    is_daq2: Optional[bool]
 
 
 class DagRunData(TypedDict):
@@ -112,7 +115,7 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
     return formatted_token
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="trigger_airflow_lute_dag",
         description="Trigger Airflow to begin executing a LUTE DAG.",
@@ -125,6 +128,16 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
     parser.add_argument(
         "--test", help="Use test Airflow instance.", action="store_true"
+    )
+    parser.add_argument(
+        "--type",
+        help=(
+            "Provide a run type to describe this workflow submission. "
+            "Some workflows may use a run type/tag to determine branching e.g. "
+            "This overrides the eLog type provided by the DAQ (if present)."
+        ),
+        type=str,
+        default="",
     )
     parser.add_argument(
         "-w", "--workflow", type=str, help="Workflow to run.", default="test"
@@ -183,7 +196,7 @@ if __name__ == "__main__":
         os.environ["RUN_NUM"] = args.run
 
         os.environ["Authorization"] = _request_arp_token(args.experiment)
-        os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
+        os.environ["ARP_JOB_ID"] = uuid.uuid4().hex[:24]
 
     wf_name: str
     use_custom_defn: bool
@@ -221,10 +234,10 @@ if __name__ == "__main__":
 
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
     user_name: str = "btx" if args.admin else "lcls_user"
-    auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
+    airflow_auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
     resp: requests.models.Response = requests.get(
         f"{airflow_instance}/{airflow_api_endpoints['health']}",
-        auth=auth,
+        auth=airflow_auth,
     )
     resp.raise_for_status()
 
@@ -252,7 +265,7 @@ if __name__ == "__main__":
         resp = requests.patch(
             f"{airflow_instance}/{airflow_api_endpoints['update_defn']}",
             json=new_workflow,
-            auth=auth,
+            auth=airflow_auth,
         )
         try:
             resp.raise_for_status()
@@ -262,7 +275,7 @@ if __name__ == "__main__":
                 resp = requests.post(
                     f"{airflow_instance}/{airflow_api_endpoints['create_defn']}",
                     json=new_workflow,
-                    auth=auth,
+                    auth=airflow_auth,
                 )
                 resp.raise_for_status()
             else:
@@ -270,48 +283,88 @@ if __name__ == "__main__":
         logger.debug("Sent new workflow definition.")
         resp = requests.get(
             f"{airflow_instance}/{airflow_api_endpoints['mod_dag']}",
-            auth=auth,
+            auth=airflow_auth,
         )
         resp.raise_for_status()
         file_token: str = resp.json()["file_token"]
         f_endpoint: str = airflow_api_endpoints["parse_file"].format(
             file_token=file_token
         )
-        resp = requests.put(f"{airflow_instance}/{f_endpoint}", auth=auth)
+        resp = requests.put(f"{airflow_instance}/{f_endpoint}", auth=airflow_auth)
         resp.raise_for_status()
         logger.debug("Re-parsed DAG for setup with new workflow.")
 
     # Experiment, run #, and ARP env variables come from ARP submission only
     # We override above or exit if we cannot, so we cast here
-    assert isinstance(os.getenv("EXPERIMENT"), str)
-    assert isinstance(os.getenv("RUN_NUM"), str)
-    assert isinstance(os.getenv("ARP_JOB_ID"), str)
-    assert isinstance(os.getenv("Authorization"), str)
+    experiment: Optional[str] = os.getenv("EXPERIMENT")
+    run_num: Optional[str] = os.getenv("RUN_NUM")
+    arp_job_id: Optional[str] = os.getenv("ARP_JOB_ID")
+    jid_authorization: Optional[str] = os.getenv("Authorization")
+    assert isinstance(experiment, str)
+    assert isinstance(run_num, str)
+    assert isinstance(arp_job_id, str)
+    assert isinstance(jid_authorization, str)
+
+    elog_auth: Dict[str, str] = {
+        "Authorization": jid_authorization,
+    }
+    base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
+    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
+    run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
+    resp = requests.get(run_doc_url, headers=elog_auth)
+
+    run_type: str
+    is_daq2: Optional[bool] = None
+    if resp.status_code != 200:
+        logger.warning(
+            "Unable to retrieve run document! No `run_type` information will be used! "
+            "No information about psana1/psana2 can be retrieved. "
+            "Workflow may be able to continue but this could point to issues with "
+            "API access that lead to problems downstream."
+        )
+        run_type = "UNKNOWN"
+    else:
+        if args.type != "":
+            run_type = args.type
+        else:
+            # If API request succeeds `type` should always be defined
+            run_type = resp.json()["value"]["type"]
+        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
+        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
+        for key in param_keys:
+            if "/drp/" in key:
+                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
+                # In LCLS1 they are sent as "DAQ Detector/<name>"
+                is_daq2 = True
+                break
+        else:
+            is_daq2 = False
+
     dag_run_data: DagRunData = {
         "dag_run_id": str(uuid.uuid4()),
         "conf": {
-            "experiment": cast(str, os.getenv("EXPERIMENT")),
-            "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
+            "experiment": experiment,
+            "run_id": f"{run_num}_{datetime.datetime.utcnow().isoformat()}",
             "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
-            "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
+            "ARP_ROOT_JOB_ID": arp_job_id,
             "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
-            "Authorization": cast(str, os.getenv("Authorization")),
+            "Authorization": jid_authorization,
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
-            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[
-                -1
-            ],
+            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
             "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
             "workflow": wf_defn,  # Only used for custom defined workflows.
+            "run_type": run_type,
+            "is_daq2": is_daq2,  # True if LCLS2 DAQ, False if LCLS1 DAQ, None if undetermined
         },
     }
 
     resp = requests.post(
         f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
         json=dag_run_data,
-        auth=auth,
+        auth=airflow_auth,
     )
     resp.raise_for_status()
     dag_run_id: str = dag_run_data["dag_run_id"]
@@ -324,7 +377,7 @@ if __name__ == "__main__":
     if not use_custom_defn:
         resp = requests.get(
             f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
-            auth=auth,
+            auth=airflow_auth,
         )
         resp.raise_for_status()
         task_ids = [task["task_id"] for task in resp.json()["tasks"]]
@@ -355,12 +408,12 @@ if __name__ == "__main__":
     while True:
         time.sleep(1)
         # DAG Status
-        resp = requests.get(url, auth=auth)
+        resp = requests.get(url, auth=airflow_auth)
         resp.raise_for_status()
         dag_state = resp.json()["state"]
         # Check Task instances
         task_url: str = f"{url}/taskInstances"
-        resp = requests.get(task_url, auth=auth)
+        resp = requests.get(task_url, auth=airflow_auth)
         resp.raise_for_status()
         instance_information: List[Dict[str, Any]] = resp.json()["task_instances"]
         for inst in instance_information:
@@ -388,7 +441,7 @@ if __name__ == "__main__":
                         xcom_key=xcom_key,
                     )
                     try:
-                        resp = requests.get(xcom_url, auth=auth)
+                        resp = requests.get(xcom_url, auth=airflow_auth)
                         resp.raise_for_status()
                         logs: str = resp.json()["value"]  # Only want to print once.
                         logger.info(f"Providing logs for {task_id}")
@@ -428,3 +481,6 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         sys.exit(0)
+
+if __name__ == "__main__":
+    main()

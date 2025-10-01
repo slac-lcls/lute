@@ -261,6 +261,10 @@ class JIDSlurmOperator(BaseOperator):
         else:
             lute_param_str = f"--taskname {self.lute_task_id} --config {config_path}"
 
+        if "is_daq2" in dagrun_config:
+            if dagrun_config["is_daq2"]:
+                lute_param_str = f"{lute_param_str} --psana2"
+
         kerb_file: Optional[str] = dagrun_config.get("kerb_file")
         if kerb_file is not None:
             lute_param_str = f"{lute_param_str} -K {kerb_file}"

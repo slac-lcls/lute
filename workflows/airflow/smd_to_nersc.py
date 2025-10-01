@@ -1,6 +1,6 @@
-"""Run smalldata_tools and basic analysis.
+"""Run smalldata_tools and converts to NeXus format.
 
-Runs smalldata_tools and then basic analysis for XSS, XAS and XES.
+Runs smalldata_tools and then converts to NeXus format.
 
 Note:
     The task_id MUST match the managed task name when defining DAGs - it is used
@@ -19,30 +19,23 @@ from airflow import DAG
 from lute.operators.jidoperators import JIDSlurmOperator
 
 dag_id: str = f"lute_{os.path.splitext(os.path.basename(__file__))[0]}"
-description: str = (
-    "Produce basic analysis for XSS, XAS, and XES from SmallData hdf5 files."
-)
+description: str = "Produces Nexus hdf5 file from SmallData hdf5 files."
 
 dag: DAG = DAG(
     dag_id=dag_id,
     start_date=datetime(2024, 9, 3),
     schedule_interval=None,
     description=description,
+    is_paused_upon_creation=False,
 )
 
-smd2_producer: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataProducer2", dag=dag)
-
-xss: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="SmallDataXSSAnalyzer", dag=dag
+smd2_producer: JIDSlurmOperator = JIDSlurmOperator(
+    task_id="SmallDataProducer2", dag=dag
 )
 
-xas: JIDSlurmOperator = JIDSlurmOperator(
-    max_cores=2, task_id="SmallDataXASAnalyzer", dag=dag
+smd2nx: JIDSlurmOperator = JIDSlurmOperator(
+    max_cores=2, task_id="SMDToNexusConvertor", dag=dag
 )
-
-xes: JIDSlurmOperator = JIDSlurmOperator(task_id="SmallDataXESAnalyzer", dag=dag)
 
 # Run summaries
-smd2_producer >> xss
-smd2_producer >> xas
-smd2_producer >> xes
+smd2_producer >> smd2nx

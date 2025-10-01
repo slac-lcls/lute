@@ -42,7 +42,7 @@ For additional debugging variables see the advanced usage section below.
 On S3DF you can also submit individual **managed** `Task`s to run as batch jobs. To do so use `launch_scripts/submit_slurm.sh`
 
 ```bash
-> launch_scripts/submit_slurm.sh -t <ManagedTaskName> -c </path/to/config/yaml> [--debug] $SLURM_ARGS
+> launch_scripts/submit_slurm.sh -t <ManagedTaskName> -c </path/to/config/yaml> [--debug] [--psana2] $SLURM_ARGS
 ```
 
 As before command-line arguments in square brackets `[]` are optional, while those in `<>` must be provided
@@ -50,6 +50,7 @@ As before command-line arguments in square brackets `[]` are optional, while tho
 - `-t <ManagedTaskName>` is the name of the **managed** `Task` you want to run.
 - `-c </path/...>` is the path to the configuration YAML.
 - `--debug` is the flag to control whether or not to run in debug mode.
+- `--psana2` is a flag to switch to using the psana2 base environment for LUTE. Otherwise, it will use the psana1 environment. The core infrastructure runs in both. If running a workflow and it was determined that the experiment/run was a LCLS2 environment, this argument will be added automatically. In general, this has no effect on `Task` execution; however, it may allow some `TaskParameters` models to use psana1/psana2 specific information to simplify configuration.
 
 In addition to the LUTE-specific arguments, SLURM arguments must also be provided (`$SLURM_ARGS` above). You can provide as many as you want; however you will need to at least provide:
 
@@ -180,7 +181,16 @@ In order to run a DAG defined in this way, we pass the **path** to the YAML file
 
 Note that fewer options are currently supported for configuring the operators for each step of the DAG.  The slurm arguments can be replaced in their entirety using a custom `slurm_params` string but individual options cannot be modified.
 
-### Debug Environment Variables
+### Environment Variables
+A number of environment variables can be set to control certain aspects of LUTE behaviour.
+
+- `LUTE_USE_ZMQ`: By default, LUTE will use ZMQ for socket-based IPC between the `Task` and `Executor`. Setting `LUTE_USE_ZMQ=0` will switch to a `socket`-based implementation. There is feature parity between the two implementations.
+- `LUTE_USE_TCP`: Set to 1 to use TCP sockets. Otherwise will use Unix sockets.
+- `LUTE_DB_SPEC_VERSION`: Set to determine the database specification version. Either 1 or 2, currently.
+
+A number of other environment variables are used (`LUTE_PATH`, `LUTE_EXECUTOR_HOST`, as examples). These, however, are set internally and are not intended to be managed by users. They will appear in the database records, however.
+
+#### Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.
 
 Types of debug markers:
@@ -204,6 +214,6 @@ You can enable a marker by setting to 1, e.g. to enable the example marker above
 MYENVVAR=1 python -B run_task.py -t Tester -c config/test.yaml
 ```
 
-#### Currently used environment variables
+##### Currently used debug environment variables
 - `LUTE_DEBUG_EXIT_AT_YAML`: Exits the program after reading in a YAML configuration file and performing variable substitutions, but BEFORE Pydantic validation.
 - `LUTE_DEBUG_BEFORE_TPP_EXEC`: Exits the program after a ThirdPartyTask has prepared its submission command, but before `exec` is used to run it.

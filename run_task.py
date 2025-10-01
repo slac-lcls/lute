@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 import argparse
 import logging
@@ -15,23 +14,23 @@ else:
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-parser: argparse.ArgumentParser = argparse.ArgumentParser(
-    prog="run_managed_task",
-    description="Run a LUTE managed task.",
-    epilog="Refer to https://github.com/slac-lcls/lute for more information.",
-)
-parser.add_argument(
-    "-c", "--config", type=str, help="Path to config file with Task parameters."
-)
-parser.add_argument(
-    "-t",
-    "--taskname",
-    type=str,
-    help="Name of the Managed Task to run.",
-    default="test",
-)
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        prog="run_managed_task",
+        description="Run a LUTE managed task.",
+        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument(
+        "-c", "--config", type=str, help="Path to config file with Task parameters."
+    )
+    parser.add_argument(
+        "-t",
+        "--taskname",
+        type=str,
+        help="Name of the Managed Task to run.",
+        default="test",
+    )
 
-if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
     config: str = args.config
     task_name: str = args.taskname
@@ -64,3 +63,6 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     managed_task.execute_task()
+
+if __name__ == "__main__":
+    main()

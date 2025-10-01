@@ -9,6 +9,7 @@ begin running the tasks of the specified deployment of a flow.
 __author__ = "Gabriel Dorlhiac"
 
 import argparse
+import collections
 import datetime
 import getpass
 import logging
@@ -17,7 +18,7 @@ import sys
 import time
 import uuid
 import yaml
-from typing import Any, cast, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 from typing_extensions import TypedDict
 
 import requests
@@ -55,6 +56,8 @@ class FlowConf(TypedDict):
     lute_params: LuteParams
     slurm_params: List[str]
     workflow: Dict[str, Any]
+    run_type: Optional[str]
+    is_daq2: Optional[bool]
 
 
 class FlowRequestDict(TypedDict):
@@ -114,7 +117,7 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
     return formatted_token
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="trigger_prefect_lute_flow",
         description="Trigger Prefect to begin executing a LUTE flow.",
@@ -177,7 +180,7 @@ if __name__ == "__main__":
         os.environ["RUN_NUM"] = args.run
 
         os.environ["Authorization"] = _request_arp_token(args.experiment)
-        os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
+        os.environ["ARP_JOB_ID"] = uuid.uuid4().hex[:24]
 
     user: str
     pw: str
@@ -186,7 +189,7 @@ if __name__ == "__main__":
     auth: HTTPBasicAuth = HTTPBasicAuth(user, pw)
 
     flow_name: str = "lute_dynamic"
-    deployment_name: str = "test-deployment2"
+    deployment_name: str = "dev"
 
     csrf_endpoint: str = f"{PREFECT_API_URL}/csrf-token"
     name_endpoint: str = (
@@ -203,20 +206,58 @@ if __name__ == "__main__":
 
     # Experiment, run #, and ARP env variables come from ARP submission only
     # We override above or exit if we cannot, so we cast here
-    assert isinstance(os.getenv("EXPERIMENT"), str)
-    assert isinstance(os.getenv("RUN_NUM"), str)
-    assert isinstance(os.getenv("ARP_JOB_ID"), str)
-    assert isinstance(os.getenv("Authorization"), str)
+    experiment: Optional[str] = os.getenv("EXPERIMENT")
+    run_num: Optional[str] = os.getenv("RUN_NUM")
+    arp_job_id: Optional[str] = os.getenv("ARP_JOB_ID")
+    jid_authorization: Optional[str] = os.getenv("Authorization")
+    assert isinstance(experiment, str)
+    assert isinstance(run_num, str)
+    assert isinstance(arp_job_id, str)
+    assert isinstance(jid_authorization, str)
+
+    elog_auth: Dict[str, str] = {
+        "Authorization": jid_authorization,
+    }
+    base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
+    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
+    run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
+    resp = requests.get(run_doc_url, headers=elog_auth)
+
+    run_type: str
+    is_daq2: Optional[bool] = None
+    if resp.status_code != 200:
+        logger.warning(
+            "Unable to retrieve run document! No `run_type` information will be used! "
+            "No information about psana1/psana2 can be retrieved. "
+            "Workflow may be able to continue but this could point to issues with "
+            "API access that lead to problems downstream."
+        )
+        run_type = "UNKNOWN"
+    else:
+        if args.type != "":
+            run_type = args.type
+        else:
+            # If API request succeeds `type` should always be defined
+            run_type = resp.json()["value"]["type"]
+        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
+        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
+        for key in param_keys:
+            if "/drp/" in key:
+                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
+                # In LCLS1 they are sent as "DAQ Detector/<name>"
+                is_daq2 = True
+        else:
+            is_daq2 = False
 
     params: LuteParams = {"config_file": args.config, "debug": args.debug}
 
     conf: FlowConf = {
-        "experiment": cast(str, os.getenv("EXPERIMENT")),
-        "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
+        "experiment": experiment,
+        "run_id": f"{run_num}_{datetime.datetime.utcnow().isoformat()}",
         "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
-        "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
+        "ARP_ROOT_JOB_ID": arp_job_id,
         "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
-        "Authorization": cast(str, os.getenv("Authorization")),
+        "Authorization": jid_authorization,
         "user": getpass.getuser(),
         "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
         "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
@@ -224,13 +265,13 @@ if __name__ == "__main__":
         "lute_params": params,
         "slurm_params": extra_args,
         "workflow": wf_defn,
+        "run_type": run_type,
+        "is_daq2": is_daq2,  # True if LCLS2 DAQ, False if LCLS1 DAQ, None if undetermined
     }
 
     # Get CSRF
     ##############################################
-    resp: requests.models.Response = requests.get(
-        csrf_endpoint, auth=auth, params={"client": user}
-    )
+    resp = requests.get(csrf_endpoint, auth=auth, params={"client": user})
 
     token: str = resp.json()["token"]
     client: str = resp.json()["client"]
@@ -291,3 +332,6 @@ if __name__ == "__main__":
         resp = requests.get(flow_run_state_endpoint, auth=auth)
         state = resp.json()["state_type"]
         task_run_id = resp.json()["state"]["state_details"]["task_run_id"]
+
+if __name__ == "__main__":
+    main()

@@ -9,6 +9,8 @@ $(basename "$0"):
           Display this message.
         -p|--path
           Path to the LUTE SQLite database.
+        --summarize
+          Provide a pivoted and reorganized view if using database v0.2.
 EOF
 }
 
@@ -25,6 +27,10 @@ do
         -p|--path)
           DBPATH="$2"
           shift
+          shift
+          ;;
+        --summarize)
+          SUMMARIZE=1
           shift
           ;;
     esac
@@ -44,4 +50,8 @@ if [[ $HOSTNAME =~ "sdf" ]]; then
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
 
-python -B ${APP_DIR}/dbview.py -p $DBPATH
+if [[ -z ${SUMMARIZE} ]]; then
+    python -B ${APP_DIR}/dbview.py -p $DBPATH
+else
+    python -B ${APP_DIR}/dbview.py -p $DBPATH --summarize
+fi

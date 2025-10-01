@@ -356,6 +356,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
         flag_type="--",
     )
     stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    config: Optional[str] = Field(
+        None,
+        description="Alternative config file to use for producer configuration",
+        flag_type="--",
+    )
     nevents: int = Field(
         int(1e9), description="Number of events to process.", flag_type="--"
     )
@@ -459,14 +464,28 @@ class SubmitSMDParameters(ThirdPartyParameters):
         exp: str = values["lute_config"].experiment
         hutch: str = exp[:3]
         if not lute_template_cfg.output_path:
-            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
-                lute_template_cfg.output_path = values["producer"]
+            cfg: str
+            if values["config"] is not None:
+                prod_cfg: str = f"prod_config_{values['config']}"
+                cfg = str(Path(values["producer"]).parent / prod_cfg)
             else:
-                cfg: str = str(
-                    Path(values["producer"]).parent / f"prod_config_{hutch}.py"
-                )
-                lute_template_cfg.output_path = cfg
-                lute_template_cfg.template_name = "smd_prod_config_template.py"
+                cfg = str(Path(values["producer"]).parent / f"prod_config_{hutch}.py")
+            lute_template_cfg.output_path = cfg
+            # Try using xtc_version now available in psana2 to figure out lcls1
+            # or lcls2
+            is_daq2: bool
+            try:
+                import psana  # type: ignore
+
+                _ = psana.xtc_version
+                # xtc_version fails in psana1
+                is_daq2 = True
+            except AttributeError:
+                is_daq2 = False
+            if not is_daq2:
+                lute_template_cfg.template_name = "smd1_prod_config_template.py"
+            else:
+                lute_template_cfg.template_name = "smd2_prod_config_template.py"
         return lute_template_cfg
 
     @root_validator(pre=False)
