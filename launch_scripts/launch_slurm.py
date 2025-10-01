@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
-
 """Script submitted by Automated Run Processor (ARP) to trigger a SLURM-job workflow.
 
 This script is submitted by the ARP to the batch nodes. It runs a batch job which itself
@@ -335,9 +333,6 @@ def main() -> None:
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
 
-    use_kerberos: bool = (
-        True  # Always copy kerberos ticket so non-active experiments can work.
-    )
     # Do we use any APIs now that need kerberos ticket if not using JID?
     # Maybe can get rid of this for the SLURM only submission?
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")

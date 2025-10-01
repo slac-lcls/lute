@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
-
 """Script submitted by Automated Run Processor (ARP) to trigger a Prefect flow.
 
 This script is submitted by the ARP to the batch nodes. It triggers Prefect to
@@ -153,9 +151,6 @@ def main() -> None:
     args, extra_args = parser.parse_known_args()
 
     # Check if was submitted from ARP - look for token
-    use_kerberos: bool = (
-        True  # Always copy kerberos ticket so non-active experiments can work.
-    )
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")
     if (
         os.getenv("Authorization") is None
@@ -301,7 +296,6 @@ def main() -> None:
     # Run loop, gather logs, etc.
     ##############################################
     flow_run_state_endpoint: str = f"{PREFECT_API_URL}/flow_runs/{flow_run_id}"
-    task_run_state_endpoint: str = f"{PREFECT_API_URL}/task_run_states/{{task_run_id}}"
     log_endpoint: str = f"{PREFECT_API_URL}/logs/filter"
 
     log_payload: Dict[str, Any] = {
@@ -316,7 +310,6 @@ def main() -> None:
 
     resp = requests.get(flow_run_state_endpoint, auth=auth)
     state: str = resp.json()["state_type"]
-    task_run_id: str = resp.json()["state"]["state_details"]["task_run_id"]
 
     last_log_idx: int = 0
     while state in ("SCHEDULED", "PENDING", "RUNNING"):

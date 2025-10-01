@@ -86,7 +86,6 @@ def main() -> None:
         # lute.execution.subprocess_utils.USE_PYDANTIC_MODELS has a bool
         # It defaults to True, but we set here in case anything changes in the future
         lute.execution.subprocess_utils.USE_PYDANTIC_MODELS = True
-        is_third_party = True
         if isinstance(task_parameters, ThirdPartyParameters):
             TaskType = ThirdPartyTask
         else:
