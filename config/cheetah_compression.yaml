@@ -60,3 +60,14 @@ RunCheetah:                       # All variables are given as strings
         abs_error: 42
         bin_size: 2
         roi_window_size: 9
+
+IndexCrystFEL:
+  #in_file: ""            # Location of a `.lst` file listing CXI files
+  #out_file: ""           # Where to write the output stream file
+  geometry: "/sdf/data/lcls/ds/mfx/mfx100903824/scratch/dorlhiac/test.geom" # Location of a geometry file
+  indexing: "mosflm"      # Indexing methods
+  int_radius: "4,5,7"     # Integration radii
+  tolerance: "5,5,5,1.5"  # Tolerances
+  multi: True
+  profile: True
+  no_revalidate: True

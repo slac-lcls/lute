@@ -94,7 +94,7 @@ CrystFELIndexer.update_environment(
         "PATH": (
             "/sdf/group/lcls/ds/tools/XDS-INTEL64_Linux_x86_64:"
             "/sdf/group/lcls/ds/tools:"
-            "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin"
+            "/sdf/group/lcls/ds/tools/crystfel/0.12.0/bin"
         )
     }
 )

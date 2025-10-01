@@ -24,6 +24,15 @@ from lute.io.models.validators import template_parameter_validator
 class RunCheetahParameters(ThirdPartyParameters):
     """Parameters for running OM Cheetah Task."""
 
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = True
+        """Whether the Executor should mark a specified parameter as a result."""
+
+        result_from_params: str = ""
+        """Defines a result from the parameters. Use a validator to do so."""
+
     class CheetahSubconfigParameters(BaseModel):
         """Parameters for OM Cheetah itself."""
 
@@ -396,3 +405,19 @@ class RunCheetahParameters(ThirdPartyParameters):
         if lute_template_cfg.output_path == "":
             lute_template_cfg.output_path = values["om_config"]
         return lute_template_cfg
+
+    @root_validator(pre=False)
+    def define_result(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        out_dir: str = values["cheetah"].params.processed_directory
+        prefix: str = values["cheetah"].params.processed_filename_prefix
+        extension: str = values["cheetah"].params.processed_filename_extension
+        n_processes: int = values["n_processes"]
+
+        file_name_base: str = f"{out_dir}/{prefix}"
+        img_list_file_name: str = f"{out_dir}/{prefix}_images.lst"
+        with open(img_list_file_name, "w") as img_list_file:
+            for i in range(1, n_processes):
+                img_list_file.write(f"{file_name_base}_{i}.{extension}\n")
+
+        cls.Config.result_from_params = img_list_file_name
+        return values
