@@ -370,7 +370,7 @@ class BayFAIOpt2:
         """
         powder[powder < 0] = 0
         if smooth:
-            for p in range(powder.shape[0]):         
+            for p in range(powder.shape[0]):
                 gradx = np.gradient(powder[p], axis=0)
                 grady = np.gradient(powder[p], axis=1)
                 powder[p] = np.sqrt(gradx**2 + grady**2)
