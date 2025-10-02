@@ -1,4 +1,5 @@
 #include "peakfinder8.hh"
+#include "peakfinder8_v2.hh"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,7 @@ extern "C" {
 
     static PyObject* Peakfinder8Exception;
     static PyObject* peakfinder_8(PyObject*, PyObject*, PyObject*);
+    static PyObject* peakfinder_8_v2(PyObject*, PyObject*, PyObject*);
     #ifdef PYPEAKFINDER_8_DEBUG
     static void on_free();
     #endif
@@ -128,12 +130,104 @@ extern "C" {
                 * The seventh entry is a list storing the signal-to-noise ratio of each
                 detected peak.)o"
     );
+
+    PyDoc_STRVAR(
+        peakfinder_8_v2_doc,
+        R"o(peakfinder_8_v2(max_num_peaks, data, mask, pix_r, adc_thresh, \
+            hitfinder_min_snr, hitfinder_min_pix_count, hitfinder_max_pix_count, \
+            hitfinder_local_bg_radius)
+
+        Peakfinder8 peak detection.
+
+        This function finds peaks in a detector data frame using the 'peakfinder8'
+        strategy from the Cheetah software package. The 'peakfinder8' peak detection
+        strategy is described in the following publication:
+
+        A. Barty, R. A. Kirian, F. R. N. C. Maia, M. Hantke, C. H. Yoon, T. A. White,
+        and H. N. Chapman, "Cheetah: software for high-throughput reduction and
+        analysis of serial femtosecond x-ray diffraction data", J Appl  Crystallogr,
+        vol. 47, pp. 1118-1131 (2014).
+
+        This V2 version does not requiring creating a "slab" from the data.
+
+        Args:
+
+            max_num_peaks (int): The maximum number of peaks that will be retrieved
+                from each data frame. Additional peaks will be ignored.
+
+            data (npt.NDArray[float]): The detector data frame on which the peak finding
+                must be performed (as an numpy array of float32).
+
+            mask (npt.NDArray[int8]): A numpy array of int8 storing a mask.  The map can
+                be used to mark areas of the data frame that must be excluded from the peak
+                search.
+
+                * The map must be a numpy array of the same shape as the data frame on
+                  which the algorithm will be applied.
+
+                * Each pixel in the map must have a value of either 0, meaning that
+                  the corresponding pixel in the data frame should be ignored, or 1,
+                  meaning that the corresponding pixel should be included in the
+                  search.
+
+                * The map is only used to exclude areas from the peak search: the data
+                  is not modified in any way.
+
+            pix_r (npt.NDArray[float]): A numpy array of float32 with radius information.
+
+                * The array must have the same shape as the data frame on which the
+                  algorithm will be applied.
+
+                * Each element of the array must store, for the corresponding pixel in the
+                  data frame, the distance in pixels from the origin of the detector
+                  reference system (usually the center of the detector).
+
+            adc_thresh (float): The minimum ADC threshold for peak detection.
+
+            hitfinder_min_snr (float): The minimum signal-to-noise ratio for peak
+                detection.
+
+            hitfinder_min_pix_count (float): The minimum size of a peak in pixels.
+
+            hitfinder_max_pixel_count (int): The maximum size of a peak in pixels.
+
+            local_bg_radius (int): The radius for the estimation of the local
+                background in pixels.
+
+        Returns:
+
+            peak_com_x (list[float]): Fractional fs indices of peak centers of mass.
+                These are within a panel.
+
+            peak_com_y (list[float]): Fractional ss indices of peak centers of mass.
+                These are within a panel.
+
+            peak_com_index (list[int]): Indicies for each peak center of mass.
+
+            peak_com_value (list[float]): The integrated intensities of each peak.
+
+            peak_npix (list[float]): The number of pixels making up each peak.
+
+            peak_maxi (list[float]): The maximum intensity pixel value in each peak.
+
+            peak_sigma (list[float]): The standard deviation of each peak.
+
+            peak_snr (list[float]): The signal to noise ratio of each peak.
+
+            peak_panel_index (list[int]): The peak panel indices.)o");
+
     static PyMethodDef peakfinders_methods[] = {
       {
           "peakfinder_8",
           (PyCFunction)peakfinder_8,
           METH_VARARGS | METH_KEYWORDS, // Support positional and keyword
           peakfinder_8_doc
+      },
+      {
+          "peakfinder_8_v2",
+          (PyCFunction)peakfinder_8_v2,
+          METH_VARARGS | METH_KEYWORDS,
+          peakfinder_8_v2_doc
       },
       {NULL,NULL,0,NULL}
     };
@@ -195,15 +289,27 @@ extern "C" {
         NULL
     };
 
+    /**
+     * Check that a numpy arrays type and dimensions match what is expected.
+     * @param arr_obj The pointer to the NumPy Python array object.
+     * @param ndim The expected dimensionality. If `-1` is passed, then this
+     *             function only checks for the data type.
+     * @param type The expected datatype of the array.
+     */
     static int is_array_okay(PyObject* arr_obj, int ndim, int type) {
-      if (!PyArray_Check(arr_obj)) {
-          return 0;
-      }
-      PyArrayObject* arr = reinterpret_cast<PyArrayObject*>(arr_obj);
-      if (PyArray_NDIM(arr) != ndim || PyArray_TYPE(arr) != type) {
-          return 0;
-      }
-      return 1;
+        if (!PyArray_Check(arr_obj)) {
+            return 0;
+        }
+        PyArrayObject* arr = reinterpret_cast<PyArrayObject*>(arr_obj);
+        // If passing ndim == -1, we don't check the dimensionality
+        bool type_or_dims_dont_match =
+            ndim == -1
+          ? PyArray_TYPE(arr) != type
+          : PyArray_TYPE(arr) != type || PyArray_NDIM(arr) != ndim;
+        if (type_or_dims_dont_match) {
+            return 0;
+        }
+        return 1;
     }
 
     static PyObject* peakfinder_8(PyObject* self, PyObject* args, PyObject* kwargs)
@@ -374,6 +480,149 @@ extern "C" {
 
         // Free allocated memory
         freePeakList(peak_list);
+
+        return result;
+    }
+
+    /**************************************************************************/
+    // Peakfinder8 V2 - no "slab" required
+
+
+
+    static const char* peakfinder_8_v2_kwlist[] = {
+        "max_num_peaks",
+        "data",
+        "mask",
+        "pix_r",
+        "adc_thresh",
+        "hitfinder_min_snr",
+        "hitfinder_min_pix_count",
+        "hitfinder_max_pix_count",
+        "hitfinder_local_bg_radius",
+        NULL
+    };
+
+    static PyObject* peakfinder_8_v2(PyObject* self, PyObject* args, PyObject* kwargs)
+    {
+        // Define all the variables - format specifiers left as comments
+        // "iOOO"
+        int max_num_peaks;                  //i
+        PyObject* data_obj = NULL;          //O -> float*
+        PyObject* mask_obj = NULL;          //O -> char*
+        PyObject* pix_r_obj = NULL;         //O -> float*
+
+        // "fflll"
+        float adc_thresh;                   //f
+        float hitfinder_min_snr;            //f
+        long hitfinder_min_pix_count;       //l
+        long hitfinder_max_pix_count;       //l
+        long hitfinder_local_bg_radius;     //l
+
+        // Parse by position or keyword
+        if (!PyArg_ParseTupleAndKeywords(
+                args, kwargs, "iOOOfflll", const_cast<char**>(peakfinder_8_v2_kwlist),
+                &max_num_peaks,
+                &data_obj,
+                &mask_obj,
+                &pix_r_obj,
+                &adc_thresh,
+                &hitfinder_min_snr,
+                &hitfinder_min_pix_count,
+                &hitfinder_max_pix_count,
+                &hitfinder_local_bg_radius)) {
+            return NULL;
+        }
+
+        // Verify arrays are okay.
+        float* data = NULL;
+        char* mask = NULL;
+        float* pix_r = NULL;
+
+        std::vector<int> shape;
+        if (!is_array_okay(data_obj, -1, NPY_FLOAT32)) {
+            PyErr_SetString(Peakfinder8Exception, "data must be an array of float32.");
+            return NULL;
+        } else {
+            PyArrayObject* data_arr = reinterpret_cast<PyArrayObject*>(data_obj);
+            data = reinterpret_cast<float*>(PyArray_DATA(data_arr));
+            long* shape_ptr = PyArray_SHAPE(data_arr);
+            int ndim = PyArray_NDIM(data_arr);
+            shape = std::vector<int>(shape_ptr, shape_ptr+ndim);
+        }
+
+        if (!is_array_okay(mask_obj, -1, NPY_INT8)) {
+            PyErr_SetString(Peakfinder8Exception, "mask must an array of int8.");
+            return NULL;
+        } else {
+            PyArrayObject* mask_arr = reinterpret_cast<PyArrayObject*>(mask_obj);
+            mask = reinterpret_cast<char*>(PyArray_DATA(mask_arr));
+        }
+
+        if (!is_array_okay(pix_r_obj, -1, NPY_FLOAT32)) {
+            PyErr_SetString(Peakfinder8Exception, "pix_r must be an array of float32.");
+            return NULL;
+        } else {
+            PyArrayObject* pix_r_arr = reinterpret_cast<PyArrayObject*>(pix_r_obj);
+            pix_r = reinterpret_cast<float *>(PyArray_DATA(pix_r_arr));
+        }
+
+        // Allocate the object for returning the peaks
+        tPeakList_v2 peak_list;
+        allocatePeakList_v2(&peak_list, max_num_peaks);
+
+        // Call the actual peakfinder
+        peakfinder8_v2(&peak_list,
+                       data,
+                       mask,
+                       pix_r,
+                       shape,
+                       adc_thresh,
+                       hitfinder_min_snr,
+                       hitfinder_min_pix_count,
+                       hitfinder_max_pix_count,
+                       hitfinder_local_bg_radius);
+
+        // Put peaks into the return tuple
+        PyObject* result = PyTuple_New(9);
+        PyObject* peak_list_x = PyList_New(0);
+        PyObject* peak_list_y = PyList_New(0);
+        PyObject* peak_list_panel_num = PyList_New(0);
+        PyObject* peak_list_value = PyList_New(0);
+        PyObject* peak_list_index = PyList_New(0);
+        PyObject* peak_list_npix = PyList_New(0);
+        PyObject* peak_list_maxi = PyList_New(0);
+        PyObject* peak_list_sigma = PyList_New(0);
+        PyObject* peak_list_snr = PyList_New(0);
+
+        int num_peaks = peak_list.nPeaks;
+        if (num_peaks > max_num_peaks) {
+            num_peaks = max_num_peaks;
+        }
+
+        for (int i = 0; i < num_peaks; i++) {
+            PyList_Append(peak_list_x, PyFloat_FromDouble(peak_list.peak_com_x[i]));
+            PyList_Append(peak_list_y, PyFloat_FromDouble(peak_list.peak_com_y[i]));
+            PyList_Append(peak_list_panel_num, PyLong_FromLong(peak_list.peak_panel_number[i]));
+            PyList_Append(peak_list_value, PyFloat_FromDouble(peak_list.peak_totalintensity[i]));
+            PyList_Append(peak_list_index, PyLong_FromLong(peak_list.peak_com_index[i]));
+            PyList_Append(peak_list_npix, PyFloat_FromDouble(peak_list.peak_npix[i]));
+            PyList_Append(peak_list_maxi, PyFloat_FromDouble(peak_list.peak_maxintensity[i]));
+            PyList_Append(peak_list_sigma, PyFloat_FromDouble(peak_list.peak_sigma[i]));
+            PyList_Append(peak_list_snr, PyFloat_FromDouble(peak_list.peak_snr[i]));
+        }
+
+        PyTuple_SetItem(result, 0, peak_list_x);
+        PyTuple_SetItem(result, 1, peak_list_y);
+        PyTuple_SetItem(result, 2, peak_list_value);
+        PyTuple_SetItem(result, 3, peak_list_index);
+        PyTuple_SetItem(result, 4, peak_list_npix);
+        PyTuple_SetItem(result, 5, peak_list_maxi);
+        PyTuple_SetItem(result, 6, peak_list_sigma);
+        PyTuple_SetItem(result, 7, peak_list_snr);
+        PyTuple_SetItem(result, 8, peak_list_panel_num);
+
+        // Free allocated memory
+        freePeakList_v2(peak_list);
 
         return result;
     }

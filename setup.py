@@ -14,6 +14,7 @@ peakfinders_ext: Extension = Extension(
     sources=(
         [
             "extensions/algorithms/peakfinder8.cpp",
+            "extensions/algorithms/peakfinder8_v2.cpp",
             "extensions/algorithms/peakfinders.cpp",
         ]
     ),
