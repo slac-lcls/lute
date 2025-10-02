@@ -314,8 +314,8 @@ class BayFAIOpt:
         Imin : float
             Minimum intensity value for identifying Bragg peaks
         """
-        self.powder = self.generate_powder(powder, detname, smooth)
         self.detector = self.build_detector(in_file)
+        self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         self.Imin = self.min_intensity(self.powder)
         self.calibrant = self.define_calibrant(calibrant)
@@ -364,13 +364,12 @@ class BayFAIOpt:
             If True, apply smoothing to the powder image.
         """
         powder[powder < 0] = 0
-        powder[mask == 0] = 0
         if smooth:
             for p in range(powder.shape[0]):
-                bkg = gaussian_filter(powder[p], sigma=4)
-                powder[p] = powder[p] - bkg
-                powder[p][powder[p] < 0] = 0
-            powder[mask == 0] = 0
+                gradx = np.gradient(powder[p], axis=0)
+                grady = np.gradient(powder[p], axis=1)
+                powder[p] = np.sqrt(gradx**2 + grady**2)
+        powder[mask == 0] = 0
         return powder
 
     def generate_powder(
@@ -389,6 +388,7 @@ class BayFAIOpt:
             If True, apply smoothing to the powder image.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
+        mask = np.squeeze(mask, axis=0)
         powder = self.extract_powder(powder_path, detname)
         powder = self.preprocess_powder(powder, mask, smooth)
         return powder
@@ -941,7 +941,7 @@ class BayFAIOpt:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zeros = np.where(self.scan["score"] > 0)[0]
-            thrsh = np.percentile(self.scan["score"][non_zeros], 25)
+            thrsh = np.percentile(self.scan["score"][non_zeros], 10)
             self.thrsh = thrsh
             score_indices = np.where(self.scan["score"] > thrsh)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])

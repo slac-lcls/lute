@@ -124,7 +124,7 @@ class BayFAIParameters(TaskParameters):
     )
 
     preprocess: bool = Field(
-        True,
+        False,
         description="Whether to apply preprocessing to the powder diffraction image before calibration.",
     )
 

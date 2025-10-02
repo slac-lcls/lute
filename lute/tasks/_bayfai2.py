@@ -369,13 +369,12 @@ class BayFAIOpt2:
             If True, apply smoothing to the powder image.
         """
         powder[powder < 0] = 0
-        powder[mask == 0] = 0
         if smooth:
-            for p in range(powder.shape[0]):
-                bkg = gaussian_filter(powder[p], sigma=4)
-                powder[p] = powder[p] - bkg
-                powder[p][powder[p] < 0] = 0
-            powder[mask == 0] = 0
+            for p in range(powder.shape[0]):         
+                gradx = np.gradient(powder[p], axis=0)
+                grady = np.gradient(powder[p], axis=1)
+                powder[p] = np.sqrt(gradx**2 + grady**2)
+        powder[mask == 0] = 0
         return powder
 
     def generate_powder(
@@ -394,6 +393,7 @@ class BayFAIOpt2:
             If True, apply smoothing to the powder image.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
+        print(f"Mask shape: {mask.shape}")
         powder = self.extract_powder(powder_path, detname)
         powder = self.preprocess_powder(powder, mask, smooth)
         return powder
@@ -990,7 +990,7 @@ class BayFAIOpt2:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zeros = np.where(self.scan["score"] > 0)[0]
-            thrsh = np.percentile(self.scan["score"][non_zeros], 25)
+            thrsh = np.percentile(self.scan["score"][non_zeros], 10)
             self.thrsh = thrsh
             score_indices = np.where(self.scan["score"] > thrsh)[0]
             shift_index = np.argmin(self.scan["residual"][score_indices])
