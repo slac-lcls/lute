@@ -8,15 +8,58 @@ Classes:
 __all__ = ["BayFAIParameters"]
 __author__ = "Louis Conreux"
 
-from typing import Dict, List, Tuple
-from pydantic import BaseModel, Field
+import os
+from typing import Any, Dict, List, Tuple, Optional
+from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
+from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 from lute.io.models.validators import (
     validate_smd_path,
-    validate_calib_path,
-    validate_output_path,
 )
+
+def validate_metrology_path(calib_path_name: str):
+    """Finds the path to a valid calibration metrology file (psana1).
+    If no calib folder found, returns empty string (e.g. for psana2)."""
+
+    def _validate_metrology_path(
+        cls, calib_path: str, values: Dict[str, Any]
+    ) -> Optional[str]:
+        if calib_path == "":
+            exp: str = values["lute_config"].experiment
+            run: int = int(values["lute_config"].run)
+            try:
+                det_type: str = values["det_type"]
+            except KeyError:
+                det_type = values["detname"]
+            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
+            src = source_from_det_info(det_type.lower(), exp[:3])
+            group = group_from_det_type(det_type.lower())
+            calib_type = "geometry"
+            calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
+            if os.path.exists(calib_dir):
+                calib_run_path = select_calib_file(calib_dir, run)
+                return calib_run_path
+        return calib_path
+
+    return validator(calib_path_name, always=True)(_validate_metrology_path)
+
+
+def validate_geometry_path(output_path_name: str):
+    """Dynamically generates the output geometry path for the optimization results."""
+
+    def _validate_geometry_path(cls, output_path: str, values: Dict[str, Any]) -> str:
+        if output_path == "":
+            work_dir = values["lute_config"].work_dir
+            run = int(values["lute_config"].run)
+            geom_dir = os.path.join(work_dir, "geom")
+            if not os.path.exists(geom_dir):
+                os.makedirs(geom_dir)
+            output_run_path = os.path.join(geom_dir, f"{run}-end.data")
+            return output_run_path
+        return output_path
+
+    return validator(output_path_name, always=True)(_validate_geometry_path)
 
 
 class BayFAIParameters(TaskParameters):
@@ -77,8 +120,8 @@ class BayFAIParameters(TaskParameters):
     bounds: Dict[str, Tuple[float, float]] = Field(
         {
             "dist": (-0.05, 0.05),
-            "poni1": (-0.01, 0.01),
-            "poni2": (-0.01, 0.01),
+            "poni1": (-0.005, 0.005),
+            "poni2": (-0.005, 0.005),
             "rot1": (-0.1, 0.1),
             "rot2": (-0.1, 0.1),
             "rot3": (-0.1, 0.1),
@@ -139,8 +182,8 @@ class BayFAIParameters(TaskParameters):
         description="Bayesian optimization hyperparameters.",
     )
 
-    _find_in_file_path = validate_calib_path("in_file")
+    _find_in_file_path = validate_metrology_path("in_file")
 
     _find_smd_path = validate_smd_path("powder")
 
-    _find_out_file_path = validate_output_path("out_file")
+    _find_out_file_path = validate_geometry_path("out_file")

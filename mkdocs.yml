@@ -7,6 +7,8 @@ nav:
   - Usage Manual:
       - Task Configuration: "usage/configuration.md"
       - Running LUTE: "usage/running_lute.md"
+      - Task Documentation:
+          - Running BayFAI: "usage/tasks/bayfai.md" 
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task:
@@ -30,6 +32,9 @@ nav:
           - task: "source/tasks/task.md"
           - tasklets: "source/tasks/tasklets.md"
           - dataclasses: "source/tasks/dataclasses.md"
+          - bayfai: "source/tasks/bayfai.md"
+          - _bayfai: "source/tasks/_bayfai.md"
+          - _bayfai2: "source/tasks/_bayfai2.md"
           - geometry: "source/tasks/geometry.md"
           - _geometry: "source/tasks/_geometry.md"
           - sfx_find_peaks: "source/tasks/sfx_find_peaks.md"
@@ -45,6 +50,7 @@ nav:
       - io:
           - models:
               - base: "source/io/models/base.md"
+              - bayfai: "source/io/models/bayfai.md"
               - geometry: "source/io/models/geometry.md"
               - sfx_find_peaks: "source/io/models/sfx_find_peaks.md"
               - sfx_index: "source/io/models/sfx_index.md"
@@ -54,6 +60,7 @@ nav:
               - validators: "source/io/models/validators.md"
               - tests: "source/io/models/tests.md"
               - mpi_tests: "source/io/models/mpi_tests.md"
+          - calib: "source/io/calib.md"
           - config: "source/io/config.md"
           - db: "source/io/db.md"
           - _db:

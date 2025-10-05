@@ -159,23 +159,6 @@ def clone_smalldata(producer_location: str) -> None:
     git_clone(repo, location, 0o777)
 
 
-def clone_lcls_geom(work_dir: str) -> None:
-    """Clone the LCLS Geom repository in the working directory
-
-    Args:
-        work_dir (str): Full path to the location to clone to.
-    """
-
-    repo: str = "LouConreux/LCLSGeom"
-    git_clone(repo, work_dir, 0o777)
-    python_path: Optional[str] = os.getenv("PYTHONPATH")
-    if python_path is not None:
-        python_path = f"{python_path}:{work_dir}/LCLSGeom"
-    else:
-        python_path = f"{work_dir}/LCLSGeom"
-    os.environ["PYTHONPATH"] = python_path
-
-
 def grep(match_str: str, in_file: str) -> List[str]:
     """Grep for specific lines of text output.
 

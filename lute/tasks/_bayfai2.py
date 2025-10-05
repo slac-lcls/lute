@@ -2,15 +2,17 @@
 Classes for geometry optimization tasks.
 
 Classes:
-    BayFAIOpt: optimize detector geometry using PyFAI coupled with Bayesian Optimization.
+    BayFAIOpt2: optimize LCLS2 detector geometry using PyFAI coupled with Bayesian Optimization.
 
 Functions:
     Miscellaneous functions for geometry-related calculations:
     - rotation_matrix: Compute and return the detector tilts as a single rotation matrix
     - correct_geom: Correct the geometry given a set of geometry parameters.
-    - calculate_2theta: Calculate the 2θ angles for the detector based on the geometry parameters.
     - calculate_radius: Calculate the radius for each pixel based on the geometry parameters.
+    - calculate_2theta: Calculate the 2θ angles for each pixel based on the geometry parameters.
+    - calculate_q: Calculate the q-vector magnitude for each pixel based on the geometry parameters.
     - azimuthal_integration: Compute the radial intensity profile of an image.
+    - theta2q: Convert pixel diffraction angles to scattering vector magnitude q.
     - r2q: Convert pixel radii to scattering vector magnitude q.
 """
 
@@ -18,11 +20,14 @@ __all__ = [
     "BayFAIOpt2",
     "rotation_matrix",
     "correct_geom",
-    "calculate_2theta",
     "calculate_radius",
+    "calculate_2theta",
+    "calculate_q",
     "azimuthal_integration",
+    "theta2q",
     "r2q",
 ]
+
 __author__ = "Louis Conreux"
 
 from lute.execution.logging import get_logger
@@ -44,7 +49,6 @@ from bokeh.models import ColorBar, LinearColorMapper, HoverTool, ColumnDataSourc
 from bokeh.palettes import Viridis256  # type: ignore
 from bokeh.models.annotations import Label  # type: ignore
 import h5py  # type: ignore
-from scipy.ndimage import gaussian_filter  # type: ignore
 import pyFAI  # type: ignore
 from pyFAI.geometry import Geometry  # type: ignore
 from pyFAI.goniometer import SingleGeometry  # type: ignore
@@ -127,26 +131,6 @@ def correct_geom(detector: pyFAI.detectors.Detector, params: Optional[list] = No
     return x, y, z
 
 
-def calculate_2theta(
-    detector: pyFAI.detectors.Detector, params: Optional[list] = None
-) -> np.ndarray:
-    """
-    Calculate the 2θ angles for the detector based on the geometry parameters.
-
-    Parameters
-    ----------
-    detector : pyFAI.detectors.Detector
-        PyFAI detector object containing pixel coordinates to be corrected.
-    params : list, optional
-        6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
-    """
-    x, y, z = correct_geom(detector, params)
-    tth = np.zeros(detector.raw_shape)
-    for p in range(detector.n_modules):
-        tth[p] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
-    return tth
-
-
 def calculate_radius(
     detector: pyFAI.detectors.Detector, params: Optional[list] = None
 ) -> np.ndarray:
@@ -172,6 +156,45 @@ def calculate_radius(
     return r
 
 
+def calculate_2theta(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
+    """
+    Calculate the 2θ angles for the detector based on the geometry parameters.
+
+    Parameters
+    ----------
+    detector : pyFAI.detectors.Detector
+        PyFAI detector object containing pixel coordinates to be corrected.
+    params : list, optional
+        6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
+    """
+    x, y, z = correct_geom(detector, params)
+    tth = np.zeros(detector.raw_shape)
+    for p in range(detector.n_modules):
+        tth[p] = np.arctan2(np.sqrt(x[p] * x[p] + y[p] * y[p]), z[p])
+    return tth
+
+
+def calculate_q(
+    detector: pyFAI.detectors.Detector, params: Optional[list] = None
+) -> np.ndarray:
+    """
+    Calculate the q-vectors for each pixel based on the geometry parameters.
+
+    Parameters
+    ----------
+    detector : pyFAI.detectors.Detector
+        PyFAI detector object containing pixel coordinates to be corrected.
+    params : list, optional
+        6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
+    """
+    tth = calculate_2theta(detector, params)
+    wavelength = detector.wavelength
+    q = 4.0 * np.pi * np.sin(tth / 2.0) / (wavelength * 1e10)
+    return q
+
+
 def azimuthal_integration(
     powder: npt.NDArray[np.float64],
     detector: pyFAI.detectors.Detector,
@@ -189,16 +212,36 @@ def azimuthal_integration(
     params : list, optional
         6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
     """
-    r = calculate_radius(detector, params)
+    tth = calculate_2theta(detector, params)
     intensity, bin_edges = np.histogram(
-        r.ravel(), bins=1000, range=(r.min(), r.max()), weights=powder.ravel()
+        tth.ravel(), bins=1000, range=(tth.min(), tth.max()), weights=powder.ravel()
     )
-    count, _ = np.histogram(r.ravel(), bins=bin_edges)
+    count, _ = np.histogram(tth.ravel(), bins=bin_edges)
     radialprofile = np.divide(
         intensity, count, out=np.zeros_like(intensity), where=count != 0
     )
-    r_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-    return radialprofile, r_centers
+    tth_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    return radialprofile, tth_centers
+
+
+def theta2q(theta: np.ndarray, wavelength: float) -> np.ndarray:
+    """
+    Convert pixel 2θ angles to scattering vector magnitude q.
+
+    Parameters
+    ----------
+    theta: : numpy.ndarray, 1d
+        diffraction angles in radians
+    wavelength : float
+        X-ray wavelength in Angstrom
+
+    Returns
+    -------
+    qs: numpy.ndarray, 1d
+        magnitude of q-vector in per Angstrom
+    """
+    qs = 4.0 * np.pi * np.sin(theta / 2.0) / (wavelength * 1e10)
+    return qs
 
 
 def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
@@ -212,7 +255,7 @@ def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
     distance : float
         detector distance in meter
     wavelength : float
-        X-ray wavelength in meter
+        X-ray wavelength in Angstrom
 
     Returns
     -------
@@ -220,7 +263,7 @@ def r2q(radii: np.ndarray, distance: float, wavelength: float) -> np.ndarray:
         magnitude of q-vector in per Angstrom
     """
     theta = np.arctan2(radii, distance)
-    qs = 4.0 * np.pi * np.sin(theta / 2.0) / (wavelength * 1e10)
+    qs = theta2q(theta, wavelength)
     return qs
 
 
@@ -322,7 +365,7 @@ class BayFAIOpt2:
         self.detector = self.build_detector(detname, in_file)
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.Imin = self.min_intensity(self.powder)
+        self.Imin = np.percentile(self.powder, 95)
         self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
@@ -393,39 +436,9 @@ class BayFAIOpt2:
             If True, apply smoothing to the powder image.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
-        print(f"Mask shape: {mask.shape}")
         powder = self.extract_powder(powder_path, detname)
         powder = self.preprocess_powder(powder, mask, smooth)
         return powder
-
-    def min_intensity(self, powder: npt.NDArray[np.float64]) -> float:
-        """
-        Define minimal intensity for identifying Bragg peaks.
-
-        The minimal intensity is chosen so that the Signal to Noise Ratio (SNR) is maximized
-        Signal is defined as the standard deviation of the pixels above the threshold
-        Noise is defined as the standard deviation of the pixels below the threshold
-
-        Parameters
-        ----------
-        powder : np.ndarray
-            Powder image
-        """
-        mean = np.mean(powder)
-        threshold = mean + 5 * np.std(powder)
-        nice_pix = powder < threshold
-        SNRs = []
-        Imins = np.arange(95, 100, 0.25)
-        for Imin in Imins:
-            threshold = np.percentile(powder[nice_pix], Imin)
-            signal_pixels = powder[nice_pix][powder[nice_pix] > threshold]
-            signal = np.std(signal_pixels)
-            noise_pixels = powder[nice_pix][powder[nice_pix] <= threshold]
-            noise = np.std(noise_pixels)
-            SNRs.append(signal / noise)
-        q = Imins[np.argmax(SNRs)]
-        Imin = np.percentile(powder[nice_pix], q)
-        return Imin
 
     def build_detector(
         self, detname: str, in_file: Optional[str] = None
@@ -506,7 +519,7 @@ class BayFAIOpt2:
         shortname: str = uc.detector_name_short(longname)
         det_type: str = detector._dettype
         run_orig: int = self.run
-        run_beg: int = 0
+        run_beg: int = self.run
         run_end: str = "end"
         run: int = run_beg
         kwa = {
@@ -1220,7 +1233,7 @@ class BayFAIOpt2:
             color="purple",
             linestyle=":",
             linewidth=2,
-            label=f"Threshold ({Imin:.2f})",
+            label=f"95th Percentile: {Imin:.2f}",
         )
         ax.set_xlim([0, 1000000])
         ax.set_ylim([0, mean + 3 * std_dev])
@@ -1678,8 +1691,8 @@ class BayFAIOpt2:
 
         # Plotting radial profiles with peaks
         ax3 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=2)
-        profile, radii = azimuthal_integration(powder, detector)
-        qs = r2q(radii, distance, self.calibrant.wavelength)
+        profile, tth = azimuthal_integration(powder, detector)
+        qs = theta2q(tth, self.calibrant.wavelength)
         self.plot_radial_integration(qs, profile, self.calibrant, ax3)
         irow += 1
 
@@ -1841,9 +1854,8 @@ class BayFAIOpt2:
 
         # Plotting radial profiles with peaks
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        masked_powder = powder
-        profile, radii = azimuthal_integration(masked_powder, detector)
-        qs = r2q(radii, distance, self.calibrant.wavelength)
+        profile, tth = azimuthal_integration(powder, detector)
+        qs = theta2q(tth, self.calibrant.wavelength)
         self.plot_radial_integration(qs, profile, self.calibrant, ax=ax2)
         irow += 1
         icol = 0

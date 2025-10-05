@@ -454,8 +454,8 @@ class BaseExecutor(ABC):
                 if update_path == "prepend":
                     env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
                 elif update_path == "append":
-                    env["PATH"] = (
-                        f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
+                    env[key] = (
+                        f"{self._analysis_desc.task_env[key]}{sep}{env[key]}"
                     )
                 elif update_path == "overwrite":
                     pass
