@@ -18,6 +18,7 @@ from lute.io.models.validators import (
     validate_smd_path,
 )
 
+
 def validate_metrology_path(calib_path_name: str):
     """Finds the path to a valid calibration metrology file (psana1).
     If no calib folder found, returns empty string (e.g. for psana2)."""
