@@ -5,8 +5,8 @@ Functions:
         parameters for validation.
 """
 
-__all__ = ["template_parameter_validator", "validate_smd_path", "validate_calib_path"]
-__author__ = ["Gabriel Dorlhiac", "Louis Conreux"]
+__all__ = ["template_parameter_validator", "validate_smd_path"]
+__author__ = ["Gabriel Dorlhiac"]
 
 import os
 from typing import Dict, Any, Optional
