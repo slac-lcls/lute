@@ -489,10 +489,6 @@ class BayFAIOpt:
         ----------
         calibrant_name : str
             Name of the calibrant
-        exp : str
-            Name of the experiment
-        run : int
-            Run number
         """
         self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
@@ -688,8 +684,6 @@ class BayFAIOpt:
             Minimum intensity threshold
         max_rings : int
             Maximum number of rings to consider
-        rtol : float
-            Relative tolerance for masking ring pixels
 
         Returns
         -------

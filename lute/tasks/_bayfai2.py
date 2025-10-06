@@ -754,8 +754,6 @@ class BayFAIOpt2:
             Minimum intensity threshold
         max_rings : int
             Maximum number of rings to consider
-        rtol : float
-            Relative tolerance for masking ring pixels
 
         Returns
         -------
