@@ -1852,7 +1852,7 @@ class BayFAIOpt2:
 
         # Plotting radial profiles with peaks
         ax2 = plt.subplot2grid((nrow, ncol), (irow, icol), colspan=ncol - icol)
-        profile, tth = azimuthal_integration(powder, detector)
+        profile, tth = azimuthal_integration(powder, detector, params=[distance, 0, 0, 0, 0, 0])
         qs = theta2q(tth, self.calibrant.wavelength)
         self.plot_radial_integration(qs, profile, self.calibrant, ax=ax2)
         irow += 1
