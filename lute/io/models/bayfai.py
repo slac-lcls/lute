@@ -54,8 +54,7 @@ def validate_geometry_path(output_path_name: str):
             work_dir = values["lute_config"].work_dir
             run = int(values["lute_config"].run)
             geom_dir = os.path.join(work_dir, "geom")
-            if not os.path.exists(geom_dir):
-                os.makedirs(geom_dir)
+            os.makedirs(geom_dir, exist_ok=True)
             output_run_path = os.path.join(geom_dir, f"{run}-end.data")
             return output_run_path
         return output_path
