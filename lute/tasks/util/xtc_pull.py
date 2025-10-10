@@ -99,12 +99,10 @@ if __name__ == "__main__":
         prog="Xtc2 writer", description="Write received file as Xtc2 using psana2"
     )
     parser.add_argument(
-        "-n",
-        "--node-id",
-        type=str,
-        help="Node ID for the detector",
-        default="1",
+        "-d", "--detector", type=str, help="Input detector (in the XTC1 file.)"
     )
+    parser.add_argument("-e", "--experiment", type=str, help="The experiment name.")
+    parser.add_argument("-f", "--filename", type=str, help="Output XTC2 filename.")
     parser.add_argument(
         "-l",
         "--resolution",
@@ -113,16 +111,23 @@ if __name__ == "__main__":
         default="4x512x512",
     )
     parser.add_argument(
+        "-n",
+        "--node-id",
+        type=str,
+        help="Node ID for the detector",
+        default="1",
+    )
+    parser.add_argument("-r", "--run", type=int, help="The experiment run number.")
+    parser.add_argument(
         "-v",
         "--verify",
         type=str,
         help="Verify data at the end - only for small datasets that fit in memory",
-        default="1",
     )
     args: argparse.Namespace = parser.parse_args()
 
     # TEMP # Do we want to parametrize this?
-    namesId = {"xpppnccd": 0, "runinfo": 1, "scan": 2}
+    namesId = {args.detector: 0, "runinfo": 1, "scan": 2}
 
     # Setup socket for zmq connection
     socket: str = "tcp://127.0.0.1:5557"
@@ -133,14 +138,13 @@ if __name__ == "__main__":
     outbuf: bytearray = bytearray(MEMSIZE)
 
     # Open output file for writing
-    ofname: str = "/sdf/scratch/users/k/kmecseki/out.xtc2"
-    xtc2file: BinaryIO = open(ofname, "wb")
+    xtc2file: BinaryIO = open(args.filename, "wb")
 
     # Create config, algorithm, and detector
     config: DgramEdit = DgramEdit(transition_id=TransitionId.Configure)
 
     alg: AlgDef = AlgDef("raw", 1, 2, 3)
-    det: DetectorDef = DetectorDef("xpppnccd", "pnccd", "detnum1234")
+    det: DetectorDef = DetectorDef(args.detector, "pnccd", "detnum1234")
 
     runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
     runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
@@ -165,8 +169,8 @@ if __name__ == "__main__":
     }
 
     # Create detetors
-    pnccd = config.Detector(
-        det, alg, datadef, nodeId=int(args.node_id), namesId=namesId["xpppnccd"]
+    detector = config.Detector(
+        det, alg, datadef, nodeId=int(args.node_id), namesId=namesId[args.detector]
     )
     runinfo = config.Detector(
         runinfo_det,
@@ -200,8 +204,8 @@ if __name__ == "__main__":
                 config_dgramedit=config,
                 ts=config_timestamp + 1,
             )
-            runinfo.runinfo.expt = "xpptut15"
-            runinfo.runinfo.runnum = 291
+            runinfo.runinfo.expt = args.experiment
+            runinfo.runinfo.runnum = args.run
             beginrun.adddata(runinfo.runinfo)
             scan.raw.pixel_position = obj["pixel_position"]
             scan.raw.pixel_index_map = obj["pixel_index_map"]
@@ -252,9 +256,9 @@ if __name__ == "__main__":
                 config_dgramedit=config,
                 ts=obj["timestamp"],
             )
-            pnccd.raw.calib = obj["calib"]
-            pnccd.raw.photon_energy = obj["photon_energy"]
-            d0.adddata(pnccd.raw)
+            detector.raw.calib = obj["calib"]
+            detector.raw.photon_energy = obj["photon_energy"]
+            d0.adddata(detector.raw)
             save_dgramedit(d0, outbuf, xtc2file)
             current_timestamp = obj["timestamp"]
     print("[XTC2 Writer]: Complete")

@@ -228,7 +228,6 @@ if __name__ == "__main__":
         "--detector",
         type=str,
         help="Detector name",
-        default="Camp.0:pnCCD.0",
     )
     parser.add_argument(
         "-l",
@@ -242,17 +241,12 @@ if __name__ == "__main__":
         "--geometry",
         type=str,
         help="Geometry file",
-        default=(
-            "/sdf/data/lcls/ds/xpp/xpptut15/calib/PNCCD::CalibV1/"
-            "Camp.0:pnCCD.0/geometry/290-292.data"
-        ),
     )
     parser.add_argument(
         "-f",
         "--eventfile",
         type=str,
         help="File with the event numbers",
-        default="/sdf/scratch/users/k/kmecseki/lute_temp/test.csv",
     )
     parser.add_argument(
         "-v",
@@ -266,7 +260,6 @@ if __name__ == "__main__":
         "--testfile",
         type=str,
         help="Path to HDF5 file for writing test output data (used only if --verify=1)",
-        default="/sdf/scratch/users/k/kmecseki/out.hdf5",
     )
 
     args: argparse.Namespace = parser.parse_args()
@@ -286,7 +279,7 @@ if __name__ == "__main__":
     # If the eventfile is presented select those, otherwise use all events
     event_num_list: List[int]
 
-    if args.eventfile == "":
+    if not args.eventfile:
         # All events
         tss = img_reader.timestamps
         event_num_list = list(range(len(tss)))

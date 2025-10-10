@@ -12,10 +12,11 @@ Based on Mona's converter:
 import logging
 import subprocess
 import time
+from typing import Union, cast
+
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
 from lute.tasks.task import Task
-from typing import cast
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -40,14 +41,21 @@ class ConvertXtc1to2(Task):
     def _run(self) -> None:
         self._task_parameters = cast(ConvertXtc1to2Parameters, self._task_parameters)
         par: ConvertXtc1to2Parameters = self._task_parameters
-
+        exp: str = par.lute_config.experiment
+        run: Union[int, str] = par.lute_config.run
         logger.debug("Starting [XTC1 Sender] in psana 1")
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"python3 lute/tasks/util/xtc_push.py -e {par.exp} -r {par.run} -m {par.mode} "
-            f"-d {par.detector} -g {par.geometry} -f {par.eventfile} -l {par.resolution} "
-            f"-v {par.verify} -t {par.testfile}"
+            f"python3 lute/tasks/util/xtc_push.py -e {exp} -r {par.lute_config.run} -m {par.mode} "
+            f"-d {par.detector} -g {par.geometry} -l {par.resolution} "
         )
+        if par.eventfile != "":
+            zmq_process1_cmd += f"-f {par.eventfile} "
+
+        if par.verify == "True":
+            zmq_process1_cmd += f"-v 1 -t {par.testfile}"
+        else:
+            zmq_process1_cmd += "-v 0"
         result_p1: subprocess.Popen = self._start_zmq_proc(
             zmq_process1_cmd, "[XTC1 Sender]"
         )
@@ -59,8 +67,13 @@ class ConvertXtc1to2(Task):
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
             f"export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && "
-            f"python3 lute/tasks/util/xtc_pull.py -n {par.node_id} -l {par.resolution}"
+            f"python3 lute/tasks/util/xtc_pull.py -d {par.detector} -e {exp} "
+            f"-f {par.output_file} -l {par.resolution} -n {par.node_id} -r {run} "
         )
+        if par.verify == "True":
+            zmq_process2_cmd += "-v 1"
+        else:
+            zmq_process2_cmd += "-v 0"
         result_p2: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"
         )
