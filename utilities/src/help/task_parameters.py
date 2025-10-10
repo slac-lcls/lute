@@ -238,13 +238,15 @@ if __name__ == "__main__":
                 if pname in parameter_model.__validators__
                 else None
             )
+            if pname == "Config":
+                continue
             out_msg = f"{out_msg}{_format_parameter_row(pname, parameter_schema['properties'][pname], validators)}"
 
         if "definitions" in parameter_schema and parameter_schema["definitions"]:
             definitions: List[str] = [
                 defn
                 for defn in parameter_schema["definitions"]
-                if defn not in ("AnalysisHeader", "TemplateConfig")
+                if defn not in ("AnalysisHeader", "TemplateConfig", "Config")
             ]
             if len(definitions) > 0:
                 out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
