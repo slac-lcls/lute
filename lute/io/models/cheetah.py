@@ -8,18 +8,22 @@ Classes:
 __all__ = ["RunCheetahParameters"]
 
 import os
-from typing import Any, Dict, Literal, Optional, Union
+import warnings
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, root_validator, validator
 
-from lute.io.models.base import (
-    ThirdPartyParameters,
-    TemplateConfig,
-    validator,
-)
+from lute.io.models.base import TemplateConfig, ThirdPartyParameters
 from lute.io.models.sfx_find_peaks import SZCompressorParameters
 from lute.io.models.validators import template_parameter_validator
 
+
+CommonDataSourceTypes = Literal[
+    "TimestampFromEvent",
+    "FloatValueFromConfiguration",
+    "IntValueFromConfiguration",
+    "ArrayFromHdf5File",
+]
 
 PsanaDataSourceTypes = Literal[
     "RayonixPsana",
@@ -94,7 +98,11 @@ class RunCheetahParameters(ThirdPartyParameters):
                     """Parameters for retrieving the event ID."""
 
                     type: Optional[
-                        Union[PsanaDataSourceTypes, Psana2DataSourceTypes]
+                        Union[
+                            CommonDataSourceTypes,
+                            PsanaDataSourceTypes,
+                            Psana2DataSourceTypes,
+                        ]
                     ] = Field(
                         default="TimestampPsana",
                         description="Timestamp object for the retrieval layer.",
@@ -105,7 +113,11 @@ class RunCheetahParameters(ThirdPartyParameters):
                     """Parameters for retrieving the event ID."""
 
                     type: Optional[
-                        Union[PsanaDataSourceTypes, Psana2DataSourceTypes]
+                        Union[
+                            CommonDataSourceTypes,
+                            PsanaDataSourceTypes,
+                            Psana2DataSourceTypes,
+                        ]
                     ] = Field(
                         default="EventIdPsana",
                         description="Event ID object for the retrieval layer.",
@@ -115,7 +127,11 @@ class RunCheetahParameters(ThirdPartyParameters):
                     """Data retrieval layer, datasource detector data parameters."""
 
                     type: Optional[
-                        Union[PsanaDataSourceTypes, Psana2DataSourceTypes]
+                        Union[
+                            CommonDataSourceTypes,
+                            PsanaDataSourceTypes,
+                            Psana2DataSourceTypes,
+                        ]
                     ] = Field(
                         default="AreaDetectorPsana",
                         description="Type name for retrieving the detector data.",
@@ -132,29 +148,146 @@ class RunCheetahParameters(ThirdPartyParameters):
                     """Data retrieval layer, datasource detector distance parameters."""
 
                     type: Optional[
-                        Union[PsanaDataSourceTypes, Psana2DataSourceTypes]
+                        Union[
+                            CommonDataSourceTypes,
+                            PsanaDataSourceTypes,
+                            Psana2DataSourceTypes,
+                        ]
                     ] = Field(
                         default="EpicsVariablePsana",
                         description="Type name for retrieving the detector distance variable.",
                     )
-                    psana_name: str = Field(
+                    psana_name: Optional[str] = Field(
                         default="detector_z",
                         description="The specific detector name in psana.",
                     )
-                    value: str = Field(
+                    value: Union[float, int, str] = Field(
                         default="DetectorDistanceValue",
-                        description="Value type for retrieving the data from the psana detector.",
+                        description=(
+                            "Value type for retrieving the data from the psana detector. "
+                            "Or this is the value if you are providing it from the YAML."
+                        ),
                     )
+
+                    @validator("psana_name", always=True)
+                    def validate_psana_name(
+                        cls, psana_name: Optional[str], values: Dict[str, Any]
+                    ) -> Optional[str]:
+                        common_types: List[str] = [
+                            t for t in vars(CommonDataSourceTypes)["__args__"]
+                        ]
+
+                        source_type: str = values["type"]
+                        if source_type in common_types:
+                            if psana_name is not None:
+                                warnings.warn(
+                                    f"For `type` {source_type} psana_name field is not used! "
+                                    "We will ignore this. But check your configuration!"
+                                )
+                            return None
+                        else:
+                            if not isinstance(psana_name, str):
+                                raise ValueError(
+                                    "`psana_name` must be a string for the psana detector to use."
+                                )
+                        return psana_name
+
+                    @validator("value", always=True)
+                    def validate_value_field(
+                        cls, value: Union[float, int, str], values: Dict[str, Any]
+                    ) -> Union[float, int, str]:
+                        common_types: List[str] = [
+                            t for t in vars(CommonDataSourceTypes)["__args__"]
+                        ]
+
+                        source_type: str = values["type"]
+                        if source_type in common_types:
+                            if source_type == "IntValueFromConfiguration":
+                                try:
+                                    new_val_int: int = int(value)
+                                    return new_val_int
+                                except ValueError:
+                                    raise ValueError(
+                                        f"Must provide an int value if using type {source_type}! "
+                                        f"Provided {value}."
+                                    )
+
+                            elif source_type == "FloatValueFromConfiguration":
+                                try:
+                                    new_val_float: float = float(value)
+                                    return new_val_float
+                                except ValueError:
+                                    raise ValueError(
+                                        f"Must provide a float value if using type {source_type}! "
+                                        f"Provided {value}."
+                                    )
+                            else:
+                                raise ValueError(
+                                    f"`type` of {source_type} not supported for Detector Distance."
+                                )
+
+                        else:
+                            return value
 
                 class PsanaDataSourceBeamEnergy(BaseModel):
                     """Parameters for retrieving the event ID."""
 
                     type: Optional[
-                        Union[PsanaDataSourceTypes, Psana2DataSourceTypes]
+                        Union[
+                            CommonDataSourceTypes,
+                            PsanaDataSourceTypes,
+                            Psana2DataSourceTypes,
+                        ]
                     ] = Field(
                         default="BeamEnergyPsana",
                         description="Beam energy object for the retrieval layer.",
                     )
+                    value: Optional[Union[str, int, float]] = Field(
+                        default=None,
+                        value="If providing a value from the configuration file this is where to put it.",
+                    )
+
+                    @validator("value", always=True)
+                    def validate_value_field(
+                        cls, value: Union[float, int, str], values: Dict[str, Any]
+                    ) -> Optional[Union[float, int, str]]:
+                        common_types: List[str] = [
+                            t for t in vars(CommonDataSourceTypes)["__args__"]
+                        ]
+
+                        source_type: str = values["type"]
+                        if source_type in common_types:
+                            if source_type == "IntValueFromConfiguration":
+                                try:
+                                    new_val_int: int = int(value)
+                                    return new_val_int
+                                except ValueError:
+                                    raise ValueError(
+                                        f"Must provide an int value if using type {source_type}! "
+                                        f"Provided {value}."
+                                    )
+
+                            elif source_type == "FloatValueFromConfiguration":
+                                try:
+                                    new_val_float: float = float(value)
+                                    return new_val_float
+                                except ValueError:
+                                    raise ValueError(
+                                        f"Must provide a float value if using type {source_type}! "
+                                        f"Provided {value}."
+                                    )
+                            else:
+                                raise RuntimeError(
+                                    f"`type` of {source_type} not supported for Detector Distance."
+                                )
+
+                        else:
+                            if value is not None:
+                                warnings.warn(
+                                    f"For `type` {source_type} no `value` field is expected! "
+                                    "We will ignore this. But check your configuration!"
+                                )
+                            return None
 
                 timestamp: PsanaDataSourceTimestamp = Field(
                     description="Fields for timestamp retrieval."
