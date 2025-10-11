@@ -9,39 +9,56 @@ task_timeout: 600
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
 ---
+# We will define some convenience keys for substitution in other parameters
+EXPERIMENT_DIR: "/sdf/data/lcls/ds/mfx/{{ experiment }}"
+XTC2_FILE_PATH: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac"
+XTC2_FILE_NAME: "{{ experiment }}-r{{ run:04d }}-s000-c000.xtc2"
+DET_CALIB_DIR: "calib/Epix10ka2M::CalibV1/MfxEndstation.0:Epix10ka2M.0"
+
 RunCheetah:                       # All variables are given as strings
   exp: "{{ experiment }}"         # Experiment name
   run: "{{ run }}"                # Run number
   dir: "/some/path"               # Path to raw_directory
-  executable: "/sdf/group/lcls/ds/tools/om/conda/ana-4.0.66-py311-miniom/bin/mpirun"
+  executable: mpirun
   n_processes: 3                  # Number of processes to launch
   om_executable: "/sdf/scratch/users/d/dorlhiac/work/om_rel/bin/om_monitor"
   om_config: "/sdf/scratch/users/d/dorlhiac/work/cheetah_tests/cheetah_config.yaml"
+  # NOTE: if passing files=... for SingleFileDataSource, do NOT quote the filename.
+  # I.e. use source: "files=/path/to/file"
+  #      NOT source: "files='/path/to/file'"
+  # LUTE will not execute the executable with a shell, and we do not want the
+  # extra quotes otherwise psana will not find the file correctly.
+  source: "files={{ XTC2_FILE_PATH }}/{{ XTC2_FILE_NAME }}"
   lute_template_cfg:
     template_name: "cheetah_template.yaml"
     output_path: "/sdf/scratch/users/d/dorlhiac/work/cheetah_tests/cheetah_config.yaml"
   cheetah_subconfig:
     om:
       processing_layer: "CheetahProcessing"
+      data_retrieval_layer: "Psana2DataEventHandler"
     data_retrieval_layer:
       data_sources:
         timestamp:
-          type: "TimestampPsana"
+          type: "TimestampPsana2"
         event_id:
-          type: "EventIdPsana"
+          type: "EventIdPsana2"
         detector_data:
+          type: "AreaDetectorPsana2"
           psana_name: "epix10k2M"
           calibration: "true"
         detector_distance:
-          type: "EpicsVariablePsana"
-          psana_name: "detector_z"
-          value: "DetectorDistanceValue"
+          type: "FloatValueFromConfiguration"
+          psana_name: null
+          value: 100.0
+        beam_energy:
+          type: "FloatValueFromConfiguration"
+          value: 9000
     cheetah:
-      processed_directory: "/sdf/data/lcls/ds/mfx/mfx100903824/results"
+      processed_directory: "{{ EXPERIMENT_DIR }}/results"
       processed_filename_prefix: "{{ experiment }}-{{ run }}"
       class_sums_filename_prefix: "{{ run }}"
     crystallography:
-      geometry_file: "/sdf/data/lcls/ds/mfx/mfx100903824/scratch/dorlhiac/test.geom"
+      geometry_file: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac/test.geom"
       responding_url: null
     peakfinder8_peak_detection:
       adc_threshold: 100.0
@@ -64,10 +81,21 @@ RunCheetah:                       # All variables are given as strings
 IndexCrystFEL:
   #in_file: ""            # Location of a `.lst` file listing CXI files
   #out_file: ""           # Where to write the output stream file
-  geometry: "/sdf/data/lcls/ds/mfx/mfx100903824/scratch/dorlhiac/test.geom" # Location of a geometry file
+  geometry: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac/test.geom" # Location of a geometry file
   indexing: "mosflm"      # Indexing methods
   int_radius: "4,5,7"     # Integration radii
   tolerance: "5,5,5,1.5"  # Tolerances
   multi: True
   profile: True
   no_revalidate: True
+
+ConvertXtc1to2:             # All variables are given as strings
+  mode: "idx"               # Mode
+  detector: "epix10k2M"     # Detector's name
+  node_id: "1"              # Node ID for the detector
+  resolution: "16x352x384"  # Channels and resolution in CHxRXxRY format
+  geometry: "{{ EXPERIMENT_DIR }}/{{ DET_CALIB_DIR }}/geometry/12-end.data"
+  eventfile: ""
+  verify: "0"               # 1=True/0=False Test data integrity (only if it fits in memory e.g. few events)
+  #testfile: ""             # Path to HDF5 file for writing test output data (used only if --verify=1)
+  output_file: "{{ XTC2_FILE_PATH }}/{{ XTC2_FILE_NAME }}"
