@@ -483,6 +483,7 @@ class ThirdPartyTask(Task):
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
-            else:
-                new_env[key] = value
+        if not new_env:
+            # No shell script sourced - will use the base environment
+            return os.environ.copy()
         return new_env
