@@ -9,12 +9,13 @@ Classes:
 __all__ = ["Task", "ThirdPartyTask"]
 __author__ = "Gabriel Dorlhiac"
 
+import os
+import signal
+import sys
 import time
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, TextIO, Type, Union, TYPE_CHECKING
-import os
-import warnings
-import signal
 
 import lute.execution.subprocess_utils
 
@@ -457,8 +458,10 @@ class ThirdPartyTask(Task):
             msg: Message = Message(contents=self._formatted_command())
             self._report_to_executor(msg)
         LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
-        self._setup_env()
-        os.execvp(file=self._cmd, args=self._args_list)
+        task_env: Dict[str, str] = self._setup_env()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.execvpe(file=self._cmd, args=self._args_list, env=task_env)
 
     def _formatted_command(self) -> str:
         """Returns the command as it would passed on the command-line."""
@@ -473,11 +476,13 @@ class ThirdPartyTask(Task):
         msg: Message = Message(signal=signal)
         self._report_to_executor(msg)
 
-    def _setup_env(self) -> None:
+    def _setup_env(self) -> Dict[str, str]:
         new_env: Dict[str, str] = {}
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
-        os.environ.update(new_env)
+            else:
+                new_env[key] = value
+        return new_env
