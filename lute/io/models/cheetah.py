@@ -56,6 +56,25 @@ Psana2DataSourceTypes = Literal[
     "EvrCodelistPsana2",
 ]
 
+ParallelizationLayerTypes = Literal[
+    "MpiParallelization",
+    "MultiprocessingParallelization",
+]
+
+RetrievalLayerTypes = Literal[
+    "PsanaDataEventHandler",
+    "Psana2DataEventHandler",
+    # Probably won't be used - at LCLS at any rate.
+    "AsapoDataEventHandler",
+    "Jungfrau1MZmqDataEventHandler",
+    "PilatusFilesEventHandler",
+    "Jungfrau1MFilesDataEventHandler",
+    "EigerFilesDataEventHandler",
+    "RayonixMccdFilesEventHandler",
+    "Lambda1M5FilesDataEventHandler",
+    "EigerHttpDataEventHandler",
+]
+
 
 class RunCheetahParameters(ThirdPartyParameters):
     """Parameters for running OM Cheetah Task."""
@@ -75,11 +94,11 @@ class RunCheetahParameters(ThirdPartyParameters):
         class OmParameters(BaseModel):
             """Parameters for OM layers"""
 
-            parallelization_layer: str = Field(
+            parallelization_layer: ParallelizationLayerTypes = Field(
                 default="MpiParallelization",
                 description="What type of parallelization use (MPI or multiprocess.)",
             )
-            data_retrieval_layer: str = Field(
+            data_retrieval_layer: RetrievalLayerTypes = Field(
                 default="PsanaDataEventHandler",
                 description="What kind of data retrieval to use (e.g. psana).",
             )
