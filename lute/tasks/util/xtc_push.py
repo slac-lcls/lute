@@ -5,104 +5,20 @@ Based on Mona's converter from https://github.com/monarin/xtc1to2
 
 import argparse
 import csv
+import json
+import pickle
+import zlib
+from typing import Any, Callable, Dict, List, Tuple, Union, Type, cast
+
 import numpy as np
 import psana  # type: ignore
-import pickle
-from typing import Any, Dict, List, Tuple, Union
-import zlib
 import zmq
-
 from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 
+from lute.io.models.xtc import DataSpec
 
 # Helper Classes
 ################
-
-
-class PsanaImg:
-
-    def __init__(self, exp: str, run: str, mode: str, detector_name: str) -> None:
-        """
-        It serves as an image accessing layer based on the data management system
-        psana in LCLS.
-
-        Args:
-            exp (str): Experiment's name
-
-            run (str): Run number
-
-            mode (str): Mode
-
-            detector_name (str): Name of the detector
-        """
-
-        # Set up Data source and Detector
-        self.datasource_id: str = f"exp={exp}:run={run}:{mode}"
-        self.datasource: psana._Datasource = psana.DataSource(self.datasource_id)
-        self.run_current: psana.Run = next(self.datasource.runs())
-        self.timestamps: Tuple[psana.EventTime, ...] = self.run_current.times()
-        self.detector: psana.Detector.AreaDetector.AreaDetector = psana.Detector(
-            detector_name
-        )
-
-    def get(self, event_num: Union[int, str], calib: bool = False) -> np.ndarray:
-        # Fetch the timestamp according to event number
-        timestamp: psana.EventTime = self.timestamps[int(event_num)]
-
-        # Access each event based on timestamp
-        event: psana.Event = self.run_current.event(timestamp)
-
-        # Fetch image data based on timestamp from detector
-        img: np.ndarray
-        if calib:
-            img = self.detector.calib(event)
-        else:
-            img = self.detector.image(event)
-        return img
-
-    def timestamp(self, event_num: Union[str, int]) -> psana.EventTime:
-        ts: psana.EventTime = self.timestamps[int(event_num)]
-        return ts
-
-
-class PsanaPhotonEnergy:
-
-    def __init__(self, exp: str, run: str, mode: str) -> None:
-        """
-        Uses psana1 ebeam and epicsStore to retrieve photon energy.
-
-        Args:
-            exp (str): Experiment's name
-
-            run (str): Run number
-
-            mode (str): Mode
-        """
-        # Set up data source
-        self.datasource_id: str = f"exp={exp}:run={run}:{mode}"
-        self.datasource: psana.DataSource = psana.DataSource(self.datasource_id)
-        self.run_current: psana.Run = next(self.datasource.runs())
-        self.timestamps: tuple = self.run_current.times()
-
-        # Set up detector and epicsStore
-        self.ebeam_det: psana.Detector = psana.Detector("EBeam")
-        self.es: psana.EpicsStore = self.datasource.env().epicsStore()
-
-    def get(self, event_num: Union[int, str]) -> float:
-
-        # Access each event based on timestamp
-        timestamp: psana.EventTime = self.timestamps[int(event_num)]
-        event: psana.Event = self.run_current.event(timestamp)
-
-        # Try to get photon energy from ebeam
-        ebeam: psana.Bld.BldDataEBeamV4 = self.ebeam_det.get(event)
-        photon_energy: float
-        try:
-            photon_energy = ebeam.ebeamPhotonEnergy()
-        except AttributeError:
-            photon_energy = 0.0
-
-        return photon_energy
 
 
 class PsanaGeometry:
@@ -213,10 +129,33 @@ class ZmqSender:
         self.zmq_socket.close()
 
 
+def get_data(data_spec: DataSpec, evt: psana.Event) -> Any:
+    obj_type: Type = eval(data_spec["object_type"])
+    obj: object = obj_type(data_spec["object_name"])
+    # Because of round trip through JSON, this will be a list
+    # hence the cast. True type is tuple
+    field_name: Union[str, List[str]] = cast(
+        Union[str, List[str]], data_spec["object_field_name"]
+    )
+    obj_field: Callable[[psana.Event], Any]
+    if isinstance(field_name, list):
+        obj_field = getattr(obj, field_name[0])
+        return getattr(obj_field(evt), field_name[1])()
+    else:
+        obj_field = getattr(obj, field_name)
+        return obj_field(evt)
+
+
 if __name__ == "__main__":
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="Xtc1 reader", description="Read in Xtc1 files using psana1"
+    )
+    parser.add_argument(
+        "-a",
+        "--access_pattern",
+        type=str,
+        help="JSON string for access pattern of data.",
     )
     parser.add_argument(
         "-e", "--exp", type=str, help="Experiment's name", default="xpptut15"
@@ -264,25 +203,23 @@ if __name__ == "__main__":
 
     args: argparse.Namespace = parser.parse_args()
 
-    img_reader: PsanaImg = PsanaImg(
-        args.exp,
-        args.run,
-        args.mode,
-        args.detector,
-    )
-    phe_reader: PsanaPhotonEnergy = PsanaPhotonEnergy(args.exp, args.run, args.mode)
+    data_def: Dict[str, Any] = json.loads(args.access_pattern)
     gmt_reader: PsanaGeometry = PsanaGeometry(args.geometry)
 
     socket: str = "tcp://127.0.0.1:5557"
     zmq_send: ZmqSender = ZmqSender(socket)
 
+    datasource_id: str = f"exp={args.exp}:run={args.run}:{args.mode}"
+    datasource: psana.DataSource = psana.DataSource(datasource_id)
+    run_current: psana.Run = next(datasource.runs())
+    timestamps: tuple = run_current.times()
     # If the eventfile is presented select those, otherwise use all events
     event_num_list: List[int]
 
     if not args.eventfile:
         # All events
-        tss = img_reader.timestamps
-        event_num_list = list(range(len(tss)))
+        event_num_list = list(range(len(timestamps)))
+        event_num_list = list(range(5))
     else:
         event_num_list = []
         try:
@@ -313,37 +250,56 @@ if __name__ == "__main__":
     else:
         data_array = np.zeros([channels, res_x, res_y], dtype=np.float32)
 
-    for i, event_num in enumerate(event_num_list):
-        img: np.ndarray = img_reader.get(event_num, calib=True)
-        photon_energy: float = phe_reader.get(event_num)
-        ts: psana.EventTime = img_reader.timestamp(event_num)
+    data_type_info: Dict[str, Tuple[Type, int]] = {}
+    send_type_info: bool = True
 
-        if verify:
-            data_array[i, :, :, :] = img
-            photon_array[i] = photon_energy
+    for i, event_num in enumerate(event_num_list):
+        timestamp: psana.EventTime = timestamps[int(event_num)]
+        event: psana.Event = run_current.event(timestamp)
+
+        data: Dict[str, Any] = {}
+        for key in data_def:
+            detector_data: Any = get_data(data_def[key], event)
+            data[key] = detector_data
+            if verify:
+                if key == "calib":
+                    data_array[i] = detector_data
+                elif key == "photon_energy":
+                    photon_array[i] = detector_data
+            if send_type_info:
+                dtype: Type
+                rank: int
+                if isinstance(detector_data, np.ndarray):
+                    dtype = detector_data.dtype.type
+                    rank = detector_data.ndim
+                elif isinstance(detector_data, float):
+                    dtype = np.float64
+                    rank = 0
+                elif isinstance(detector_data, int):
+                    dtype = np.int64
+                    rank = 0
+                else:
+                    dtype = type(detector_data)
+                    rank = 0
+                data_type_info[key] = (dtype, rank)
+        data["timestamp"] = timestamp.time()
+        if send_type_info:
+            zmq_send.send_zipped_pickle({"DATA_TYPE_INFO": data_type_info})
+            send_type_info = False
 
         if i == 0:
             # Send beginning timestamp - this will create config, beginrun,
             # beginstep, and enable on the client.
             start_dict: Dict[str, Any] = {
                 "start": True,
-                "config_timestamp": ts.time() - 10,
+                "config_timestamp": timestamp.time() - 10,
                 "pixel_position": gmt_reader.pixel_position,
                 "pixel_index_map": gmt_reader.pixel_index_map,
             }
             print("[XTC1 Sender]: Starting sending..")
             zmq_send.send_zipped_pickle(start_dict)
 
-        data: Dict[str, Any] = {
-            "calib": img,
-            "photon_energy": photon_energy,
-            "timestamp": ts.time(),
-        }
-
-        print(
-            f"[XTC1 Sender]: event_num={event_num} ts={ts.time()} img={img.shape} "
-            f"dtype={img.dtype} photon energy:{photon_energy:.3f}"
-        )
+        print(f"[XTC1 Sender]: event_num={event_num} ts={timestamp.time()}")
 
         # Send the dataset
         zmq_send.send_zipped_pickle(data)

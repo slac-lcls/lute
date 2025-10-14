@@ -9,7 +9,9 @@ Based on Mona's converter:
     https://github.com/monarin/xtc1to2
 """
 
+import json
 import logging
+import os
 import subprocess
 import time
 from typing import Union, cast
@@ -44,10 +46,14 @@ class ConvertXtc1to2(Task):
         exp: str = par.lute_config.experiment
         run: Union[int, str] = par.lute_config.run
         logger.debug("Starting [XTC1 Sender] in psana 1")
+        json_access_pattern: str = json.dumps(par.xtc1_access_pattern)
+        py_path: str = f"{os.getenv('LUTE_PATH')}:{os.getenv('PYTHONPATH')}"
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"python3 lute/tasks/util/xtc_push.py -e {exp} -r {par.lute_config.run} -m {par.mode} "
-            f"-d {par.detector} -g {par.geometry} -l {par.resolution} "
+            f"export PYTHONPATH={py_path} && "
+            f"python3 lute/tasks/util/xtc_push.py -a '{json_access_pattern}' -e {exp} "
+            f"-r {par.lute_config.run} -m {par.mode} -d {par.detector} "
+            f"-g {par.geometry} -l {par.resolution} "
         )
         if par.eventfile != "":
             zmq_process1_cmd += f"-f {par.eventfile} "
@@ -63,7 +69,6 @@ class ConvertXtc1to2(Task):
         time.sleep(1)
 
         logger.debug("Starting [XTC2 Writer] in psana 2")
-        # TODO: This is needed until psana2 is updated to the latest version
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
             f"export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && "

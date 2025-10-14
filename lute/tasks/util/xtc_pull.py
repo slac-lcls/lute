@@ -1,11 +1,11 @@
 import argparse
+import pickle
+import zlib
+from typing import Any, BinaryIO, Optional
+
 import h5py  # type: ignore
 import numpy as np
-import pickle
-from typing import Any, BinaryIO
 import zmq
-import zlib
-
 from psana import DataSource  # type: ignore
 from psana.dgramedit import DgramEdit, AlgDef, DetectorDef  # type: ignore
 from psana.psexp import TransitionId  # type: ignore
@@ -42,7 +42,7 @@ class ZmqReceiver:
         self.zmq_socket.close()
 
 
-def test_output(num_events: int, resolution: str) -> None:
+def test_output(det_name: str, num_events: int, resolution: str) -> None:
     """
     Psana1 reader saves the content as a hdf5, we compare this file to the data that we received.
     """
@@ -58,7 +58,7 @@ def test_output(num_events: int, resolution: str) -> None:
 
         ds: DataSource = DataSource(files="/sdf/scratch/users/k/kmecseki/out.xtc2")
         run: Any = next(ds.runs())
-        det: Any = run.Detector("xpppnccd")
+        det: Any = run.Detector(det_name)
 
         pp_det: Any = run.Detector("pixel_position")
         pim_det: Any = run.Detector("pixel_index_map")
@@ -143,8 +143,8 @@ if __name__ == "__main__":
     # Create config, algorithm, and detector
     config: DgramEdit = DgramEdit(transition_id=TransitionId.Configure)
 
-    alg: AlgDef = AlgDef("raw", 1, 2, 3)
-    det: DetectorDef = DetectorDef(args.detector, "pnccd", "detnum1234")
+    alg: AlgDef = AlgDef("xtc1dump", 0, 1, 0)
+    det: DetectorDef = DetectorDef(args.detector, "generic_container", "detnum1234")
 
     runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
     runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
@@ -153,10 +153,6 @@ if __name__ == "__main__":
     scan_det: DetectorDef = DetectorDef("scan", "scan", "detnum1234")
 
     # Define data formats
-    datadef = {
-        "calib": (np.float32, 3),
-        "photon_energy": (np.float64, 0),
-    }
 
     runinfodef = {
         "expt": (str, 1),
@@ -167,25 +163,7 @@ if __name__ == "__main__":
         "pixel_position": (np.float32, 4),
         "pixel_index_map": (np.int16, 4),
     }
-
-    # Create detetors
-    detector = config.Detector(
-        det, alg, datadef, nodeId=int(args.node_id), namesId=namesId[args.detector]
-    )
-    runinfo = config.Detector(
-        runinfo_det,
-        runinfo_alg,
-        runinfodef,
-        nodeId=int(args.node_id),
-        namesId=namesId["runinfo"],
-    )
-    scan = config.Detector(
-        scan_det,
-        scan_alg,
-        scandef,
-        nodeId=int(args.node_id),
-        namesId=namesId["scan"],
-    )
+    detector: Optional[config.Detector] = None
 
     num_events = int(zmq_recv.zmq_socket.recv_string())
     # Start saving data
@@ -194,7 +172,35 @@ if __name__ == "__main__":
         obj = zmq_recv.recv_zipped_pickle()
         # Begin timestamp is needed (we calculate this from the first L1Accept)
         # to set the correct timestamp for all transitions prior to the first L1.
-        if "start" in obj:
+        if "DATA_TYPE_INFO" in obj:
+            datadef = obj["DATA_TYPE_INFO"]
+            # {
+            #    "calib": (np.float32, 3),
+            #    "photon_energy": (np.float64, 0),
+            # }
+            # Create detetors
+            detector = config.Detector(
+                det,
+                alg,
+                datadef,
+                nodeId=int(args.node_id),
+                namesId=namesId[args.detector],
+            )
+            runinfo = config.Detector(
+                runinfo_det,
+                runinfo_alg,
+                runinfodef,
+                nodeId=int(args.node_id),
+                namesId=namesId["runinfo"],
+            )
+            scan = config.Detector(
+                scan_det,
+                scan_alg,
+                scandef,
+                nodeId=int(args.node_id),
+                namesId=namesId["scan"],
+            )
+        elif "start" in obj:
             config_timestamp = obj["config_timestamp"]
             config.updatetimestamp(config_timestamp)
             save_dgramedit(config, outbuf, xtc2file)
@@ -248,17 +254,17 @@ if __name__ == "__main__":
             )
             save_dgramedit(endrun, outbuf, xtc2file)
             break
-
         else:
+            assert detector is not None
             # Create L1Accept
             d0 = DgramEdit(
                 transition_id=TransitionId.L1Accept,
                 config_dgramedit=config,
                 ts=obj["timestamp"],
             )
-            detector.raw.calib = obj["calib"]
-            detector.raw.photon_energy = obj["photon_energy"]
-            d0.adddata(detector.raw)
+            detector.xtc1dump.calib = obj["calib"]
+            detector.xtc1dump.photon_energy = obj["photon_energy"]
+            d0.adddata(detector.xtc1dump)
             save_dgramedit(d0, outbuf, xtc2file)
             current_timestamp = obj["timestamp"]
     print("[XTC2 Writer]: Complete")
@@ -266,4 +272,4 @@ if __name__ == "__main__":
     zmq_recv.close()
     verify: bool = bool(int(args.verify))
     if verify:
-        test_output(num_events, args.resolution)
+        test_output(args.detector, num_events, args.resolution)
