@@ -24,7 +24,7 @@ description: str = "Run managed test Task in sequence and parallel"
 dag: DAG = DAG(
     dag_id=dag_id,
     start_date=datetime(1970, 1, 1),
-    schedule_interval=None,
+    schedule=None,
     description=description,
 )
 

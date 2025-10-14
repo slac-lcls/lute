@@ -66,8 +66,10 @@ def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
     else:
         logger.debug("Running as user.")
         user_type = "user"
+    if user_type == "user" and instance == "test_v3":
+        raise ValueError("The Airflow V3 test instance is only available for admin users.")
     path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}_{user_type}.txt"
-    if instance == "prod" or instance == "test":
+    if instance in ("prod", "test", "test_v3"):
         path = path.format(instance=instance, user_type=user_type)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
@@ -127,6 +129,9 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
     parser.add_argument(
         "--test", help="Use test Airflow instance.", action="store_true"
+    )
+    parser.add_argument(
+        "--test_v3", help="Use test Airflow instance.", action="store_true"
     )
     parser.add_argument(
         "--type",
@@ -216,8 +221,12 @@ if __name__ == "__main__":
         airflow_instance = "http://172.24.5.247:8080"
         instance_str = "prod"
 
+    if args.test_v3:
+        airflow_instance = "https://psdm.slac.stanford.edu/airflow3-dev"
+        instance_str = "test_v3"
+
     airflow_api_endpoints: Dict[str, str] = {
-        "health": "api/v1/health",
+        "health": "api/v1/health" if not args.test_v3 else "api/v2/monitor/health",
         "run_dag": f"api/v1/dags/lute_{wf_name}/dagRuns",
         "get_tasks": f"api/v1/dags/lute_{wf_name}/tasks",
         "get_xcom": (  # Need to format dag_run_id, task_id, xcom_key
@@ -230,6 +239,10 @@ if __name__ == "__main__":
         "update_defn": "api/v1/variables/user_workflow",
         "parse_file": "api/v1/parseDagFile/{file_token}",
     }
+
+    if args.test_v3:
+        for key in airflow_api_endpoints:
+            airflow_api_endpoints[key] = airflow_api_endpoints[key].replace("v1","v2")
 
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
     user_name: str = "btx" if args.admin else "lcls_user"

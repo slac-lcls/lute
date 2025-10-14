@@ -27,7 +27,6 @@ import requests
 from airflow.models import BaseOperator
 from airflow.exceptions import AirflowException
 from airflow.plugins_manager import AirflowPlugin
-from airflow.utils.decorators import apply_defaults
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -40,7 +39,6 @@ logger: logging.Logger = logging.getLogger(__name__)
 class RequestOnlyOperator(BaseOperator):
     """This Operator makes a JID request and exits."""
 
-    @apply_defaults
     def __init__(
         self,
         user: str = getpass.getuser(),
@@ -115,7 +113,6 @@ class JIDSlurmOperator(BaseOperator):
         "job_log_file": "{experiment}/job_log_file",
     }
 
-    @apply_defaults
     def __init__(
         self,
         user: str = getpass.getuser(),
