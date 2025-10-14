@@ -55,6 +55,7 @@ class DagRunConf(TypedDict):
 
 class DagRunData(TypedDict):
     dag_run_id: str
+    logical_date: None
     conf: DagRunConf
 
 
@@ -66,8 +67,12 @@ def _retrieve_pw(instance: str = "prod", is_admin: bool = False) -> str:
     else:
         logger.debug("Running as user.")
         user_type = "user"
+    if user_type == "user" and instance == "test_v3":
+        raise ValueError(
+            "The Airflow V3 test instance is only available for admin users."
+        )
     path: str = "/sdf/group/lcls/ds/tools/lute/airflow_{instance}_{user_type}.txt"
-    if instance == "prod" or instance == "test":
+    if instance in ("prod", "test", "test_v3"):
         path = path.format(instance=instance, user_type=user_type)
     else:
         raise ValueError('`instance` must be either "test" or "prod"!')
@@ -114,6 +119,46 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
     return formatted_token
 
 
+def _request_airflow_token(instance: str, instance_type: str) -> Optional[str]:
+    """Request a JWT token for Airflow authentication.
+
+    This only works (and is required) for Airflow v3 (currently a test instance only).
+
+    Args:
+        instance (str): URL for the Airflow instance.
+
+        instance_type (str): Which instance to use. Currently either:
+            - "prod"
+            - "test"
+            - "test_v3"
+            Only test_v3 will lead to token generation.
+
+    Returns:
+        formatted_token (str | None): A formatted token if using test_v3 otherwise
+            None.
+    """
+    if instance_type != "test_v3":
+        return None
+    token_endpoint: str = "auth/token"
+    full_url: str = f"{instance}/{token_endpoint}"
+
+    pw: str = _retrieve_pw("test_v3", is_admin=True)
+    user_name: str = "btx"
+    headers: Dict[str, str] = {"Content-Type": "application/json"}
+    data: Dict[str, str] = {
+        "username": user_name,
+        "password": pw,
+    }
+    resp: requests.models.Response = requests.post(
+        full_url,
+        headers=headers,
+        json=data,
+    )
+    token: str = resp.json()["access_token"]
+    formatted_token: str = f"Bearer {token}"
+    return formatted_token
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="trigger_airflow_lute_dag",
@@ -127,6 +172,9 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
     parser.add_argument(
         "--test", help="Use test Airflow instance.", action="store_true"
+    )
+    parser.add_argument(
+        "--test_v3", help="Use test Airflow instance.", action="store_true"
     )
     parser.add_argument(
         "--type",
@@ -216,8 +264,12 @@ if __name__ == "__main__":
         airflow_instance = "http://172.24.5.247:8080"
         instance_str = "prod"
 
+    if args.test_v3:
+        airflow_instance = "https://psdm.slac.stanford.edu/airflow3-dev"
+        instance_str = "test_v3"
+
     airflow_api_endpoints: Dict[str, str] = {
-        "health": "api/v1/health",
+        "health": "api/v1/health" if not args.test_v3 else "api/v2/monitor/health",
         "run_dag": f"api/v1/dags/lute_{wf_name}/dagRuns",
         "get_tasks": f"api/v1/dags/lute_{wf_name}/tasks",
         "get_xcom": (  # Need to format dag_run_id, task_id, xcom_key
@@ -231,6 +283,13 @@ if __name__ == "__main__":
         "parse_file": "api/v1/parseDagFile/{file_token}",
     }
 
+    if args.test_v3:
+        for key in airflow_api_endpoints:
+            airflow_api_endpoints[key] = airflow_api_endpoints[key].replace("v1", "v2")
+
+    airflow_token: Optional[str] = _request_airflow_token(
+        instance=airflow_instance, instance_type=instance_str
+    )
     pw: str = _retrieve_pw(instance_str, is_admin=args.admin)
     user_name: str = "btx" if args.admin else "lcls_user"
     airflow_auth: HTTPBasicAuth = HTTPBasicAuth(user_name, pw)
@@ -341,6 +400,7 @@ if __name__ == "__main__":
 
     dag_run_data: DagRunData = {
         "dag_run_id": str(uuid.uuid4()),
+        "logical_date": None,
         "conf": {
             "experiment": experiment,
             "run_id": f"{run_num}_{datetime.datetime.utcnow().isoformat()}",
@@ -359,11 +419,19 @@ if __name__ == "__main__":
         },
     }
 
-    resp = requests.post(
-        f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
-        json=dag_run_data,
-        auth=airflow_auth,
-    )
+    if airflow_token is not None:
+        logger.debug("Using token.")
+        resp = requests.post(
+            f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
+            json=dag_run_data,
+            headers={"Authorization": airflow_token},
+        )
+    else:
+        resp = requests.post(
+            f"{airflow_instance}/{airflow_api_endpoints['run_dag']}",
+            json=dag_run_data,
+            auth=airflow_auth,
+        )
     resp.raise_for_status()
     dag_run_id: str = dag_run_data["dag_run_id"]
     logger.info(f"Submitted DAG (Workflow): {wf_name}\nDAG_RUN_ID: {dag_run_id}")
@@ -373,10 +441,16 @@ if __name__ == "__main__":
     # Get Task information
     task_ids: List[str]
     if not use_custom_defn:
-        resp = requests.get(
-            f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
-            auth=airflow_auth,
-        )
+        if airflow_token is not None:
+            resp = requests.get(
+                f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
+                headers={"Authorization": airflow_token},
+            )
+        else:
+            resp = requests.get(
+                f"{airflow_instance}/{airflow_api_endpoints['get_tasks']}",
+                auth=airflow_auth,
+            )
         resp.raise_for_status()
         task_ids = [task["task_id"] for task in resp.json()["tasks"]]
     else:
@@ -406,12 +480,18 @@ if __name__ == "__main__":
     while True:
         time.sleep(1)
         # DAG Status
-        resp = requests.get(url, auth=airflow_auth)
+        if airflow_token is not None:
+            resp = requests.get(url, headers={"Authorization": airflow_token})
+        else:
+            resp = requests.get(url, auth=airflow_auth)
         resp.raise_for_status()
         dag_state = resp.json()["state"]
         # Check Task instances
         task_url: str = f"{url}/taskInstances"
-        resp = requests.get(task_url, auth=airflow_auth)
+        if airflow_token is not None:
+            resp = requests.get(task_url, headers={"Authorization": airflow_token})
+        else:
+            resp = requests.get(task_url, auth=airflow_auth)
         resp.raise_for_status()
         instance_information: List[Dict[str, Any]] = resp.json()["task_instances"]
         for inst in instance_information:
@@ -439,7 +519,12 @@ if __name__ == "__main__":
                         xcom_key=xcom_key,
                     )
                     try:
-                        resp = requests.get(xcom_url, auth=airflow_auth)
+                        if airflow_token is not None:
+                            resp = requests.get(
+                                xcom_url, headers={"Authorization": airflow_token}
+                            )
+                        else:
+                            resp = requests.get(xcom_url, auth=airflow_auth)
                         resp.raise_for_status()
                         logs: str = resp.json()["value"]  # Only want to print once.
                         logger.info(f"Providing logs for {task_id}")
