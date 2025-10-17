@@ -181,4 +181,4 @@ trap 'cleanup CANCELLED' 2 3 6 15
 
 STARTED_CMD="inform_manager 'STARTED'"
 
-sbatch $SLURM_ARGS --wrap "inform_manager 'STARTED' && ${CMD}"
+sbatch $SLURM_ARGS --wrap "${CMD}"
