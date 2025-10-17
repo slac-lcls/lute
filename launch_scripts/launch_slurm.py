@@ -310,6 +310,8 @@ def create_workflow(
                     )
     else:
         slurm_params = wf_dict.get("slurm_params", "")
+        if not slurm_params:
+            slurm_params = default_slurm_params
         future = executor.submit(
             launch_lute_task,
             lute_location,
