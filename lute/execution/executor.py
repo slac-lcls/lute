@@ -48,6 +48,7 @@ from abc import ABC, abstractmethod
 import warnings
 import copy
 import re
+import requests
 
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
@@ -203,6 +204,11 @@ class BaseExecutor(ABC):
         self._delayed_update_env_args: Optional[
             Tuple[Union[Dict[str, str], Callable[[], Dict[str, str]]], str]
         ] = None
+        self._m_task_name: str = ""
+
+        # Check to see if we are running from the Slurm WF manager
+        # It passes us a URL for status updates
+        self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
     def add_tasklet(
         self,
@@ -647,6 +653,12 @@ class BaseExecutor(ABC):
         proc: subprocess.Popen = self._submit_task(cmd)
         self._task_time0 = time.monotonic()
 
+        if self._lute_manager_url is not None:
+            json_data: Dict[str, str] = {
+                "managed_task": self._m_task_name,
+                "status": "STARTED",
+            }
+            requests.post(f"http://{self._lute_manager_url}/status", json=json_data)
         while self._task_is_running(proc):
             self._task_loop(proc)
             if self._task_timeout is not None:
@@ -698,6 +710,23 @@ class BaseExecutor(ABC):
         for comm in self._communicators:
             comm.clear_communicator()
         time.sleep(1)
+        status: TaskStatus = self._analysis_desc.task_result.task_status
+        status_str: str
+        if status == TaskStatus.FAILED:
+            status_str = "FAILED"
+        elif status == TaskStatus.CANCELLED:
+            status_str = "CANCELLED"
+        elif status == TaskStatus.TIMEDOUT:
+            status_str = "TIMEDOUT"
+        else:
+            status_str = "COMPLETED"
+
+        if self._lute_manager_url is not None:
+            json_data = {
+                "managed_task": self._m_task_name,
+                "status": status_str,
+            }
+            requests.post(f"http://{self._lute_manager_url}/status", json=json_data)
         if self._analysis_desc.task_result.task_status in (
             TaskStatus.FAILED,
             TaskStatus.TIMEDOUT,
@@ -1062,6 +1091,16 @@ class Executor(BaseExecutor):
                     for item in executor._analysis_desc.task_result.summary:
                         if is_printable_type(item):
                             logger.info(item)
+                            if self._lute_manager_url is not None:
+                                message: str = repr(msg.contents)
+                                json_data: Dict[str, str] = {
+                                    "managed_task": self._m_task_name,
+                                    "message": message,
+                                }
+                                requests.post(
+                                    f"http://{self._lute_manager_url}/log",
+                                    json=json_data,
+                                )
 
                 logger.info(executor._analysis_desc.task_result.task_status)
             elog_data: Dict[str, str] = {
@@ -1106,13 +1145,40 @@ class Executor(BaseExecutor):
                 if msg.contents is not None:
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
+                        if self._lute_manager_url is not None:
+                            message: str = msg.contents
+                            json_data: Dict[str, str] = {
+                                "managed_task": self._m_task_name,
+                                "message": message,
+                            }
+                            requests.post(
+                                f"http://{self._lute_manager_url}/log", json=json_data
+                            )
                     elif isinstance(msg.contents, TaskParametersDBReference):
                         # We will log the actual reconstructed TaskParameters object
                         # instead of the raw message. The raw message only contains
                         # the pointers for reconstructing the object.
                         logger.info(self._analysis_desc.task_parameters)
+                        if self._lute_manager_url is not None:
+                            message = repr(msg.contents)
+                            json_data = {
+                                "managed_task": self._m_task_name,
+                                "message": message,
+                            }
+                            requests.post(
+                                f"http://{self._lute_manager_url}/log", json=json_data
+                            )
                     elif not isinstance(msg.contents, str):
                         logger.info(msg.contents)
+                        if self._lute_manager_url is not None:
+                            message = repr(msg.contents)
+                            json_data = {
+                                "managed_task": self._m_task_name,
+                                "message": message,
+                            }
+                            requests.post(
+                                f"http://{self._lute_manager_url}/log", json=json_data
+                            )
                 if not communicator.has_messages:
                     break
 

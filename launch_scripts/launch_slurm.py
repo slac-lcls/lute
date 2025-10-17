@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
-
 """Script submitted by Automated Run Processor (ARP) to trigger a SLURM-job workflow.
 
 This script is submitted by the ARP to the batch nodes. It runs a batch job which itself
@@ -9,13 +7,18 @@ submits the individual workflow job steps.
 __author__ = "Gabriel Dorlhiac"
 
 import argparse
+import json
 import logging
 import os
 import re
+import socket
 import subprocess
 import sys
+import threading
+import time
 import yaml
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 from typing_extensions import TypedDict
 
@@ -29,6 +32,60 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
+MANAGED_TASK_STATUS: Dict[str, str] = {}
+MANAGED_TASK_LOGS: Dict[str, List[str]] = {}
+STATUS_LOCK: threading.Lock = threading.Lock()
+
+
+class JobStatusHandler(BaseHTTPRequestHandler):
+
+    def _handle_route(self, route: str, data: Dict[str, Any]) -> None:
+        global MANAGED_TASK_LOGS
+        global MANAGED_TASK_STATUS
+        global STATUS_LOCK
+
+        if route == "/status":
+            managed_task: str = data["managed_task"]
+            status: str = data["status"]
+            date_time: str = self.date_time_string()
+            print(f"{date_time} [{managed_task}] Status = {status}.", flush=True)
+            self.send_response(200)
+            self.end_headers()
+            with STATUS_LOCK:
+                MANAGED_TASK_STATUS[managed_task] = status
+
+        elif route == "/log":
+            managed_task = data["managed_task"]
+            message: str = data["message"]
+            date_time = self.date_time_string()
+            formatted_msg: str = f"{date_time} [{managed_task}] {message}"
+            with STATUS_LOCK:
+                if managed_task in MANAGED_TASK_LOGS:
+                    MANAGED_TASK_LOGS[managed_task].append(formatted_msg)
+                else:
+                    MANAGED_TASK_LOGS[managed_task] = [formatted_msg]
+            # print(f"{date_time} [{managed_task}] {message}")
+            self.send_response(200)
+            self.end_headers()
+        else:
+            print(f"Invalid route: {route}", flush=True)
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format: str, *args: Any):
+        pass
+
+    def do_POST(self) -> None:
+        content_length: int = int(self.headers.get("Content-Length", 0))
+        body: bytes = self.rfile.read(content_length)
+        try:
+            data: Dict[str, Any] = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_response(400)
+            self.end_headers()
+            return None
+        self._handle_route(route=self.path, data=data)
 
 
 class LuteParams(TypedDict):
@@ -140,6 +197,10 @@ def launch_lute_task(
     kerb_file: Optional[str] = None,
     wait_for: Optional[Future] = None,
 ) -> Tuple[str, str, str]:
+    global MANAGED_TASK_LOGS
+    global MANAGED_TASK_STATUS
+    global STATUS_LOCK
+
     if wait_for is not None:
         while not wait_for.done():
             ...
@@ -173,15 +234,35 @@ def launch_lute_task(
 
     jobid: str = jobid_full_str.split()[-1]  # out.split()[-1]
 
-    logfile_path: str = get_slurm_logfile_path(jobid=jobid)
+    # logfile_path: str = get_slurm_logfile_path(jobid=jobid)
     # Loop on task here?
-    logfile: str = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
-    while (status := get_slurm_job_status(jobid=jobid)) not in (
-        "FAILED",
-        "COMPLETED",
-        "CANCELLED",
-    ):
-        logfile = get_slurm_log(logfile_path=logfile_path)
+    # logfile: str = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
+    logfile: str = ""
+    # while (status := get_slurm_job_status(jobid=jobid)) not in (
+    #    "FAILED",
+    #    "COMPLETED",
+    #    "CANCELLED",
+    # ):
+    #    logfile = get_slurm_log(logfile_path=logfile_path)
+    #    time.sleep(10)
+
+    while True:
+        with STATUS_LOCK:
+            if task_name not in MANAGED_TASK_STATUS:
+                status = "PENDING"
+            else:
+                status = MANAGED_TASK_STATUS[task_name]
+
+        with STATUS_LOCK:
+            if task_name in MANAGED_TASK_LOGS and MANAGED_TASK_LOGS[task_name]:
+                for _ in range(len(MANAGED_TASK_LOGS[task_name])):
+                    logfile += f"{MANAGED_TASK_LOGS[task_name].pop(0)}\n"
+        if status in ("FAILED", "COMPLETED", "CANCELLED", "TIMEDOUT"):
+            break
+        time.sleep(5)
+
+    if not logfile:
+        logfile = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
 
     return task_name, status, logfile
 
@@ -193,6 +274,7 @@ def create_workflow(
     wf_dict: Union[Dict[str, Any], List[Dict[str, Any]]],
     lute_location: str,
     lute_params: LuteParams,
+    default_slurm_params: str,
     kerb_file: Optional[str] = None,
 ) -> None:
     slurm_params: str
@@ -200,6 +282,8 @@ def create_workflow(
     if isinstance(wf_dict, list):
         for task_dict in wf_dict:
             slurm_params = task_dict.get("slurm_params", "")
+            if not slurm_params:
+                slurm_params = default_slurm_params
             future = executor.submit(
                 launch_lute_task,
                 lute_location,
@@ -221,6 +305,7 @@ def create_workflow(
                         wf_dict=task,
                         lute_location=lute_location,
                         lute_params=lute_params,
+                        default_slurm_params=default_slurm_params,
                         kerb_file=kerb_file,
                     )
     else:
@@ -246,6 +331,7 @@ def create_workflow(
                     wf_dict=task,
                     lute_location=lute_location,
                     lute_params=lute_params,
+                    default_slurm_params=default_slurm_params,
                     kerb_file=kerb_file,
                 )
     return None
@@ -366,6 +452,7 @@ if __name__ == "__main__":
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     lute_params: LuteParams = {"config_file": args.config, "debug": args.debug}
+    default_slurm_params: str = " ".join(extra_args)
 
     wf_repr: str
     task_count: int
@@ -373,6 +460,13 @@ if __name__ == "__main__":
 
     logger.info(f"Running the following workflow with {task_count} Managed Tasks:")
     print(wf_repr, flush=True)
+
+    server: HTTPServer = HTTPServer(("0.0.0.0", 41239), JobStatusHandler)
+    os.environ["LUTE_MANAGER_URL"] = f"{socket.gethostname()}:41239"
+    server_thread: threading.Thread = threading.Thread(
+        target=server.serve_forever, daemon=True
+    )
+    server_thread.start()
     with ThreadPoolExecutor(max_workers=task_count) as executor:
         all_futures: List[Future] = []
         # Recursively submit work to the ThreadPoolExecutor. The individual functions
@@ -385,6 +479,7 @@ if __name__ == "__main__":
             wf_dict=wf_defn,
             lute_location=lute_location,
             lute_params=lute_params,
+            default_slurm_params=default_slurm_params,
             kerb_file=cache_file,
         )
 
@@ -408,3 +503,7 @@ if __name__ == "__main__":
             sys.exit(-1)
         else:
             logger.info("Workflow exited: COMPLETED")
+
+    server.shutdown()
+    server.server_close()
+    server_thread.join()

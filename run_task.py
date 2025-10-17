@@ -61,4 +61,5 @@ else:
         )
     sys.exit(-1)
 
+managed_task._m_task_name = task_name
 managed_task.execute_task()
