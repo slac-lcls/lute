@@ -373,7 +373,9 @@ class BayFAIOpt:
                 try:
                     powder = h5[f"Sums/{detname}_calib"][()]
                 except KeyError:
-                    logger.error(f"Cannot find {detname} Sum powder in {powder_path}. Exiting...")
+                    logger.error(
+                        f"Cannot find {detname} Sum powder in {powder_path}. Exiting..."
+                    )
                     raise
         return powder
 
@@ -694,7 +696,7 @@ class BayFAIOpt:
     def uncertainty_penalty(self, refinement, epsilon=1e-5):
         """
         Compute a penalty based on parameter uncertainties from the Hessian matrix.
-        
+
         Parameters
         ----------
         refinement : GeometryRefinement
@@ -707,8 +709,17 @@ class BayFAIOpt:
         penalty : float
             Penalty to add to residual: higher if parameters are poorly constrained.
         """
-        param0 = np.array([refinement.dist, refinement.poni1, refinement.poni2,
-                        refinement.rot1, refinement.rot2, refinement.rot3], dtype=np.float64)
+        param0 = np.array(
+            [
+                refinement.dist,
+                refinement.poni1,
+                refinement.poni2,
+                refinement.rot1,
+                refinement.rot2,
+                refinement.rot3,
+            ],
+            dtype=np.float64,
+        )
         param_names = ["dist", "poni1", "poni2", "rot1", "rot2"]
         size = len(param_names)
         d1 = refinement.data[:, 0]
@@ -726,7 +737,7 @@ class BayFAIOpt:
             f_plus = refinement.residu2(param, d1, d2, ring)
             param[i] -= 2 * deltai
             f_minus = refinement.residu2(param, d1, d2, ring)
-            hessian[i, i] = (f_plus + f_minus - 2 * f_min) / (deltai ** 2)
+            hessian[i, i] = (f_plus + f_minus - 2 * f_min) / (deltai**2)
 
             for j in range(i + 1, size):
                 deltaj = delta[j]
@@ -741,7 +752,9 @@ class BayFAIOpt:
                 f_pm = refinement.residu2(param, d1, d2, ring)
                 param[j] += 2 * deltaj
                 f_mp = refinement.residu2(param, d1, d2, ring)
-                hessian[i, j] = hessian[j, i] = (f_pp + f_mm - f_pm - f_mp) / (4 * deltai * deltaj)
+                hessian[i, j] = hessian[j, i] = (f_pp + f_mm - f_pm - f_mp) / (
+                    4 * deltai * deltaj
+                )
         cov = np.linalg.inv(hessian)
         sigma2 = np.diag(cov)
         penalty = np.sqrt(np.sum(sigma2) / len(refinement.data))
@@ -929,7 +942,9 @@ class BayFAIOpt:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        residual, penalty, score, size, params = self.gradient_descent(best_param, Imin, max_rings, alpha)
+        residual, penalty, score, size, params = self.gradient_descent(
+            best_param, Imin, max_rings, alpha
+        )
         logger.info(
             f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, penalty={penalty:3e}, size={size}"
         )
@@ -1158,8 +1173,21 @@ class BayFAIOpt:
             Matplotlib axes
         """
         ax.plot(self.distances, self.scan["score"], linewidth=0.8, color="black")
-        ax.scatter(self.distances[self.valid], self.scan["score"][self.valid], linewidth=0.8, color="green", s=10)
-        ax.scatter(self.distances[self.invalid], self.scan["score"][self.invalid], linewidth=0.8, color="red", alpha=0.3, s=10)
+        ax.scatter(
+            self.distances[self.valid],
+            self.scan["score"][self.valid],
+            linewidth=0.8,
+            color="green",
+            s=10,
+        )
+        ax.scatter(
+            self.distances[self.invalid],
+            self.scan["score"][self.invalid],
+            linewidth=0.8,
+            color="red",
+            alpha=0.3,
+            s=10,
+        )
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Score", fontsize=6)
@@ -1179,8 +1207,21 @@ class BayFAIOpt:
             Matplotlib axes
         """
         ax.plot(self.distances, self.scan["residual"], linewidth=0.8, color="black")
-        ax.scatter(self.distances[self.valid], self.scan["residual"][self.valid], linewidth=0.8, color="green", s=10)
-        ax.scatter(self.distances[self.invalid], self.scan["residual"][self.invalid], linewidth=0.8, color="red", alpha=0.3, s=10)
+        ax.scatter(
+            self.distances[self.valid],
+            self.scan["residual"][self.valid],
+            linewidth=0.8,
+            color="green",
+            s=10,
+        )
+        ax.scatter(
+            self.distances[self.invalid],
+            self.scan["residual"][self.invalid],
+            linewidth=0.8,
+            color="red",
+            alpha=0.3,
+            s=10,
+        )
         best_dist = self.distances[self.index]
         ax.axvline(
             best_dist,

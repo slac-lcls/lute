@@ -102,7 +102,7 @@ class BayFAIParameters(TaskParameters):
 
         alpha: float = Field(
             0.1,
-            description="Regularization hyperparameter for the residual uncertainty penalty."
+            description="Regularization hyperparameter for the residual uncertainty penalty.",
         )
 
         seed: int = Field(
