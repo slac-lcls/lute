@@ -59,6 +59,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
+from scipy.ndimage import gaussian_filter1d  # type: ignore\
+from scipy.signal import find_peaks  # type: ignore
 from mpi4py import MPI
 
 from LCLSGeom.psana2.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL  # type: ignore
@@ -213,16 +215,17 @@ def azimuthal_integration(
         6 Geometry parameters: distance, x-shift, y-shift, Rx, Ry, Rz
     """
     tth = calculate_2theta(detector, params)
+    nbins = round(len(tth.ravel()) / 4000)  # aim for 4000 pixels per bin
     intensity, bin_edges = np.histogram(
-        tth.ravel(), bins=1000, range=(tth.min(), tth.max()), weights=powder.ravel()
+        tth.ravel(), bins=nbins, range=(tth.min(), tth.max()), weights=powder.ravel()
     )
     count, _ = np.histogram(tth.ravel(), bins=bin_edges)
     radialprofile = np.divide(
         intensity, count, out=np.zeros_like(intensity), where=count != 0
     )
+    radialprofile = gaussian_filter1d(radialprofile, sigma=1)
     tth_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     return radialprofile, tth_centers
-
 
 def theta2q(theta: np.ndarray, wavelength: float) -> np.ndarray:
     """
@@ -342,7 +345,7 @@ class BayFAIOpt2:
         smooth: bool,
         calibrant: str,
         fixed: list,
-        in_file: Optional[str] = None,
+        in_file: str,
     ):
         """
         Setup the BayFAI optimization.
@@ -359,13 +362,18 @@ class BayFAIOpt2:
             PyFAI calibrant object
         fixed : list
             List of parameters to keep fixed during optimization
-        in_file : str, optional
+        in_file : str
             Path to the input geometry file
+
+        Returns
+        -------
+        Imin : float
+            Minimum intensity value for identifying Bragg peaks
         """
-        self.detector = self.build_detector(detname, in_file)
+        self.detector = self.build_detector(in_file)
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.Imin = np.percentile(self.powder, 95)
+        self.Imin = np.percentile(self.powder, 98)
         self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
@@ -390,7 +398,11 @@ class BayFAIOpt2:
                 logger.warning(
                     f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
                 )
-                powder = h5[f"Sums/{detname}_calib"][()]
+                try:
+                    powder = h5[f"Sums/{detname}_calib"][()]
+                except KeyError:
+                    logger.error(f"Cannot find {detname} Sum powder in {powder_path}. Exiting...")
+                    raise
         return powder
 
     def preprocess_powder(
@@ -580,6 +592,7 @@ class BayFAIOpt2:
         fixed : list
             List of parameters to keep fixed during optimization
         """
+        self.fixed = fixed
         self.space = []
         parallelized = ["dist"]
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
@@ -704,11 +717,11 @@ class BayFAIOpt2:
 
     def score(self, sample, Imin, max_rings):
         """
-        Evaluate score at a given sampled geometry.
+        Evaluate score at a given sampled geometry based on the angular residuals of Bragg peaks.
 
         Parameters
         ----------
-        sample : array-like
+        sample : list
             Geometry parameters
         Imin : float
             Minimum intensity threshold
@@ -739,10 +752,76 @@ class BayFAIOpt2:
             geometry=geom_sample,
         )
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
-        score = len(sg.geometry_refinement.data)
-        return score
+        data = sg.geometry_refinement.data
 
-    def pyFAI_score(self, best_param, Imin, max_rings):
+        if data is None:
+            return -1.0
+
+        if len(data) == 0:
+            return -1.0
+        ix = data[:, 0]
+        iy = data[:, 1]
+        ring = data[:, 2].astype(np.int32)
+        residual = sg.geometry_refinement.residu2(sample, ix, iy, ring) / len(data)
+        return -residual
+
+    def uncertainty_penalty(self, refinement, epsilon=1e-5):
+        """
+        Compute a penalty based on parameter uncertainties from the Hessian matrix.
+        
+        Parameters
+        ----------
+        refinement : GeometryRefinement
+            pyFAI refinement object after refine3.
+        epsilon : float
+            Relative step for finite differences.
+
+        Returns
+        -------
+        penalty : float
+            Penalty to add to residual: higher if parameters are poorly constrained.
+        """
+        param0 = np.array([refinement.dist, refinement.poni1, refinement.poni2,
+                        refinement.rot1, refinement.rot2, refinement.rot3], dtype=np.float64)
+        param_names = ["dist", "poni1", "poni2", "rot1", "rot2"]
+        size = len(param_names)
+        d1 = refinement.data[:, 0]
+        d2 = refinement.data[:, 1]
+        ring = refinement.data[:, 2].astype(np.int32)
+        f_min = refinement.residu2(param0, d1, d2, ring)
+        hessian = np.zeros((size, size), dtype=np.float64)
+
+        delta = np.maximum(abs(epsilon * param0[:size]), epsilon)
+
+        for i in range(size):
+            deltai = delta[i]
+            param = param0.copy()
+            param[i] += deltai
+            f_plus = refinement.residu2(param, d1, d2, ring)
+            param[i] -= 2 * deltai
+            f_minus = refinement.residu2(param, d1, d2, ring)
+            hessian[i, i] = (f_plus + f_minus - 2 * f_min) / (deltai ** 2)
+
+            for j in range(i + 1, size):
+                deltaj = delta[j]
+                param = param0.copy()
+                param[i] += deltai
+                param[j] += deltaj
+                f_pp = refinement.residu2(param, d1, d2, ring)
+                param[i] -= 2 * deltai
+                param[j] -= 2 * deltaj
+                f_mm = refinement.residu2(param, d1, d2, ring)
+                param[i] += 2 * deltai
+                f_pm = refinement.residu2(param, d1, d2, ring)
+                param[j] += 2 * deltaj
+                f_mp = refinement.residu2(param, d1, d2, ring)
+                hessian[i, j] = hessian[j, i] = (f_pp + f_mm - f_pm - f_mp) / (4 * deltai * deltaj)
+        cov = np.linalg.inv(hessian)
+        sigma2 = np.diag(cov)
+        penalty = np.sqrt(np.sum(sigma2) / len(refinement.data))
+        return penalty
+
+    def gradient_descent(self, best_param, Imin, max_rings, alpha=0.1):
         """
         Evaluate geometry found by BO on pyFAI refinement tool
 
@@ -754,13 +833,19 @@ class BayFAIOpt2:
             Minimum intensity threshold
         max_rings : int
             Maximum number of rings to consider
+        alpha : float
+            Regularization parameter for the score
 
         Returns
         -------
         residual : float
             Residual error after refinement
+        penalty : float
+            Uncertainty penalty after refinement
         score : float
             BO Score of the refined parameters
+        size : int
+            Number of data points used for refinement
         params : dict
             Refined parameters
         """
@@ -784,12 +869,21 @@ class BayFAIOpt2:
         )
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
-        residual = 0
-        if len(sg.geometry_refinement.data) > 0:
-            residual = sg.geometry_refinement.refine3(fix=["wavelength"])
+        residual = 1.0
+        penalty = 0.0
+        score = -1.0
+        size = 0
+        if sg.geometry_refinement.data is None or len(sg.geometry_refinement.data) == 0:
+            return residual, penalty, score, size, best_param
+        else:
+            fix = ["rot3", "wavelength"]
+            residual = sg.geometry_refinement.refine3(fix=fix)
+            penalty = self.uncertainty_penalty(sg.geometry_refinement)
+            residual += alpha * penalty
         params = sg.geometry_refinement.param
+        size = len(sg.geometry_refinement.data)
         score = self.score(params, Imin, max_rings)
-        return residual, score, params
+        return residual, penalty, score, size, params
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_distance(
@@ -803,6 +897,7 @@ class BayFAIOpt2:
         Imin,
         max_rings,
         beta=1.96,
+        alpha=0.1,
         prior=True,
         seed=0,
     ):
@@ -829,6 +924,8 @@ class BayFAIOpt2:
             Maximum number of rings to search for Bragg peaks
         beta : float
             Exploration-exploitation trade-off parameter for UCB acquisition function
+        alpha : float
+            Regularization parameter for the residual penalty
         prior : bool
             Whether to sample initial points around the center or randomly
         seed : int
@@ -906,15 +1003,17 @@ class BayFAIOpt2:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        residual, score, params = self.pyFAI_score(best_param, Imin, max_rings)
+        residual, penalty, score, size, params = self.gradient_descent(best_param, Imin, max_rings, alpha)
         logger.info(
-            f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}"
+            f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, penalty={penalty:3e}, size={size}"
         )
         result = {
             "bo_history": bo_history,
             "params": params,
             "residual": residual,
+            "penalty": penalty,
             "score": score,
+            "size": size,
             "best_idx": best_idx,
         }
         return result
@@ -929,6 +1028,7 @@ class BayFAIOpt2:
         Imin,
         max_rings,
         beta=1.96,
+        alpha=0.1,
         prior=True,
         seed=0,
     ):
@@ -957,59 +1057,64 @@ class BayFAIOpt2:
             Maximum number of rings to consider
         beta : float
             Exploration-exploitation trade-off parameter for UCB acquisition function
+        alpha : float
+            Regularization parameter for the residual uncertainty penalty
         prior : bool
             Whether to sample initial points around the center or randomly
         seed : int
             Random seed for reproducibility
         """
-        if self.comm != MPI.COMM_NULL:
-            dist = self.distribute_distances(center, res)
-            logger.info(
-                f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
-            )
+        dist = self.distribute_distances(center, res)
+        logger.info(
+            f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
+        )
 
-            bayfai_hyperparams = {
-                "n_samples": n_samples,
-                "n_iterations": n_iterations,
-                "Imin": Imin,
-                "max_rings": max_rings,
-                "beta": beta,
-                "prior": prior,
-                "seed": seed,
-            }
+        bayfai_hyperparams = {
+            "n_samples": n_samples,
+            "n_iterations": n_iterations,
+            "Imin": Imin,
+            "max_rings": max_rings,
+            "beta": beta,
+            "alpha": alpha,
+            "prior": prior,
+            "seed": seed,
+        }
 
-            results = self.bayes_opt_distance(
-                dist,
-                center,
-                bounds,
-                res,
-                **bayfai_hyperparams,
-            )
+        results = self.bayes_opt_distance(
+            dist,
+            center,
+            bounds,
+            res,
+            **bayfai_hyperparams,
+        )
 
-            self.comm.Barrier()
+        self.comm.Barrier()
 
-            self.scan = {}
-            self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
-            self.scan["params"] = self.comm.gather(results["params"], root=0)
-            self.scan["residual"] = self.comm.gather(results["residual"], root=0)
-            self.scan["score"] = self.comm.gather(results["score"], root=0)
-            self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
-            self.finalize()
+        self.scan = {}
+        self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
+        self.scan["params"] = self.comm.gather(results["params"], root=0)
+        self.scan["residual"] = self.comm.gather(results["residual"], root=0)
+        self.scan["penalty"] = self.comm.gather(results["penalty"], root=0)
+        self.scan["score"] = self.comm.gather(results["score"], root=0)
+        self.scan["size"] = self.comm.gather(results["size"], root=0)
+        self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.finalize()
 
     def finalize(self):
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
-            non_zeros = np.where(self.scan["score"] > 0)[0]
-            thrsh = np.percentile(self.scan["score"][non_zeros], 10)
-            self.thrsh = thrsh
-            score_indices = np.where(self.scan["score"] > thrsh)[0]
-            shift_index = np.argmin(self.scan["residual"][score_indices])
-            index = score_indices[shift_index]
+            non_zeros = np.where(self.scan["size"] > 0)[0]
+            thrsh = np.percentile(self.scan["size"][non_zeros], 20)
+            self.valid = np.where(self.scan["size"] > thrsh)[0]
+            self.invalid = np.where(self.scan["size"] <= thrsh)[0]
+            shift_index = np.argmin(self.scan["residual"][self.valid])
+            index = self.valid[shift_index]
             self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
+            self.penalty = self.scan["penalty"][index]
             self.best_score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
             self.gr = GeometryRefinement(
@@ -1098,9 +1203,6 @@ class BayFAIOpt2:
         """
         bo_history = self.scan["bo_history"]
         iters = np.arange(len(bo_history[0]["scores"]))
-        for r in range(len(bo_history)):
-            score = bo_history[r]["scores"]
-            ax.plot(iters, score, marker="o", markersize=1, linestyle="None", alpha=0.6)
         ax.plot(
             iters,
             bo_history[self.index]["scores"],
@@ -1130,19 +1232,14 @@ class BayFAIOpt2:
             Matplotlib axes
         """
         ax.plot(self.distances, self.scan["score"], linewidth=0.8, color="black")
-        ax.axhline(
-            self.thrsh,
-            color="red",
-            linestyle="--",
-            label=f"Threshold score: {self.thrsh}",
-            linewidth=0.8,
-        )
+        ax.scatter(self.distances[self.valid], self.scan["score"][self.valid], linewidth=0.8, color="green", s=10)
+        ax.scatter(self.distances[self.invalid], self.scan["score"][self.invalid], linewidth=0.8, color="red", alpha=0.3, s=10)
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Score", fontsize=6)
         ax.tick_params(axis="x", labelsize=4)
         ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("Bragg Peaks Found vs Distance", fontsize=6)
+        ax.set_title("-Residual vs Distance", fontsize=6)
 
     def plot_residual_distance_scan(self, refined_dist, ax):
         """
@@ -1156,6 +1253,8 @@ class BayFAIOpt2:
             Matplotlib axes
         """
         ax.plot(self.distances, self.scan["residual"], linewidth=0.8, color="black")
+        ax.scatter(self.distances[self.valid], self.scan["residual"][self.valid], linewidth=0.8, color="green", s=10)
+        ax.scatter(self.distances[self.invalid], self.scan["residual"][self.invalid], linewidth=0.8, color="red", alpha=0.3, s=10)
         best_dist = self.distances[self.index]
         ax.axvline(
             best_dist,
@@ -1174,9 +1273,10 @@ class BayFAIOpt2:
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Residual", fontsize=6)
+        ax.set_ylim(0, 2 * np.mean(self.scan["residual"][self.valid]))
         ax.tick_params(axis="x", labelsize=4)
         ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("PyFAI Residual vs Distance", fontsize=6)
+        ax.set_title("Penalized Residual vs Distance", fontsize=6)
 
     def plot_intensity_hist(self, powder, Imin, ax):
         """
@@ -1195,12 +1295,10 @@ class BayFAIOpt2:
         ax : plt.Axes
             Matplotlib axes
         """
-        threshold = np.mean(powder) + 3 * np.std(powder)
-        nice_pix = powder < threshold
-        mean = np.mean(powder[nice_pix])
-        std_dev = np.std(powder[nice_pix])
+        mean = np.mean(powder)
+        std_dev = np.std(powder)
         _ = ax.hist(
-            powder[nice_pix],
+            powder.ravel(),
             bins=200,
             color="skyblue",
             edgecolor="black",
@@ -1231,9 +1329,9 @@ class BayFAIOpt2:
             color="purple",
             linestyle=":",
             linewidth=2,
-            label=f"95th Percentile: {Imin:.2f}",
+            label=f"98th Percentile: {Imin:.2f}",
         )
-        ax.set_xlim([0, 1000000])
+        ax.set_xlim([0, 100000])
         ax.set_ylim([0, mean + 3 * std_dev])
         ax.set_ylabel("Pixel Intensity", fontsize=6)
         ax.set_xlabel("Frequency", fontsize=6)

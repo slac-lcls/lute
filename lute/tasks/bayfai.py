@@ -70,6 +70,7 @@ class BayFAI(Task):
             "Imin": optimizer.Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
+            "alpha": self._task_parameters.bo_params.alpha,
             "seed": self._task_parameters.bo_params.seed,
         }
         optimizer.bayfai_opt(

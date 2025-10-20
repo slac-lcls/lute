@@ -76,12 +76,12 @@ class BayFAIParameters(TaskParameters):
         """Bayesian optimization hyperparameters."""
 
         n_samples: int = Field(
-            20,
+            40,
             description="Number of samples to initialize the Gaussian Process.",
         )
 
         n_iterations: int = Field(
-            80,
+            60,
             description="Number of iterations of Bayesian Optimization",
         )
 
@@ -97,7 +97,12 @@ class BayFAIParameters(TaskParameters):
 
         beta: float = Field(
             1.96,
-            description="Exploration-exploitation trade-off parameter for Upper Confidence Bound acquisition function.",
+            description="Exploration-exploitation trade-off hyperparameter for Upper Confidence Bound acquisition function.",
+        )
+
+        alpha: float = Field(
+            0.1,
+            description="Regularization hyperparameter for the residual uncertainty penalty."
         )
 
         seed: int = Field(
@@ -132,8 +137,8 @@ class BayFAIParameters(TaskParameters):
     resolutions: Dict[str, float] = Field(
         {
             "dist": 0.0005,
-            "poni1": 0.0001,
-            "poni2": 0.0001,
+            "poni1": 0.0002,
+            "poni2": 0.0002,
             "rot1": 0.02,
             "rot2": 0.02,
             "rot3": 0.02,
