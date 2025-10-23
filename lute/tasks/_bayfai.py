@@ -714,8 +714,17 @@ class BayFAIOpt:
         is_min : bool
             True if a local minimum was found
         """
-        param0 = np.array([refinement.dist, refinement.poni1, refinement.poni2,
-                        refinement.rot1, refinement.rot2, refinement.rot3], dtype=np.float64)
+        param0 = np.array(
+            [
+                refinement.dist,
+                refinement.poni1,
+                refinement.poni2,
+                refinement.rot1,
+                refinement.rot2,
+                refinement.rot3,
+            ],
+            dtype=np.float64,
+        )
         param_names = ["dist", "poni1", "poni2", "rot1", "rot2"]
         size = len(param_names)
 
