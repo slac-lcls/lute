@@ -819,7 +819,7 @@ class BayFAIOpt2:
             param = param0.copy()
             param[i] -= deltai
             f_minus = refinement.residu2(param, d1, d2, ring)
-            hessian[i, i] = (f_plus + f_minus - 2.0 * f_min) / (deltai ** 2)
+            hessian[i, i] = (f_plus + f_minus - 2.0 * f_min) / (deltai**2)
 
             for j in range(i + 1, size):
                 deltaj = delta[j]
@@ -839,7 +839,9 @@ class BayFAIOpt2:
                 param[i] -= deltai
                 param[j] += deltaj
                 f_mp = refinement.residu2(param, d1, d2, ring)
-                hessian[j, i] = hessian[i, j] = (f_pp + f_mm - f_pm - f_mp) / (4.0 * deltai * deltaj)
+                hessian[j, i] = hessian[i, j] = (f_pp + f_mm - f_pm - f_mp) / (
+                    4.0 * deltai * deltaj
+                )
 
         eig, _ = np.linalg.eigh(hessian)
         if np.any(eig <= 0):
@@ -1050,7 +1052,9 @@ class BayFAIOpt2:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        residual, sigma, score, size, params, is_min = self.gradient_descent(best_param, res, Imin, max_rings, step, alpha)
+        residual, sigma, score, size, params, is_min = self.gradient_descent(
+            best_param, res, Imin, max_rings, step, alpha
+        )
         logger.info(
             f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, size={size}"
         )
@@ -1268,7 +1272,9 @@ class BayFAIOpt2:
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
-        ax.set_ylabel(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6)
+        ax.set_ylabel(
+            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
+        )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
@@ -1301,11 +1307,16 @@ class BayFAIOpt2:
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6)
+        ax.set_ylabel(
+            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
+        )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
-        ax.set_title(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance", fontsize=6)
+        ax.set_title(
+            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance",
+            fontsize=6,
+        )
 
     def plot_residual_distance_scan(self, refined_dist, ax):
         """
@@ -1355,7 +1366,10 @@ class BayFAIOpt2:
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
-        ax.set_title(r"Refined $\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance", fontsize=6)
+        ax.set_title(
+            r"Refined $\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance",
+            fontsize=6,
+        )
 
     def plot_intensity_hist(self, powder, Imin, ax):
         """
@@ -1711,10 +1725,19 @@ class BayFAIOpt2:
         p.xaxis.major_label_text_font_size = "8pt"
         p.yaxis.major_label_text_font_size = "8pt"
 
-        qs = {"closest": closest_q, "border_2": border_2_q, "border": border_q, "furthest": furthest_q}
-        resolutions = {"closest": closest_resol, "border_2": border_2_resol, "border": border_resol, "furthest": furthest_resol}
+        qs = {
+            "closest": closest_q,
+            "border_2": border_2_q,
+            "border": border_q,
+            "furthest": furthest_q,
+        }
+        resolutions = {
+            "closest": closest_resol,
+            "border_2": border_2_resol,
+            "border": border_resol,
+            "furthest": furthest_resol,
+        }
         return p, qs, resolutions
-
 
     def create_diagnostics_panel(
         self,

@@ -104,12 +104,10 @@ class BayFAI(Task):
             optimizer.upload_geometry(
                 self._task_parameters.out_file, self._task_parameters.detname
             )
-            powder_plot, qs, resolutions = (
-                optimizer.create_interactive_powder(
-                    powder=optimizer.powder,
-                    detector=calib_detector,
-                    distance=distance,
-                )
+            powder_plot, qs, resolutions = optimizer.create_interactive_powder(
+                powder=optimizer.powder,
+                detector=calib_detector,
+                distance=distance,
             )
             diagnostics_plot = optimizer.create_diagnostics_panel(
                 powder=optimizer.powder,
@@ -161,7 +159,9 @@ class BayFAI(Task):
                     "Highest q": f"{qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)",
                 }
             )
-            logger.info(f">>> Low q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5")
+            logger.info(
+                f">>> Low q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5"
+            )
             logger.info(
                 f">>> High q : {qs['border']:.3f} \u00c5-1 | {resolutions['border']:.3f} \u00c5 (detector edge)"
             )
