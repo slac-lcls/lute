@@ -70,7 +70,7 @@ class BayFAI(Task):
             "Imin": optimizer.Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
-            "alpha": self._task_parameters.bo_params.alpha,
+            "step": self._task_parameters.bo_params.step,
             "seed": self._task_parameters.bo_params.seed,
         }
         optimizer.bayfai_opt(
@@ -104,7 +104,7 @@ class BayFAI(Task):
             optimizer.upload_geometry(
                 self._task_parameters.out_file, self._task_parameters.detname
             )
-            powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
+            powder_plot, qs, resolutions = (
                 optimizer.create_interactive_powder(
                     powder=optimizer.powder,
                     detector=calib_detector,
@@ -116,18 +116,12 @@ class BayFAI(Task):
                 Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
-                low_resolution=low_res,
-                high_resolution=high_res,
-                border_resolution=border_res,
             )
             _ = optimizer.create_summary_plot(
                 powder=optimizer.powder,
                 Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
-                low_resolution=low_res,
-                high_resolution=high_res,
-                border_resolution=border_res,
                 plot=plot,
             )
             pn.extension("matplotlib", "bokeh")
@@ -162,17 +156,17 @@ class BayFAI(Task):
                         f"{cx/optimizer.detector.pixel_size:.3f}",
                         f"{cy/optimizer.detector.pixel_size:.3f}",
                     ),
-                    "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
-                    "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
-                    "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
+                    "Low q": f"{qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5",
+                    "High q": f"{qs['border']:.3f} \u00c5-1 | {resolutions['border']:.3f} \u00c5 (detector edge)",
+                    "Highest q": f"{qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)",
                 }
             )
-            logger.info(f">>> Low q : {low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5")
+            logger.info(f">>> Low q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5")
             logger.info(
-                f">>> High q : {border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)"
+                f">>> High q : {qs['border']:.3f} \u00c5-1 | {resolutions['border']:.3f} \u00c5 (detector edge)"
             )
             logger.info(
-                f">>> Highest q : {high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)"
+                f">>> Highest q : {qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)"
             )
             self._result.summary.append(
                 ElogSummaryPlots(

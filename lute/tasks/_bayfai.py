@@ -345,7 +345,8 @@ class BayFAIOpt:
         self.detector = self.build_detector(in_file)
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
-        self.Imin = np.percentile(self.powder, 98)
+        non_zero_pixels = self.powder[self.powder > 0]
+        self.Imin = np.percentile(non_zero_pixels, 98)
         self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
@@ -544,10 +545,10 @@ class BayFAIOpt:
         dist : float
             The distance assigned to this MPI rank
         """
-        low = center["dist"] - res["dist"] * self.size / 2
-        high = center["dist"] + res["dist"] * self.size / 2
-        distances = np.linspace(low, high - res["dist"], self.size)
-        distances = np.round(distances * 10000, decimals=0) / 10000
+        half = self.size // 2
+        offsets = (np.arange(self.size) - half) * res["dist"]
+        distances = center["dist"] + offsets
+        distances = np.round(distances, 6)
         self.distances = distances
         dist = distances[self.rank]
         return dist
@@ -693,51 +694,48 @@ class BayFAIOpt:
         residual = sg.geometry_refinement.residu2(sample, ix, iy, ring) / len(data)
         return -residual
 
-    def uncertainty_penalty(self, refinement, epsilon=1e-5):
+    def estimate_uncertainty(self, refinement, rel_eps=1e-3, abs_eps=1e-4):
         """
-        Compute a penalty based on parameter uncertainties from the Hessian matrix.
+        Estimate parameter uncertainties from the Hessian matrix.
 
         Parameters
         ----------
         refinement : GeometryRefinement
             pyFAI refinement object after refine3.
-        epsilon : float
+        rel_eps : float
             Relative step for finite differences.
+        abs_eps : float
+            Absolute step for finite differences.
 
         Returns
         -------
-        penalty : float
-            Penalty to add to residual: higher if parameters are poorly constrained.
+        sigmas : np.ndarray
+            Estimated uncertainties for each parameter
+        is_min : bool
+            True if a local minimum was found
         """
-        param0 = np.array(
-            [
-                refinement.dist,
-                refinement.poni1,
-                refinement.poni2,
-                refinement.rot1,
-                refinement.rot2,
-                refinement.rot3,
-            ],
-            dtype=np.float64,
-        )
+        param0 = np.array([refinement.dist, refinement.poni1, refinement.poni2,
+                        refinement.rot1, refinement.rot2, refinement.rot3], dtype=np.float64)
         param_names = ["dist", "poni1", "poni2", "rot1", "rot2"]
         size = len(param_names)
+
         d1 = refinement.data[:, 0]
         d2 = refinement.data[:, 1]
         ring = refinement.data[:, 2].astype(np.int32)
         f_min = refinement.residu2(param0, d1, d2, ring)
         hessian = np.zeros((size, size), dtype=np.float64)
+        dof = max(len(refinement.data) - size, 1)
 
-        delta = np.maximum(abs(epsilon * param0[:size]), epsilon)
-
+        delta = np.maximum(rel_eps * np.abs(param0), abs_eps)
         for i in range(size):
             deltai = delta[i]
             param = param0.copy()
             param[i] += deltai
             f_plus = refinement.residu2(param, d1, d2, ring)
-            param[i] -= 2 * deltai
+            param = param0.copy()
+            param[i] -= deltai
             f_minus = refinement.residu2(param, d1, d2, ring)
-            hessian[i, i] = (f_plus + f_minus - 2 * f_min) / (deltai**2)
+            hessian[i, i] = (f_plus + f_minus - 2.0 * f_min) / (deltai ** 2)
 
             for j in range(i + 1, size):
                 deltaj = delta[j]
@@ -745,22 +743,33 @@ class BayFAIOpt:
                 param[i] += deltai
                 param[j] += deltaj
                 f_pp = refinement.residu2(param, d1, d2, ring)
-                param[i] -= 2 * deltai
-                param[j] -= 2 * deltaj
+                param = param0.copy()
+                param[i] -= deltai
+                param[j] -= deltaj
                 f_mm = refinement.residu2(param, d1, d2, ring)
-                param[i] += 2 * deltai
+                param = param0.copy()
+                param[i] += deltai
+                param[j] -= deltaj
                 f_pm = refinement.residu2(param, d1, d2, ring)
-                param[j] += 2 * deltaj
+                param = param0.copy()
+                param[i] -= deltai
+                param[j] += deltaj
                 f_mp = refinement.residu2(param, d1, d2, ring)
-                hessian[i, j] = hessian[j, i] = (f_pp + f_mm - f_pm - f_mp) / (
-                    4 * deltai * deltaj
-                )
-        cov = np.linalg.inv(hessian)
-        sigma2 = np.diag(cov)
-        penalty = np.sqrt(np.sum(sigma2) / len(refinement.data))
-        return penalty
+                hessian[j, i] = hessian[i, j] = (f_pp + f_mm - f_pm - f_mp) / (4.0 * deltai * deltaj)
 
-    def gradient_descent(self, best_param, Imin, max_rings, alpha=0.1):
+        eig, _ = np.linalg.eigh(hessian)
+        if np.any(eig <= 0):
+            sigmas = np.ones(size)
+            is_min = False
+            return sigmas, is_min
+
+        cov = np.linalg.inv(hessian)
+        sigmas = f_min * np.diag(cov) / dof
+        sigmas = np.sqrt(sigmas)
+        is_min = True
+        return sigmas, is_min
+
+    def gradient_descent(self, best_param, resolutions, Imin, max_rings, step=5):
         """
         Evaluate geometry found by BO on pyFAI refinement tool
 
@@ -768,12 +777,14 @@ class BayFAIOpt:
         ----------
         best_param : list
             Best parameters found by Bayesian optimization
+        resolutions : dict
+            Resolution per parameter for restricted refinement
         Imin : float
             Minimum intensity threshold
         max_rings : int
             Maximum number of rings to consider
-        alpha : float
-            Regularization parameter for the score
+        step : int
+            Size of the refinement space around best parameters
 
         Returns
         -------
@@ -781,6 +792,8 @@ class BayFAIOpt:
             Residual error after refinement
         penalty : float
             Uncertainty penalty after refinement
+        sigma : np.ndarray
+            Estimated uncertainties for each parameter
         score : float
             BO Score of the refined parameters
         size : int
@@ -808,21 +821,32 @@ class BayFAIOpt:
         )
         sg.extract_cp(max_rings=max_rings, pts_per_deg=1, Imin=Imin)
         self.sg = sg
-        residual = 1.0
-        penalty = 0.0
-        score = -1.0
-        size = 0
+
         if sg.geometry_refinement.data is None or len(sg.geometry_refinement.data) == 0:
-            return residual, penalty, score, size, best_param
-        else:
-            fix = ["rot3", "wavelength"]
-            residual = sg.geometry_refinement.refine3(fix=fix)
-            penalty = self.uncertainty_penalty(sg.geometry_refinement)
-            residual += alpha * penalty
+            residual = 1
+            sigma = np.ones(5)
+            score = -1.0
+            size = 0
+            is_min = False
+            return residual, sigma, score, size, best_param, is_min
+
+        sg.geometry_refinement.set_dist_min(dist - step * resolutions["dist"])
+        sg.geometry_refinement.set_dist_max(dist + step * resolutions["dist"])
+        sg.geometry_refinement.set_poni1_min(poni1 - step * resolutions["poni1"])
+        sg.geometry_refinement.set_poni1_max(poni1 + step * resolutions["poni1"])
+        sg.geometry_refinement.set_poni2_min(poni2 - step * resolutions["poni2"])
+        sg.geometry_refinement.set_poni2_max(poni2 + step * resolutions["poni2"])
+        sg.geometry_refinement.set_rot1_min(rot1 - step * resolutions["rot1"])
+        sg.geometry_refinement.set_rot1_max(rot1 + step * resolutions["rot1"])
+        sg.geometry_refinement.set_rot2_min(rot2 - step * resolutions["rot2"])
+        sg.geometry_refinement.set_rot2_max(rot2 + step * resolutions["rot2"])
+        fix = ["rot3", "wavelength"]
+        residual = sg.geometry_refinement.refine3(fix=fix)
+        sigma, is_min = self.estimate_uncertainty(sg.geometry_refinement)
         params = sg.geometry_refinement.param
         size = len(sg.geometry_refinement.data)
         score = self.score(params, Imin, max_rings)
-        return residual, penalty, score, size, params
+        return residual, sigma, score, size, params, is_min
 
     @ignore_warnings(category=ConvergenceWarning)
     def bayes_opt_distance(
@@ -836,7 +860,7 @@ class BayFAIOpt:
         Imin,
         max_rings,
         beta=1.96,
-        alpha=0.1,
+        step=5,
         prior=True,
         seed=0,
     ):
@@ -863,8 +887,8 @@ class BayFAIOpt:
             Maximum number of rings to search for Bragg peaks
         beta : float
             Exploration-exploitation trade-off parameter for UCB acquisition function
-        alpha : float
-            Regularization parameter for the residual penalty
+        step : int
+            Size of the refinement space around best parameters
         prior : bool
             Whether to sample initial points around the center or randomly
         seed : int
@@ -942,20 +966,19 @@ class BayFAIOpt:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        residual, penalty, score, size, params = self.gradient_descent(
-            best_param, Imin, max_rings, alpha
-        )
+        residual, sigma, score, size, params, is_min = self.gradient_descent(best_param, res, Imin, max_rings, step, alpha)
         logger.info(
-            f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, penalty={penalty:3e}, size={size}"
+            f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, size={size}"
         )
         result = {
             "bo_history": bo_history,
             "params": params,
             "residual": residual,
-            "penalty": penalty,
+            "sigma": sigma,
             "score": score,
             "size": size,
             "best_idx": best_idx,
+            "is_min": is_min,
         }
         return result
 
@@ -969,7 +992,7 @@ class BayFAIOpt:
         Imin,
         max_rings,
         beta=1.96,
-        alpha=0.1,
+        step=5,
         prior=True,
         seed=0,
     ):
@@ -998,8 +1021,8 @@ class BayFAIOpt:
             Maximum number of rings to consider
         beta : float
             Exploration-exploitation trade-off parameter for UCB acquisition function
-        alpha : float
-            Regularization parameter for the residual uncertainty penalty
+        step : int
+            Size of the refinement space around best parameters
         prior : bool
             Whether to sample initial points around the center or randomly
         seed : int
@@ -1016,7 +1039,7 @@ class BayFAIOpt:
             "Imin": Imin,
             "max_rings": max_rings,
             "beta": beta,
-            "alpha": alpha,
+            "step": step,
             "prior": prior,
             "seed": seed,
         }
@@ -1035,10 +1058,11 @@ class BayFAIOpt:
         self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
         self.scan["params"] = self.comm.gather(results["params"], root=0)
         self.scan["residual"] = self.comm.gather(results["residual"], root=0)
-        self.scan["penalty"] = self.comm.gather(results["penalty"], root=0)
+        self.scan["sigma"] = self.comm.gather(results["sigma"], root=0)
         self.scan["score"] = self.comm.gather(results["score"], root=0)
         self.scan["size"] = self.comm.gather(results["size"], root=0)
         self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
+        self.scan["is_min"] = self.comm.gather(results["is_min"], root=0)
         self.finalize()
 
     def finalize(self):
@@ -1046,16 +1070,18 @@ class BayFAIOpt:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zeros = np.where(self.scan["size"] > 0)[0]
-            thrsh = np.percentile(self.scan["size"][non_zeros], 20)
-            self.valid = np.where(self.scan["size"] > thrsh)[0]
-            self.invalid = np.where(self.scan["size"] <= thrsh)[0]
+            thrsh = np.percentile(self.scan["size"][non_zeros], 25)
+            not_enough = self.scan["size"] <= thrsh
+            not_min = ~self.scan["is_min"]
+            self.invalid = not_enough | not_min
+            self.valid = np.where(~self.invalid)[0]
             shift_index = np.argmin(self.scan["residual"][self.valid])
             index = self.valid[shift_index]
             self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
-            self.penalty = self.scan["penalty"][index]
+            self.sigma = self.scan["sigma"][index]
             self.best_score = self.scan["score"][index]
             self.best_idx = self.scan["best_idx"][index]
             self.gr = GeometryRefinement(
@@ -1158,9 +1184,10 @@ class BayFAIOpt:
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
-        ax.set_ylabel("Score", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
+        ax.set_ylabel(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6)
+        ax.yaxis.get_offset_text().set_fontsize(6)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
         ax.set_title("Bayesian Optimization History", fontsize=6)
 
     def plot_score_distance_scan(self, ax):
@@ -1190,10 +1217,11 @@ class BayFAIOpt:
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel("Score", fontsize=6)
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("-Residual vs Distance", fontsize=6)
+        ax.set_ylabel(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6)
+        ax.yaxis.get_offset_text().set_fontsize(6)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title(r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance", fontsize=6)
 
     def plot_residual_distance_scan(self, refined_dist, ax):
         """
@@ -1240,10 +1268,10 @@ class BayFAIOpt:
         ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel("Residual", fontsize=6)
-        ax.set_ylim(0, 2 * np.mean(self.scan["residual"][self.valid]))
-        ax.tick_params(axis="x", labelsize=4)
-        ax.tick_params(axis="y", labelsize=4)
-        ax.set_title("Penalized Residual vs Distance", fontsize=6)
+        ax.yaxis.get_offset_text().set_fontsize(6)
+        ax.tick_params(axis="x", labelsize=6)
+        ax.tick_params(axis="y", labelsize=6)
+        ax.set_title(r"Refined $\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance", fontsize=6)
 
     def plot_intensity_hist(self, powder, Imin, ax):
         """
@@ -1264,9 +1292,10 @@ class BayFAIOpt:
         """
         mean = np.mean(powder)
         std_dev = np.std(powder)
+        nice_pix = powder[np.where(powder < mean + 2 * std_dev)]
         _ = ax.hist(
-            powder.ravel(),
-            bins=200,
+            nice_pix.ravel(),
+            bins=100,
             color="skyblue",
             edgecolor="black",
             alpha=0.7,
@@ -1296,10 +1325,10 @@ class BayFAIOpt:
             color="purple",
             linestyle=":",
             linewidth=2,
-            label=f"98th Percentile: {Imin:.2f}",
+            label=f"Minimum Intensity ({Imin:.2f})",
         )
         ax.set_xlim([0, 100000])
-        ax.set_ylim([0, mean + 3 * std_dev])
+        ax.set_ylim([0, mean + 2 * std_dev])
         ax.set_ylabel("Pixel Intensity", fontsize=6)
         ax.set_xlabel("Frequency", fontsize=6)
         ax.set_xticks([])
@@ -1592,22 +1621,16 @@ class BayFAIOpt:
             ]
         )
         p.add_tools(hover)
-
         p.title.text_font_size = "12pt"
         p.xaxis.axis_label_text_font_size = "10pt"
         p.yaxis.axis_label_text_font_size = "10pt"
         p.xaxis.major_label_text_font_size = "8pt"
         p.yaxis.major_label_text_font_size = "8pt"
 
-        return (
-            p,
-            closest_q,
-            closest_resol,
-            furthest_q,
-            furthest_resol,
-            border_q,
-            border_resol,
-        )
+        qs = {"closest": closest_q, "border_2": border_2_q, "border": border_q, "furthest": furthest_q}
+        resolutions = {"closest": closest_resol, "border_2": border_2_resol, "border": border_resol, "furthest": furthest_resol}
+        return p, qs, resolutions
+
 
     def create_diagnostics_panel(
         self,
@@ -1615,9 +1638,6 @@ class BayFAIOpt:
         Imin,
         detector,
         distance,
-        low_resolution=None,
-        high_resolution=None,
-        border_resolution=None,
         plot="",
     ):
         """
@@ -1683,66 +1703,43 @@ class BayFAIOpt:
         ax1.text(
             0.05,
             0.5,
-            f"Distance = {distance:.4f} m",
+            f"Distance = {1000 * distance:.3f} ± {1000 * self.sigma[0]:.3f} mm",
             ha="left",
             va="center",
             fontsize=8,
         )
-        if low_resolution is not None:
-            ax1.text(
-                0.05,
-                0.4,
-                f"{'Low-q Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.4,
-                f"{low_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
-            ax1.text(
-                0.05,
-                0.3,
-                f"{'Border Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.3,
-                f"{border_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
-            ax1.text(
-                0.05,
-                0.2,
-                f"{'Corner Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.2,
-                f"{high_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
+        ax1.text(
+            0.05,
+            0.4,
+            f"X-shift = {1000 * self.params[1]:.3f} ± {1000 * self.sigma[1]:.3f} mm",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.3,
+            f"Y-shift = {1000 * self.params[2]:.3f} ± {1000 * self.sigma[2]:.3f} mm",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.2,
+            f"RotX = {self.params[3]:.3f} ± {self.sigma[3]:.6f} rad",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.1,
+            f"RotY = {self.params[4]:.3f} ± {self.sigma[4]:.6f} rad",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
         ax1.axis("off")
         icol += 1
 
@@ -1782,9 +1779,6 @@ class BayFAIOpt:
         Imin,
         detector,
         distance,
-        low_resolution=None,
-        high_resolution=None,
-        border_resolution=None,
         plot="",
     ):
         """
@@ -1854,66 +1848,43 @@ class BayFAIOpt:
         ax1.text(
             0.05,
             0.5,
-            f"Distance = {distance:.4f} m",
+            f"Distance = {1000 * distance:.3f} ± {1000 * self.sigma[0]:.3f} mm",
             ha="left",
             va="center",
             fontsize=8,
         )
-        if low_resolution is not None:
-            ax1.text(
-                0.05,
-                0.4,
-                f"{'Low-q Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.4,
-                f"{low_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
-            ax1.text(
-                0.05,
-                0.3,
-                f"{'Border Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.3,
-                f"{border_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
-            ax1.text(
-                0.05,
-                0.2,
-                f"{'Corner Resolution':<30}",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="black",
-            )
-            ax1.text(
-                0.50,
-                0.2,
-                f"{high_resolution:.3f} \u00c5",
-                ha="left",
-                va="center",
-                fontsize=8,
-                color="red",
-            )
+        ax1.text(
+            0.05,
+            0.4,
+            f"ShiftX = {1000 * self.params[1]:.3f} ± {1000 * self.sigma[1]:.3f} mm",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.3,
+            f"ShiftY = {1000 * self.params[2]:.3f} ± {1000 * self.sigma[2]:.3f} mm",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.2,
+            f"RotX = {self.params[3]:.3f} ± {self.sigma[3]:.6f} rad",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
+        ax1.text(
+            0.05,
+            0.1,
+            f"RotY = {self.params[4]:.3f} ± {self.sigma[4]:.6f} rad",
+            ha="left",
+            va="center",
+            fontsize=8,
+        )
         ax1.axis("off")
         icol += 1
 
