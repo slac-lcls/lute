@@ -977,9 +977,7 @@ class BayFAIOpt:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        residual, sigma, score, size, params, is_min = self.gradient_descent(
-            best_param, res, Imin, max_rings, step, alpha
-        )
+        residual, sigma, score, size, params, is_min = self.gradient_descent(best_param, res, Imin, max_rings, step)
         logger.info(
             f"Rank {self.rank} dist={dist:.4f}m: score={score}, residual={residual:3e}, size={size}"
         )
