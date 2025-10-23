@@ -1273,7 +1273,7 @@ class BayFAIOpt2:
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
         ax.set_ylabel(
-            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
+            r"-$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
         )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
@@ -1305,16 +1305,15 @@ class BayFAIOpt2:
             alpha=0.3,
             s=10,
         )
-        ax.legend(fontsize=6)
         ax.set_xlabel("Distance (m)", fontsize=6)
         ax.set_ylabel(
-            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
+            r"-$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$", fontsize=6
         )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            r"Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance",
+            r"BO Score = -$\frac{1}{N} \sum (2\theta_g - 2\theta_c)^2$ vs Distance",
             fontsize=6,
         )
 
