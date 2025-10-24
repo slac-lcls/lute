@@ -8,6 +8,7 @@ __all__ = ["setup_smd2_env"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
+
 # import subprocess
 from typing import List, Dict, Optional
 
