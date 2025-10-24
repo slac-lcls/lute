@@ -78,11 +78,11 @@ def setup_smd2_env() -> Dict[str, str]:
     slurm_job_nodelist: Optional[str] = os.getenv("SLURM_JOB_NODELIST")
     if slurm_job_nodelist is None:
         return psana_vars
-    cmd: List[str] = ["scontrol", "show", "hostnames", slurm_job_nodelist]
-    host_list_bytes: bytes
-    host_list_bytes, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
+    # cmd: List[str] = ["scontrol", "show", "hostnames", slurm_job_nodelist]
+    # host_list_bytes: bytes
+    # host_list_bytes, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
-    host_list: List[str] = host_list_bytes.decode().split("\n")[:-1]
+    # host_list: List[str] = host_list_bytes.decode().split("\n")[:-1]
 
     slurm_job_id: Optional[str] = os.getenv("SLURM_JOB_ID")
     if slurm_job_id is None:
