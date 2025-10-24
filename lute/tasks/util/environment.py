@@ -87,19 +87,19 @@ def setup_smd2_env() -> Dict[str, str]:
     slurm_job_id: Optional[str] = os.getenv("SLURM_JOB_ID")
     if slurm_job_id is None:
         return psana_vars
-    host_file: str = f"slurm_host_{slurm_job_id}"
-    with open(host_file, "w") as f:
-        for i in range(len(host_list)):
-            if i == 0:
-                f.write(f"{host_list[i]} slots=1\n")
-            else:
-                f.write(f"{host_list[i]}\n")
+    # host_file: str = f"slurm_host_{slurm_job_id}"
+    # with open(host_file, "w") as f:
+    #     for i in range(len(host_list)):
+    #         if i == 0:
+    #             f.write(f"{host_list[i]} slots=1\n")
+    #         else:
+    #             f.write(f"{host_list[i]}\n")
 
     # This calculation may not work of --ntasks-per-node is not passed
     # But on the other hand, I cannot find PS_N_RANKS used in psana code.
     n_ranks: int = int(cores_per_node) * (int(nodes) - 1) + 1
 
-    psana_vars["PS_HOST_FILE"] = host_file
+    # psana_vars["PS_HOST_FILE"] = host_file
     psana_vars["PS_N_RANKS"] = str(n_ranks)
 
     return psana_vars
