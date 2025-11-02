@@ -1,9 +1,25 @@
+{%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
+{%- if data is mapping %}
+{%- for param_name, param_value in data.items() %}
+        {{ dict_name }}["{{ param_name }}"] = {{ param_value }}
+{%- endfor %}
+
+        ret_dict["{{ detector }}"] = {{ dict_name }}
+{%- else %}
+{%- for data_dict in data %}
+        # Create list of dicts for {{ detector }}
+        {{ dict_name }}s = []
+
+{{- step_parameters(dict_name, detector, data_dict) }}
+        {{ dict_name }}s.append({{ dict_name }})
+
+        # Add list of dicts for {{ detector }} to total dictionary
+        ret_dict["{{ detector }}"] = {{ dict_name }}s
+{%- endfor %}
+{%- endif %}
+{%- endmacro -%}
 import numpy as np
 
-# These lists are needed, do not delete them
-# If no detector in a given category, leave the corresponding
-# list empty.
-# detectors = ['jungfrau','epix100']
 {%- if detnames is defined and detnames %}
 detectors = {{ detnames }}
 {% else %}
@@ -11,10 +27,9 @@ detectors = []
 {% endif %}
 {%- if integrating_detectors is defined and integrating_detectors %}
 integrating_detectors = {{ integrating_detectors }}
-{% else %}
-integrating_detectors = []
 {% endif %}
 
+{%- if IntgParams is defined and IntgParams %}
 def get_intg(run):
     """
     Returns
@@ -42,26 +57,33 @@ def get_intg(run):
         ...
 {% endif %}
     return intg_main, intg_addl
+{% endif %}
 
 {%- if getROIs is defined and getROIs %}
 def getROIs(run):
     ret_dict = {}
 
-    jungfrau_roi = {"thresADU": None, "writeArea": True, "calcPars": False, "ROI": None}
-    epix100_roi = {"thresADU": None, "writeArea": True, "calcPars": False, "ROI": None}
-
     if run > 0:
         roi_dict = {}
 {% for detector, params in getROIs.items() %}
-        roi_dict["ROIs"] = {{ params["ROIs"] }}
-        roi_dict["writeArea"] = {{ params["writeArea"] }}
-        roi_dict["thresADU"] = {{ params["thresADU"] }}
-        roi_dict["calcPars"] = {{ params["calcPars"] }}
-
-        ret_dict["{{ detector }}"] = roi_dict
+{{- step_parameters("roi_dict", detector, params) }}
 {% endfor %}
-        ...
     return ret_dict
+{% endif %}
+
+{%- if getDetImages is defined and getDetImages %}
+def getDetImages(run):
+    ...
+{% endif %}
+
+{%- if getWfIntegrate is defined and getWfIntegrate %}
+def get_wf_integrate(run):
+    ...
+{% endif %}
+
+{%- if getWfHitfinder is defined and getWfIntegrate %}
+def get_wf_hitfinder(run):
+    ...
 {% endif %}
 
 
@@ -86,9 +108,14 @@ def get_droplet2photon(run):
         d2p_dict["nData"] = None
         d2p_dict["get_photon_img"] = False
 
-        ret_dict["epix100"] = d2p_dict
+        ret_dict["{{ detector }}"] = d2p_dict
 {% endfor %}
     return ret_dict
+{% endif %}
+
+{%- if getWfSVD is defined and getWfIntegrate %}
+def get_wf_svd(run):
+    ...
 {% endif %}
 
 {%- if getDropletParams is defined and getDropletParams %}
@@ -99,15 +126,7 @@ def get_droplet(run):
     if run>0:
         droplet_dict = {}
 {% for detector, params in getDropletParams.items() %}
-        droplet_dict['name'] = {{ params['name'] }}
-        #droplet_dict['mask'] = None # have to pass full array
-        droplet_dict['threshold'] = {{ params['threshold'] }}
-        droplet_dict['thresholdLow'] = {{ params['thresholdLow'] }}
-        droplet_dict['thresADU'] = {{ params['thresADU'] }}
-        droplet_dict['useRms'] = {{ params['useRms'] }}
-        droplet_dict['nData'] = {{ params['nData'] }}
-
-        ret_dict['{{ detector }}'] = droplet_dict
+{{- step_parameters("droplet_dict", detector, params) }}
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -120,15 +139,41 @@ def get_azav(run):
     if run>0:
         az_dict = {}
 {% for detector, params in getAzIntParams.items() %}
-        az_dict['eBeam'] = {{ params['eBeam'] }}
-        az_dict['center'] = {{ params['center'] }}
-        az_dict['dis_to_sam'] = {{ params['dis_to_sam'] }}
-        az_dict['tx'] = {{ params['tx'] }}
-        az_dict['ty'] = {{ params['ty'] }}
+{{- step_parameters("az_dict", detector, params) }}
+{% endfor %}
+    return ret_dict
+{% endif %}
+
+{%- if getAzIntPyFAIParams is defined and getAzIntPyFAIParams %}
+def getAzIntPyFAIParams(run):
+    if isinstance(run,str):
+        run=int(run)
+    ret_dict = {}
+    if run>0:
+        az_dict = {}
+{% for detector, params in getAzIntPyFAIParams.items() %}
+{%- if params['poni_file'] -%}
+        az_dict['poni_file'] = {{ params['poni_file'] }}
+{% else %}
+        ai_kwargs = {}
+        ai_kwargs['dist'] = {{ params['ai_kwargs']['dist'] }}
+        ai_kwargs['poni1'] = {{ params['ai_kwargs']['poni1'] }}
+        ai_kwargs['poni2'] = {{ params['ai_kwargs']['poni2'] }}
+        az_dict['ai_kwargs'] = ai_kwargs
+{% endif %}
+        az_dict['npts'] = {{ params['npts'] }}
+        az_dict['npts_az'] = {{ params['npts_az'] }}
+        az_dict['int_units'] = {{ params['2th_deg'] }}
+        az_dict['return2d'] = {{ params['return2d'] }}
 
         ret_dict['{{ detector }}'] = az_dict
 {% endfor %}
     return ret_dict
+{%- endif %}
+
+{%- if getPolynomialCorrection is defined and getWfIntegrate %}
+def get_polynomial_correction(run):
+    ...
 {% endif %}
 
 {%- if detSumAlgos is defined and detSumAlgos %}

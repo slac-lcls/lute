@@ -23,12 +23,16 @@ Exceptions
 __all__ = ["BaseExecutor", "Executor", "MPIExecutor"]
 __author__ = "Gabriel Dorlhiac"
 
-import sys
+import copy
 import logging
-import subprocess
-import time
 import os
+import re
 import signal
+import subprocess
+import sys
+import time
+import warnings
+from abc import ABC, abstractmethod
 from typing import (
     overload,
     Dict,
@@ -44,12 +48,7 @@ from typing import (
     Type,
 )
 from typing_extensions import TypedDict, TypeAlias
-from abc import ABC, abstractmethod
-import warnings
-import copy
-import re
 
-from lute.execution.logging import get_logger
 from lute.execution.ipc import (
     Party,
     Message,
@@ -58,14 +57,13 @@ from lute.execution.ipc import (
     LUTE_SIGNALS,
     Communicator,
 )
-from lute.tasks.dataclasses import (
-    DescribedAnalysis,
-    TaskResult,
-    TaskStatus,
-    ElogSummaryPlots,
-    TaskParametersDBReference,
+from lute.execution.logging import get_logger
+from lute.io.db import (
+    record_analysis_db,
+    update_analysis_db,
+    get_task_parameters_defn_and_params,
 )
-from lute.io.parameters import RowIds, construct_task_parameters
+from lute.io.elog import post_elog_run_status, post_elog_run_table
 from lute.io.models.base import (
     TaskParameters,
     TemplateParameters,
@@ -73,12 +71,14 @@ from lute.io.models.base import (
     TemplateConfig,  # noqa: F401
     ThirdPartyParameters,
 )  # NOTE: All imports required for unpickling!
-from lute.io.db import (
-    record_analysis_db,
-    update_analysis_db,
-    get_task_parameters_defn_and_params,
+from lute.io.parameters import RowIds, construct_task_parameters
+from lute.tasks.dataclasses import (
+    DescribedAnalysis,
+    TaskResult,
+    TaskStatus,
+    ElogSummaryPlots,
+    TaskParametersDBReference,
 )
-from lute.io.elog import post_elog_run_status, post_elog_run_table
 
 if __debug__:
     warnings.simplefilter("default")
@@ -441,9 +441,17 @@ class BaseExecutor(ABC):
         self,
         env: Union[Dict[str, str], Callable[[], Dict[str, str]]],
         update_path: str = "prepend",
+        use_tenv_prefix: bool = False,
     ) -> None:
         if callable(env):
-            env_update: Dict[str, str] = env()
+            raw_env_update: Dict[str, str] = env()
+            env_update: Dict[str, str]
+            if use_tenv_prefix:
+                env_update = {
+                    f"LUTE_TENV_{key}": val for key, val in raw_env_update.items()
+                }
+            else:
+                env_update = raw_env_update
             self._analysis_desc.task_env.update(env_update)
             return
 
@@ -466,6 +474,13 @@ class BaseExecutor(ABC):
                         " Options are: prepend, append, overwrite."
                     )
                 )
+        env_update: Dict[str, str]
+        if use_tenv_prefix:
+            env_update = {
+                f"LUTE_TENV_{key}": val for key, val in env.items()
+            }
+        else:
+            env_update = env
         self._analysis_desc.task_env.update(env)
 
     def shell_source(self, env: str) -> None:
@@ -541,11 +556,15 @@ class BaseExecutor(ABC):
                 new_environment["PYTHONPATH"] = lute_path
         self._analysis_desc.task_env = new_environment
 
-    def _pre_task(self) -> None:
+    def _pre_task(self) -> str:
         """Any actions to be performed before task submission.
 
-        This method may or may not be used by subclasses. It may be useful
-        for logging etc.
+        This method should be modified carefully, if at all, by subclasses as
+        it prepares environments. This preparation is rather finicky given the
+        need to prevent collisions between various environments.
+
+        Returns:
+            lute_path (str): The path to the LUTE installation being used.
         """
         # This prevents the Executors in managed_tasks.py from all acquiring
         # resources like sockets.
@@ -565,6 +584,26 @@ class BaseExecutor(ABC):
             key: os.environ[key] for key in os.environ if "LUTE_" in key
         }
         self._analysis_desc.task_env.update(tmp)
+
+        # ********* Important ********* #
+        # If using _update_environment AND _shell_source, the environment
+        # variables in _update_environment must be prepended by LUTE_TENV_
+        lute_path: Optional[str] = os.getenv("LUTE_PATH")
+        if lute_path is None:
+            logger.debug("Absolute path to subprocess_task.py not found.")
+            lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
+            os.environ.update({"LUTE_PATH": lute_path})
+            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
+
+        use_tenv_prefix: bool = False
+        if self._shell_source_script is not None:
+            self._shell_source()
+            use_tenv_prefix = True
+
+        if self._delayed_update_env_args is not None:
+            self._update_environment(*self._delayed_update_env_args, use_tenv_prefix=use_tenv_prefix)
+
+        return lute_path
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
@@ -625,23 +664,13 @@ class BaseExecutor(ABC):
 
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
-        self._pre_task()
-        lute_path: Optional[str] = os.getenv("LUTE_PATH")
-        if lute_path is None:
-            logger.debug("Absolute path to subprocess_task.py not found.")
-            lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
-            os.environ.update({"LUTE_PATH": lute_path})
-            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
+        # _pre_task does Task environment preparation. All updates are done now
+        # to prevent various Managed Tasks which are all defined in the same module
+        # from affecting each other.
+        lute_path: str = self._pre_task()
         executable_path: str = f"{lute_path}/subprocess_task.py"
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
-
-        # Prevent all managed tasks from affecting each others environments
-        if self._shell_source_script is not None:
-            self._shell_source()
-
-        if self._delayed_update_env_args is not None:
-            self._update_environment(*self._delayed_update_env_args)
 
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)

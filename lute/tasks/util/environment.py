@@ -9,8 +9,9 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 
-# import subprocess
 from typing import List, Dict, Optional
+
+import requests
 
 
 def setup_smd2_env() -> Dict[str, str]:
@@ -29,6 +30,26 @@ def setup_smd2_env() -> Dict[str, str]:
     """
     # partition: str = ...
     psana_vars: Dict[str, str] = {}
+
+    # Setup SIT_PSDM_DATA for reading from FFB if needed
+    exp: Optional[str] = os.getenv("EXPERIMENT")
+    run: Optional[str] = os.getenv("RUN_NUM")
+
+    if exp and run:
+        base_url: str = "https://pswww.slac.stanford.edu/ws/lgbk/lgbk"
+        endpoint: str = f"{exp}/ws/{run}/files_for_live_mode_at_location"
+        full_url: str = f"{base_url}/{endpoint}"
+
+        # This request returns True if data is on /sdf/data/lcls/ds instead of FFB
+        resp: requests.models.Response = requests.get(full_url, params={"location":"S3DF"})
+        resp.raise_for_status()
+        data_dir: bool = resp.json()["value"]["all_present"]
+
+        if data_dir:
+            psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/ds"
+        else:
+            psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/drpsrcf/ffb"
+
     # These values are the requests - may not be defined if --nodes and
     # --ntasks-per-node were not passed.
     nodes: Optional[str] = os.getenv("SLURM_NNODES")

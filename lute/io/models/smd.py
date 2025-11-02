@@ -71,7 +71,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
             )
 
         class ROIParams(BaseModel):
-            ROIs: Optional[List[List[List[int]]]] = Field(
+            name: str = Field(
+                "ROI", description="HDF5 key name for storing this ROI data."
+            )
+            ROI: Optional[List[List[List[int]]]] = Field(
                 description="Definition of ROIs, can define multiple."
             )
 
@@ -83,7 +86,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 None, description="Optional threshold on ADU."
             )
 
-            calcPars: Optional[bool] = Field(False, description="...")
+            calcPars: bool = Field(False, description="Whether to output sum, mean, max as well.")
 
         class AzIntParams(BaseModel):
             eBeam: float = Field(description="Beam energy in keV.")
@@ -95,6 +98,23 @@ class SubmitSMDParameters(ThirdPartyParameters):
             tx: float = Field(0, description="Tilt in x, degrees")
 
             ty: float = Field(0, description="Tilt in y, degress")
+
+            ADU_per_Photon: float = Field(1.0, description="ADU per photon.")
+
+            phiBins: int = Field(1, description="Number of phi bins.")
+
+            qbin: float = Field(5e-3, description="Width of Q bin.")
+
+            thresRms: Optional[Union[int, float]] = Field(None, description="Lower threshold in RMS.")
+
+            thresADU: Optional[Union[int, float]] = Field(None, description="Lower threshold in ADU.")
+
+            thresADUhigh: Optional[Union[int, float]] = Field(None, description="High threshold in ADU.")
+
+            geomCorr: bool = Field(True, description="Whether to apply geometric correction.")
+
+            polCorr: bool = Field(True, description="Whether to apply polarization correction.")
+
 
         class AzIntPyFAIParams(BaseModel):
             class AiKwargs(BaseModel):
