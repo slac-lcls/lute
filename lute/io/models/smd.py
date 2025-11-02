@@ -86,7 +86,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 None, description="Optional threshold on ADU."
             )
 
-            calcPars: bool = Field(False, description="Whether to output sum, mean, max as well.")
+            calcPars: bool = Field(
+                False, description="Whether to output sum, mean, max as well."
+            )
 
         class AzIntParams(BaseModel):
             eBeam: float = Field(description="Beam energy in keV.")
@@ -105,16 +107,25 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
             qbin: float = Field(5e-3, description="Width of Q bin.")
 
-            thresRms: Optional[Union[int, float]] = Field(None, description="Lower threshold in RMS.")
+            thresRms: Optional[Union[int, float]] = Field(
+                None, description="Lower threshold in RMS."
+            )
 
-            thresADU: Optional[Union[int, float]] = Field(None, description="Lower threshold in ADU.")
+            thresADU: Optional[Union[int, float]] = Field(
+                None, description="Lower threshold in ADU."
+            )
 
-            thresADUhigh: Optional[Union[int, float]] = Field(None, description="High threshold in ADU.")
+            thresADUhigh: Optional[Union[int, float]] = Field(
+                None, description="High threshold in ADU."
+            )
 
-            geomCorr: bool = Field(True, description="Whether to apply geometric correction.")
+            geomCorr: bool = Field(
+                True, description="Whether to apply geometric correction."
+            )
 
-            polCorr: bool = Field(True, description="Whether to apply polarization correction.")
-
+            polCorr: bool = Field(
+                True, description="Whether to apply polarization correction."
+            )
 
         class AzIntPyFAIParams(BaseModel):
             class AiKwargs(BaseModel):

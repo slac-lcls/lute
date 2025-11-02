@@ -476,9 +476,7 @@ class BaseExecutor(ABC):
                 )
         env_update: Dict[str, str]
         if use_tenv_prefix:
-            env_update = {
-                f"LUTE_TENV_{key}": val for key, val in env.items()
-            }
+            env_update = {f"LUTE_TENV_{key}": val for key, val in env.items()}
         else:
             env_update = env
         self._analysis_desc.task_env.update(env)
@@ -601,7 +599,9 @@ class BaseExecutor(ABC):
             use_tenv_prefix = True
 
         if self._delayed_update_env_args is not None:
-            self._update_environment(*self._delayed_update_env_args, use_tenv_prefix=use_tenv_prefix)
+            self._update_environment(
+                *self._delayed_update_env_args, use_tenv_prefix=use_tenv_prefix
+            )
 
         return lute_path
 

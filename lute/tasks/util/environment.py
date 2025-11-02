@@ -41,7 +41,9 @@ def setup_smd2_env() -> Dict[str, str]:
         full_url: str = f"{base_url}/{endpoint}"
 
         # This request returns True if data is on /sdf/data/lcls/ds instead of FFB
-        resp: requests.models.Response = requests.get(full_url, params={"location":"S3DF"})
+        resp: requests.models.Response = requests.get(
+            full_url, params={"location": "S3DF"}
+        )
         resp.raise_for_status()
         data_dir: bool = resp.json()["value"]["all_present"]
 
