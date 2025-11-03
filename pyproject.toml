@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "numpy", "mypy"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools", "numpy", "mypy", "meson-python", "pybind11"]
+build-backend = "mesonpy"
 
 [project]
 name = "lute"
@@ -8,17 +8,20 @@ description="LCLS Unified Task Executor."
 requires-python = ">=3.8"
 dynamic = ["version"]
 dependencies = [
+    "pyyaml",
+    "pydantic==1.10",
     "numpy",
-    "pydantic==1.10.13",
     "requests",
     "zmq",
     "jinja2",
 ]
 
+[tool.meson-python.args]
+install = ['--skip-subprojects', 'spdlog']
+
 
 [project.optional-dependencies]
 mypy = ["mypy"]
-#mypyc = ["setuptools>=50"]
 docs = [
     "mkdocs",
     "mkdocstring",
