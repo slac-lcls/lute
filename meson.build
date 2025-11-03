@@ -28,5 +28,6 @@ py3.install_sources(
     pure: false,
 )
 
+subdir('extensions')
 subdir('lute')
 #subdir('workflows/maestro')
