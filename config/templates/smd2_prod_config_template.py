@@ -3,14 +3,15 @@
 {%- for param_name, param_value in data.items() %}
         {{ dict_name }}["{{ param_name }}"] = {{ param_value }}
 {%- endfor %}
-
+        {% if add_to_ret -%}
         ret_dict["{{ detector }}"] = {{ dict_name }}
+        {% endif %}
 {%- else %}
 {%- for data_dict in data %}
         # Create list of dicts for {{ detector }}
         {{ dict_name }}s = []
 
-{{- step_parameters(dict_name, detector, data_dict) }}
+{{- step_parameters(dict_name, detector, data_dict, False) }}
         {{ dict_name }}s.append({{ dict_name }})
 
         # Add list of dicts for {{ detector }} to total dictionary
@@ -139,7 +140,12 @@ def get_azav(run):
     if run>0:
         az_dict = {}
 {% for detector, params in getAzIntParams.items() %}
-{{- step_parameters("az_dict", detector, params) }}
+        {%- if 'userMask' in params %}
+        az_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("az_dict", detector, params|rejectattr("userMask")) }}
+        {% else %}
+        {{- step_parameters("az_dict", detector, params) }}
+        {% endif %}
 {% endfor %}
     return ret_dict
 {% endif %}

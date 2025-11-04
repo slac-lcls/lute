@@ -127,6 +127,14 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 True, description="Whether to apply polarization correction."
             )
 
+            userMask: Optional[str] = Field(
+                None,
+                description=(
+                    "Path to a numpy array (.npy) to use as a mask for azimuthal "
+                    "integration."
+                ),
+            )
+
         class AzIntPyFAIParams(BaseModel):
             class AiKwargs(BaseModel):
                 dist: float = Field(description="Detector distance.")

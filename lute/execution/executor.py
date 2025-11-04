@@ -443,9 +443,9 @@ class BaseExecutor(ABC):
         update_path: str = "prepend",
         use_tenv_prefix: bool = False,
     ) -> None:
+        env_update: Dict[str, str]
         if callable(env):
             raw_env_update: Dict[str, str] = env()
-            env_update: Dict[str, str]
             if use_tenv_prefix:
                 env_update = {
                     f"LUTE_TENV_{key}": val for key, val in raw_env_update.items()
@@ -474,7 +474,6 @@ class BaseExecutor(ABC):
                         " Options are: prepend, append, overwrite."
                     )
                 )
-        env_update: Dict[str, str]
         if use_tenv_prefix:
             env_update = {f"LUTE_TENV_{key}": val for key, val in env.items()}
         else:
