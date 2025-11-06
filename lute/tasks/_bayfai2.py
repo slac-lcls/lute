@@ -375,7 +375,7 @@ class BayFAIOpt2:
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         non_zero_pixels = self.powder[self.powder > 0]
-        self.Imin = np.percentile(non_zero_pixels, 95)
+        self.Imin = np.percentile(non_zero_pixels, 99)
         self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
