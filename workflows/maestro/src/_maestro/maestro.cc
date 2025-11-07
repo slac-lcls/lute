@@ -35,9 +35,10 @@ PYBIND11_MODULE(_maestro, m, py::mod_gil_not_used()) {
     .value("ALWAYS", LWM::TriggerRule::ALWAYS);
 
   py::class_<LWM::JobParameters>(m, "JobParameters")
-    .def(py::init<std::string, std::string, bool>())
+    .def(py::init<std::string, std::string, std::string, bool>())
     .def_readwrite("lute_location", &LWM::JobParameters::lute_location)
     .def_readwrite("config_file", &LWM::JobParameters::config_file)
+    .def_readwrite("executable_subdir", &LWM::JobParameters::executable_subdir)
     .def_readwrite("debug", &LWM::JobParameters::debug);
 
   py::class_<LWM::JobStep>(m, "JobStep")

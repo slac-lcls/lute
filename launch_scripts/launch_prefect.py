@@ -325,5 +325,6 @@ def main() -> None:
         resp = requests.get(flow_run_state_endpoint, auth=auth)
         state = resp.json()["state_type"]
 
+
 if __name__ == "__main__":
     main()

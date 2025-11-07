@@ -226,6 +226,7 @@ def main():
     wf_defn: List[_maestro.JobStep] = load_lute_dag(
         workflow_path=args.workflow_defn,
         lute_location=lute_location,
+        executable_subdir=os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
         config_file=args.config,
         debug=args.debug,
         default_slurm_params=" ".join(extra_args),

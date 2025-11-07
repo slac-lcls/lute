@@ -22,6 +22,7 @@ namespace LWM {
   class JobParameters {
   public:
     std::string lute_location;
+    std::string executable_subdir;
     std::string config_file;
     bool debug;
   };

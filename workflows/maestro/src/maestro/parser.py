@@ -232,6 +232,7 @@ def get_lute_dag_dumper() -> Type[yaml.SafeDumper]:
 def load_lute_dag(
     workflow_path: str,
     lute_location: str,
+    executable_subdir: str,
     config_file: str,
     debug: bool,
     default_slurm_params: str = "",
@@ -243,6 +244,8 @@ def load_lute_dag(
         workflow_path (str): The path to the workflow to load.
 
         lute_location (str): The path of the LUTE installation to use.
+
+        executable_subdir (str): The sub-directory to use for the executables.
 
         config_file (str): The path to the config file to use.
 
@@ -270,7 +273,7 @@ def load_lute_dag(
             the appropriate objects.
     """
 
-    gen_params: JobParameters = JobParameters(lute_location, config_file, debug)
+    gen_params: JobParameters = JobParameters(lute_location, executable_subdir, config_file, debug)
 
     loader: Type[yaml.SafeLoader] = get_lute_dag_loader(
         gen_params=gen_params,
@@ -301,13 +304,14 @@ def load_lute_dag(
 def load_lute_dag_str(
     workflow_str: str,
     lute_location: str,
+    executable_subdir: str,
     config_file: str,
     debug: bool,
     default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
 ) -> List[JobStep]:
     """As `lute_lute_dag` but takes a string for the workflow instead of a path."""
-    gen_params: JobParameters = JobParameters(lute_location, config_file, debug)
+    gen_params: JobParameters = JobParameters(lute_location, executable_subdir, config_file, debug)
 
     loader: Type[yaml.SafeLoader] = get_lute_dag_loader(
         gen_params=gen_params,

@@ -19,7 +19,7 @@ import time
 import yaml
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, overload
 from typing_extensions import TypedDict
 
 logger: logging.Logger = logging.getLogger("Launch_SLURM_Workflow")
@@ -489,16 +489,20 @@ def main() -> None:
 
     is_daq2: bool = True
     wf_defn: Dict[str, Any]
-    def branch_daq2_constructor(loader: yaml.Loader, node: yaml.MappingNode) -> Any:
+
+    def branch_daq2_constructor(
+        loader: yaml.SafeLoader, node: yaml.nodes.MappingNode
+    ) -> Any:
         values = loader.construct_mapping(node)
         if is_daq2:
             return values["daq2"]
         else:
             return values["daq1"]
 
-    yaml.add_constructor("!branch_daq2", branch_daq2_constructor)
+    loader: Type[yaml.SafeLoader] = yaml.SafeLoader
+    loader.add_constructor("!branch_daq2", branch_daq2_constructor)
     with open(args.workflow_defn, "r") as f:
-        wf_defn = yaml.load(stream=f, Loader=yaml.FullLoader)
+        wf_defn = yaml.load(stream=f, Loader=loader)
 
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
@@ -559,6 +563,7 @@ def main() -> None:
     server.shutdown()
     server.server_close()
     server_thread.join()
+
 
 if __name__ == "__main__":
     main()

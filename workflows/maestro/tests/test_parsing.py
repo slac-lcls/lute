@@ -120,9 +120,12 @@ def is_equal(steps_0: List[JobStep], steps_1: List[JobStep]) -> bool:
 class TestParsing:
     # These values don't matter since we are only testing
     lute_location: str = "/path/to/lute"
+    executable_subdir: str = ""  # Not running anything so irrelevant
     config_file: str = "/path/to/config"
     debug: bool = True
-    gen_params: JobParameters = JobParameters(lute_location, config_file, debug)
+    gen_params: JobParameters = JobParameters(
+        lute_location, executable_subdir, config_file, debug
+    )
 
     def test_simple(self):
         job_steps: List[JobStep] = [
@@ -145,6 +148,7 @@ class TestParsing:
         wf_defn: List[JobStep] = load_lute_dag_str(
             workflow_str=SIMPLE_DAG,
             lute_location=TestParsing.lute_location,
+            executable_subdir=TestParsing.executable_subdir,  # Not running anything so irrelevant
             config_file=TestParsing.config_file,
             debug=TestParsing.debug,
             branch_conditions={"daq2": True},
@@ -187,6 +191,7 @@ class TestParsing:
         wf_defn: List[JobStep] = load_lute_dag_str(
             workflow_str=SIMPLE_PARALLEL_DAG,
             lute_location=TestParsing.lute_location,
+            executable_subdir=TestParsing.executable_subdir,  # Not running anything so irrelevant
             config_file=TestParsing.config_file,
             debug=TestParsing.debug,
             branch_conditions={"daq2": True},
@@ -236,6 +241,7 @@ class TestParsing:
         wf_defn: List[JobStep] = load_lute_dag_str(
             workflow_str=SIMPLE_TRIGGER_DAG,
             lute_location=TestParsing.lute_location,
+            executable_subdir=TestParsing.executable_subdir,  # Not running anything so irrelevant
             config_file=TestParsing.config_file,
             debug=TestParsing.debug,
             branch_conditions={"daq2": True},
@@ -278,6 +284,7 @@ class TestParsing:
         wf_defn: List[JobStep] = load_lute_dag_str(
             workflow_str=SIMPLE_BRANCH_DAG,
             lute_location=TestParsing.lute_location,
+            executable_subdir=TestParsing.executable_subdir,  # Not running anything so irrelevant
             config_file=TestParsing.config_file,
             debug=TestParsing.debug,
             branch_conditions={"daq2": True},
@@ -328,6 +335,7 @@ class TestParsing:
         wf_defn: List[JobStep] = load_lute_dag_str(
             workflow_str=SIMPLE_BRANCH_DAG,
             lute_location=TestParsing.lute_location,
+            executable_subdir=TestParsing.executable_subdir,  # Not running anything so irrelevant
             config_file=TestParsing.config_file,
             debug=TestParsing.debug,
             branch_conditions={"daq2": False},

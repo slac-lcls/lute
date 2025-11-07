@@ -264,8 +264,15 @@ namespace LWM {
   }
 
   std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
+    //if (job.parameters.executable_subdir == "launch_")
     std::string executable =
-        job.parameters.lute_location + "/launch_scripts/submit_slurm.sh";
+      job.parameters.lute_location + "/" + job.parameters.executable_subdir
+      + "/submit_slurm";
+    if (job.parameters.executable_subdir == "launch_scripts") {
+      // We did not "install" LUTE and are running against repo structure -
+      // script has .sh suffix
+      executable += ".sh";
+    }
 
     std::string config_file = job.parameters.config_file;
     std::string param_str =
@@ -275,7 +282,7 @@ namespace LWM {
       param_str += " --debug";
     }
     if (is_daq2) {
-      param_str += " --psana2"
+      param_str += " --psana2";
     }
 
     std::string slurm_params = job.extra_parameters;
@@ -291,7 +298,12 @@ namespace LWM {
     bool debug = job.parameters.debug;
     executable += debug ? "-B " : "-OB ";
 
-    std::string script_location = job.parameters.lute_location + "/run_task.py ";
+    std::string script_location;
+    if (job.parameters.executable_subdir == "launch_scripts") {
+      script_location = job.parameters.lute_location + "/run_task.py ";
+    } else {
+      script_location = job.parameters.lute_location + "/" + job.parameters.executable_subdir + "/run_task ";
+    }
 
     executable += script_location;
 

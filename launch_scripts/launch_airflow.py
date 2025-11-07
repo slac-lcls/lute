@@ -351,7 +351,9 @@ def main() -> None:
             "Authorization": jid_authorization,
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
-            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
+            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[
+                -1
+            ],
             "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
@@ -481,6 +483,7 @@ def main() -> None:
         sys.exit(1)
     else:
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
