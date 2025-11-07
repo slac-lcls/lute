@@ -371,7 +371,7 @@ class BayFAIOpt2:
         Imin : float
             Minimum intensity value for identifying Bragg peaks
         """
-        self.detector = self.build_detector(in_file)
+        self.detector = self.build_detector(detname, in_file)
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         non_zero_pixels = self.powder[self.powder > 0]
