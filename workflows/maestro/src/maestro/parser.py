@@ -200,7 +200,9 @@ def get_lute_dag_loader(
             # So we just ignore that this is not good and append the job steps.
             if isinstance(job_step_dict, dict):
                 task_name = job_step_dict.get("task_name")
-                slurm_params = job_step_dict.get("slurm_params", default_slurm_params)
+                slurm_params = job_step_dict.get("slurm_params")
+                if not slurm_params:
+                    slurm_params = default_slurm_params
                 next_job_steps = job_step_dict.get("next")
                 if trig_rule is None:
                     trig_rule = default_trigger_rule
