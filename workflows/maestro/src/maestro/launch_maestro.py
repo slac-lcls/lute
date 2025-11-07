@@ -203,11 +203,8 @@ def main():
         )
         run_type = "UNKNOWN"
     else:
-        if args.type != "":
-            run_type = args.type
-        else:
-            # If API request succeeds `type` should always be defined
-            run_type = resp.json()["value"]["type"]
+        # If API request succeeds `type` should always be defined
+        run_type = resp.json()["value"]["type"]
         # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
         param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
         for key in param_keys:
