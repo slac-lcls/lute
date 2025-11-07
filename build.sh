@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 mkdir -p install
 
-source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
+if [[ $HOSTNAME =~ "sdf" ]]; then
+    source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+fi
 
 BASE_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
 INSTALL_DIR="${BASE_DIR}/install"

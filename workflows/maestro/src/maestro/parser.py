@@ -6,7 +6,7 @@ __author__ = "Gabriel Dorlhiac"
 import collections
 import os
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import yaml
 
@@ -114,6 +114,7 @@ def get_branch(
 def get_lute_dag_loader(
     gen_params: JobParameters,
     default_trigger_rule: TriggerRule = TriggerRule.ALL_SUCCESS,
+    default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
 ) -> Type[yaml.SafeLoader]:
     """Create a loader that handles the special tags used by LUTE's YAML files.
@@ -124,6 +125,9 @@ def get_lute_dag_loader(
 
         default_trigger_rule (TriggerRule): The default TriggerRule to apply to a
             JobStep if None has been specified.
+
+        default_slurm_params (str): The default SLURM parameters that will be applied
+            to all JobSteps if they don't define any themselves.
 
         branch_conditions (Dict[str, bool]): A mapping of branch keys to the
             evaluated conditions. E.g. `daq2` : True means a `!branch_daq2`
@@ -196,7 +200,7 @@ def get_lute_dag_loader(
             # So we just ignore that this is not good and append the job steps.
             if isinstance(job_step_dict, dict):
                 task_name = job_step_dict.get("task_name")
-                slurm_params = job_step_dict.get("slurm_params", "")
+                slurm_params = job_step_dict.get("slurm_params", default_slurm_params)
                 next_job_steps = job_step_dict.get("next")
                 if trig_rule is None:
                     trig_rule = default_trigger_rule
@@ -230,6 +234,7 @@ def load_lute_dag(
     lute_location: str,
     config_file: str,
     debug: bool,
+    default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
 ) -> List[JobStep]:
     """Load a LUTE DAG from a YAML file with support for LUTE's custom tags.
@@ -242,6 +247,9 @@ def load_lute_dag(
         config_file (str): The path to the config file to use.
 
         debug (bool): Whether to run in debug mode.
+
+        default_slurm_params (str): The default SLURM parameters that will be applied
+            to all JobSteps if they don't define any themselves.
 
         branch_conditions (Dict[str, bool]): A mapping of branch keys to the
             evaluated conditions. E.g. `daq2` : True means a `!branch_daq2`
@@ -267,6 +275,7 @@ def load_lute_dag(
     loader: Type[yaml.SafeLoader] = get_lute_dag_loader(
         gen_params=gen_params,
         default_trigger_rule=TriggerRule.ALL_SUCCESS,
+        default_slurm_params=default_slurm_params,
         branch_conditions=branch_conditions,
     )
 
@@ -294,6 +303,7 @@ def load_lute_dag_str(
     lute_location: str,
     config_file: str,
     debug: bool,
+    default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
 ) -> List[JobStep]:
     """As `lute_lute_dag` but takes a string for the workflow instead of a path."""
@@ -302,6 +312,7 @@ def load_lute_dag_str(
     loader: Type[yaml.SafeLoader] = get_lute_dag_loader(
         gen_params=gen_params,
         default_trigger_rule=TriggerRule.ALL_SUCCESS,
+        default_slurm_params=default_slurm_params,
         branch_conditions=branch_conditions,
     )
 

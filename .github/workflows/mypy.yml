@@ -15,4 +15,4 @@ jobs:
       - name: "Run mypy install-types"
         run: "yes | mypy ./lute ./utilities ./launch_scripts ./workflows/airflow --install-types || true"
       - name: "Run mypy"
-        run: "mypy ./lute ./utilities/src ./launch_scripts"
+        run: "mypy ./lute ./utilities ./launch_scripts"

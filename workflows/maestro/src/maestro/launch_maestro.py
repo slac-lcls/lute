@@ -108,6 +108,7 @@ def main():
         lute_location=lute_location,
         config_file=args.config,
         debug=args.debug,
+        default_slurm_params=" ".join(extra_args),
     )
     _maestro.run_workflow(wf_defn)
 
