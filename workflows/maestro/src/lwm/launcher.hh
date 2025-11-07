@@ -152,6 +152,7 @@ namespace LWM {
     virtual std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) = 0;
     std::pair<std::string, int> run_subprocess_log(const std::string& cmd,
                                                    bool return_output = false);
+    virtual void update_log(std::string& log, std::string& jobid) {}
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
     std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
@@ -184,6 +185,7 @@ namespace LWM {
         : SubprocessLauncher(unbuffered_logs) {}
 
   protected:
+    void update_log(std::string& log, std::string& jobid) override;
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SlurmLauncher");
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }

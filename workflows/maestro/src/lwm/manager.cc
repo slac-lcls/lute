@@ -161,14 +161,18 @@ namespace LWM {
             using namespace std::literals;
             const auto pending_time = splits.running_point - splits.launch_point;
             const auto running_time = splits.end_point - splits.running_point;
-            std::cout << logfile << std::endl
-                      << "Time " << task_name << " spent: " << std::endl
+            if (!m_params.unbuffered_logs) {
+              std::cout << logfile << std::endl;
+            }
+            std::cout << "Time " << task_name << " spent: " << std::endl
                       << "- Pending: " << pending_time / 1s << " s" << std::endl
                       << "- Running: " << running_time / 1s << " s"
                       << std::endl;
           } else {
             m_logger->error(msg);
-            std::cout << logfile << std::endl;
+            if (!m_params.unbuffered_logs) {
+              std::cout << logfile << std::endl;
+            }
           }
           futures.erase(return_it);
         } else {

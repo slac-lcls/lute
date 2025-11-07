@@ -249,18 +249,28 @@ namespace LWM {
         status = "SUBPROCESS_FAILED";
         return std::move(JobReturn(managed_task_name, status, log, splits));
       }
+      std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
+      std::smatch jobid_match;
+      std::string jobid{""};
+      if (std::regex_search(log,jobid_match,jobid_regex)) {
+        jobid = jobid_match[1].str();
+      }
+
       while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         // ... Need to do the status check ... //
         {
           std::lock_guard<std::mutex>(m_status_handler->m_status_mut);
           for (auto& pair : m_status_handler->m_status_map) {
-            status = pair.second;
+            if (pair.first == managed_task_name) {
+              status = pair.second;
+            }
           }
         }
-        logger()->debug(managed_task_name + "'s current status is " + "status");
+        logger()->debug(managed_task_name + "'s current status is " + status);
       }
       status = "COMPLETED";
+      update_log(log, jobid);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger
       // rule and explain why not running
@@ -299,6 +309,33 @@ namespace LWM {
     param_str += " " + slurm_params;
 
     return executable + " " + param_str;
+  }
+
+  void SlurmLauncher::update_log(std::string& log, std::string& jobid) {
+    if (jobid.empty()) {
+      logger()->error("Trying to get information for an empty SLURM jobid!");
+    }
+    std::string get_logfile_cmd{"sacct -j " + jobid + " -o StdOut%200"};
+    auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+
+    std::regex logfile_regex(R"((/[^\s]+\.out))");
+    std::smatch logfile_match;
+    std::string logfile_path{""};
+    if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
+      logfile_path = logfile_match[1].str();
+    } else {
+      return;
+    }
+
+    size_t pos = logfile_path.find("%J");
+    if (pos != std::string::npos) {
+      logfile_path.replace(pos, 2, jobid);
+    } else {
+      return;
+    }
+
+    std::string get_slurm_log_cmd{"cat "+logfile_path};
+    std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
   }
 
   std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
