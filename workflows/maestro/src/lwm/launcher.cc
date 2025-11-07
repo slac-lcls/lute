@@ -165,8 +165,8 @@ namespace LWM {
     return true; // Broke out of all other cass.
   }
 
-  std::string SubprocessLauncher::run_subprocess_log(const std::string& cmd,
-                                                     bool return_output) {
+  std::pair<std::string,int> SubprocessLauncher::run_subprocess_log(const std::string& cmd,
+                                                                    bool return_output) {
     std::string final_cmd = cmd;
     std::FILE* tmp_file;
     std::string tmp_filename;
@@ -195,7 +195,7 @@ namespace LWM {
     }
 
     if (!return_output) {
-      return "";
+      return std::make_pair("",status);
     } else {
       std::string result;
       std::ifstream in(tmp_filename);
@@ -209,9 +209,9 @@ namespace LWM {
         err += tmp_filename;
         throw std::runtime_error(err.c_str());
       }
-      return result;
+      return std::make_pair(result, status);
     }
-    return "";
+    return std::make_pair("", status);
   }
 
   JobReturn SubprocessLauncher::launch_task(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
@@ -234,7 +234,12 @@ namespace LWM {
       }
       m_status_handler->update_running_splits(&splits, managed_task_name);
       splits.launch_point = std::chrono::steady_clock::now();
-      log = run_subprocess_log(launch_cmd, true);
+      int ret_status;
+      std::tie(log, ret_status) = run_subprocess_log(launch_cmd, true);
+      if (ret_status != 0) {
+        status = "SUBPROCESS_FAILED";
+        return std::move(JobReturn(managed_task_name, status, log, splits));
+      }
       while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         // ... Need to do the status check ... //
