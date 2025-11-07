@@ -6,6 +6,7 @@ project(
         'cpp_std=c++20',
     ],
 )
+add_project_arguments('-frtti', language: 'cpp')
 
 pymod = import('python')
 

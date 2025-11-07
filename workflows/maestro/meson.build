@@ -1,5 +1,4 @@
 pybind11_dep = dependency('pybind11', required: true)
-add_project_arguments('-frtti', language: 'cpp')
 
 cmake = import('cmake')
 spdlog_opts = cmake.subproject_options()
