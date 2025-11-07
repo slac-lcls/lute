@@ -48,11 +48,20 @@ namespace LWM {
      * What kind of job launching to employ (SLURM, Python, etc.)
      */
     LauncherType launch_type{LauncherType::PythonLauncherType};
+    /**
+     * Whether the experiment/workflow is LCLS2. This affects the base environment used.
+     */
+    bool is_daq2{false};
+    /**
+     * What the run type is for this experiment run.
+     */
+    std::string run_type{""};
   };
 
   class Manager {
   public:
     Manager() = delete;
+    Manager(const ManagerParameters& params);
     Manager(const std::string& host, std::uint16_t port, LauncherType launch_type);
     Manager(WfDefinition wf_defn, LauncherType launcher_type);
 
@@ -62,6 +71,7 @@ namespace LWM {
   private:
     std::string m_host;
     std::uint16_t m_port;
+    ManagerParameters m_params;
 
     HTTP::Server m_server;
     std::unique_ptr<Launcher> m_launcher;

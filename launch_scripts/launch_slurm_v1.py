@@ -489,7 +489,7 @@ def main() -> None:
 
     is_daq2: bool = True
     wf_defn: Dict[str, Any]
-    def branch_daq2_constructor(loader: yaml.Loader, node: yaml.Node) -> Any:
+    def branch_daq2_constructor(loader: yaml.Loader, node: yaml.MappingNode) -> Any:
         values = loader.construct_mapping(node)
         if is_daq2:
             return values["daq2"]

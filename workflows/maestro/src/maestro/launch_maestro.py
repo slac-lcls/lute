@@ -110,7 +110,19 @@ def main():
         debug=args.debug,
         default_slurm_params=" ".join(extra_args),
     )
-    _maestro.run_workflow(wf_defn)
+
+    manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
+        2,                                   # Manager threads
+        2,                                   # Server threads
+        True,                                # Unbuffered logs
+        "0.0.0.0",                           # Server IP
+        8080,                                # Server port
+        _maestro.LauncherType.SlurmLauncher, # Launch mechanism
+        True,                                # Is daq2?
+        "RUN_TYPE",                          # Run type
+    )
+
+    _maestro.run_workflow(wf_defn, manager_params)
 
 
 if __name__ == "__main__":

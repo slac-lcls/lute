@@ -214,7 +214,7 @@ namespace LWM {
     return "";
   }
 
-  JobReturn SubprocessLauncher::launch_task(const JobStep& job, MaybeJobFutures_t wait_for) {
+  JobReturn SubprocessLauncher::launch_task(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
     JobStepSplits splits;
     std::string managed_task_name = job.managed_task_name;
     std::string msg{"Preparing to run: "};
@@ -223,7 +223,7 @@ namespace LWM {
     logger()->debug(msg);
     std::string log, status;
     if (can_task_run(job, wait_for, reason)) { // This will block on futures as needed
-      std::string launch_cmd = prepare_launch_cmd(job);
+      std::string launch_cmd = prepare_launch_cmd(job, is_daq2);
       msg = "Will launch " + managed_task_name + " with: " + launch_cmd;
       logger()->info(msg);
       if (launch_cmd.empty()) {
@@ -259,11 +259,11 @@ namespace LWM {
     return std::move(JobReturn(managed_task_name, status, log, splits));
   }
 
-  JobReturn SubprocessLauncher::operator()(const JobStep& job, MaybeJobFutures_t wait_for) {
-    return launch_task(job, wait_for);
+  JobReturn SubprocessLauncher::operator()(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
+    return launch_task(job, is_daq2, wait_for);
   }
 
-  std::string SlurmLauncher::prepare_launch_cmd(const JobStep &job) {
+  std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
     std::string executable =
         job.parameters.lute_location + "/launch_scripts/submit_slurm.sh";
 
@@ -282,7 +282,7 @@ namespace LWM {
     return executable + " " + param_str;
   }
 
-  std::string PythonLauncher::prepare_launch_cmd(const JobStep &job) {
+  std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
     std::string executable = "python ";
 
     bool debug = job.parameters.debug;

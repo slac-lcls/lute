@@ -31,8 +31,10 @@ namespace LWM {
     virtual ~Launcher() = default;
 
     virtual JobReturn launch_task(const JobStep& job,
+                                  bool is_daq2,
                                   MaybeJobFutures_t wait_for = std::nullopt) = 0;
     virtual JobReturn operator()(const JobStep& job,
+                                 bool is_daq2,
                                  MaybeJobFutures_t wait_for = std::nullopt) = 0;
     virtual std::map<std::pair<std::string,HTTP::METHOD>,std::shared_ptr<HTTP::Handler>> get_request_handlers() {
       return m_request_handlers;
@@ -126,14 +128,16 @@ namespace LWM {
       m_request_handlers[std::make_pair("/log", HTTP::METHOD::POST)] = m_log_handler;
     }
     JobReturn launch_task(const JobStep& job,
+                          bool is_daq2,
                           MaybeJobFutures_t wait_for = std::nullopt) final;
 
     JobReturn operator()(const JobStep& job,
+                         bool is_daq2,
                          MaybeJobFutures_t wait_for = std::nullopt) final;
 
   protected:
     // Sub-class must override `prepare_parameter_str`
-    virtual std::string prepare_launch_cmd(const JobStep& job) = 0;
+    virtual std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) = 0;
     std::string run_subprocess_log(const std::string& cmd, bool return_output = false);
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
@@ -148,7 +152,7 @@ namespace LWM {
    */
   class PythonLauncher : public SubprocessLauncher {
   protected:
-    std::string prepare_launch_cmd(const JobStep& job) override;
+    std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:PythonLauncher");
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
   };
@@ -159,7 +163,7 @@ namespace LWM {
    */
   class SlurmLauncher : public SubprocessLauncher {
   protected:
-    std::string prepare_launch_cmd(const JobStep& job) override;
+    std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SlurmLauncher");
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
   };

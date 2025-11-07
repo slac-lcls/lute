@@ -13,6 +13,30 @@
 #include <vector>
 
 namespace LWM {
+  Manager::Manager(const ManagerParameters& params)
+    : m_params(params)
+    , m_server(HTTP::Server(params.host, params.port))
+    , m_job_pool(params.num_manager_threads)
+    , m_logger(spdlog::stdout_color_st("LWM:Manager"))
+  {
+    spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
+    std::string msg{"Running workflows with "};
+    switch (params.launch_type) {
+    case LauncherType::PythonLauncherType: {
+      m_launcher = std::move(std::make_unique<PythonLauncher>());
+      msg += "PythonLauncher";
+      break;
+    }
+    case LauncherType::SlurmLauncherType: {
+      m_launcher = std::move(std::make_unique<SlurmLauncher>());
+      msg += "SlurmLauncher.";
+      break;
+    }
+    }
+    m_all_futures =
+        std::make_shared<std::vector<std::shared_future<JobReturn>>>();
+    m_logger->info(msg);
+  }
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
     : m_server(HTTP::Server("0.0.0.0", 8080))
     , m_job_pool(5)
@@ -76,14 +100,18 @@ namespace LWM {
 
   void Manager::recurse_workflow(const WfDefinition& wf, MaybeJobFutures_t wait_for=std::nullopt) {
     auto launch_func = [&](const JobStep &job,
+                           bool is_daq2,
                            MaybeJobFutures_t wait_for = std::nullopt) -> JobReturn {
       // Wrap the launch function in a lambda to avoid making Launcher::launch_task
       // a static function
-      return m_launcher->launch_task(job, wait_for);
+      return m_launcher->launch_task(job, is_daq2, wait_for);
     };
 
     for (const auto& step : wf) {
-      auto next_wait_for = std::shared_future<JobReturn>(m_job_pool.enqueue(launch_func, step, wait_for));
+      auto next_wait_for = std::shared_future<JobReturn>(m_job_pool.enqueue(launch_func,
+                                                                            step,
+                                                                            m_params.is_daq2,
+                                                                            wait_for));
       m_all_futures->push_back(next_wait_for);
       if (!step.next.empty()) {
         recurse_workflow(step.next, std::optional<decltype(next_wait_for)>(next_wait_for));
