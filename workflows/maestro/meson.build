@@ -66,10 +66,17 @@ py_mod = py3.extension_module('_maestro',
 # only a handful of modules
 py_sources = [
     'src/maestro/__init__.py',
-    'src/maestro/launch_maestro.py',
     'src/maestro/parser.py',
 ]
 py3.install_sources(
     py_sources,
     subdir: 'maestro',
+)
+
+py_launch_sources = [
+    'src/maestro/launch_maestro.py',
+]
+py3.install_sources(
+    py_launch_sources,
+    subdir: 'launch_scripts',
 )

@@ -179,11 +179,9 @@ def main():
 
     experiment: Optional[str] = os.getenv("EXPERIMENT")
     run_num: Optional[str] = os.getenv("RUN_NUM")
-    arp_job_id: Optional[str] = os.getenv("ARP_JOB_ID")
     jid_authorization: Optional[str] = os.getenv("Authorization")
     assert isinstance(experiment, str)
     assert isinstance(run_num, str)
-    assert isinstance(arp_job_id, str)
     assert isinstance(jid_authorization, str)
 
     elog_auth: Dict[str, str] = {
@@ -221,12 +219,13 @@ def main():
         else:
             is_daq2 = False
 
-    lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
+    bin_dir: str = os.path.dirname(os.path.realpath(sys.argv[0]))
+    lute_location: str = os.path.abspath(f"{bin_dir}/..")
 
     wf_defn: List[_maestro.JobStep] = load_lute_dag(
         workflow_path=args.workflow_defn,
         lute_location=lute_location,
-        executable_subdir=os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
+        executable_subdir=bin_dir.split("/")[-1],
         config_file=args.config,
         debug=args.debug,
         default_slurm_params=" ".join(extra_args),
@@ -238,14 +237,14 @@ def main():
     os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
     # fmt: off
     manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
-        num_concurrent_steps,                # Manager threads
-        args.num_server_threads,             # Server threads
-        args.unbuffered,                     # Unbuffered logs
-        "0.0.0.0",                           # Server IP
-        manager_port,                        # Server port
-        _maestro.LauncherType.SlurmLauncher, # Launch mechanism
-        is_daq2,                             # Is daq2?
-        run_type,                            # Run type
+        num_concurrent_steps,                    # Manager threads
+        args.num_server_threads,                 # Server threads
+        args.unbuffered,                         # Unbuffered logs
+        "0.0.0.0",                               # Server IP
+        manager_port,                            # Server port
+        _maestro.LauncherType.SlurmLauncherType, # Launch mechanism
+        is_daq2,                                 # Is daq2?
+        run_type,                                # Run type
     )
     # fmt: on
 
