@@ -36,6 +36,13 @@ namespace LWM {
     m_all_futures =
         std::make_shared<std::vector<std::shared_future<JobReturn>>>();
     m_logger->info(msg);
+    if (m_launcher->use_server()) {
+      auto request_handlers = m_launcher->get_request_handlers();
+      for (auto [route_method_pair, handler] : request_handlers) {
+        m_server.add_request_handler(route_method_pair.first,
+                                     route_method_pair.second, handler);
+      }
+    }
   }
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
     : m_server(HTTP::Server("0.0.0.0", 8080))
@@ -59,6 +66,13 @@ namespace LWM {
     m_all_futures =
         std::make_shared<std::vector<std::shared_future<JobReturn>>>();
     m_logger->info(msg);
+    if (m_launcher->use_server()) {
+      auto request_handlers = m_launcher->get_request_handlers();
+      for (auto [route_method_pair, handler] : request_handlers) {
+        m_server.add_request_handler(route_method_pair.first,
+                                     route_method_pair.second, handler);
+      }
+    }
   }
 
   Manager::Manager(const std::string& host, std::uint16_t port, LauncherType launch_type)

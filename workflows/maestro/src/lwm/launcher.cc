@@ -62,7 +62,15 @@ namespace LWM {
       {
     //  std::lock_guard<std::mutex> lock(m_log_mut);
     //  m_log_map[log["managed_task"]] = log["message"];
-        m_logger->info(log["log"]);
+        if (log.find("managed_task") != log.end()) {
+          std::string msg = "[";
+          msg += log["managed_task"] + "] ";
+          if (log.find("log") != log.end()) {
+            m_logger->info(msg + log["log"]);
+          } else if (log.find("message") != log.end()) {
+            m_logger->info(msg + log["message"]);
+          }
+        }
       }
     }
     HTTP::Response response(HTTP::CODE::OK);
