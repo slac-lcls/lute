@@ -452,7 +452,8 @@ def write_master_file(
     # Compute cumulative powder hits and misses for all files
     # Copy mask as well
     mask: Optional[NDArray[numpy.uint16]] = None
-    powder_hits, powder_misses = None, None
+    powder_hits: Optional[NDArray[numpy.float64]] = None
+    powder_misses: Optional[NDArray[numpy.float64]] = None
     for fn in fnames:
         f = h5py.File(fn, "r")
         if mask is None:
@@ -461,6 +462,7 @@ def write_master_file(
             powder_hits = f["entry_1/data_1/powderHits"][:].copy()
             powder_misses = f["entry_1/data_1/powderMisses"][:].copy()
         else:
+            assert powder_misses is not None
             powder_hits = numpy.maximum(
                 powder_hits, f["entry_1/data_1/powderHits"][:].copy()
             )

@@ -45,6 +45,7 @@ class DagRunConf(TypedDict):
     Authorization: str
     user: str
     lute_location: str
+    executable_subdir: str
     kerb_file: Optional[str]
     lute_params: Dict[str, Union[str, bool]]
     slurm_params: List[str]
@@ -114,7 +115,7 @@ def _request_arp_token(exp: str, lifetime: int = 300) -> str:
     return formatted_token
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="trigger_airflow_lute_dag",
         description="Trigger Airflow to begin executing a LUTE DAG.",
@@ -350,6 +351,7 @@ if __name__ == "__main__":
             "Authorization": jid_authorization,
             "user": getpass.getuser(),
             "lute_location": os.path.abspath(f"{os.path.dirname(__file__)}/.."),
+            "executable_subdir": os.path.abspath(os.path.dirname(__file__)).split("/")[-1],
             "kerb_file": cache_file,
             "lute_params": params,
             "slurm_params": extra_args,
@@ -479,3 +481,6 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         sys.exit(0)
+
+if __name__ == "__main__":
+    main()

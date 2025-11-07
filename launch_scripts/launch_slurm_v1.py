@@ -502,8 +502,7 @@ def main() -> None:
     yaml.add_constructor("!branch_daq2", branch_daq2_constructor)
     with open(args.workflow_defn, "r") as f:
         wf_defn = yaml.load(stream=f, Loader=yaml.FullLoader)
-    print(wf_defn)
-    sys.exit(0)
+
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     lute_params: LuteParams = {"config_file": args.config, "debug": args.debug}
@@ -563,7 +562,6 @@ def main() -> None:
     server.shutdown()
     server.server_close()
     server_thread.join()
-
 
 if __name__ == "__main__":
     main()

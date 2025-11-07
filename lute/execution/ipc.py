@@ -47,7 +47,7 @@ import queue
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, Set, List, Union, Tuple, cast
+from typing import Any, ClassVar, List, Optional, Set, Tuple, Union, cast
 from typing_extensions import Self
 
 LUTE_SIGNALS: Set[str] = {
@@ -404,15 +404,15 @@ class SocketCommunicator(Communicator):
     machine and Executor machine.
     """
 
-    ACCEPT_TIMEOUT: float = 0.01
+    ACCEPT_TIMEOUT: ClassVar[float] = 0.01
     """
     Maximum time to wait to accept connections. Used by Executor-side.
     """
-    MSG_HEAD: bytes = b"MSG"
+    MSG_HEAD: ClassVar[bytes] = b"MSG"
     """
     Start signal of a message. The end of a message is indicated by MSG_HEAD[::-1].
     """
-    MSG_SEP: bytes = b";;;"
+    MSG_SEP: ClassVar[bytes] = b";;;"
     """
     Separator for parts of a message. Messages have a start, length, message and end.
     """

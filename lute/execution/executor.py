@@ -23,32 +23,33 @@ Exceptions
 __all__ = ["BaseExecutor", "Executor", "MPIExecutor"]
 __author__ = "Gabriel Dorlhiac"
 
-import sys
+import copy
 import logging
-import subprocess
-import time
 import os
+import re
+import shutil
 import signal
+import subprocess
+import sys
+import time
+import warnings
+from abc import ABC, abstractmethod
 from typing import (
-    overload,
-    Dict,
-    Callable,
-    List,
-    Optional,
     Any,
-    Tuple,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
     Literal,
+    Optional,
+    Protocol,
+    Tuple,
+    Type,
     Union,
     cast,
-    Protocol,
-    Type,
+    overload,
 )
 from typing_extensions import TypedDict, TypeAlias
-from abc import ABC, abstractmethod
-import warnings
-import copy
-import re
-import requests
 
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
@@ -158,7 +159,7 @@ class BaseExecutor(ABC):
         execute_task(): Run the task as a subprocess.
     """
 
-    Hooks: Type[ExecutorHooks] = ExecutorHooks
+    Hooks: ClassVar[Type[ExecutorHooks]] = ExecutorHooks
 
     def __init__(
         self,
@@ -638,7 +639,15 @@ class BaseExecutor(ABC):
             lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
             os.environ.update({"LUTE_PATH": lute_path})
             self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
-        executable_path: str = f"{lute_path}/subprocess_task.py"
+        executable_path: Optional[str] = shutil.which("subprocess_task")
+        if executable_path is None:
+            # Did not install and just running from a clone of repo
+            if lute_path is None:
+                logger.debug("Absolute path to subprocess_task.py not found.")
+                lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
+                os.environ.update({"LUTE_PATH": lute_path})
+                self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
+            executable_path = f"{lute_path}/subprocess_task.py"
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
 
