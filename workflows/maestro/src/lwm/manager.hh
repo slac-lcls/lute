@@ -18,6 +18,38 @@ namespace LWM {
   using WfDefinition = ParallelJobSteps;
   //using WfDefinition = std::variant<JobStep, ParallelJobSteps>;
 
+  class ManagerParameters {
+  public:
+    /**
+     * Number of threads for the manager. This should probably match the number
+     * of Managed Task's that will run concurrently.
+     */
+    unsigned num_manager_threads{2};
+    /**
+     * Number of threads for the server process. This probably doesn't need to be
+     * very high unless you expect a lot of HTTP traffic.
+     */
+    unsigned num_server_threads{2};
+    /**
+     * Whether to print logs immediately or only at the end of each JobStep by
+     * pulling them from the log file.
+     */
+    bool unbuffered_logs{false};
+
+    /**
+     * HTTP server host IP (usually 0.0.0.0)
+     */
+    std::string host{"0.0.0.0"};
+    /**
+     * HTTP server port.
+     */
+    std::uint16_t port{8080};
+    /**
+     * What kind of job launching to employ (SLURM, Python, etc.)
+     */
+    LauncherType launch_type{LauncherType::PythonLauncherType};
+  };
+
   class Manager {
   public:
     Manager() = delete;

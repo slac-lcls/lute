@@ -466,9 +466,6 @@ def main() -> None:
         # If buffering make sure we have a dict here.
         MANAGED_TASK_LOGS = {}
 
-    use_kerberos: bool = (
-        True  # Always copy kerberos ticket so non-active experiments can work.
-    )
     # Do we use any APIs now that need kerberos ticket if not using JID?
     # Maybe can get rid of this for the SLURM only submission?
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")

@@ -27,6 +27,7 @@ import copy
 import logging
 import os
 import re
+import requests
 import shutil
 import signal
 import subprocess
@@ -210,6 +211,9 @@ class BaseExecutor(ABC):
         # Check to see if we are running from the Slurm WF manager
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
+
+    def _report_to_manager(self, end_point: str, json_data: Dict[str, str]) -> None:
+        requests.post(f"http://{self._lute_manager_url}/{end_point}", json=json_data)
 
     def add_tasklet(
         self,
@@ -667,7 +671,7 @@ class BaseExecutor(ABC):
                 "managed_task": self._m_task_name,
                 "status": "STARTED",
             }
-            requests.post(f"http://{self._lute_manager_url}/status", json=json_data)
+            self._report_to_manager(end_point="status", json_data=json_data)
         while self._task_is_running(proc):
             self._task_loop(proc)
             if self._task_timeout is not None:
@@ -735,7 +739,7 @@ class BaseExecutor(ABC):
                 "managed_task": self._m_task_name,
                 "status": status_str,
             }
-            requests.post(f"http://{self._lute_manager_url}/status", json=json_data)
+            self._report_to_manager(end_point="status", json_data=json_data)
         if self._analysis_desc.task_result.task_status in (
             TaskStatus.FAILED,
             TaskStatus.TIMEDOUT,
@@ -1106,9 +1110,8 @@ class Executor(BaseExecutor):
                                     "managed_task": self._m_task_name,
                                     "message": message,
                                 }
-                                requests.post(
-                                    f"http://{self._lute_manager_url}/log",
-                                    json=json_data,
+                                self._report_to_manager(
+                                    end_point="log", json_data=json_data
                                 )
 
                 logger.info(executor._analysis_desc.task_result.task_status)
@@ -1160,8 +1163,8 @@ class Executor(BaseExecutor):
                                 "managed_task": self._m_task_name,
                                 "message": message,
                             }
-                            requests.post(
-                                f"http://{self._lute_manager_url}/log", json=json_data
+                            self._report_to_manager(
+                                end_point="log", json_data=json_data
                             )
                     elif isinstance(msg.contents, TaskParametersDBReference):
                         # We will log the actual reconstructed TaskParameters object
@@ -1174,8 +1177,8 @@ class Executor(BaseExecutor):
                                 "managed_task": self._m_task_name,
                                 "message": message,
                             }
-                            requests.post(
-                                f"http://{self._lute_manager_url}/log", json=json_data
+                            self._report_to_manager(
+                                end_point="log", json_data=json_data
                             )
                     elif not isinstance(msg.contents, str):
                         logger.info(msg.contents)
@@ -1185,8 +1188,8 @@ class Executor(BaseExecutor):
                                 "managed_task": self._m_task_name,
                                 "message": message,
                             }
-                            requests.post(
-                                f"http://{self._lute_manager_url}/log", json=json_data
+                            self._report_to_manager(
+                                end_point="log", json_data=json_data
                             )
                 if not communicator.has_messages:
                     break

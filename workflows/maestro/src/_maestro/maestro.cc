@@ -5,6 +5,7 @@
 
 //#include <pybind11/chrono.h>
 //#include <pybind11/functional.h>
+#include <cstdint>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -13,7 +14,8 @@
 
 namespace py = pybind11;
 
-std::string run_workflow(LWM::WfDefinition wf_defn) {
+std::string run_workflow(LWM::WfDefinition wf_defn,
+                         LWM::ManagerParameters manager_params) {
   LWM::Manager manager = LWM::Manager("0.0.0.0",
                                       8080,
                                       LWM::LauncherType::PythonLauncherType);
@@ -53,6 +55,23 @@ PYBIND11_MODULE(_maestro, m, py::mod_gil_not_used()) {
     .def_readwrite("parameters", &LWM::JobStep::parameters)
     .def_readwrite("extra_parameters", &LWM::JobStep::extra_parameters)
     .def_readwrite("next", &LWM::JobStep::next);
+
+  py::enum_<LWM::LauncherType>(m, "LauncherType")
+    .value("PythonLauncherType", LWM::LauncherType::PythonLauncherType)
+    .value("SlurmLauncherType", LWM::LauncherType::SlurmLauncherType);
+
+  py::class_<LWM::ManagerParameters>(m, "ManagerParameters")
+    .def(py::init<
+         unsigned,            // The number of manager threads
+         unsigned,            // The number of HTTP server threads
+         bool,                // Whether to print logs immediately or only after JobStep ends
+         std::string,         // HTTP server ip (0.0.0.0 for all interfaces)
+         std::uint16_t,       // HTTP server port
+         LWM::LauncherType>() // JobStep launching mechanism (e.g. Python or SLURM)
+     )
+    .def_readwrite("num_manager_threads", &LWM::ManagerParameters::num_manager_threads)
+    .def_readwrite("config_file", &LWM::ManagerParameters::num_server_threads)
+    .def_readwrite("debug", &LWM::ManagerParameters::unbuffered_logs);
 
   m.def("run_workflow", &run_workflow, "Run a LUTE workflow using maestro.");
 }

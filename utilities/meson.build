@@ -3,7 +3,8 @@ bash_scripts = [
 ]
 
 install_data(
-    bash_scripts
+    bash_scripts,
+    install_dir: get_option('bindir'),
 )
 
 py_sources = [
