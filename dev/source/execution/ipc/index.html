@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.22">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
     
     
       
@@ -5400,15 +5400,15 @@ machine and Executor machine.</p>
 <span class="sd">    machine and Executor machine.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">ACCEPT_TIMEOUT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">ACCEPT_TIMEOUT</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.01</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Maximum time to wait to accept connections. Used by Executor-side.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">MSG_HEAD</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;MSG&quot;</span>
+    <span class="n">MSG_HEAD</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;MSG&quot;</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Start signal of a message. The end of a message is indicated by MSG_HEAD[::-1].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">MSG_SEP</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;;;;&quot;</span>
+    <span class="n">MSG_SEP</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;;;;&quot;</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Separator for parts of a message. Messages have a start, length, message and end.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -6024,7 +6024,6 @@ machine and Executor machine.</p>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
 
 </h3>
@@ -6047,7 +6046,6 @@ machine and Executor machine.</p>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
 
 </h3>
@@ -6070,7 +6068,6 @@ machine and Executor machine.</p>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
 
 </h3>
