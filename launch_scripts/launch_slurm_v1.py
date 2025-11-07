@@ -490,10 +490,20 @@ def main() -> None:
         os.environ["EXPERIMENT"] = args.experiment
         os.environ["RUN_NUM"] = args.run
 
+    is_daq2: bool = True
     wf_defn: Dict[str, Any]
+    def branch_daq2_constructor(loader: yaml.Loader, node: yaml.Node) -> Any:
+        values = loader.construct_mapping(node)
+        if is_daq2:
+            return values["daq2"]
+        else:
+            return values["daq1"]
+
+    yaml.add_constructor("!branch_daq2", branch_daq2_constructor)
     with open(args.workflow_defn, "r") as f:
         wf_defn = yaml.load(stream=f, Loader=yaml.FullLoader)
-
+    print(wf_defn)
+    sys.exit(0)
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     lute_params: LuteParams = {"config_file": args.config, "debug": args.debug}
