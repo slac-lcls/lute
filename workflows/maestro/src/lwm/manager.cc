@@ -17,7 +17,7 @@ namespace LWM {
     : m_params(params)
     , m_server(HTTP::Server(params.host, params.port))
     , m_job_pool(params.num_manager_threads)
-    , m_logger(spdlog::stdout_color_st("LWM:Manager"))
+    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
     std::string msg{"Running workflows with "};
@@ -47,7 +47,7 @@ namespace LWM {
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
     : m_server(HTTP::Server("0.0.0.0", 8080))
     , m_job_pool(5)
-    , m_logger(spdlog::stdout_color_st("LWM:Manager"))
+    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
     std::string msg{"Running workflows with "};
@@ -80,7 +80,7 @@ namespace LWM {
     , m_port(port)
     , m_server(HTTP::Server(m_host, m_port))
     , m_job_pool(2)
-    , m_logger(spdlog::stdout_color_st("LWM:Manager"))
+    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
     std::string msg{"Running workflows with "};
