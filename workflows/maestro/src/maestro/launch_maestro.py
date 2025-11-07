@@ -4,10 +4,14 @@ __all__ = []
 __author__ = "Gabriel Dorlhiac"
 
 import argparse
+import collections
 import logging
 import os
+import socket
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional
+
+import requests
 
 from maestro._maestro import _maestro
 from maestro.parser import load_lute_dag
@@ -17,6 +21,70 @@ handler: logging.Handler = logging.StreamHandler()
 formatter: logging.Formatter = logging.Formatter(logging.BASIC_FORMAT)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+
+def _request_arp_token(exp: str, lifetime: int = 300) -> str:
+    """Request an ARP token via Kerberos endpoint.
+
+    A token is required for job submission.
+
+    Args:
+        exp (str): The experiment to request the token for. All tokens are
+            scoped to a single experiment.
+
+        lifetime (int): The lifetime, in minutes, of the token. After the token
+            expires, it can no longer be used for job submission. The maximum
+            time you can request is 480 minutes (i.e. 8 hours). NOTE: since this
+            token is used for the entirety of a workflow, it must have a lifetime
+            equal or longer than the duration of the workflow's execution time.
+    """
+    from kerberos import GSSError  # type: ignore
+    from krtc import KerberosTicket  # type: ignore
+
+    try:
+        krbheaders: Dict[str, str] = KerberosTicket(
+            "HTTP@pswww.slac.stanford.edu"
+        ).getAuthHeaders()
+    except GSSError:
+        logger.info(
+            "Cannot proceed without credentials. Try running `kinit` from the command-line."
+        )
+        raise
+    base_url: str = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
+    token_endpoint: str = (
+        f"{base_url}/{exp}/ws/generate_arp_token?token_lifetime={lifetime}"
+    )
+    resp: requests.models.Response = requests.get(token_endpoint, headers=krbheaders)
+    resp.raise_for_status()
+    token: str = resp.json()["value"]
+    formatted_token: str = f"Bearer {token}"
+    return formatted_token
+
+
+def get_concurrent_job_steps(wf: List[_maestro.JobStep]) -> int:
+    """Return the maximum number of concurrent JobSteps.
+
+    This can be used to determine how many threads to add to the threadpool for the
+    workflow manager.
+
+    NOTE: This is a very basic calculation - if you have complicated branch structures
+    it may undershoot the number of concurrent jobs. For safety you can add one to
+    the returned value - this will likely cover 99% of all workflow cases.
+
+    Args:
+        wf (List[_maestro.JobStep]): The workflow.
+
+    Returns:
+        max_concurrent_jobs (int): The maximum number of jobs found to run in
+            parallel at any given time.
+    """
+    num_concurrent_steps: int = len(wf)
+    for step in wf:
+        next_concurrent_steps: int = get_concurrent_job_steps(step.next)
+        num_concurrent_steps = max(num_concurrent_steps, next_concurrent_steps)
+
+    return num_concurrent_steps
+
 
 def main():
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
@@ -67,6 +135,12 @@ def main():
         "-d", "--debug", help="Run in debug mode.", action="store_true"
     )
     optional_args.add_argument(
+        "--num_server_threads",
+        type=int,
+        help="Number of threads to use for the HTTP server.",
+        default=2,
+    )
+    optional_args.add_argument(
         "--unbuffered",
         help=(
             "Flush logs immediately. Warning: This can make output confusing "
@@ -101,6 +175,52 @@ def main():
         os.environ["EXPERIMENT"] = args.experiment
         os.environ["RUN_NUM"] = args.run
 
+        os.environ["Authorization"] = _request_arp_token(args.experiment)
+
+    experiment: Optional[str] = os.getenv("EXPERIMENT")
+    run_num: Optional[str] = os.getenv("RUN_NUM")
+    arp_job_id: Optional[str] = os.getenv("ARP_JOB_ID")
+    jid_authorization: Optional[str] = os.getenv("Authorization")
+    assert isinstance(experiment, str)
+    assert isinstance(run_num, str)
+    assert isinstance(arp_job_id, str)
+    assert isinstance(jid_authorization, str)
+
+    elog_auth: Dict[str, str] = {
+        "Authorization": jid_authorization,
+    }
+    base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
+    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
+    run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
+    resp = requests.get(run_doc_url, headers=elog_auth)
+
+    run_type: str
+    is_daq2: Optional[bool] = None
+    if resp.status_code != 200:
+        logger.warning(
+            "Unable to retrieve run document! No `run_type` information will be used! "
+            "No information about psana1/psana2 can be retrieved. "
+            "Workflow may be able to continue but this could point to issues with "
+            "API access that lead to problems downstream."
+        )
+        run_type = "UNKNOWN"
+    else:
+        if args.type != "":
+            run_type = args.type
+        else:
+            # If API request succeeds `type` should always be defined
+            run_type = resp.json()["value"]["type"]
+        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
+        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
+        for key in param_keys:
+            if "/drp/" in key:
+                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
+                # In LCLS1 they are sent as "DAQ Detector/<name>"
+                is_daq2 = True
+                break
+        else:
+            is_daq2 = False
+
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     wf_defn: List[_maestro.JobStep] = load_lute_dag(
@@ -111,16 +231,22 @@ def main():
         default_slurm_params=" ".join(extra_args),
     )
 
+    num_concurrent_steps: int = get_concurrent_job_steps(wf_defn)
+    manager_host: str = socket.gethostname()
+    manager_port: int = 41239
+    os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
+    # fmt: off
     manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
-        2,                                   # Manager threads
-        2,                                   # Server threads
-        True,                                # Unbuffered logs
+        num_concurrent_steps,                # Manager threads
+        args.num_server_threads,             # Server threads
+        args.unbuffered,                     # Unbuffered logs
         "0.0.0.0",                           # Server IP
-        8080,                                # Server port
+        manager_port,                        # Server port
         _maestro.LauncherType.SlurmLauncher, # Launch mechanism
-        True,                                # Is daq2?
-        "RUN_TYPE",                          # Run type
+        is_daq2,                             # Is daq2?
+        run_type,                            # Run type
     )
+    # fmt: on
 
     _maestro.run_workflow(wf_defn, manager_params)
 

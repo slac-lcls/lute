@@ -7,9 +7,14 @@ from collections import defaultdict
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
+from textual.reactive import Reactive
 from textual.widgets import Footer, Header, DataTable, TabbedContent, TabPane
 
-from lute.io.db import common_sqlite
+from lute.io.db import (
+    common_sqlite,
+    get_executions_summary,
+    get_task_parameters_summary,
+)
 from lute.io.db import LUTE_DB_SPEC_VERSION as api_version
 
 
@@ -72,7 +77,7 @@ class DBView(App):
         return table
 
     def action_toggle_dark(self) -> None:
-        self.dark: bool = not self.dark
+        self.dark: Reactive[bool] = not self.dark
 
     def pull_table_data_v2(self, table: DataTable) -> DataTable:
         """Query database for all rows in a table and add to display.
@@ -86,8 +91,8 @@ class DBView(App):
             return self._task_param_summary(table, table_name)
 
     def _executions_summary(self, table: DataTable) -> DataTable:
-        rows: List[Tuple[int, str, str, str, str, str, int]] = (
-            db.get_executions_summary(os.path.dirname(self._dbpath))
+        rows: List[Tuple[int, str, str, str, str, str, int]] = get_executions_summary(
+            os.path.dirname(self._dbpath)
         )
         executions: defaultdict = defaultdict(dict)
 
@@ -136,7 +141,7 @@ class DBView(App):
         return table
 
     def _task_param_summary(self, table: DataTable, task: str) -> DataTable:
-        rows: List[Tuple[int, str, int, str, str]] = db.get_task_parameters_summary(
+        rows: List[Tuple[int, str, int, str, str]] = get_task_parameters_summary(
             os.path.dirname(self._dbpath), task_name=task
         )
         executions: defaultdict = defaultdict(dict)

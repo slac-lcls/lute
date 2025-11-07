@@ -274,6 +274,9 @@ namespace LWM {
     if (job.parameters.debug) {
       param_str += " --debug";
     }
+    if (is_daq2) {
+      param_str += " --psana2"
+    }
 
     std::string slurm_params = job.extra_parameters;
 

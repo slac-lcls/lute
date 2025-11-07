@@ -11,7 +11,7 @@ import subprocess
 import sys
 from typing import List, Dict, Any, Optional
 
-from krtc import KerberosTicket
+from krtc import KerberosTicket  # type: ignore
 
 
 logging.basicConfig(level=logging.INFO)
@@ -276,7 +276,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            _ = input()
             extra_args_str = f"{extra_args_str} --account={account}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
@@ -294,7 +294,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            _ = input()
             extra_args_str = f"{extra_args_str} --ntasks={ncores}"
         except KeyboardInterrupt:
             logger.info("Exiting.")

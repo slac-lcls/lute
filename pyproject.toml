@@ -17,6 +17,9 @@ dependencies = [
 ]
 
 [tool.meson-python.args]
+# Need to do this.... I couldn't for the life of me figure out how to get meson
+# meson-python and the CMake projects to work well together for installing the
+# shared library...
 install = ['--skip-subprojects', 'spdlog']
 
 
