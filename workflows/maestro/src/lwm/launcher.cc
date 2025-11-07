@@ -57,13 +57,14 @@ namespace LWM {
 
   HTTP::Response JsonLogHandler::operator()(const HTTP::Request &request) {
     std::map<std::string, std::string> log;
-    //parse_json(request.content(), log);
-    //{
+    if (m_unbuffered_logs) {
+      parse_json(request.content(), log);
+      {
     //  std::lock_guard<std::mutex> lock(m_log_mut);
     //  m_log_map[log["managed_task"]] = log["message"];
-    //  m_logger->debug(log["log"]);
-    //}
-
+        m_logger->info(log["log"]);
+      }
+    }
     HTTP::Response response(HTTP::CODE::OK);
     response.set_content("Log received.");
     return response;

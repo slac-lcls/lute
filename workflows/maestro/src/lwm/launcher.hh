@@ -27,6 +27,7 @@ namespace LWM {
   class Launcher {
   public:
     Launcher() = default;
+    Launcher(const bool& unbuffered_logs) : m_unbuffered_logs(unbuffered_logs) {}
     // Sub-classes may potentially be used via pointers to base so virtual destructor
     virtual ~Launcher() = default;
 
@@ -61,6 +62,11 @@ namespace LWM {
      * statuses against the TriggerRule for the job.
      */
     bool can_task_run(const JobStep& job, MaybeJobFutures_t wait_for, std::string& reason);
+
+    /**
+     * Whether logging was specified as unbuffered.
+     */
+    bool m_unbuffered_logs{false};
   };
 
   /**
@@ -101,15 +107,17 @@ namespace LWM {
 
   public:
     JsonLogHandler() = default;
+    JsonLogHandler(bool unbuffered_logs) : m_unbuffered_logs(unbuffered_logs) {}
     ~JsonLogHandler() = default;
 
-    HTTP::Response operator()(const HTTP::Request &request);
+    HTTP::Response operator()(const HTTP::Request& request);
 
   private:
     std::mutex m_log_mut;
     std::map<std::string, std::string> m_log_map;
 
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:JsonLogHandler");
+    bool m_unbuffered_logs{false};
   };
 
   /**
@@ -124,6 +132,10 @@ namespace LWM {
 
   public:
     SubprocessLauncher() : Launcher() {
+      m_request_handlers[std::make_pair("/status", HTTP::METHOD::POST)] = m_status_handler;
+      m_request_handlers[std::make_pair("/log", HTTP::METHOD::POST)] = m_log_handler;
+    }
+    SubprocessLauncher(const bool& unbuffered_logs) : Launcher(unbuffered_logs) {
       m_request_handlers[std::make_pair("/status", HTTP::METHOD::POST)] = m_status_handler;
       m_request_handlers[std::make_pair("/log", HTTP::METHOD::POST)] = m_log_handler;
     }
@@ -142,7 +154,7 @@ namespace LWM {
                                                    bool return_output = false);
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
-    std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>();
+    std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
 
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SubprocessLauncher");
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
@@ -152,6 +164,9 @@ namespace LWM {
    * Invoke the job step by calling `python ...` directly.
    */
   class PythonLauncher : public SubprocessLauncher {
+  public:
+    PythonLauncher() : SubprocessLauncher(){}
+    PythonLauncher(const bool& unbuffered_logs) : SubprocessLauncher(unbuffered_logs) {}
   protected:
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:PythonLauncher");
@@ -163,6 +178,11 @@ namespace LWM {
    * as a SLURM job.
    */
   class SlurmLauncher : public SubprocessLauncher {
+  public:
+    SlurmLauncher() : SubprocessLauncher() {}
+    SlurmLauncher(const bool& unbuffered_logs)
+        : SubprocessLauncher(unbuffered_logs) {}
+
   protected:
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
     std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SlurmLauncher");

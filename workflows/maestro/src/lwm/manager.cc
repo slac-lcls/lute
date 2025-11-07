@@ -23,12 +23,12 @@ namespace LWM {
     std::string msg{"Running workflows with "};
     switch (params.launch_type) {
     case LauncherType::PythonLauncherType: {
-      m_launcher = std::move(std::make_unique<PythonLauncher>());
+      m_launcher = std::move(std::make_unique<PythonLauncher>(params.unbuffered_logs));
       msg += "PythonLauncher";
       break;
     }
     case LauncherType::SlurmLauncherType: {
-      m_launcher = std::move(std::make_unique<SlurmLauncher>());
+      m_launcher = std::move(std::make_unique<SlurmLauncher>(params.unbuffered_logs));
       msg += "SlurmLauncher.";
       break;
     }
