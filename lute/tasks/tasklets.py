@@ -220,7 +220,7 @@ def indexamajig_summary_indexing_rate(stream_file: str) -> Dict[str, str]:
         rate = n_indexed / n_hits
     else:
         n_hits = 0
-        rate = 0
+        rate = 0.0
     return {
         "Number of lattices indexed": str(n_indexed),
         "Indexing rate": f"{rate:.2f}",

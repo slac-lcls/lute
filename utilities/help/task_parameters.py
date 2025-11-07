@@ -1,6 +1,6 @@
-import sys
 import argparse
 import logging
+import sys
 from typing import Dict, Optional, List, Set, Tuple, Any, Callable, Generic, Union, cast
 from typing_extensions import TypedDict, TypeVar
 
@@ -9,6 +9,10 @@ import pprint
 import lute.io.models
 from lute.io.models.base import TaskParameters
 from lute import managed_tasks
+
+logging.basicConfig(level=logging.INFO)
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 T = TypeVar("T")
 
@@ -48,25 +52,6 @@ class ModelSchema(TypedDict):
     required: Optional[List[str]]
     title: str
     type: str
-
-
-logging.basicConfig(level=logging.INFO)
-logger: logging.Logger = logging.getLogger(__name__)
-
-parser: argparse.ArgumentParser = argparse.ArgumentParser(
-    prog="Task parameters help utility.",
-    description="Display parameter descriptions and types for a specified Task.",
-    epilog="Refer to https://github.com/slac-lcls/lute for more information.",
-)
-parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
-parser.add_argument(
-    "-T", "--Task", type=str, help="Name of the Task to inspect.", required=False
-)
-parser.add_argument(
-    "--full_schema",
-    action="store_true",
-    help="Dump an unformated full model schema. Has more information.",
-)
 
 
 def _format_parameter_row(
@@ -113,7 +98,21 @@ def _format_parameter_row(
     return msg
 
 
-if __name__ == "__main__":
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        prog="Task parameters help utility.",
+        description="Display parameter descriptions and types for a specified Task.",
+        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
+    parser.add_argument(
+        "-T", "--Task", type=str, help="Name of the Task to inspect.", required=False
+    )
+    parser.add_argument(
+        "--full_schema",
+        action="store_true",
+        help="Dump an unformated full model schema. Has more information.",
+    )
     args: argparse.Namespace = parser.parse_args()
     task_name: str
     parameter_schema: ModelSchema
@@ -232,3 +231,7 @@ if __name__ == "__main__":
                         )
                         out_msg = f"{out_msg}{row}"
         print(out_msg)
+
+
+if __name__ == "__main__":
+    main()
