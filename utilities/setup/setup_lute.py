@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.63-py3/bin/python
-
 """Script to setup LUTE and workflow definitions."""
 
 __author__ = "Gabriel Dorlhiac"
@@ -156,7 +154,7 @@ def modify_permissions(lute_path: str):
             os.chmod(os.path.join(root, f), 0o755)
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="setup_lute",
         description="Setup LUTE work space and eLog workflows for an experiment.",
@@ -355,3 +353,7 @@ if __name__ == "__main__":
         resp: requests.models.Response = requests.post(**post_params)
         resp.raise_for_status()
         # Extra logging and such...
+
+
+if __name__ == "__main__":
+    main()

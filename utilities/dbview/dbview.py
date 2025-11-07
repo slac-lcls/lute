@@ -1,62 +1,16 @@
 import argparse
-import importlib.util
 import json
 import os
-import sys
 import sqlite3
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
-from typing_extensions import TypeAlias
-from types import ModuleType
+from typing import Any, Dict, List, Set, Tuple
 from collections import defaultdict
 
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Footer, Header, DataTable, TabbedContent, TabPane
 
-ModuleSpec: TypeAlias = "importlib.machinery.ModuleSpec"
-Loader: TypeAlias = "importlib.machinery.SourceFileLoader"
-
-
-def find_module(base_path: str, py_file: str, mod_name: str) -> ModuleType:
-    spec: Optional[ModuleSpec] = importlib.util.spec_from_file_location(
-        mod_name, f"{base_path}/{py_file}"
-    )
-    print(f"{base_path}/{py_file}")
-    if spec is None:
-        print(f"Cannot find module specification: {mod_name}.")
-        sys.exit(-1)
-    module: ModuleType = importlib.util.module_from_spec(cast(ModuleSpec, spec))
-    loader: Optional[Loader] = cast(Loader, cast(ModuleSpec, spec).loader)
-    if loader is not None:
-        cast(Loader, loader.exec_module(module))
-    else:
-        print("Unable to generate loader for module! Exiting.")
-        sys.exit(-1)
-    return module
-
-
-base: str = os.environ.get("LUTE_BASE", "")
-if base:
-    sys.path.append(base)
-else:
-    print("Please define LUTE_BASE!")
-    sys.exit(-1)
-
-db: ModuleType = find_module(os.environ.get("LUTE_BASE", ""), "lute/io/db.py", "db")
-common_sqlite: ModuleType = db.common_sqlite
-api_version: int = db.LUTE_DB_SPEC_VERSION
-
-parser: argparse.ArgumentParser = argparse.ArgumentParser(
-    prog="DBView",
-    description="LUTE database inspection utility. Read-Only.",
-    epilog="Refer to https://github.com/slac-lcls/lute for more information.",
-)
-parser.add_argument("-p", "--path", type=str, help="Path to SQLite database.")
-parser.add_argument(
-    "--summarize",
-    action="store_true",
-    help="Pivot and reorganize to provide a summary. Only applies to db spec v0.2.",
-)
+from lute.io.db import common_sqlite
+from lute.io.db import LUTE_DB_SPEC_VERSION as api_version
 
 
 class DBView(App):
@@ -213,7 +167,22 @@ class DBView(App):
         return table
 
 
-if __name__ == "__main__":
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        prog="DBView",
+        description="LUTE database inspection utility. Read-Only.",
+        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument("-p", "--path", type=str, help="Path to SQLite database.")
+    parser.add_argument(
+        "--summarize",
+        action="store_true",
+        help="Pivot and reorganize to provide a summary. Only applies to db spec v0.2.",
+    )
     args: argparse.Namespace = parser.parse_args()
     app: DBView = DBView(dbpath=args.path, summarize_v2=args.summarize)
     app.run()
+
+
+if __name__ == "__main__":
+    main()
