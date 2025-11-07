@@ -29,6 +29,11 @@ py3.install_sources(
     pure: false,
 )
 
+install_subdir(
+    'config',
+    install_dir: py3.get_install_dir(),
+)
+
 subdir('extensions')
 subdir('launch_scripts')
 subdir('lute')
