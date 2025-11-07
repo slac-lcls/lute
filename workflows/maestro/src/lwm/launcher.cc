@@ -269,7 +269,6 @@ namespace LWM {
         }
         logger()->debug(managed_task_name + "'s current status is " + status);
       }
-      status = "COMPLETED";
       update_log(log, jobid);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger
