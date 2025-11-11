@@ -3,10 +3,10 @@
 # installation. It should only be used when LUTE has been installed at a
 # non-standard prefix. In most cases this is the usual operating procedure.
 
-PY_VER=$(python -V 2>&1 | grep -Po '\d.\d')
 LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
 LUTE_INSTALL_PATH="$(echo $LUTE_BIN_PATH | sed s/bin//g)"
 echo "Using LUTE installation at $LUTE_INSTALL_PATH"
-LUTE_LIB_PATH="${LUTE_INSTALL_PATH}lib/python${PY_VER}/site-packages"
+LUTE_LIB_PATH=(${LUTE_INSTALL_PATH}lib/python*/site-packages)
+echo "Python libraries are available at: ${LUTE_LIB_PATH}"
 export PYTHONPATH="${LUTE_LIB_PATH}:${PYTHONPATH}"
 export PATH="${LUTE_BIN_PATH}:${PATH}"

@@ -18,7 +18,6 @@ DET_CALIB_DIR: "calib/Epix10ka2M::CalibV1/MfxEndstation.0:Epix10ka2M.0"
 RunCheetah:                       # All variables are given as strings
   exp: "{{ experiment }}"         # Experiment name
   run: "{{ run }}"                # Run number
-  dir: "/some/path"               # Path to raw_directory
   executable: mpirun
   n_processes: 3                  # Number of processes to launch
   om_executable: "/sdf/scratch/users/d/dorlhiac/work/om_rel/bin/om_monitor"
