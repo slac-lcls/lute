@@ -167,7 +167,7 @@ class RunCheetahParameters(ThirdPartyParameters):
                         description=(
                             "The psana2 `algorithm` for accessing the data. "
                             "E.g. `raw`, `fex`"
-                        )
+                        ),
                     )
 
                 class PsanaDataSourceDetectorDistanceParameters(BaseModel):
