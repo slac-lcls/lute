@@ -137,8 +137,18 @@ else
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
 
-export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
-EXECUTABLE="${LUTE_PATH}run_task.py"
+SCRIPT_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
+export LUTE_PATH="$( echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g )"
+EXECUTABLE="run_task.py"
+
+if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
+    EXECUTABLE="${LUTE_PATH}run_task.py"
+else
+    # Running from installation
+    source "${SCRIPT_DIR}/activate_installation"
+    EXECUTABLE="$(which run_task)"
+fi
+
 
 if [[ ${DEBUG} ]]; then
     echo "Running in debug mode - verbose logging."
@@ -154,5 +164,31 @@ if [[ $DEBUG ]]; then
     echo "Using socket ${LUTE_SOCKET}"
     echo "${CMD}"
 fi
+
+inform_manager() {
+    curl -d "{\"Worker\": \"${TASK}\", \"status\": \"${1}\"}" -X POST http://$LUTE_MANAGER_URL/status
+}
+
+cleanup() {
+    echo $LUTE_MANAGER_URL
+    inform_manager "${1}"
+    if [[ "${1}" == "TIMEDOUT" ]]; then
+        trap - 14
+        kill -s 14 "$$"
+    else
+        trap - 2 3 6 15
+        kill -s 15 "$$"
+    fi
+}
+# SIGINT: 2
+# SIGQUIT: 3
+# SIGABRT: 4
+# SIGALRM: 14
+# SIGTERM: 15
+trap 'cleanup TIMEDOUT' 14
+trap 'cleanup CANCELLED' 2 3 6 15
+
+
+STARTED_CMD="inform_manager 'STARTED'"
 
 sbatch $SLURM_ARGS --wrap "${CMD}"

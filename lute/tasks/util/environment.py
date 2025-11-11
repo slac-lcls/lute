@@ -8,7 +8,8 @@ __all__ = ["setup_smd2_env"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
-import subprocess
+
+# import subprocess
 from typing import List, Dict, Optional
 
 
@@ -78,28 +79,28 @@ def setup_smd2_env() -> Dict[str, str]:
     slurm_job_nodelist: Optional[str] = os.getenv("SLURM_JOB_NODELIST")
     if slurm_job_nodelist is None:
         return psana_vars
-    cmd: List[str] = ["scontrol", "show", "hostnames", slurm_job_nodelist]
-    host_list_bytes: bytes
-    host_list_bytes, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
+    # cmd: List[str] = ["scontrol", "show", "hostnames", slurm_job_nodelist]
+    # host_list_bytes: bytes
+    # host_list_bytes, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
-    host_list: List[str] = host_list_bytes.decode().split("\n")[:-1]
+    # host_list: List[str] = host_list_bytes.decode().split("\n")[:-1]
 
     slurm_job_id: Optional[str] = os.getenv("SLURM_JOB_ID")
     if slurm_job_id is None:
         return psana_vars
-    host_file: str = f"slurm_host_{slurm_job_id}"
-    with open(host_file, "w") as f:
-        for i in range(len(host_list)):
-            if i == 0:
-                f.write(f"{host_list[i]} slots=1\n")
-            else:
-                f.write(f"{host_list[i]}\n")
+    # host_file: str = f"slurm_host_{slurm_job_id}"
+    # with open(host_file, "w") as f:
+    #     for i in range(len(host_list)):
+    #         if i == 0:
+    #             f.write(f"{host_list[i]} slots=1\n")
+    #         else:
+    #             f.write(f"{host_list[i]}\n")
 
     # This calculation may not work of --ntasks-per-node is not passed
     # But on the other hand, I cannot find PS_N_RANKS used in psana code.
     n_ranks: int = int(cores_per_node) * (int(nodes) - 1) + 1
 
-    psana_vars["PS_HOST_FILE"] = host_file
+    # psana_vars["PS_HOST_FILE"] = host_file
     psana_vars["PS_N_RANKS"] = str(n_ranks)
 
     return psana_vars

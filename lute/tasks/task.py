@@ -336,7 +336,11 @@ class ThirdPartyTask(Task):
             )
             template_dir = "../../config/templates"
         else:
-            template_dir = f"{lute_path}/config/templates"
+            py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
+            template_dir = f"{lute_path}/lib/{py_ver}/site-packages/config/templates"
+            if not os.path.exists(template_dir):
+                # Did not install and running from clone of repo
+                template_dir = f"{lute_path}/config/templates"
         environment: Environment = Environment(loader=FileSystemLoader(template_dir))
         template: Template = environment.get_template(template_name)
 

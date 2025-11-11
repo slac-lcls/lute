@@ -20,7 +20,7 @@ class TaskNotFoundError(Exception):
     been registered with the `import_task` function below.
     """
 
-    ...
+    pass  # fmt: pass
 
 
 def import_task(task_name: str) -> Type[Task]:
