@@ -162,6 +162,13 @@ class RunCheetahParameters(ThirdPartyParameters):
                     calibration: bool = Field(
                         default=True, description="Whether to use calibration."
                     )
+                    psana_algorithm: str = Field(
+                        default="raw",
+                        description=(
+                            "The psana2 `algorithm` for accessing the data. "
+                            "E.g. `raw`, `fex`"
+                        )
+                    )
 
                 class PsanaDataSourceDetectorDistanceParameters(BaseModel):
                     """Data retrieval layer, datasource detector distance parameters."""

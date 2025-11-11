@@ -450,7 +450,16 @@ class SubmitSMDParameters(ThirdPartyParameters):
             hutch: str = exp[:3]
             base_path: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
             path: str
-            if hutch.lower() in ("cxi", "mec", "xcs", "xpp"):
+            is_daq2: bool
+            try:
+                import psana  # type: ignore
+
+                _ = psana.xtc_version
+                # xtc_version fails in psana1
+                is_daq2 = True
+            except AttributeError:
+                is_daq2 = False
+            if not is_daq2:
                 path = f"{base_path}/lcls1_producers/smd_producer.py"
             else:
                 path = f"{base_path}/lcls2_producers/smd_producer.py"

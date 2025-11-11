@@ -46,6 +46,7 @@ RunCheetah:                       # All variables are given as strings
           type: "AreaDetectorPsana2"
           psana_name: "epix10k2M"
           calibration: "true"
+          psana_algorithm: "xtc1dump"
         detector_distance:
           type: "FloatValueFromConfiguration"
           psana_name: null
