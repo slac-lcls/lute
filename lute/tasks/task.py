@@ -15,7 +15,7 @@ import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TextIO, Type, Union, TYPE_CHECKING
+from typing import Any, Dict, Iterable, List, Optional, TextIO, Type, Union, TYPE_CHECKING
 
 import lute.execution.subprocess_utils
 
@@ -137,6 +137,15 @@ class Task(ABC):
                 )
         self._use_mpi: bool = use_mpi
         self._row_ids: Optional[RowIds] = row_ids
+
+        affinity: Iterable[int] = os.sched_getaffinity(0)
+        # By convention, the Executor takes the minimum core on this node.
+        # Task gets everything else. If we only have 1 core here then out of luck
+        # and cannot set new affinities without issues
+        if len(affinity) > 1:
+            executor_affinity: Iterable[int] = {min(affinity)}
+            task_affinity: Iterable[int] = affinity - executor_affinity
+            os.sched_setaffinity(0, task_affinity)
 
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.

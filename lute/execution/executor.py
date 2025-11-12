@@ -40,6 +40,7 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
+    Iterable,
     List,
     Literal,
     Optional,
@@ -672,6 +673,14 @@ class BaseExecutor(ABC):
                 "status": "STARTED",
             }
             self._report_to_manager(end_point="status", json_data=json_data)
+
+        affinity: Iterable[int] = os.sched_getaffinity(0)
+        # By convention, the Executor takes the minimum core on this node.
+        # Task gets everything else. If we only have 1 core here then out of luck
+        # and cannot set new affinities without issues
+        if len(affinity) > 1:
+            executor_affinity: Iterable[int] = {min(affinity)}
+            os.sched_setaffinity(0, executor_affinity)
         while self._task_is_running(proc):
             self._task_loop(proc)
             if self._task_timeout is not None:

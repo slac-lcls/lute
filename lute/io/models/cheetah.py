@@ -615,6 +615,12 @@ class RunCheetahParameters(ThirdPartyParameters):
         description="MPI executable.",
         flag_type="",
     )
+    bind_to: str = Field(
+        default="core",
+        description="MPI rank-to-resource binding. You may want to set to `none` if using compression.",
+        flag_type="--",
+        rename_param="bind-to",
+    )
     n_processes: int = Field(
         4,
         description="Number of processes to launch.",

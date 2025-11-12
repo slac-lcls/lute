@@ -5,7 +5,7 @@ experiment: "mfx100903824"
 run: "27"
 date: "2025/09/29"
 lute_version: 0.1      # Do not be change unless need to force older version
-task_timeout: 600
+task_timeout: 6000
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
 ---
@@ -19,7 +19,8 @@ RunCheetah:                       # All variables are given as strings
   exp: "{{ experiment }}"         # Experiment name
   run: "{{ run }}"                # Run number
   executable: mpirun
-  n_processes: 3                  # Number of processes to launch
+  #bind_to: "core"                 # For compression may want to uncomment and set to `none`
+  n_processes: 6                  # Number of processes to launch
   om_executable: "/sdf/scratch/users/d/dorlhiac/work/om_rel/bin/om_monitor"
   om_config: "/sdf/scratch/users/d/dorlhiac/work/cheetah_tests/cheetah_config.yaml"
   # NOTE: if passing files=... for SingleFileDataSource, do NOT quote the filename.
