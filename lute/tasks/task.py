@@ -15,7 +15,17 @@ import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterable, List, Optional, TextIO, Type, Union, TYPE_CHECKING
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+    TYPE_CHECKING,
+)
 
 import lute.execution.subprocess_utils
 
