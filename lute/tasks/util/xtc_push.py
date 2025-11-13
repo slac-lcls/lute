@@ -129,21 +129,25 @@ class ZmqSender:
         self.zmq_socket.close()
 
 
-def get_data(data_spec: DataSpec, evt: psana.Event) -> Any:
-    obj_type: Type = eval(data_spec["object_type"])
-    obj: object = obj_type(data_spec["object_name"])
-    # Because of round trip through JSON, this will be a list
-    # hence the cast. True type is tuple
-    field_name: Union[str, List[str]] = cast(
-        Union[str, List[str]], data_spec["object_field_name"]
-    )
-    obj_field: Callable[[psana.Event], Any]
-    if isinstance(field_name, list):
-        obj_field = getattr(obj, field_name[0])
-        return getattr(obj_field(evt), field_name[1])()
-    else:
-        obj_field = getattr(obj, field_name)
-        return obj_field(evt)
+def get_data(data_specs: List[DataSpec], evt: psana.Event) -> Any:
+    data: Dict[str, Any] = {}
+    for data_spec in data_specs:
+        obj_type: Type = eval(data_spec["object_type"])
+        obj: object = obj_type(data_spec["object_name"])
+        # Because of round trip through JSON, this will be a list
+        # hence the cast. True type is tuple
+        field_name: Union[str, List[str]] = cast(
+            Union[str, List[str]], data_spec["object_field_name"]
+        )
+        obj_field: Callable[[psana.Event], Any]
+        attr_name: str = data_spec["xtc2_attr_name"]
+        if isinstance(field_name, list):
+            obj_field = getattr(obj, field_name[0])
+            data[attr_name] = getattr(obj_field(evt), field_name[1])()
+        else:
+            obj_field = getattr(obj, field_name)
+            data[attr_name] = obj_field(evt)
+    return data
 
 
 if __name__ == "__main__":
@@ -187,19 +191,6 @@ if __name__ == "__main__":
         type=str,
         help="File with the event numbers",
     )
-    parser.add_argument(
-        "-v",
-        "--verify",
-        type=str,
-        help="Verify data at the end - only for small datasets that fit in memory",
-        default="1",
-    )
-    parser.add_argument(
-        "-t",
-        "--testfile",
-        type=str,
-        help="Path to HDF5 file for writing test output data (used only if --verify=1)",
-    )
 
     args: argparse.Namespace = parser.parse_args()
 
@@ -219,7 +210,6 @@ if __name__ == "__main__":
     if not args.eventfile:
         # All events
         event_num_list = list(range(len(timestamps)))
-        event_num_list = list(range(5))
     else:
         event_num_list = []
         try:
@@ -235,22 +225,12 @@ if __name__ == "__main__":
 
     zmq_send.zmq_socket.send_string(str(total_events))
 
-    verify: bool = bool(int(args.verify))
-    data_array: np.ndarray
-    photon_array: np.ndarray
     channels: int
     res_x: int
     res_y: int
     channels, res_x, res_y = map(int, args.resolution.split("x"))
 
-    if verify:
-        # We need to store all in memory
-        data_array = np.zeros([total_events, channels, res_x, res_y], dtype=np.float32)
-        photon_array = np.zeros(total_events, dtype=np.float64)
-    else:
-        data_array = np.zeros([channels, res_x, res_y], dtype=np.float32)
-
-    data_type_info: Dict[str, Tuple[Type, int]] = {}
+    data_type_info: Dict[str, Dict[str, Tuple[Type, int]]] = {}
     send_type_info: bool = True
 
     for i, event_num in enumerate(event_num_list):
@@ -258,30 +238,30 @@ if __name__ == "__main__":
         event: psana.Event = run_current.event(timestamp)
 
         data: Dict[str, Any] = {}
-        for key in data_def:
-            detector_data: Any = get_data(data_def[key], event)
-            data[key] = detector_data
-            if verify:
-                if key == "calib":
-                    data_array[i] = detector_data
-                elif key == "photon_energy":
-                    photon_array[i] = detector_data
+
+        for detname in data_def:
+            # detector data will be a dict of field_names to the data
+            # (e.g. "calib": (1,2,3,...))
+            detector_data: Dict[str, Any] = get_data(data_def[detname], event)
+            data[detname] = detector_data
             if send_type_info:
-                dtype: Type
-                rank: int
-                if isinstance(detector_data, np.ndarray):
-                    dtype = detector_data.dtype.type
-                    rank = detector_data.ndim
-                elif isinstance(detector_data, float):
-                    dtype = np.float64
-                    rank = 0
-                elif isinstance(detector_data, int):
-                    dtype = np.int64
-                    rank = 0
-                else:
-                    dtype = type(detector_data)
-                    rank = 0
-                data_type_info[key] = (dtype, rank)
+                data_type_info[detname] = {}
+                for attr_name, field_data in detector_data.items():
+                    dtype: Type
+                    rank: int
+                    if isinstance(field_data, np.ndarray):
+                        dtype = field_data.dtype.type
+                        rank = field_data.ndim
+                    elif isinstance(field_data, float):
+                        dtype = np.float64
+                        rank = 0
+                    elif isinstance(field_data, int):
+                        dtype = np.int64
+                        rank = 0
+                    else:
+                        dtype = type(field_data)
+                        rank = 0
+                    data_type_info[detname][attr_name] = (dtype, rank)
         data["timestamp"] = timestamp.time()
         if send_type_info:
             zmq_send.send_zipped_pickle({"DATA_TYPE_INFO": data_type_info})
@@ -311,11 +291,3 @@ if __name__ == "__main__":
 
     zmq_send.close()
 
-    if verify:
-        import h5py  # type: ignore
-
-        with h5py.File(args.testfile, "w") as f:
-            f.create_dataset("pixel_position", data=gmt_reader.pixel_position)
-            f.create_dataset("pixel_index_map", data=gmt_reader.pixel_index_map)
-            f.create_dataset("data", data=data_array)
-            f.create_dataset("photon_energy", data=photon_array)

@@ -1,7 +1,7 @@
 import argparse
 import pickle
 import zlib
-from typing import Any, BinaryIO, Optional
+from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Type
 
 import h5py  # type: ignore
 import numpy as np
@@ -126,8 +126,14 @@ if __name__ == "__main__":
     )
     args: argparse.Namespace = parser.parse_args()
 
-    # TEMP # Do we want to parametrize this?
-    namesId = {args.detector: 0, "runinfo": 1, "scan": 2}
+    detnames: List[str] = args.detector.split(",")
+    all_detnames: List[str] = detnames + ["runinfo", "scan"]
+
+    namesId: Dict[str, int] = {}
+    for idx, detname in enumerate(all_detnames):
+        namesId[detname] = idx
+
+    # namesId = {args.detector: 0, "runinfo": 1, "scan": 2}
 
     # Setup socket for zmq connection
     socket: str = "tcp://127.0.0.1:5557"
@@ -143,8 +149,18 @@ if __name__ == "__main__":
     # Create config, algorithm, and detector
     config: DgramEdit = DgramEdit(transition_id=TransitionId.Configure)
 
-    alg: AlgDef = AlgDef("xtc1dump", 0, 1, 0)
-    det: DetectorDef = DetectorDef(args.detector, "generic_container", "detnum1234")
+    generic_det_alg: AlgDef = AlgDef("xtc1dump", 0, 1, 0)
+
+    det_defs: Dict[str, DetectorDef] = {}
+    serial_num: str = "detnum1"
+    counter: int = 2
+    for detname in detnames:
+        det_def: DetectorDef = DetectorDef(detname, "generic_container", serial_num)
+        serial_num += str(counter)
+        counter += 1
+        det_defs[detname] = det_def
+
+    # det: DetectorDef = DetectorDef(args.detector, "generic_container", "detnum1234")
 
     runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
     runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
@@ -154,38 +170,49 @@ if __name__ == "__main__":
 
     # Define data formats
 
-    runinfodef = {
+    runinfodef: Dict[str, Tuple[Type, int]] = {
         "expt": (str, 1),
         "runnum": (np.uint32, 0),
     }
 
-    scandef = {
+    scandef: Dict[str, Tuple[Type, int]] = {
         "pixel_position": (np.float32, 4),
         "pixel_index_map": (np.int16, 4),
     }
-    detector: Optional[config.Detector] = None
+    # detector: Optional[config.Detector] = None
 
     num_events = int(zmq_recv.zmq_socket.recv_string())
+
+    # This will be sent before anything else - contains rank and type
+    # of all the information to be stored for the detector
+    # detname: {field: (type, rank)}
+    datadef: Optional[Dict[str, Dict[str, Tuple[Type, int]]]] = None
     # Start saving data
     print("[XTC2 Writer]: Starting receiving")
+    detector: config.Detector
+    detectors: Dict[str, config.Detector] = {}
     while True:
         obj = zmq_recv.recv_zipped_pickle()
         # Begin timestamp is needed (we calculate this from the first L1Accept)
         # to set the correct timestamp for all transitions prior to the first L1.
         if "DATA_TYPE_INFO" in obj:
             datadef = obj["DATA_TYPE_INFO"]
-            # {
+            # detname: {
             #    "calib": (np.float32, 3),
             #    "photon_energy": (np.float64, 0),
             # }
             # Create detetors
-            detector = config.Detector(
-                det,
-                alg,
-                datadef,
-                nodeId=int(args.node_id),
-                namesId=namesId[args.detector],
-            )
+            assert datadef is not None
+            for detname in detnames:
+                if detname in datadef:
+                    detector = config.Detector(
+                        det_defs[detname],
+                        generic_det_alg,
+                        datadef[detname],
+                        nodeId=int(args.node_id),
+                        namesId=namesId[detname],
+                    )
+                    detectors[detname] = detector
             runinfo = config.Detector(
                 runinfo_det,
                 runinfo_alg,
@@ -255,16 +282,19 @@ if __name__ == "__main__":
             save_dgramedit(endrun, outbuf, xtc2file)
             break
         else:
-            assert detector is not None
             # Create L1Accept
             d0 = DgramEdit(
                 transition_id=TransitionId.L1Accept,
                 config_dgramedit=config,
                 ts=obj["timestamp"],
             )
-            detector.xtc1dump.calib = obj["calib"]
-            detector.xtc1dump.photon_energy = obj["photon_energy"]
-            d0.adddata(detector.xtc1dump)
+            for detname in obj:
+                if detname == "timestamp":
+                    continue
+                detector = detectors[detname]
+                for attr in obj[detname]:
+                    setattr(detector.xtc1dump, attr, obj[detname][attr])
+                d0.adddata(detector.xtc1dump)
             save_dgramedit(d0, outbuf, xtc2file)
             current_timestamp = obj["timestamp"]
     print("[XTC2 Writer]: Complete")

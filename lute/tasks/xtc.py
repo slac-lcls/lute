@@ -14,7 +14,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Union, cast
+from typing import Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
@@ -38,10 +38,10 @@ class ConvertXtc1to2(Task):
     """
 
     def __init__(self, *, params: ConvertXtc1to2Parameters) -> None:
+        self._task_parameters: ConvertXtc1to2Parameters
         super().__init__(params=params)
 
     def _run(self) -> None:
-        self._task_parameters = cast(ConvertXtc1to2Parameters, self._task_parameters)
         par: ConvertXtc1to2Parameters = self._task_parameters
         exp: str = par.lute_config.experiment
         run: Union[int, str] = par.lute_config.run
@@ -58,10 +58,6 @@ class ConvertXtc1to2(Task):
         if par.eventfile != "":
             zmq_process1_cmd += f"-f {par.eventfile} "
 
-        if par.verify == "True":
-            zmq_process1_cmd += f"-v 1 -t {par.testfile}"
-        else:
-            zmq_process1_cmd += "-v 0"
         result_p1: subprocess.Popen = self._start_zmq_proc(
             zmq_process1_cmd, "[XTC1 Sender]"
         )
@@ -75,10 +71,6 @@ class ConvertXtc1to2(Task):
             f"python3 lute/tasks/util/xtc_pull.py -d {par.detector} -e {exp} "
             f"-f {par.output_file} -l {par.resolution} -n {par.node_id} -r {run} "
         )
-        if par.verify == "True":
-            zmq_process2_cmd += "-v 1"
-        else:
-            zmq_process2_cmd += "-v 0"
         result_p2: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"
         )
