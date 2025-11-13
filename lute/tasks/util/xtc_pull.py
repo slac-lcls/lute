@@ -3,10 +3,8 @@ import pickle
 import zlib
 from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Type
 
-import h5py  # type: ignore
 import numpy as np
 import zmq
-from psana import DataSource  # type: ignore
 from psana.dgramedit import DgramEdit, AlgDef, DetectorDef  # type: ignore
 from psana.psexp import TransitionId  # type: ignore
 
@@ -42,51 +40,6 @@ class ZmqReceiver:
         self.zmq_socket.close()
 
 
-def test_output(det_name: str, num_events: int, resolution: str) -> None:
-    """
-    Psana1 reader saves the content as a hdf5, we compare this file to the data that we received.
-    """
-    print("[XTC2 Writer]: Testing")
-    try:
-        f: h5py._hl.files.File = h5py.File(
-            "/sdf/scratch/users/k/kmecseki/out.hdf5", "r"
-        )
-        pixel_position: h5py._hl.dataset.Dataset = f["pixel_position"]
-        pixel_index_map: h5py._hl.dataset.Dataset = f["pixel_index_map"]
-        data: h5py._hl.dataset.Dataset = f["data"]
-        photon_energy: h5py._hl.dataset.Dataset = f["photon_energy"]
-
-        ds: DataSource = DataSource(files="/sdf/scratch/users/k/kmecseki/out.xtc2")
-        run: Any = next(ds.runs())
-        det: Any = run.Detector(det_name)
-
-        pp_det: Any = run.Detector("pixel_position")
-        pim_det: Any = run.Detector("pixel_index_map")
-
-        channels: int
-        res_x: int
-        res_y: int
-        channels, res_x, res_y = map(int, resolution.split("x"))
-        data_array: np.ndarray = np.zeros(
-            [num_events, channels, res_x, res_y], dtype=np.float32
-        )
-        photon_array: np.ndarray = np.zeros(num_events, dtype=np.float64)
-
-        for i, evt in enumerate(run.events()):
-            data_array[i, :, :, :] = det.raw.calib(evt)
-            photon_array[i] = det.raw.photon_energy(evt)
-            pixel_position_array = pp_det(evt)
-            pixel_index_map_array = pim_det(evt)
-        assert np.array_equal(data, data_array)
-        assert np.array_equal(photon_energy, photon_array)
-        assert np.array_equal(pixel_position, pixel_position_array)
-        assert np.array_equal(pixel_index_map, pixel_index_map_array)
-        print("[XTC2 writer]: All test passed successfully")
-
-    except (OSError, IOError) as e:
-        print(f"Error opening hdf5 file: {e}")
-
-
 def save_dgramedit(dg_edit: DgramEdit, outbuf: bytearray, outfile: BinaryIO) -> None:
     """Save dgram edit to output buffer and write to file"""
     dg_edit.save(outbuf)
@@ -104,13 +57,6 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--experiment", type=str, help="The experiment name.")
     parser.add_argument("-f", "--filename", type=str, help="Output XTC2 filename.")
     parser.add_argument(
-        "-l",
-        "--resolution",
-        type=str,
-        help="Detector channels and resolution in the format: CxRxR",
-        default="4x512x512",
-    )
-    parser.add_argument(
         "-n",
         "--node-id",
         type=str,
@@ -118,12 +64,6 @@ if __name__ == "__main__":
         default="1",
     )
     parser.add_argument("-r", "--run", type=int, help="The experiment run number.")
-    parser.add_argument(
-        "-v",
-        "--verify",
-        type=str,
-        help="Verify data at the end - only for small datasets that fit in memory",
-    )
     args: argparse.Namespace = parser.parse_args()
 
     detnames: List[str] = args.detector.split(",")
@@ -203,8 +143,8 @@ if __name__ == "__main__":
             # }
             # Create detetors
             assert datadef is not None
-            for detname in detnames:
-                if detname in datadef:
+            for detname in datadef:
+                if detname in detnames:
                     detector = config.Detector(
                         det_defs[detname],
                         generic_det_alg,
@@ -213,6 +153,12 @@ if __name__ == "__main__":
                         namesId=namesId[detname],
                     )
                     detectors[detname] = detector
+                elif "_calib" in detname:
+                    calib_type_info: Dict[str, Tuple[Type, int]] = datadef[detname]
+                    for const_name, const_type in calib_type_info.items():
+                        prefixed_name: str = f"{detname}_{const_name}"
+                        # detname_prefixed_constants: str = f"{detname}"
+                        runinfodef[prefixed_name] = const_type
             runinfo = config.Detector(
                 runinfo_det,
                 runinfo_alg,
@@ -300,6 +246,3 @@ if __name__ == "__main__":
     print("[XTC2 Writer]: Complete")
     xtc2file.close()
     zmq_recv.close()
-    verify: bool = bool(int(args.verify))
-    if verify:
-        test_output(args.detector, num_events, args.resolution)

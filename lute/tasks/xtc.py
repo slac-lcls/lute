@@ -14,7 +14,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Union
+from typing import Any, Dict, Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
@@ -46,14 +46,21 @@ class ConvertXtc1to2(Task):
         exp: str = par.lute_config.experiment
         run: Union[int, str] = par.lute_config.run
         logger.debug("Starting [XTC1 Sender] in psana 1")
-        json_access_pattern: str = json.dumps(par.xtc1_access_pattern)
-        py_path: str = f"{os.getenv('LUTE_PATH')}:{os.getenv('PYTHONPATH')}"
+        data_spec: Dict[str, Any] = {}
+        for detname, specs in par.xtc1_access_pattern.items():
+            det_spec: Dict[str, Any] = {}
+            for spec in specs:
+                det_spec[detname] = spec.dict()
+            data_spec[detname] = det_spec
+        json_access_pattern: str = json.dumps(data_spec)
+        lute_location: str = os.getenv("LUTE_PATH", "")
+        assert lute_location
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"export PYTHONPATH={py_path} && "
-            f"python3 lute/tasks/util/xtc_push.py -a '{json_access_pattern}' -e {exp} "
+            f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
+            f"-a '{json_access_pattern}' -e {exp} "
             f"-r {par.lute_config.run} -m {par.mode} -d {par.detector} "
-            f"-g {par.geometry} -l {par.resolution} "
+            f"-g {par.geometry} "
         )
         if par.eventfile != "":
             zmq_process1_cmd += f"-f {par.eventfile} "
@@ -67,9 +74,9 @@ class ConvertXtc1to2(Task):
         logger.debug("Starting [XTC2 Writer] in psana 2")
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
-            f"export PYTHONPATH=/sdf/home/k/kmecseki/munka/lcls2/psana:$PYTHONPATH && "
-            f"python3 lute/tasks/util/xtc_pull.py -d {par.detector} -e {exp} "
-            f"-f {par.output_file} -l {par.resolution} -n {par.node_id} -r {run} "
+            f"python3 {lute_location}/lute/tasks/util/xtc_pull.py "
+            f"-d {par.detector} -e {exp} "
+            f"-f {par.output_file} -n {par.node_id} -r {run} "
         )
         result_p2: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"

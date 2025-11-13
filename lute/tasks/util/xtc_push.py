@@ -8,18 +8,21 @@ import csv
 import json
 import pickle
 import zlib
-from typing import Any, Callable, Dict, List, Tuple, Union, Type, cast
+from typing import Any, Callable, Dict, List, Tuple, TypedDict, Union, Type, cast
 
 import numpy as np
 import psana  # type: ignore
 import zmq
 from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 
-from lute.io.models.xtc import DataSpec
-
 # Helper Classes
 ################
 
+class DataSpec(TypedDict):
+    xtc2_attr_name: str
+    object_name: str
+    object_type: str
+    object_field_name: Union[str, Tuple[str, str]]
 
 class PsanaGeometry:
 
@@ -150,6 +153,26 @@ def get_data(data_specs: List[DataSpec], evt: psana.Event) -> Any:
     return data
 
 
+def get_calib_constants(data_specs: List[DataSpec], evt: psana.Event) -> Any:
+    data: Dict[str, Any] = {}
+    for data_spec in data_specs:
+        # We assume currently that it is the same object in all specs
+        # so only need to loop once
+        obj_type: Type = eval(data_spec["object_type"])
+        obj: object = obj_type(data_spec["object_name"])
+        if hasattr(obj, "pedestals"):
+            data["pedestals"] = obj.pedestals(evt)
+        if hasattr(obj, "status"):
+            data["pixel_status"] = obj.status(evt)
+        if hasattr(obj, "status_as_mask"):
+            data["mask"] = obj.status_as_mask(evt)
+        if hasattr(obj, "gain"):
+            data["gain"] = obj.gain(evt)
+        break
+    return data if data else None
+
+
+
 if __name__ == "__main__":
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
@@ -171,13 +194,6 @@ if __name__ == "__main__":
         "--detector",
         type=str,
         help="Detector name",
-    )
-    parser.add_argument(
-        "-l",
-        "--resolution",
-        type=str,
-        help="Detector channels and resolution in the format: CxRxR",
-        default="4x512x512",
     )
     parser.add_argument(
         "-g",
@@ -225,14 +241,10 @@ if __name__ == "__main__":
 
     zmq_send.zmq_socket.send_string(str(total_events))
 
-    channels: int
-    res_x: int
-    res_y: int
-    channels, res_x, res_y = map(int, args.resolution.split("x"))
-
     data_type_info: Dict[str, Dict[str, Tuple[Type, int]]] = {}
     send_type_info: bool = True
 
+    calib_dict: Dict[str, Any] = {}
     for i, event_num in enumerate(event_num_list):
         timestamp: psana.EventTime = timestamps[int(event_num)]
         event: psana.Event = run_current.event(timestamp)
@@ -262,6 +274,26 @@ if __name__ == "__main__":
                         dtype = type(field_data)
                         rank = 0
                     data_type_info[detname][attr_name] = (dtype, rank)
+                for detname in data_def:
+                    calib_consts: Any = get_data(data_def[detname], event)
+                    if calib_consts is not None:
+                        calib_dict[detname] = calib_consts
+                        for attr_name, field_data in detector_data.items():
+                            if isinstance(field_data, np.ndarray):
+                                dtype = field_data.dtype.type
+                                rank = field_data.ndim
+                            elif isinstance(field_data, float):
+                                dtype = np.float64
+                                rank = 0
+                            elif isinstance(field_data, int):
+                                dtype = np.int64
+                                rank = 0
+                            else:
+                                dtype = type(field_data)
+                                rank = 0
+                            calib_detname: str = f"{detname}_calib"
+                            data_type_info[calib_detname][attr_name] = (dtype, rank)
+
         data["timestamp"] = timestamp.time()
         if send_type_info:
             zmq_send.send_zipped_pickle({"DATA_TYPE_INFO": data_type_info})
@@ -276,6 +308,8 @@ if __name__ == "__main__":
                 "pixel_position": gmt_reader.pixel_position,
                 "pixel_index_map": gmt_reader.pixel_index_map,
             }
+            if calib_dict:
+                start_dict["calib_const"] = calib_dict
             print("[XTC1 Sender]: Starting sending..")
             zmq_send.send_zipped_pickle(start_dict)
 

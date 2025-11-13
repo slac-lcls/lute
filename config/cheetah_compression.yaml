@@ -94,9 +94,19 @@ ConvertXtc1to2:             # All variables are given as strings
   mode: "idx"               # Mode
   detector: "epix10k2M"     # Detector's name
   node_id: "1"              # Node ID for the detector
-  resolution: "16x352x384"  # Channels and resolution in CHxRXxRY format
   geometry: "{{ EXPERIMENT_DIR }}/{{ DET_CALIB_DIR }}/geometry/12-end.data"
   eventfile: ""
-  verify: "0"               # 1=True/0=False Test data integrity (only if it fits in memory e.g. few events)
-  #testfile: ""             # Path to HDF5 file for writing test output data (used only if --verify=1)
   output_file: "{{ XTC2_FILE_PATH }}/{{ XTC2_FILE_NAME }}"
+  xtc1_access_pattern:
+    epix10k2M: # Name of the detector in the converted XTC2
+    # You can have a list of attributes you will convert that will be stored in
+    # this detector
+      - xtc2_attr_name: "calib"        # Name of this attribute in xtc2
+        object_name: "epix10k2M"       # Name of the detector in psana1
+        object_type: "psana.Detector"  # Name of the object type in psana1
+        object_field_name: "calib"     # Name of the per-event method to use in psana1
+    EBeam:
+      - xtc2_attr_name: "photon_energy"
+        object_name: "EBeam"
+        object_type: "psana.Detector"
+        object_field_name: ["get","ebeamPhotonEnergy"]
