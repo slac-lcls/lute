@@ -14,7 +14,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
@@ -47,11 +47,15 @@ class ConvertXtc1to2(Task):
         run: Union[int, str] = par.lute_config.run
         logger.debug("Starting [XTC1 Sender] in psana 1")
         data_spec: Dict[str, Any] = {}
+        detnames: List[str] = []
         for detname, specs in par.xtc1_access_pattern.items():
-            det_spec: Dict[str, Any] = {}
+            det_specs: List[Any] = []
             for spec in specs:
-                det_spec[detname] = spec.dict()
-            data_spec[detname] = det_spec
+                det_specs.append(spec.dict())
+            data_spec[detname] = det_specs
+            detnames.append(detname)
+
+        detname_csv: str = ",".join(detnames)
         json_access_pattern: str = json.dumps(data_spec)
         lute_location: str = os.getenv("LUTE_PATH", "")
         assert lute_location
@@ -59,7 +63,7 @@ class ConvertXtc1to2(Task):
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
             f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
             f"-a '{json_access_pattern}' -e {exp} "
-            f"-r {par.lute_config.run} -m {par.mode} -d {par.detector} "
+            f"-r {par.lute_config.run} -m {par.mode} -d {detname_csv} "
             f"-g {par.geometry} "
         )
         if par.eventfile != "":
@@ -75,7 +79,7 @@ class ConvertXtc1to2(Task):
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
             f"python3 {lute_location}/lute/tasks/util/xtc_pull.py "
-            f"-d {par.detector} -e {exp} "
+            f"-d {detname_csv} -e {exp} "
             f"-f {par.output_file} -n {par.node_id} -r {run} "
         )
         result_p2: subprocess.Popen = self._start_zmq_proc(

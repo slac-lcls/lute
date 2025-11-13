@@ -11,6 +11,7 @@ import zlib
 from typing import Any, Callable, Dict, List, Tuple, TypedDict, Union, Type, cast
 
 import numpy as np
+import numpy.typing as npt
 import psana  # type: ignore
 import zmq
 from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
@@ -69,6 +70,37 @@ class PsanaGeometry:
 
         self.pixel_position: np.ndarray = pixel_position
         self.pixel_index_map: np.ndarray = pixel_index_map
+
+def get_geometry(geometry: GeometryAccess) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.uint16]]:
+    cframe: int = 0
+    # Stores a tuple of x,y, and z coordinate arrays
+    pixel_coords: tuple = geometry.get_pixel_coords(cframe=cframe)
+    pixel_coord_indexes: tuple = geometry.get_pixel_coord_indexes(cframe=cframe)
+
+    # Converts from microns to meters
+    temp: List[np.ndarray[Any, np.dtype[np.float64]]] = [
+        np.asarray(t) * 1e-6 for t in pixel_coords
+    ]
+    temp_index: List[np.ndarray[Any, np.dtype[np.float64]]] = [
+        np.asarray(t) for t in pixel_coord_indexes
+    ]
+
+    # The shape of each axis is represented by five numbers (for this det)
+    # e.g. (1,2,2,512,512). We calculate no. of panels by multiplying
+    # all numbers except the last two (#pixel_x, #pixel_y).
+    panel_num: np.integer = np.prod(temp[0].shape[:-2])
+
+    shape: tuple = (panel_num, temp[0].shape[-2], temp[0].shape[-1])
+    pixel_position: npt.NDArray[np.float32] = np.zeros(shape + (3,), dtype=np.float32)  # x,y,z
+    pixel_index_map: npt.NDArray[np.uint16] = np.zeros(shape + (2,), dtype=np.uint16)  # x,y
+
+    for n in range(3):
+        pixel_position[..., n] = temp[n].reshape(shape).astype(np.float32)
+
+    for n in range(2):
+        pixel_index_map[..., n] = temp_index[n].reshape(shape).astype(np.uint16)
+
+    return pixel_position, pixel_index_map
 
 
 class ZmqSender:
@@ -168,6 +200,10 @@ def get_calib_constants(data_specs: List[DataSpec], evt: psana.Event) -> Any:
             data["mask"] = obj.status_as_mask(evt)
         if hasattr(obj, "gain"):
             data["gain"] = obj.gain(evt)
+        if hasattr(obj, "geometry"):
+            pixel_position, pixel_index_map = get_geometry(obj.geometry(evt))
+            data["pixel_position"] = pixel_position
+            data["pixel_index_map"] = pixel_index_map
         break
     return data if data else None
 
@@ -275,10 +311,12 @@ if __name__ == "__main__":
                         rank = 0
                     data_type_info[detname][attr_name] = (dtype, rank)
                 for detname in data_def:
-                    calib_consts: Any = get_data(data_def[detname], event)
+                    calib_consts: Any = get_calib_constants(data_def[detname], event)
                     if calib_consts is not None:
                         calib_dict[detname] = calib_consts
-                        for attr_name, field_data in detector_data.items():
+                        calib_detname: str = f"{detname}_calib"
+                        data_type_info[calib_detname] = {}
+                        for attr_name, field_data in calib_consts.items():
                             if isinstance(field_data, np.ndarray):
                                 dtype = field_data.dtype.type
                                 rank = field_data.ndim
@@ -291,7 +329,6 @@ if __name__ == "__main__":
                             else:
                                 dtype = type(field_data)
                                 rank = 0
-                            calib_detname: str = f"{detname}_calib"
                             data_type_info[calib_detname][attr_name] = (dtype, rank)
 
         data["timestamp"] = timestamp.time()

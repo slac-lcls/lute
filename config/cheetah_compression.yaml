@@ -90,10 +90,9 @@ IndexCrystFEL:
   profile: True
   no_revalidate: True
 
-ConvertXtc1to2:             # All variables are given as strings
-  mode: "idx"               # Mode
-  detector: "epix10k2M"     # Detector's name
-  node_id: "1"              # Node ID for the detector
+ConvertXtc1to2:               # All variables are given as strings
+  mode: "idx"                 # Mode
+  node_id: "1"                # Node ID for the detector
   geometry: "{{ EXPERIMENT_DIR }}/{{ DET_CALIB_DIR }}/geometry/12-end.data"
   eventfile: ""
   output_file: "{{ XTC2_FILE_PATH }}/{{ XTC2_FILE_NAME }}"

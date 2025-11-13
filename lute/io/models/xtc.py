@@ -39,13 +39,7 @@ class ConvertXtc1to2Parameters(TaskParameters):
     """Parameters for the xtc conversion Task."""
 
     mode: str = Field(default="idx", description="Psana 1 access mode")
-    detector: Union[str, List[str]] = Field(
-        description="Detector, or comma-separated detectors to save."
-    )
     node_id: str = Field(default="1", description="Node ID for the detector")
-    resolution: str = Field(
-        description="Detector channels and resolution",
-    )
     geometry: str = Field(
         description="Geometry file",
     )

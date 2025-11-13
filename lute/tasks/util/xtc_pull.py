@@ -80,7 +80,7 @@ if __name__ == "__main__":
     zmq_recv: ZmqReceiver = ZmqReceiver(socket)
 
     # Allocating memory for DgramEdit output buffer
-    MEMSIZE: int = 64000000
+    MEMSIZE: int = 640000000
     outbuf: bytearray = bytearray(MEMSIZE)
 
     # Open output file for writing
@@ -185,6 +185,11 @@ if __name__ == "__main__":
             )
             runinfo.runinfo.expt = args.experiment
             runinfo.runinfo.runnum = args.run
+            if "calib_const" in obj:
+                for detname, det_consts in obj["calib_const"].items():
+                    for const_name, consts in det_consts.items():
+                        full_name: str = f"{detname}_calib_{const_name}"
+                        setattr(runinfo.runinfo, full_name, consts)
             beginrun.adddata(runinfo.runinfo)
             scan.raw.pixel_position = obj["pixel_position"]
             scan.raw.pixel_index_map = obj["pixel_index_map"]
