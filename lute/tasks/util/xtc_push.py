@@ -25,53 +25,20 @@ class DataSpec(TypedDict):
     object_type: str
     object_field_name: Union[str, Tuple[str, str]]
 
-class PsanaGeometry:
-
-    pixel_position: np.ndarray
-    pixel_index_map: np.ndarray
-
-    def __init__(self, geom: str) -> None:
-        """A getter that reads in lcls1-style geometry file.
-        Use this access info from  geometry file (*-end.data).
-        Available info is set as class attributes.
-
-        Args:
-            geom (str): Geometry file's path
-        """
-        cframe: int = 0  # fixed to psana style (1 is for lab conventions)
-        geometry: GeometryAccess = GeometryAccess(geom, cframe=cframe)
-
-        # Stores a tuple of x,y, and z coordinate arrays
-        pixel_coords: tuple = geometry.get_pixel_coords(cframe=cframe)
-        pixel_coord_indexes: tuple = geometry.get_pixel_coord_indexes(cframe=cframe)
-
-        # Converts from microns to meters
-        temp: List[np.ndarray[Any, np.dtype[np.float64]]] = [
-            np.asarray(t) * 1e-6 for t in pixel_coords
-        ]
-        temp_index: List[np.ndarray[Any, np.dtype[np.float64]]] = [
-            np.asarray(t) for t in pixel_coord_indexes
-        ]
-
-        # The shape of each axis is represented by five numbers (for this det)
-        # e.g. (1,2,2,512,512). We calculate no. of panels by multiplying
-        # all numbers except the last two (#pixel_x, #pixel_y).
-        panel_num: np.integer = np.prod(temp[0].shape[:-2])
-
-        shape: tuple = (panel_num, temp[0].shape[-2], temp[0].shape[-1])
-        pixel_position = np.zeros(shape + (3,), dtype=np.float32)  # x,y,z
-        pixel_index_map = np.zeros(shape + (2,), dtype=np.int16)  # x,y
-
-        for n in range(3):
-            pixel_position[..., n] = temp[n].reshape(shape).astype(np.float32)
-
-        for n in range(2):
-            pixel_index_map[..., n] = temp_index[n].reshape(shape).astype(np.int16)
-
-        self.pixel_position: np.ndarray = pixel_position
-        self.pixel_index_map: np.ndarray = pixel_index_map
 
 def get_geometry(geometry: GeometryAccess) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.uint16]]:
+    """Return the pixel coordinates and index map.
+
+
+    Args:
+        geometry (GeometryAccess): A GeometryAccess object. This can be created
+            for a detector (that has geometry) by calling geometry = det.geometry(evt).
+
+    Returns:
+        pixel_position (npt.NDArray[np.float32]): Pixel position array.
+
+        pixel_index_map (npt.NDArray[np.uint16]): Pixel index array.
+    """
     cframe: int = 0
     # Stores a tuple of x,y, and z coordinate arrays
     pixel_coords: tuple = geometry.get_pixel_coords(cframe=cframe)
@@ -132,8 +99,7 @@ class ZmqSender:
         """
         Send a NumPy array with metadata (dtype and shape) over a ZeroMQ socket.
 
-        Parameters:
-
+        Args:
             data (np.ndarray): Array to send.
 
             flags (int): ZMQ flags (e.g., zmq.SNDMORE).
@@ -143,7 +109,6 @@ class ZmqSender:
             track (bool): Whether to track the message.
 
         Returns:
-
             bool: True if the message was successfully sent, False otherwise.
         """
         try:
@@ -208,9 +173,7 @@ def get_calib_constants(data_specs: List[DataSpec], evt: psana.Event) -> Any:
     return data if data else None
 
 
-
-if __name__ == "__main__":
-
+def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="Xtc1 reader", description="Read in Xtc1 files using psana1"
     )
@@ -232,12 +195,6 @@ if __name__ == "__main__":
         help="Detector name",
     )
     parser.add_argument(
-        "-g",
-        "--geometry",
-        type=str,
-        help="Geometry file",
-    )
-    parser.add_argument(
         "-f",
         "--eventfile",
         type=str,
@@ -247,7 +204,6 @@ if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
 
     data_def: Dict[str, Any] = json.loads(args.access_pattern)
-    gmt_reader: PsanaGeometry = PsanaGeometry(args.geometry)
 
     socket: str = "tcp://127.0.0.1:5557"
     zmq_send: ZmqSender = ZmqSender(socket)
@@ -262,6 +218,7 @@ if __name__ == "__main__":
     if not args.eventfile:
         # All events
         event_num_list = list(range(len(timestamps)))
+        event_num_list = list(range(5))
     else:
         event_num_list = []
         try:
@@ -342,10 +299,10 @@ if __name__ == "__main__":
             start_dict: Dict[str, Any] = {
                 "start": True,
                 "config_timestamp": timestamp.time() - 10,
-                "pixel_position": gmt_reader.pixel_position,
-                "pixel_index_map": gmt_reader.pixel_index_map,
             }
             if calib_dict:
+                # If the requested detectors had calibration constants they will
+                # be attached to the BeginRun transition as part of the scan det
                 start_dict["calib_const"] = calib_dict
             print("[XTC1 Sender]: Starting sending..")
             zmq_send.send_zipped_pickle(start_dict)
@@ -362,3 +319,5 @@ if __name__ == "__main__":
 
     zmq_send.close()
 
+if __name__ == "__main__":
+    main()

@@ -67,13 +67,11 @@ if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
 
     detnames: List[str] = args.detector.split(",")
-    all_detnames: List[str] = detnames + ["runinfo", "scan"]
+    all_detnames: List[str] = detnames + ["runinfo", "epicsinfo", "scan"]
 
     namesId: Dict[str, int] = {}
     for idx, detname in enumerate(all_detnames):
         namesId[detname] = idx
-
-    # namesId = {args.detector: 0, "runinfo": 1, "scan": 2}
 
     # Setup socket for zmq connection
     socket: str = "tcp://127.0.0.1:5557"
@@ -100,13 +98,15 @@ if __name__ == "__main__":
         counter += 1
         det_defs[detname] = det_def
 
-    # det: DetectorDef = DetectorDef(args.detector, "generic_container", "detnum1234")
-
     runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
     runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
 
     scan_alg: AlgDef = AlgDef("raw", 2, 0, 0)
     scan_det: DetectorDef = DetectorDef("scan", "scan", "detnum1234")
+
+    # Hold calibration information
+    calib_serial_num: str = "detnum"
+    calib_detectors: Dict[str, DetectorDef] = {}
 
     # Define data formats
 
@@ -115,14 +115,17 @@ if __name__ == "__main__":
         "runnum": (np.uint32, 0),
     }
 
-    scandef: Dict[str, Tuple[Type, int]] = {
-        "pixel_position": (np.float32, 4),
-        "pixel_index_map": (np.int16, 4),
-    }
-    # detector: Optional[config.Detector] = None
-
+    scandef: Dict[str, Tuple[Type, int]] = {}
     num_events = int(zmq_recv.zmq_socket.recv_string())
 
+    epics_alg: AlgDef = AlgDef("raw", 2, 0, 0)
+    epics_det: DetectorDef = DetectorDef("epics", "epics", "detnum1234")
+    epics_def: Dict[str, Tuple[Type, int]] = {}
+
+    epicsinfo_det: DetectorDef = DetectorDef("epicsinfo", "epicsinfo", "detnum1234")
+    epicsinfo_alg: AlgDef = AlgDef("epicsinfo", 1, 0, 0)
+    epicsinfo_def: Dict[str, Tuple[Type, int]] = {"keys": (str, 1)}
+    epicsinfo: Optional[config.Detector] = None
     # This will be sent before anything else - contains rank and type
     # of all the information to be stored for the detector
     # detname: {field: (type, rank)}
@@ -131,6 +134,7 @@ if __name__ == "__main__":
     print("[XTC2 Writer]: Starting receiving")
     detector: config.Detector
     detectors: Dict[str, config.Detector] = {}
+    namesId["epics"] = len(namesId)
     while True:
         obj = zmq_recv.recv_zipped_pickle()
         # Begin timestamp is needed (we calculate this from the first L1Accept)
@@ -154,11 +158,27 @@ if __name__ == "__main__":
                     )
                     detectors[detname] = detector
                 elif "_calib" in detname:
+                    # Constants are too big... We will split them up and attach them to
+                    # indiviudal SlowUpdate datagrams as "epics" detectors
                     calib_type_info: Dict[str, Tuple[Type, int]] = datadef[detname]
                     for const_name, const_type in calib_type_info.items():
-                        prefixed_name: str = f"{detname}_{const_name}"
-                        # detname_prefixed_constants: str = f"{detname}"
-                        runinfodef[prefixed_name] = const_type
+                        prefixed_name: str = (
+                            f"{detname.replace('_calib','')}_{const_name}"
+                        )
+                        calib_serial_num += str(len(calib_detectors))
+                        calib_epics_det: DetectorDef = DetectorDef(
+                            "epics", "epics", calib_serial_num
+                        )
+                        namesId[prefixed_name] = len(namesId)
+                        detector = config.Detector(
+                            calib_epics_det,
+                            epics_alg,
+                            {prefixed_name: const_type},
+                            nodeId=int(args.node_id),
+                            namesId=namesId[prefixed_name],
+                        )
+                        epicsinfo_def.update({prefixed_name: (str, 1)})
+                        calib_detectors[prefixed_name] = detector
             runinfo = config.Detector(
                 runinfo_det,
                 runinfo_alg,
@@ -166,16 +186,23 @@ if __name__ == "__main__":
                 nodeId=int(args.node_id),
                 namesId=namesId["runinfo"],
             )
-            scan = config.Detector(
-                scan_det,
-                scan_alg,
-                scandef,
+            epicsinfo = config.Detector(
+                epicsinfo_det,
+                epicsinfo_alg,
+                epicsinfo_def,
                 nodeId=int(args.node_id),
-                namesId=namesId["scan"],
+                namesId=namesId["epicsinfo"],
             )
         elif "start" in obj:
             config_timestamp = obj["config_timestamp"]
             config.updatetimestamp(config_timestamp)
+
+            if epicsinfo is not None:
+                for calib_name in calib_detectors.keys():
+                    setattr(epicsinfo.epicsinfo, calib_name, calib_name)
+                epicsinfo.epicsinfo.keys = "epicsname"
+                config.adddata(epicsinfo.epicsinfo)
+
             save_dgramedit(config, outbuf, xtc2file)
 
             beginrun = DgramEdit(
@@ -185,15 +212,7 @@ if __name__ == "__main__":
             )
             runinfo.runinfo.expt = args.experiment
             runinfo.runinfo.runnum = args.run
-            if "calib_const" in obj:
-                for detname, det_consts in obj["calib_const"].items():
-                    for const_name, consts in det_consts.items():
-                        full_name: str = f"{detname}_calib_{const_name}"
-                        setattr(runinfo.runinfo, full_name, consts)
             beginrun.adddata(runinfo.runinfo)
-            scan.raw.pixel_position = obj["pixel_position"]
-            scan.raw.pixel_index_map = obj["pixel_index_map"]
-            beginrun.adddata(scan.raw)
             save_dgramedit(beginrun, outbuf, xtc2file)
 
             beginstep = DgramEdit(
@@ -210,6 +229,23 @@ if __name__ == "__main__":
             )
             save_dgramedit(enable, outbuf, xtc2file)
             current_timestamp = config_timestamp + 3
+            if "calib_const" in obj:
+                for detname, det_consts in obj["calib_const"].items():
+                    if detname == "timestamp":
+                        continue
+                    keys: List[str] = list(det_consts.keys())
+                    for const_name, constants in det_consts.items():
+                        prefixed_name = f"{detname}_{const_name}"
+                        detector = calib_detectors[prefixed_name]
+                        slow_update: DgramEdit = DgramEdit(
+                            transition_id=TransitionId.SlowUpdate,
+                            config_dgramedit=config,
+                            ts=current_timestamp + 1,
+                        )
+                        setattr(detector.raw, prefixed_name, constants)
+                        slow_update.adddata(detector.raw)
+                        save_dgramedit(slow_update, outbuf, xtc2file)
+                        current_timestamp += 1
 
         elif "end" in obj:
             disable = DgramEdit(

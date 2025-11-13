@@ -64,7 +64,6 @@ class ConvertXtc1to2(Task):
             f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
             f"-a '{json_access_pattern}' -e {exp} "
             f"-r {par.lute_config.run} -m {par.mode} -d {detname_csv} "
-            f"-g {par.geometry} "
         )
         if par.eventfile != "":
             zmq_process1_cmd += f"-f {par.eventfile} "
