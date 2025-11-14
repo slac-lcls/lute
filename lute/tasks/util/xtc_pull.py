@@ -196,6 +196,7 @@ if __name__ == "__main__":
     detector: config.Detector
     detectors: Dict[str, config.Detector] = {}
     namesId["epics"] = len(namesId)
+    add_dummy_events: bool = True
     while True:
         obj = zmq_recv.recv_zipped_pickle()
         # Begin timestamp is needed (we calculate this from the first L1Accept)
@@ -312,39 +313,57 @@ if __name__ == "__main__":
                             ts=current_timestamp + 1,
                         )
                         setattr(detector.raw, prefixed_name, constants)
-                        # setattr(detector, prefixed_name, constants)
-                        # detattr = getattr(detector, prefixed_name)
                         slow_update.adddata(detector.raw)
                         save_dgramedit(slow_update, outbuf, xtc2file)
                         current_timestamp += 1
 
         elif "end" in obj:
+            current_timestamp += 1
             disable = DgramEdit(
                 transition_id=TransitionId.Disable,
                 config_dgramedit=config,
-                ts=current_timestamp + 1,
+                ts=current_timestamp,
             )
             save_dgramedit(disable, outbuf, xtc2file)
-            current_timestamp = config_timestamp + 3
+            current_timestamp += 1
+            # current_timestamp = config_timestamp + 3
             endstep = DgramEdit(
                 transition_id=TransitionId.EndStep,
                 config_dgramedit=config,
-                ts=current_timestamp + 2,
+                ts=current_timestamp,
             )
             save_dgramedit(endstep, outbuf, xtc2file)
+            current_timestamp += 1
             endrun = DgramEdit(
                 transition_id=TransitionId.EndRun,
                 config_dgramedit=config,
-                ts=current_timestamp + 3,
+                ts=current_timestamp,
             )
             save_dgramedit(endrun, outbuf, xtc2file)
             break
         else:
             # Create L1Accept
+            real_timestamp: int = obj["timestamp"]
+            if add_dummy_events:
+                dummy_timestamp = real_timestamp - 120
+                for i in range(120):
+                    d0 = DgramEdit(
+                        transition_id=TransitionId.L1Accept,
+                        config_dgramedit=config,
+                        ts=dummy_timestamp,
+                    )
+                    if timing is not None:
+                        timing_data = write_timing(dummy_timestamp)
+                        for attr in timing_data:
+                            setattr(timing.raw, attr, timing_data[attr])  # type: ignore
+                        d0.adddata(timing.raw)
+                    dummy_timestamp += 1
+                    save_dgramedit(d0, outbuf, xtc2file)
+                add_dummy_events = False
             d0 = DgramEdit(
                 transition_id=TransitionId.L1Accept,
                 config_dgramedit=config,
-                ts=obj["timestamp"],
+                ts=real_timestamp,
             )
             for detname in obj:
                 if detname == "timestamp":
@@ -354,12 +373,12 @@ if __name__ == "__main__":
                     setattr(detector.xtc1dump, attr, obj[detname][attr])
                 d0.adddata(detector.xtc1dump)
             if timing is not None:
-                timing_data = write_timing(obj["timestamp"])
+                timing_data = write_timing(real_timestamp)
                 for attr in timing_data:
                     setattr(timing.raw, attr, timing_data[attr])  # type: ignore
                 d0.adddata(timing.raw)
             save_dgramedit(d0, outbuf, xtc2file)
-            current_timestamp = obj["timestamp"]
+            current_timestamp = real_timestamp
     print("[XTC2 Writer]: Complete")
     xtc2file.close()
     zmq_recv.close()
