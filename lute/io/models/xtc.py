@@ -5,7 +5,7 @@ Classes:
     which converst lcls1 style xtc files to lcls2 style.
 """
 
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -46,6 +46,13 @@ class ConvertXtc1to2Parameters(TaskParameters):
     eventfile: str = Field(
         default="",
         description="CSV file with event numbers. Otherwise will process all events.",
+    )
+    nevents: Optional[int] = Field(
+        default=None,
+        description=(
+            "Optionally specify the number of events to use. If providing eventfile "
+            "as well, that option will supercede this one."
+        )
     )
     output_file: str = Field(
         description="Where to write the output XTC2 file.", is_result=True

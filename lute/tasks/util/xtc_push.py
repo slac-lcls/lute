@@ -184,15 +184,7 @@ def main() -> None:
         help="JSON string for access pattern of data.",
     )
     parser.add_argument(
-        "-e", "--exp", type=str, help="Experiment's name", default="xpptut15"
-    )
-    parser.add_argument("-r", "--run", type=str, help="Run number", default="291")
-    parser.add_argument("-m", "--mode", type=str, help="Mode", default="idx")
-    parser.add_argument(
-        "-d",
-        "--detector",
-        type=str,
-        help="Detector name",
+        "-e", "--exp", type=str, help="Experiment's name"
     )
     parser.add_argument(
         "-f",
@@ -200,6 +192,17 @@ def main() -> None:
         type=str,
         help="File with the event numbers",
     )
+    parser.add_argument(
+        "-n",
+        "--nevents",
+        type=int,
+        help=(
+            "Specify the number of events. If both this and eventfile are provided, "
+            "eventfile is used. If neither is provided, will convert all events."
+        ),
+        default=0,
+    )
+    parser.add_argument("-r", "--run", type=str, help="Run number")
 
     args: argparse.Namespace = parser.parse_args()
 
@@ -208,7 +211,8 @@ def main() -> None:
     socket: str = "tcp://127.0.0.1:5557"
     zmq_send: ZmqSender = ZmqSender(socket)
 
-    datasource_id: str = f"exp={args.exp}:run={args.run}:{args.mode}"
+    mode: str = "idx"
+    datasource_id: str = f"exp={args.exp}:run={args.run}:{mode}"
     datasource: psana.DataSource = psana.DataSource(datasource_id)
     run_current: psana.Run = next(datasource.runs())
     timestamps: tuple = run_current.times()
@@ -217,8 +221,10 @@ def main() -> None:
 
     if not args.eventfile:
         # All events
-        event_num_list = list(range(len(timestamps)))
-        event_num_list = list(range(5))
+        if not args.nevents:
+            event_num_list = list(range(len(timestamps)))
+        else:
+            event_num_list = list(range(args.nevents))
     else:
         event_num_list = []
         try:
