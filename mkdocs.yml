@@ -6,6 +6,7 @@ nav:
   - Quick Start: "quick_start.md"
   - Usage Manual:
       - Task Configuration: "usage/configuration.md"
+      - Installation: "usage/installation.md"
       - Running LUTE: "usage/running_lute.md"
       - Task Documentation:
           - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
