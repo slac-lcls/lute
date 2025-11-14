@@ -1,9 +1,10 @@
 import argparse
 import pickle
 import zlib
-from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Type
+from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Type, TypedDict
 
 import numpy as np
+import numpy.typing as npt
 import zmq
 from psana.dgramedit import DgramEdit, AlgDef, DetectorDef  # type: ignore
 from psana.psexp import TransitionId  # type: ignore
@@ -46,6 +47,47 @@ def save_dgramedit(dg_edit: DgramEdit, outbuf: bytearray, outfile: BinaryIO) -> 
     outfile.write(outbuf[: dg_edit.size])
 
 
+class TimingDef(TypedDict):
+    pulseId: np.uint64
+    timeStamp: np.uint64
+    fixedRates: npt.NDArray[np.uint8]
+    acRates: npt.NDArray[np.uint8]
+    timeSlot: np.uint8
+    timeSlotPhase: np.uint16
+    ebeamPresent: np.uint8
+    ebeamDestn: np.uint8
+    ebeamCharge: np.uint16
+    ebeamEnergy: npt.NDArray[np.uint16]
+    xWavelength: npt.NDArray[np.uint16]
+    dmod5: np.uint16
+    mpsLimits: npt.NDArray[np.uint8]
+    mpsPowerClass: npt.NDArray[np.uint8]
+    sequenceValues: npt.NDArray[np.uint16]
+    inhibitCounts: npt.NDArray[np.uint32]
+
+
+def write_timing(timestamp: int) -> TimingDef:
+    timing_data: TimingDef = {
+        "pulseId": np.uint64(0),
+        "timeStamp": np.uint64(timestamp),
+        "fixedRates": np.uint8([0] * 10),  # type: ignore
+        "acRates": np.uint8([0] * 6),  # type: ignore
+        "timeSlot": np.uint8(0),
+        "timeSlotPhase": np.uint16(0),
+        "ebeamPresent": np.uint8(1),
+        "ebeamDestn": np.uint8(0),
+        "ebeamCharge": np.uint16(0),
+        "ebeamEnergy": np.uint16([0] * 4),  # type: ignore
+        "xWavelength": np.uint16([0] * 2),  # type: ignore
+        "dmod5": np.uint16(0),
+        "mpsLimits": np.uint8([0] * 16),  # type: ignore
+        "mpsPowerClass": np.uint8([0] * 16),  # type: ignore
+        "sequenceValues": np.uint16([0] * 18),  # type: ignore
+        "inhibitCounts": np.uint32([0] * 8),  # type: ignore
+    }
+    return timing_data
+
+
 if __name__ == "__main__":
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
@@ -67,7 +109,7 @@ if __name__ == "__main__":
     args: argparse.Namespace = parser.parse_args()
 
     detnames: List[str] = args.detector.split(",")
-    all_detnames: List[str] = detnames + ["runinfo", "epicsinfo", "scan"]
+    all_detnames: List[str] = detnames + ["runinfo", "epicsinfo"]
 
     namesId: Dict[str, int] = {}
     for idx, detname in enumerate(all_detnames):
@@ -101,31 +143,50 @@ if __name__ == "__main__":
     runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
     runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
 
-    scan_alg: AlgDef = AlgDef("raw", 2, 0, 0)
-    scan_det: DetectorDef = DetectorDef("scan", "scan", "detnum1234")
-
-    # Hold calibration information
-    calib_serial_num: str = "detnum"
-    calib_detectors: Dict[str, DetectorDef] = {}
-
     # Define data formats
-
+    ##############################
     runinfodef: Dict[str, Tuple[Type, int]] = {
         "expt": (str, 1),
         "runnum": (np.uint32, 0),
     }
 
-    scandef: Dict[str, Tuple[Type, int]] = {}
-    num_events = int(zmq_recv.zmq_socket.recv_string())
-
+    # Hold calibration information
+    # These will be stored as "epics" detectors
+    calib_serial_num: str = "detnum"
+    calib_detectors: Dict[str, DetectorDef] = {}
     epics_alg: AlgDef = AlgDef("raw", 2, 0, 0)
     epics_det: DetectorDef = DetectorDef("epics", "epics", "detnum1234")
     epics_def: Dict[str, Tuple[Type, int]] = {}
 
+    # Base epicsinfo (for psana compat)
     epicsinfo_det: DetectorDef = DetectorDef("epicsinfo", "epicsinfo", "detnum1234")
     epicsinfo_alg: AlgDef = AlgDef("epicsinfo", 1, 0, 0)
     epicsinfo_def: Dict[str, Tuple[Type, int]] = {"keys": (str, 1)}
     epicsinfo: Optional[config.Detector] = None
+
+    timing_alg: AlgDef = AlgDef("raw", 2, 1, 0)
+    timing_det: DetectorDef = DetectorDef("timing", "ts", "detnum1234")
+    timing_def: Dict[str, Tuple[Type, int]] = {
+        "pulseId": (np.uint64, 0),
+        "timeStamp": (np.uint64, 0),
+        "fixedRates": (np.uint8, 1),
+        "acRates": (np.uint8, 1),
+        "timeSlot": (np.uint8, 0),
+        "timeSlotPhase": (np.uint16, 0),
+        "ebeamPresent": (np.uint8, 0),
+        "ebeamDestn": (np.uint8, 0),
+        "ebeamCharge": (np.uint16, 0),
+        "ebeamEnergy": (np.uint16, 1),
+        "xWavelength": (np.uint16, 1),
+        "dmod5": (np.uint16, 0),
+        "mpsLimits": (np.uint8, 1),
+        "mpsPowerClass": (np.uint8, 1),
+        "sequenceValues": (np.uint16, 1),
+        "inhibitCounts": (np.uint32, 1),
+    }
+    namesId["timing"] = len(namesId)
+    timing: Optional[config.Detector] = None
+    num_events = int(zmq_recv.zmq_socket.recv_string())
     # This will be sent before anything else - contains rank and type
     # of all the information to be stored for the detector
     # detname: {field: (type, rank)}
@@ -169,6 +230,7 @@ if __name__ == "__main__":
                         calib_epics_det: DetectorDef = DetectorDef(
                             "epics", "epics", calib_serial_num
                         )
+                        # epics_alg: AlgDef = AlgDef("raw", 2, 0, 0)
                         namesId[prefixed_name] = len(namesId)
                         detector = config.Detector(
                             calib_epics_det,
@@ -192,6 +254,13 @@ if __name__ == "__main__":
                 epicsinfo_def,
                 nodeId=int(args.node_id),
                 namesId=namesId["epicsinfo"],
+            )
+            timing = config.Detector(
+                timing_det,
+                timing_alg,
+                timing_def,
+                nodeId=int(args.node_id),
+                namesId=namesId["timing"],
             )
         elif "start" in obj:
             config_timestamp = obj["config_timestamp"]
@@ -243,6 +312,8 @@ if __name__ == "__main__":
                             ts=current_timestamp + 1,
                         )
                         setattr(detector.raw, prefixed_name, constants)
+                        # setattr(detector, prefixed_name, constants)
+                        # detattr = getattr(detector, prefixed_name)
                         slow_update.adddata(detector.raw)
                         save_dgramedit(slow_update, outbuf, xtc2file)
                         current_timestamp += 1
@@ -282,6 +353,11 @@ if __name__ == "__main__":
                 for attr in obj[detname]:
                     setattr(detector.xtc1dump, attr, obj[detname][attr])
                 d0.adddata(detector.xtc1dump)
+            if timing is not None:
+                timing_data = write_timing(obj["timestamp"])
+                for attr in timing_data:
+                    setattr(timing.raw, attr, timing_data[attr])  # type: ignore
+                d0.adddata(timing.raw)
             save_dgramedit(d0, outbuf, xtc2file)
             current_timestamp = obj["timestamp"]
     print("[XTC2 Writer]: Complete")
