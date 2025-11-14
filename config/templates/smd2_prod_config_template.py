@@ -214,7 +214,7 @@ def get_pressio_compression(run):
                 f"{compressor_id}:metric": "size",
             }
         }
-        ret_dict["{{ detname }}"] = pressio_dict
+        ret_dict["{{ detector }}"] = pressio_dict
         {% endif %}
 {% endfor %}
     return ret_dict
