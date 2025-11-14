@@ -52,7 +52,7 @@ class ConvertXtc1to2Parameters(TaskParameters):
         description=(
             "Optionally specify the number of events to use. If providing eventfile "
             "as well, that option will supercede this one."
-        )
+        ),
     )
     output_file: str = Field(
         description="Where to write the output XTC2 file.", is_result=True
