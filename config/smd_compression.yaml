@@ -44,7 +44,7 @@ SubmitSMD:
   experiment: "{{ experiment }}"
   #stn: 0
   directory: "/sdf/scratch/users/d/dorlhiac/"
-  psdm_dir: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac"
+  psdm_dir: "{{ XTC2_FILE_PATH }}"
   #config: "mfx_cctbx"
   #gather_interval: 25
   #norecorder: False
