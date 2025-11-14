@@ -26,6 +26,10 @@ detectors = {{ detnames }}
 {% else %}
 detectors = []
 {% endif %}
+{%- if xdetectors is defined and xdetectors %}
+xdetectors = {{ xdetectors }}
+{% else %}
+{% endif %}
 {%- if integrating_detectors is defined and integrating_detectors %}
 integrating_detectors = {{ integrating_detectors }}
 {% endif %}

@@ -289,6 +289,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
             None, description="List of detectors to process."
         )
 
+        xdetectors: Optional[List[str]] = Field(
+            None, description="List of detectors to exclude from loading by psana."
+        )
+
         integrating_detectors: Optional[List[str]] = Field(
             None,
             description="List of integrating detectors to process. Only for LCLS2.",

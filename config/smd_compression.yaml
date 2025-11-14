@@ -39,7 +39,6 @@ SubmitSMD:
   # Command line arguments
   np: 5
   producer: "/sdf/scratch/users/d/dorlhiac/work/smalldata_tools_new/lcls2_producers/smd_producer.py"
-  #files: "{{ XTC2_FILE_PATH }}/{{ XTC2_FILE_NAME }}"
   run: "{{ run }}"
   experiment: "{{ experiment }}"
   #stn: 0

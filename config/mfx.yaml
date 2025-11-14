@@ -102,6 +102,9 @@ SubmitSMD:
   #experiment: ""
   #stn: 0
   #directory: ""
+  #psdm_dir: ""
+  #nevents: 5
+  #interactive: false
   #config: "mfx_cctbx"
   #gather_interval: 25
   #norecorder: False
@@ -125,6 +128,7 @@ SubmitSMD:
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
   #detnames: []
+  #xdetectors: []
   #epicsPV: []
   #ttCalib: []
   # Provide detector image sum algorithms.
