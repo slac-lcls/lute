@@ -18,6 +18,7 @@ nav:
           - Third Party: "development/new_task/third_party.md"
       - Creating a new Workflow:
           - Overview: "development/creating_workflows.md"
+          - With Maestro: "development/creating_workflows_maestro.md"
           - With Airflow: "development/creating_workflows_airflow.md"
           - Dynamic Run-time Workflows: "development/dynamic_workflows.md"
           #- With Prefect: "development/creating_workflows_prefect.md"
