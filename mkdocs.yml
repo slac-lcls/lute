@@ -7,6 +7,9 @@ nav:
   - Usage Manual:
       - Task Configuration: "usage/configuration.md"
       - Running LUTE: "usage/running_lute.md"
+      - Task Documentation:
+          - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
+          - Converting XTC1 to XTC2: "usage/tasks/xtc1_to_xtc2_conversion.md"
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task:
