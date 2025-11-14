@@ -96,6 +96,40 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
             ty: float = Field(0, description="Tilt in y, degress")
 
+            ADU_per_Photon: float = Field(1.0, description="ADU per photon.")
+
+            phiBins: int = Field(1, description="Number of phi bins.")
+
+            qbin: float = Field(5e-3, description="Width of Q bin.")
+
+            thresRms: Optional[Union[int, float]] = Field(
+                None, description="Lower threshold in RMS."
+            )
+
+            thresADU: Optional[Union[int, float]] = Field(
+                None, description="Lower threshold in ADU."
+            )
+
+            thresADUhigh: Optional[Union[int, float]] = Field(
+                None, description="High threshold in ADU."
+            )
+
+            geomCorr: bool = Field(
+                True, description="Whether to apply geometric correction."
+            )
+
+            polCorr: bool = Field(
+                True, description="Whether to apply polarization correction."
+            )
+
+            userMask: Optional[str] = Field(
+                None,
+                description=(
+                    "Path to a numpy array (.npy) to use as a mask for azimuthal "
+                    "integration."
+                ),
+            )
+
         class AzIntPyFAIParams(BaseModel):
             class AiKwargs(BaseModel):
                 dist: float = Field(description="Detector distance.")
@@ -330,9 +364,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
         description="Number of processes",
         flag_type="-",
     )
-    map_by: str = Field(
-        "core", description="MPI rank mapping.", flag_type="--", rename_param="map-by"
-    )
+    # This will interfere with affinities set by executor -- need smarter handling
+    # map_by: str = Field(
+    #    "core", description="MPI rank mapping.", flag_type="--", rename_param="map-by"
+    # )
     p_arg1: str = Field(
         "python", description="Executable to run with mpi (i.e. python).", flag_type=""
     )
@@ -356,6 +391,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
         flag_type="--",
     )
     stn: NonNegativeInt = Field(0, description="Hutch endstation.", flag_type="--")
+    psdm_dir: Optional[str] = Field(
+        None,
+        description="Optionally override SIT_PSDM_DATA.",
+        flag_type="--",
+    )
     config: Optional[str] = Field(
         None,
         description="Alternative config file to use for producer configuration",
@@ -451,14 +491,18 @@ class SubmitSMDParameters(ThirdPartyParameters):
             base_path: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
             path: str
             is_daq2: bool
-            try:
-                import psana  # type: ignore
-
-                _ = psana.xtc_version
-                # xtc_version fails in psana1
+            if values["psdm_dir"]:
+                # Assume we are only overriding SIT_PSDM_DATA if using converted xtc2
                 is_daq2 = True
-            except AttributeError:
-                is_daq2 = False
+            else:
+                try:
+                    import psana  # type: ignore
+
+                    _ = psana.xtc_version
+                    # xtc_version fails in psana1
+                    is_daq2 = True
+                except AttributeError:
+                    is_daq2 = False
             if not is_daq2:
                 path = f"{base_path}/lcls1_producers/smd_producer.py"
             else:
@@ -480,17 +524,21 @@ class SubmitSMDParameters(ThirdPartyParameters):
             else:
                 cfg = str(Path(values["producer"]).parent / f"prod_config_{hutch}.py")
             lute_template_cfg.output_path = cfg
-            # Try using xtc_version now available in psana2 to figure out lcls1
-            # or lcls2
             is_daq2: bool
-            try:
-                import psana  # type: ignore
-
-                _ = psana.xtc_version
-                # xtc_version fails in psana1
+            if values["psdm_dir"]:
+                # Assume we are only overriding SIT_PSDM_DATA if using converted xtc2
                 is_daq2 = True
-            except AttributeError:
-                is_daq2 = False
+            else:
+                # Try using xtc_version now available in psana2 to figure out lcls1
+                # or lcls2
+                try:
+                    import psana  # type: ignore
+
+                    _ = psana.xtc_version
+                    # xtc_version fails in psana1
+                    is_daq2 = True
+                except AttributeError:
+                    is_daq2 = False
             if not is_daq2:
                 lute_template_cfg.template_name = "smd1_prod_config_template.py"
             else:

@@ -11,7 +11,8 @@ work_dir: "/sdf/scratch/users/d/dorlhiac"
 ---
 # We will define some convenience keys for substitution in other parameters
 EXPERIMENT_DIR: "/sdf/data/lcls/ds/mfx/{{ experiment }}"
-XTC2_FILE_PATH: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac"
+FAKE_PSDM_SUBDIR: "mfx/{{ experiment }}/xtc"
+XTC2_FILE_PATH: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac/{{ FAKE_PSDM_SUBDIR }}"
 XTC2_FILE_NAME: "{{ experiment }}-r{{ run:04d }}-s000-c000.xtc2"
 DET_CALIB_DIR: "calib/Epix10ka2M::CalibV1/MfxEndstation.0:Epix10ka2M.0"
 
@@ -44,6 +45,7 @@ SubmitSMD:
   experiment: "{{ experiment }}"
   #stn: 0
   directory: "/sdf/scratch/users/d/dorlhiac/"
+  psdm_dir: "{{ EXPERIMENT_DIR }}/scratch/dorlhiac"
   #config: "mfx_cctbx"
   #gather_interval: 25
   #norecorder: False
@@ -69,6 +71,12 @@ SubmitSMD:
   detnames: ["epix10k2M"]
   #epicsPV: []
   #ttCalib: []
+  getPressioCompression:
+    epix10k2M:
+      compressor_id: "sz3"
+      # Specific arguments vary depending on compressor_id
+      compressor_args:
+        abs_error_bound: 10
   # Provide detector image sum algorithms.
   # If detSumAlgos is not defined, it will default to calib, calib_dropped and
   # calib_dropped_square for every detector. You can add processing algorithms for

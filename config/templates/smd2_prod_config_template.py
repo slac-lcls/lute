@@ -151,7 +151,7 @@ def get_azav(run):
 {% endif %}
 
 {%- if getAzIntPyFAIParams is defined and getAzIntPyFAIParams %}
-def getAzIntPyFAIParams(run):
+def get_azav_pyfai(run):
     if isinstance(run,str):
         run=int(run)
     ret_dict = {}
@@ -188,6 +188,34 @@ def get_sum_algos(run):
     if run > 0:
 {% for detector, params in detSumAlgos.items() %}
         ret_dict['{{ detector }}'] = {{ params }}
+{% endfor %}
+    return ret_dict
+{% endif %}
+
+{%- if getPressioCompression is defined and getPressioCompression %}
+def get_pressio_compression(run):
+    if isinstance(run,str):
+        run=int(run)
+    ret_dict = {}
+    if run>0:
+        pressio_dict = {}
+{% for detector, params in getPressioCompression.items() %}
+        {%- if 'compressor_id' in params %}
+        compressor_id = "{{ params['compressor_id'] }}"
+        {%- if 'compressor_args' in params and 'abs_error_bound' in params['compressor_args'] %}
+        abs_error_bound = {{ params['compressor_args']['abs_error_bound'] }}
+        {%- else %}
+        abs_error_bound = 10
+        {% endif %}
+        pressio_dict['pressio_config'] = {
+            "compressor_id": compressor_id,
+            "compressor_config": {
+                f"{compressor_id}:abs_error_bound": abs_error_bound,
+                f"{compressor_id}:metric": "size",
+            }
+        }
+        ret_dict["{{ detname }}"] = pressio_dict
+        {% endif %}
 {% endfor %}
     return ret_dict
 {% endif %}
