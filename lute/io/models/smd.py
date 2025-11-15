@@ -27,7 +27,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Union, List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic import (
     BaseModel,
@@ -285,6 +285,21 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 None, description="Corrections for each mask/ROI."
             )
 
+        class PressioCompression(BaseModel):
+            class Sz3CompressorArgs(BaseModel):
+                abs_error_bound: Union[int, float] = Field(
+                    default=10,
+                    description="The bound on absolute error for the compression.",
+                )
+
+            compressor_id: Literal["sz3"] = Field(
+                default=None, description="The type of compressor to use."
+            )
+            compressor_args: Sz3CompressorArgs = Field(
+                default=Sz3CompressorArgs(),
+                description="Compressor specific arguments.",
+            )
+
         detnames: Optional[List[str]] = Field(
             None, description="List of detectors to process."
         )
@@ -356,6 +371,9 @@ class SubmitSMDParameters(ThirdPartyParameters):
         getAutocorrParams: Optional[Dict[str, AutocorrParams]] = Field(
             None,
             description="Dictionary of auto-correlation parameters by detector.",
+        )
+        getPressioCompression: Optional[Dict[str, PressioCompression]] = Field(
+            None, description="Per detector compression arguments."
         )
 
     _set_producer_template_parameters = template_parameter_validator(

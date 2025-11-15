@@ -1,6 +1,9 @@
 import argparse
+import os
 import pickle
+import shutil
 import zlib
+from pathlib import PosixPath
 from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Type, TypedDict
 
 import numpy as np
@@ -88,8 +91,7 @@ def write_timing(timestamp: int) -> TimingDef:
     return timing_data
 
 
-if __name__ == "__main__":
-
+def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="Xtc2 writer", description="Write received file as Xtc2 using psana2"
     )
@@ -155,8 +157,8 @@ if __name__ == "__main__":
     calib_serial_num: str = "detnum"
     calib_detectors: Dict[str, DetectorDef] = {}
     epics_alg: AlgDef = AlgDef("raw", 2, 0, 0)
-    epics_det: DetectorDef = DetectorDef("epics", "epics", "detnum1234")
-    epics_def: Dict[str, Tuple[Type, int]] = {}
+    # epics_det: DetectorDef = DetectorDef("epics", "epics", "detnum1234")
+    # epics_def: Dict[str, Tuple[Type, int]] = {}
 
     # Base epicsinfo (for psana compat)
     epicsinfo_det: DetectorDef = DetectorDef("epicsinfo", "epicsinfo", "detnum1234")
@@ -186,7 +188,7 @@ if __name__ == "__main__":
     }
     namesId["timing"] = len(namesId)
     timing: Optional[config.Detector] = None
-    num_events = int(zmq_recv.zmq_socket.recv_string())
+    # num_events = int(zmq_recv.zmq_socket.recv_string())
     # This will be sent before anything else - contains rank and type
     # of all the information to be stored for the detector
     # detname: {field: (type, rank)}
@@ -303,7 +305,6 @@ if __name__ == "__main__":
                 for detname, det_consts in obj["calib_const"].items():
                     if detname == "timestamp":
                         continue
-                    keys: List[str] = list(det_consts.keys())
                     for const_name, constants in det_consts.items():
                         prefixed_name = f"{detname}_{const_name}"
                         detector = calib_detectors[prefixed_name]
@@ -382,3 +383,23 @@ if __name__ == "__main__":
     print("[XTC2 Writer]: Complete")
     xtc2file.close()
     zmq_recv.close()
+
+    # Write smalldata
+    xtc_path: PosixPath = PosixPath(args.filename)
+    xtc_folder: PosixPath = xtc_path.parent.absolute()
+    smalldata_dir: PosixPath = xtc_folder / "smalldata"
+
+    smalldata_dir.mkdir(parents=True, exist_ok=True)
+
+    xtc_name: str = xtc_path.stem
+    smd_name: str = str(xtc_folder / xtc_name)
+    cur_dir: str = os.path.abspath(os.curdir)
+    # This writes the smalldata as smd.xtc2 in current dir - no option to set output file
+    os.chdir(xtc_folder)
+    os.system(f"smdwriter -f {args.filename}")
+    shutil.move("smd.xtc2", smd_name)
+    os.chdir(cur_dir)
+
+
+if __name__ == "__main__":
+    main()
