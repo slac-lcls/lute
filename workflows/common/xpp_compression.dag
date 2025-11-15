@@ -1,0 +1,7 @@
+!LUTE_DAG
+task_name: "ConvertXtc1to2"
+slurm_params: ""
+next:
+- task_name: "SmallDataProducerSpack"
+  slurm_params: ""
+  next: []
