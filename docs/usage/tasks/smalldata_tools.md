@@ -1,4 +1,31 @@
 # Running smalldata_tools - `SubmitSMD`
+## Command-line help
+
+As a reminder, the `lute_help` command-line utility may be used to inspect the full set of command-line arguments. After sourcing the activation script upon building LUTE you will have the utility in your PATH.
+
+```bash
+# Assume the current working directory is the top of the LUTE repo, and the build
+# script was run
+> source install/bin/activate_installation
+> lute_help -T <task>
+```
+
+For help on smalldata_tools, you can run:
+
+```bash
+> lute_help -T SubmitSMD
+# ...
+
+ROIParams:
+ROI (array)
+	Definition of ROIs, can define multiple.
+
+writeArea (boolean) - Default: False
+	Whether to write out the area image of the ROI.
+
+# ...
+```
+
 ## Managed `Task`s
 smalldata_tools (via the `Task` `SubmitSMD`) can be run in various environments using different **managed** `Task`s:
 
@@ -7,11 +34,14 @@ smalldata_tools (via the `Task` `SubmitSMD`) can be run in various environments 
 - `SmallDataProducerSpack`: Run the psana2 smalldata_tools production, **in the spack environment**. This is required for compression features.
 
 ## Configuration
+
 The starting YAML for smalldata_tools may look like:
 
 ```yaml
 SubmitSMD:
   # Command line arguments
+  #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
+  #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
   #np: 5
   #producer: "/path/to/producer"
   #run: "{{ run }}"
@@ -70,17 +100,27 @@ SubmitSMD:
   #    - "calib_skipFirst_thresADU1"
   #    - "calib_skipFirst_max"
   #getROIs:
-  #  epix10k2M:   # Change to detector name
+  #  jungfrau1M:   # Change to detector name
   #    - ROIs: [[[1, 2], [157, 487], [294, 598]]]
+  #      #name: "abcd" # Providing a name is only required if you are creating multiple ROIs
   #      writeArea: True   # Whether to save ROI, if False, save sum but not img.
   #      thresADU: None
+  #      calcPars: True
   #getAzIntParams:
-  #  Rayonix:
+  #  jungfrau:
   #    eBeam: 18
   #    center: [87526.79161840, 92773.3296889500]
   #    dis_to_sam: 80.0
   #    tx: 0
   #    ty: 0
+  #    ADU_per_Photon: 1.0
+  #    phiBins: 1
+  #    qbin: 5e-3
+  #    thresRms: null
+  #    thresADUhigh: null
+  #    geomCorr: true
+  #    polCorr: true
+  #    userMask: "/path/to/numpy_array.
   #getAzIntPyFAIParams:
   #  Rayonix:
   #    pix_size: 176e-6
@@ -136,6 +176,8 @@ The following parameters control the behaviour of the job submission:
 
 ```yaml
   # Command line arguments
+  #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
+  #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
   #np: 5
   #producer: "/path/to/producer"
   #run: "{{ run }}"
@@ -171,6 +213,84 @@ As mentioned, in normal operation (in the context of a workflow, or SLURM submis
 
 You may also want to specify `config` if you have multiple possible configuration files to use.
 
+The options for MPI resource mappings may be useful but care should be taken when modifying them:
+
+- `map_by` selects how MPI maps the ranks to various resources (cores, sockets).
+- `bind_to` changes how MPI then **restricts** (i.e. binds) the ranks to those resources.
+
 ### Production parameters
 
-[WIP]
+#### ROI Selection: `getROIs`
+
+One or more ROIs can be defined on a per detector basis using the parameters defined in this block:
+
+```yaml
+  getROIs:
+    jungfrau1M:   # Change to detector name
+      - ROI: [[[1, 2], [157, 487], [294, 598]]]
+        #name: "abcd" # Providing a name is only required if you are creating multiple ROIs
+        writeArea: True   # Whether to save ROI, if False, save sum but not img.
+        thresADU: None
+        calcPars: True
+```
+
+Note that under each detector there is a **list** of dictionaries because multiple ROIs can be defined. For each ROI, the parameters are as follows:  
+
+- `ROI`: This defines the ROI. The format is a list of lists, where the inner lists define a set of indices for each dimension of the array of the data that the ROI will span. E.g. `[[1,2],[157,487],[294,598]]` defines an ROI spanning 1-2 (so the index 1) of the first dimension, 157-487 of the second dimension and 294-598 of the third dimension.
+- `name`: Provides a name for the ROI. There will be a default name; however, if you are defining multiple ROIs you should provide a unique name for each of them, otherwise they will overwrite each other.
+- `thresADU`: A threshold to add to the ROI.
+- `calcPars`: Whether to output some summary statistics (mean, max, etc.) along with the ROI.
+- `writeArea`: A boolean indicating whether to write out the area, or just the sum of the ROI.
+
+#### Azimuthal integration: `getAzIntParams` and `getAzIntPyFAIParams`
+
+Two algorithms for azimuthal integration are provided, the home grown implementation via `getAzIntParams` and the PyFAI implementation using `getAzIntPyFAIParams`. The two can be run simultaneously if really needed.
+
+```yaml
+  #getAzIntParams:
+  #  jungfrau:
+  #    eBeam: 18
+  #    center: [87526.79161840, 92773.3296889500]
+  #    dis_to_sam: 80.0
+  #    tx: 0
+  #    ty: 0
+  #    ADU_per_Photon: 1.0
+  #    phiBins: 1
+  #    qbin: 5e-3
+  #    thresRms: null
+  #    thresADUhigh: null
+  #    geomCorr: true
+  #    polCorr: true
+  #    userMask: "/path/to/numpy_array.
+  #getAzIntPyFAIParams:
+  #  Rayonix:
+  #    pix_size: 176e-6
+  #    ai_kwargs:
+  #      dist: 1
+  #      poni1: 960 * 1.76e-4
+  #      poni2: 960 * 1.76e-4
+  #    npts: 512
+  #    int_units: "2th_deg"
+  #    return2d: False
+```
+
+#### Compression Verification
+
+Via libpressio (if using the `SmallDataProducerSpack` **managed** `Task` with the spack environment) a simple compression/decompression operation is provided. This will compress and immediately decompress the data before performing any other operations. The purpose of this is to provide a method for verifying whether the compression has any effect on the resultant output data. The configuration is as follows:
+
+```yaml
+  getPressioCompression:
+    epix10k2M:
+      compressor_id: "sz3"
+      # Specific arguments vary depending on compressor_id
+      compressor_args:
+        abs_error_bound: 10
+```
+
+These options are again provided per detector. The first option is the `compressor_id`. This is currently only `sz3`, however additional compressors may be supported in the future.
+
+For the specific compressor selected a set of arguments may be provided under `compressor_args`.
+
+- For `sz3` the following arguments are supported:
+
+  - `abs_error_bound`: Provides the absolute bound on the error for the lossy compression.

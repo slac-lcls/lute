@@ -71,7 +71,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
             )
 
         class ROIParams(BaseModel):
-            ROIs: Optional[List[List[List[int]]]] = Field(
+            ROI: Optional[List[List[List[int]]]] = Field(
                 description="Definition of ROIs, can define multiple."
             )
 
@@ -372,8 +372,18 @@ class SubmitSMDParameters(ThirdPartyParameters):
             None,
             description="Dictionary of auto-correlation parameters by detector.",
         )
+
         getPressioCompression: Optional[Dict[str, PressioCompression]] = Field(
             None, description="Per detector compression arguments."
+        )
+
+        detSumAlgos: Optional[Dict[str, List[str]]] = Field(
+            None,
+            description=(
+                "Detector sum algorithms. Can add a key for `all` to apply the algorithm "
+                "to all detectors, in addition to providing algorithms for each detector "
+                "individually."
+            ),
         )
 
     _set_producer_template_parameters = template_parameter_validator(
@@ -387,9 +397,15 @@ class SubmitSMDParameters(ThirdPartyParameters):
         flag_type="-",
     )
     # This will interfere with affinities set by executor -- need smarter handling
-    # map_by: str = Field(
-    #    "core", description="MPI rank mapping.", flag_type="--", rename_param="map-by"
-    # )
+    map_by: Optional[str] = Field(
+        None, description="MPI rank mapping.", flag_type="--", rename_param="map-by"
+    )
+    bind_to: Optional[str] = Field(
+        None,
+        description="MPI rank to resource binding.",
+        flag_type="--",
+        rename_param="bind-to",
+    )
     p_arg1: str = Field(
         "python", description="Executable to run with mpi (i.e. python).", flag_type=""
     )

@@ -1,4 +1,43 @@
 # Converting XTC1 to XTC2 Files - `ConvertXtc1to2`
+## Command-line help
+
+As a reminder, the `lute_help` command-line utility may be used to inspect the full set of command-line arguments. After sourcing the activation script upon building LUTE you will have the utility in your PATH.
+
+```bash
+# Assume the current working directory is the top of the LUTE repo, and the build
+# script was run
+> source install/bin/activate_installation
+> lute_help -T <task>
+```
+
+For help on the conversion `Task`, you can run:
+
+```bash
+> lute_help -T ConvertXtc1to2
+# ...
+
+ConvertXtc1to2
+--------------
+Parameters for the xtc conversion Task.
+
+
+Required Parameters:
+--------------------
+lute_config (AnalysisHeader)
+	Unknown description.
+
+geometry (string)
+	Geometry file
+
+output_file (string)
+	Where to write the output XTC2 file.
+
+xtc1_access_pattern (object)
+	Provides information for how to access the data in XTC1. The top level keys will be used as the detector names in the XTC2 data.
+
+# ...
+```
+
 ## Managed `Task`s
 There is currently only 1 **managed** `Task` that runs this specific `Task`: `Xtc1to2Converter`. It runs in either the psana1 or psana2 base environment since it will be launch and manage the psana1 and psana2 environments separately to control the reading and writing for the conversion process.
 

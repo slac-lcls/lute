@@ -246,4 +246,4 @@ epicsOncePV = []
 # psplot config
 ##########################################################
 
-import psplot
+# import psplot
