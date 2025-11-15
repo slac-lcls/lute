@@ -96,7 +96,7 @@ SubmitSMD:
       ty: 0
   # Compression arguments. Comment this entire block if no compression wanted
   getPressioCompression:
-    epix10k2M:
+    jungfrau1M_alcove:
       compressor_id: "sz3"
       # Specific arguments vary depending on compressor_id
       compressor_args:
