@@ -334,7 +334,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
             None, description="Integrating detector configuration. LCLS2 only."
         )
 
-        getROIs: Optional[Dict[str, ROIParams]] = Field(
+        getROIs: Optional[Dict[str, List[ROIParams]]] = Field(
             None, description="Dictionary of ROI parameters by detector."
         )
 
