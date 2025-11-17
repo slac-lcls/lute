@@ -125,7 +125,18 @@ def main() -> None:
     MEMSIZE: int = 640000000
     outbuf: bytearray = bytearray(MEMSIZE)
 
-    # Open output file for writing
+    # Open output file for writing, but check directory structure
+    hutch: str = args.experiment[:3]
+    required_pattern: str = f"{hutch}/{args.experiment}/xtc"
+    if required_pattern not in args.filename:
+        raise RuntimeError(
+            f"Output directory must contain {required_pattern}. Check `output_file` "
+            "in the configuration YAML!"
+        )
+    xtc_path: PosixPath = PosixPath(args.filename)
+    xtc_dir: PosixPath = xtc_path.parent.absolute()
+    xtc_dir.mkdir(parents=True, exist_ok=True)
+
     xtc2file: BinaryIO = open(args.filename, "wb")
 
     # Create config, algorithm, and detector
@@ -385,17 +396,14 @@ def main() -> None:
     zmq_recv.close()
 
     # Write smalldata
-    xtc_path: PosixPath = PosixPath(args.filename)
-    xtc_folder: PosixPath = xtc_path.parent.absolute()
-    smalldata_dir: PosixPath = xtc_folder / "smalldata"
-
+    smalldata_dir: PosixPath = xtc_dir / "smalldata"
     smalldata_dir.mkdir(parents=True, exist_ok=True)
 
     xtc_name: str = xtc_path.stem
-    smd_name: str = str(xtc_folder / xtc_name)
+    smd_name: str = str(xtc_dir / xtc_name)
     cur_dir: str = os.path.abspath(os.curdir)
     # This writes the smalldata as smd.xtc2 in current dir - no option to set output file
-    os.chdir(xtc_folder)
+    os.chdir(xtc_dir)
     os.system(f"smdwriter -f {args.filename}")
     shutil.move("smd.xtc2", smd_name)
     os.chdir(cur_dir)
