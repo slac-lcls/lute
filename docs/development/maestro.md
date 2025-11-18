@@ -122,6 +122,15 @@ There are currently two `Launcher` implementations. They are selected via the `L
 - The `PythonLauncher` runs the job steps directly calling the `python` interpreter - this is a blocking call.
 - The `SlurmLauncher` submits the `submit_slurm.sh` batch script to launch the `JobStep` as a batch job.
 
+### `Handler` implementations
+
+Side-by-side with the actual `Launcher` implementations a set of `Handler`s have been defined that implement the REST API. These are used by both the `PythonLauncher` and `SlurmLauncher`.
+
+- `JsonStatusHandler`: Implements the callback for status updates from the `Executor`.
+- `JsonLogHandler`: Implements the callback for log updates from the `Executor`. If the unbuffered logs option is passed to the launch script then this handler will print log messages as they come in.
+
+As both `Launcher` implementations use (and expect) the HTTP server, the `m_expects_server` bool is set to `true` for the implementations. Setting this boolean allows the `Manager` to register the callback handlers with the HTTP server.
+
 ## `ManagerParameters` and `Manager` creation
 
 A number of constructors are provided for the `Manager` class; however, the most complete (and the one accessible via Python bindings) is the one that defines a set of `ManagerParameters`. This allows for full configuration of the workflow manager. The parameters object is reproduced below.
