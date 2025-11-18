@@ -737,7 +737,12 @@ def _add_parameters(
         # Type checking may not work because of the parameters hack to support different
         # environments -- so check the class name... not great...
         if raw_val.__class__.__name__ == "TemplateParameters":
-            json_val = json.dumps(raw_val.params)
+            if hasattr(raw_val.params, "dict"):
+                json_val = json.dumps(raw_val.params.dict())
+            else:
+                json_val = json.dumps(raw_val.params)
+        elif hasattr(raw_val, "dict"):
+            json_val = json.dumps(raw_val.dict())
         else:
             json_val = json.dumps(raw_val)
         param_entries: Dict[str, Any] = {

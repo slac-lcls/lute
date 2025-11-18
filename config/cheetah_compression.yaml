@@ -16,8 +16,6 @@ XTC2_FILE_NAME: "{{ experiment }}-r{{ run:04d }}-s000-c000.xtc2"
 DET_CALIB_DIR: "calib/Epix10ka2M::CalibV1/MfxEndstation.0:Epix10ka2M.0"
 
 RunCheetah:                       # All variables are given as strings
-  exp: "{{ experiment }}"         # Experiment name
-  run: "{{ run }}"                # Run number
   executable: mpirun
   #bind_to: "core"                 # For compression may want to uncomment and set to `none`
   n_processes: 6                  # Number of processes to launch
