@@ -541,15 +541,16 @@ class BaseExecutor(ABC):
                 if key in os.environ and os.getenv(key) == value:
                     # Add identical items first
                     new_environment[key] = value
-                elif key == "PYTHONPATH":
+                elif key in ("PYTHONPATH", "PATH"):
                     # Handle PYTHONPATH specifically if above doesn't catch it
-                    curr: Optional[str] = os.getenv("PYTHONPATH")
+                    curr: Optional[str] = os.getenv(key)
                     if curr is not None:
                         if curr in value:
                             new_environment[key] = value
                         else:
                             # Not in PYTHONPATH, make sure to add it in
-                            new_environment[key] = f"{value}:{curr}"
+                            new_environment[key] = curr
+                            new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
 
         # Until we make LUTE installable... Need to make sure this is available
         # for first-party Tasks, regardless of the directory they run in if using
