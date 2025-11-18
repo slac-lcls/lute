@@ -7,6 +7,8 @@
 
 Creating a new `Task` of either type generally involves the same steps, although for first-party `Task`s, the analysis code must of course also be written. Due to this difference, as well as additional considerations for parameter handling when dealing with "third-party" `Task`s, the "first-party" and "third-party" `Task` integration cases will be considered separately.
 
+**Note:** Strictly speaking, the LUTE execution framework handles **three** cases. When dealing with first-party `Task`s, the case when the `Task` runs in the same environment as the `Executor` and in a different environment, are handled separately. From the perspective of implementing a new `Task` there aren't many differences, however, and these two cases are both covered in the first-party `Task` documentation.
+
 ## Build System
 
 LUTE currently uses [meson](https://mesonbuild.com) for building the package, along with [meson-python](https://mesonbuild.com/meson-python/). Within each sub-directory for the Python package you will find a `meson.build` file, it will have a structure similar to the following:
