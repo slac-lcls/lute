@@ -40,9 +40,6 @@ class ConvertXtc1to2Parameters(TaskParameters):
 
     mode: str = Field(default="idx", description="Psana 1 access mode")
     node_id: str = Field(default="1", description="Node ID for the detector")
-    geometry: str = Field(
-        description="Geometry file",
-    )
     eventfile: str = Field(
         default="",
         description="CSV file with event numbers. Otherwise will process all events.",

@@ -2,7 +2,7 @@
 ---
 title: "Config to run smalldata_tools on converted XTC1 files."
 experiment: "xppx1003621"
-#run: "27"
+run: "{{ $RUN_NUM }}"
 date: "2025/11/14"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 6000
