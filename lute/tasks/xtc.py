@@ -61,7 +61,7 @@ class ConvertXtc1to2(Task):
         assert lute_location
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
+            f"python3 {lute_location}lib/python3.9/site-packages/lute/tasks/util/xtc_push.py "
             f"-a '{json_access_pattern}' -e {exp} "
             f"-r {par.lute_config.run} -m {par.mode} "
         )
@@ -79,7 +79,7 @@ class ConvertXtc1to2(Task):
         logger.debug("Starting [XTC2 Writer] in psana 2")
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
-            f"python3 {lute_location}/lute/tasks/util/xtc_pull.py "
+            f"python3 {lute_location}lib/python3.9/site-packages/lute/tasks/util/xtc_pull.py "
             f"-d {detname_csv} -e {exp} "
             f"-f {par.output_file} -n {par.node_id} -r {run} "
         )
