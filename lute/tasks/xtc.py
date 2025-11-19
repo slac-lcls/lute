@@ -12,12 +12,14 @@ Based on Mona's converter:
 import json
 import logging
 import os
+import signal
 import subprocess
 import time
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
+from lute.tasks.dataclasses import TaskStatus
 from lute.tasks.task import Task
 
 logger: logging.Logger = get_logger(__name__)
@@ -61,16 +63,16 @@ class ConvertXtc1to2(Task):
         assert lute_location
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
-            f"python3 {lute_location}lib/python3.9/site-packages/lute/tasks/util/xtc_push.py "
+            f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
             f"-a '{json_access_pattern}' -e {exp} "
-            f"-r {par.lute_config.run} -m {par.mode} "
+            f"-r {par.lute_config.run} "
         )
         if par.eventfile != "":
             zmq_process1_cmd += f"-f {par.eventfile} "
         elif par.nevents is not None:
             zmq_process1_cmd += f"-n {par.nevents}"
 
-        result_p1: subprocess.Popen = self._start_zmq_proc(
+        push_proc: subprocess.Popen = self._start_zmq_proc(
             zmq_process1_cmd, "[XTC1 Sender]"
         )
 
@@ -79,21 +81,50 @@ class ConvertXtc1to2(Task):
         logger.debug("Starting [XTC2 Writer] in psana 2")
         zmq_process2_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
-            f"python3 {lute_location}lib/python3.9/site-packages/lute/tasks/util/xtc_pull.py "
+            f"python3 {lute_location}/lute/tasks/util/xtc_pull.py "
             f"-d {detname_csv} -e {exp} "
             f"-f {par.output_file} -n {par.node_id} -r {run} "
         )
-        result_p2: subprocess.Popen = self._start_zmq_proc(
+        pull_proc: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"
         )
 
-        out_p1, err_p1 = result_p1.communicate()
-        out_p2, err_p2 = result_p2.communicate()
+        while True:
+            push_running: bool = self._is_running(push_proc)
+            pull_running: bool = self._is_running(pull_proc)
 
-        logger.debug(f"[XTC1 Sender] Output::\n{out_p1}")
-        logger.error(f"[XTC1 Sender] Error:\n{err_p1}")
-        logger.debug(f"[XTC2 Writer] Output:\n{out_p2}")
-        logger.error(f"[XTC2 Writer] Error::\n{err_p2}")
+            if not push_running and not pull_running:
+                break
+
+            if not push_running:
+                if pull_running and push_proc.returncode:
+                    self._result.task_status = TaskStatus.FAILED
+                    os.kill(pull_proc.pid, signal.SIGINT)
+            elif not pull_running:
+                if push_running and pull_proc.returncode:
+                    self._result.task_status = TaskStatus.FAILED
+                    os.kill(push_proc.pid, signal.SIGINT)
+
+            push_stdout, push_stderr = self._read_stdout_stderr(push_proc)
+            pull_stdout, pull_stderr = self._read_stdout_stderr(pull_proc)
+            if push_stdout is not None:
+                logger.info(f"[XTC1 Sender] {push_stdout}")
+            if push_stderr is not None:
+                logger.info(f"[XTC1 Sender] {push_stderr}")
+
+            if pull_stdout is not None:
+                logger.info(f"[XTC2 Writer] {pull_stdout}")
+            if pull_stderr is not None:
+                logger.info(f"[XTC2 Writer] {pull_stderr}")
+
+            time.sleep(0.005)
+
+        if pull_proc.returncode or push_proc.returncode:
+            self._result.task_status = TaskStatus.FAILED
+            logger.error("Error during the conversion process.")
+        else:
+            self._result.task_status = TaskStatus.COMPLETED
+            logger.info("Conversion completed.")
 
     def _start_zmq_proc(self, cmd: str, name: str) -> subprocess.Popen:
         """Helper function to source the correct conda env and spawn a subprocess."""
@@ -105,3 +136,14 @@ class ConvertXtc1to2(Task):
         logger.debug(f"Command: {cmd}")
 
         return process
+
+    def _is_running(self, proc: subprocess.Popen) -> bool:
+        return proc.poll() is None
+
+    def _read_stdout_stderr(
+        self, proc: subprocess.Popen
+    ) -> Tuple[Optional[str], Optional[str]]:
+        stdout: Optional[str] = proc.stdout.read() if proc.stdout is not None else None
+        stderr: Optional[str] = proc.stderr.read() if proc.stderr is not None else None
+
+        return stdout, stderr

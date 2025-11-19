@@ -38,7 +38,6 @@ class ConversionSpecification(BaseModel):
 class ConvertXtc1to2Parameters(TaskParameters):
     """Parameters for the xtc conversion Task."""
 
-    mode: str = Field(default="idx", description="Psana 1 access mode")
     node_id: str = Field(default="1", description="Node ID for the detector")
     eventfile: str = Field(
         default="",
