@@ -236,10 +236,6 @@ def main() -> None:
             print(f"Error: File not found: {args.eventfile}, using test numbers.")
             event_num_list = [290, 291]
 
-    total_events: int = len(event_num_list)
-
-    zmq_send.zmq_socket.send_string(str(total_events))
-
     data_type_info: Dict[str, Dict[str, Tuple[Type, int]]] = {}
     send_type_info: bool = True
 

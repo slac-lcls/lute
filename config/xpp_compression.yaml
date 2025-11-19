@@ -43,7 +43,8 @@ SubmitSMD:
   run: "{{ run }}"
   experiment: "{{ experiment }}"
   #stn: 0
-  directory: "/sdf/data/lcls/ds/xpp/xppx1003621/hdf5/conversion"
+  #directory: "/sdf/data/lcls/ds/xpp/xppx1003621/hdf5/no_compression"
+  directory: "/sdf/data/lcls/ds/xpp/xppx1003621/hdf5/with_compression"
   psdm_dir: "{{ XTC2_FILE_PATH }}"
   #config: "mfx_cctbx"
   #gather_interval: 25
