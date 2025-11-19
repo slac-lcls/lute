@@ -400,13 +400,12 @@ def main() -> None:
     smalldata_dir.mkdir(parents=True, exist_ok=True)
 
     xtc_name: str = xtc_path.stem
-    smd_name: str = str(xtc_dir / xtc_name) + ".smd.xtc2"
+    smd_name: str = str(smalldata_dir / xtc_name) + ".smd.xtc2"
     cur_dir: str = os.path.abspath(os.curdir)
     # This writes the smalldata as smd.xtc2 in current dir - no option to set output file
     os.chdir(xtc_dir)
     os.system(f"smdwriter -f {args.filename}")
-    full_smd_path: str = str(smalldata_dir / smd_name)
-    shutil.move("smd.xtc2", full_smd_path)
+    shutil.move("smd.xtc2", smd_name)
     os.chdir(cur_dir)
 
 

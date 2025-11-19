@@ -108,14 +108,14 @@ class ConvertXtc1to2(Task):
             push_stdout, push_stderr = self._read_stdout_stderr(push_proc)
             pull_stdout, pull_stderr = self._read_stdout_stderr(pull_proc)
             if push_stdout is not None:
-                logger.info(f"[XTC1 Sender] {push_stdout}")
+                print(f"[XTC1 Sender] {push_stdout}", flush=True)
             if push_stderr is not None:
-                logger.info(f"[XTC1 Sender] {push_stderr}")
+                print(f"[XTC1 Sender] {push_stderr}", flush=True)
 
             if pull_stdout is not None:
-                logger.info(f"[XTC2 Writer] {pull_stdout}")
+                print(f"[XTC2 Writer] {pull_stdout}", flush=True)
             if pull_stderr is not None:
-                logger.info(f"[XTC2 Writer] {pull_stderr}")
+                print(f"[XTC2 Writer] {pull_stderr}", flush=True)
 
             time.sleep(0.005)
 
