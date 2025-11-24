@@ -209,7 +209,6 @@ def main() -> None:
     detector: config.Detector
     detectors: Dict[str, config.Detector] = {}
     namesId["epics"] = len(namesId)
-    add_dummy_events: bool = True
     while True:
         obj = zmq_recv.recv_zipped_pickle()
         # Begin timestamp is needed (we calculate this from the first L1Accept)
@@ -356,22 +355,6 @@ def main() -> None:
         else:
             # Create L1Accept
             real_timestamp: int = obj["timestamp"]
-            if add_dummy_events:
-                dummy_timestamp = real_timestamp - 120
-                for i in range(120):
-                    d0 = DgramEdit(
-                        transition_id=TransitionId.L1Accept,
-                        config_dgramedit=config,
-                        ts=dummy_timestamp,
-                    )
-                    if timing is not None:
-                        timing_data = write_timing(dummy_timestamp)
-                        for attr in timing_data:
-                            setattr(timing.raw, attr, timing_data[attr])  # type: ignore
-                        d0.adddata(timing.raw)
-                    dummy_timestamp += 1
-                    save_dgramedit(d0, outbuf, xtc2file)
-                add_dummy_events = False
             d0 = DgramEdit(
                 transition_id=TransitionId.L1Accept,
                 config_dgramedit=config,
