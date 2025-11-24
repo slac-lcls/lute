@@ -7,6 +7,18 @@ from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
 from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
+class SZCompressorParameters(BaseModel):
+    compressor: Literal["qoz", "sz3"] = Field(
+        "qoz", description='Compression algorithm ("qoz" or "sz3")'
+    )
+    abs_error: float = Field(10.0, description="Absolute error bound")
+    bin_size: int = Field(2, description="Bin size")
+    roi_window_size: int = Field(
+        9,
+        description="Default window size",
+    )
+
+
 class FindPeaksPyAlgosParameters(TaskParameters):
     """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
 
@@ -17,17 +29,6 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     class Config(TaskParameters.Config):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
-
-    class SZCompressorParameters(BaseModel):
-        compressor: Literal["qoz", "sz3"] = Field(
-            "qoz", description='Compression algorithm ("qoz" or "sz3")'
-        )
-        abs_error: float = Field(10.0, description="Absolute error bound")
-        bin_size: int = Field(2, description="Bin size")
-        roi_window_size: int = Field(
-            9,
-            description="Default window size",
-        )
 
     outdir: str = Field(
         description="Output directory for cxi files",
@@ -148,16 +149,6 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
 
         result_from_params: str = ""
         """Defines a result from the parameters. Use a validator to do so."""
-
-    class SZParameters(BaseModel):
-        compressor: Literal["qoz", "sz3"] = Field(
-            "qoz", description="SZ compression algorithm (qoz, sz3)"
-        )
-        binSize: int = Field(2, description="SZ compression's bin size paramater")
-        roiWindowSize: int = Field(
-            2, description="SZ compression's ROI window size paramater"
-        )
-        absError: float = Field(10, descriptionp="Maximum absolute error value")
 
     executable: str = Field("mpirun", description="MPI executable.", flag_type="")
     np: PositiveInt = Field(
@@ -286,7 +277,7 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
         ),
         description="Template information for the sz.json file",
     )
-    sz_parameters: SZParameters = Field(
+    sz_parameters: SZCompressorParameters = Field(
         description="Configuration parameters for SZ Compression", flag_type=""
     )
 
@@ -312,18 +303,18 @@ class FindPeaksPsocakeParameters(ThirdPartyParameters):
 
     @validator("sz_parameters", always=True)
     def set_sz_compression_parameters(
-        cls, sz_parameters: SZParameters, values: Dict[str, Any]
+        cls, sz_parameters: SZCompressorParameters, values: Dict[str, Any]
     ) -> None:
         values["compressor"] = sz_parameters.compressor
-        values["binSize"] = sz_parameters.binSize
-        values["roiWindowSize"] = sz_parameters.roiWindowSize
+        values["binSize"] = sz_parameters.bin_size
+        values["roiWindowSize"] = sz_parameters.roi_window_size
         if sz_parameters.compressor == "qoz":
             values["pressio_opts"] = {
-                "pressio:abs": sz_parameters.absError,
+                "pressio:abs": sz_parameters.abs_error,
                 "qoz": {"qoz:stride": 8},
             }
         else:
-            values["pressio_opts"] = {"pressio:abs": sz_parameters.absError}
+            values["pressio_opts"] = {"pressio:abs": sz_parameters.abs_error}
         return None
 
     @root_validator(pre=False)

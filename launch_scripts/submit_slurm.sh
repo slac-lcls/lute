@@ -147,6 +147,7 @@ else
     # Running from installation
     source "${SCRIPT_DIR}/activate_installation"
     EXECUTABLE="$(which run_task)"
+    export LUTE_PATH="${LUTE_PATH}/lib/python3.9/site-packages"
 fi
 
 
@@ -164,31 +165,5 @@ if [[ $DEBUG ]]; then
     echo "Using socket ${LUTE_SOCKET}"
     echo "${CMD}"
 fi
-
-inform_manager() {
-    curl -d "{\"Worker\": \"${TASK}\", \"status\": \"${1}\"}" -X POST http://$LUTE_MANAGER_URL/status
-}
-
-cleanup() {
-    echo $LUTE_MANAGER_URL
-    inform_manager "${1}"
-    if [[ "${1}" == "TIMEDOUT" ]]; then
-        trap - 14
-        kill -s 14 "$$"
-    else
-        trap - 2 3 6 15
-        kill -s 15 "$$"
-    fi
-}
-# SIGINT: 2
-# SIGQUIT: 3
-# SIGABRT: 4
-# SIGALRM: 14
-# SIGTERM: 15
-trap 'cleanup TIMEDOUT' 14
-trap 'cleanup CANCELLED' 2 3 6 15
-
-
-STARTED_CMD="inform_manager 'STARTED'"
 
 sbatch $SLURM_ARGS --wrap "${CMD}"
