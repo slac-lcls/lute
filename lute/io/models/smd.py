@@ -529,7 +529,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
             base_path: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
             path: str
             is_daq2: bool
-            if values["psdm_dir"]:
+            if "psdm_dir" in values and values["psdm_dir"]:
                 # Assume we are only overriding SIT_PSDM_DATA if using converted xtc2
                 is_daq2 = True
             else:
@@ -563,7 +563,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
                 cfg = str(Path(values["producer"]).parent / f"prod_config_{hutch}.py")
             lute_template_cfg.output_path = cfg
             is_daq2: bool
-            if values["psdm_dir"]:
+            if "psdm_dir" in values and values["psdm_dir"]:
                 # Assume we are only overriding SIT_PSDM_DATA if using converted xtc2
                 is_daq2 = True
             else:
