@@ -526,8 +526,8 @@ class BaseExecutor(ABC):
             f'{sys.executable} -c "import os; print(dict(os.environ))"\n'
         )
         logger.info(f"Sourcing file {self._shell_source_script}")
-        subproc_env: Dict[str,str] = {}
-        for key,val in os.environ.items():
+        subproc_env: Dict[str, str] = {}
+        for key, val in os.environ.items():
             if "CONDA" not in key:
                 subproc_env[key] = val
         o, e = subprocess.Popen(
