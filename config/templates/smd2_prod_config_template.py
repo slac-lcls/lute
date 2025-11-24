@@ -1,22 +1,26 @@
 {%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
 {%- if data is mapping %}
 {%- for param_name, param_value in data.items() %}
-        {{ dict_name }}["{{ param_name }}"] = {{ param_value }}
+        {{ dict_name }}["{{ param_name }}"] = {{ param_value | pprint }}
 {%- endfor %}
         {% if add_to_ret -%}
         ret_dict["{{ detector }}"] = {{ dict_name }}
         {% endif %}
 {%- else %}
-{%- for data_dict in data %}
         # Create list of dicts for {{ detector }}
         {{ dict_name }}s = []
+
+{%- for data_dict in data %}
+        # Create a dict for this set
+        {{ dict_name }} = {}
 
 {{- step_parameters(dict_name, detector, data_dict, False) }}
         {{ dict_name }}s.append({{ dict_name }})
 
+{%- endfor %}
+
         # Add list of dicts for {{ detector }} to total dictionary
         ret_dict["{{ detector }}"] = {{ dict_name }}s
-{%- endfor %}
 {%- endif %}
 {%- endmacro -%}
 import numpy as np
@@ -69,7 +73,6 @@ def getROIs(run):
     ret_dict = {}
 
     if run > 0:
-        roi_dict = {}
 {% for detector, params in getROIs.items() %}
 {{- step_parameters("roi_dict", detector, params) }}
 {% endfor %}
@@ -246,4 +249,4 @@ epicsOncePV = []
 # psplot config
 ##########################################################
 
-# import psplot
+import psplot
