@@ -1,7 +1,11 @@
 {%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
 {%- if data is mapping %}
 {%- for param_name, param_value in data.items() %}
+        {% if param_value is none -%}
+        {{ dict_name }}["{{ param_name }}"] = None
+        {% else -%}
         {{ dict_name }}["{{ param_name }}"] = {{ param_value | pprint }}
+        {% endif %}
 {%- endfor %}
         {% if add_to_ret -%}
         ret_dict["{{ detector }}"] = {{ dict_name }}
