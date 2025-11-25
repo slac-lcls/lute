@@ -73,7 +73,7 @@ class AnalyzeSmallData(Task):
         if self._mpi_rank == 0:
             try:
                 self._total_num_events: int = len(self._smd_h5["event_time"][()])
-            except:
+            except KeyError:
                 self._total_num_events = len(self._smd_h5["timestamp"])
             quotient: int
             remainder: int
