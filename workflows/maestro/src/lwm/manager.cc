@@ -174,7 +174,7 @@ namespace LWM {
               std::cout << logfile << std::endl;
             }
           }
-          futures.erase(return_it);
+          return_it = futures.erase(return_it);
         } else {
           ++return_it;
           m_logger->trace("Waiting on Managed Task completion.");
