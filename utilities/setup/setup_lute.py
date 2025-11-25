@@ -96,6 +96,20 @@ def git_clone(repo: str, location: str, tag: str) -> None:
     os.chdir(cwd)
 
 
+def run_build_script(lute_path: str) -> None:
+    """Run the LUTE build script.
+
+    Args:
+        lute_path (str): The path to the LUTE installation to build.
+    """
+
+    cwd: str = os.getcwd()
+    os.chdir(lute_path)
+    cmd: List[str] = ["./build.sh"]
+    _run_subprocess_log(cmd)
+    os.chdir(cwd)
+
+
 def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
     """Install from a source directory to an optionally specified directory.
 
@@ -145,13 +159,13 @@ def inplace_sed(in_file: str, pattern: str) -> None:
 
 def modify_permissions(lute_path: str):
     """Recursively set permissions for a LUTE installation."""
-    os.chmod(lute_path, 0o755)
+    os.chmod(lute_path, 0o765)
     for root, dirs, files in os.walk(lute_path):
         for d in dirs:
-            os.chmod(os.path.join(root, d), 0o755)
+            os.chmod(os.path.join(root, d), 0o765)
 
         for f in files:
-            os.chmod(os.path.join(root, f), 0o755)
+            os.chmod(os.path.join(root, f), 0o765)
 
 
 def main() -> None:
@@ -194,11 +208,11 @@ def main() -> None:
         default="dev",
     )
     parser.add_argument(
-        "-w",
+        "-W",
         "--workflow",
         type=str,
         help=("Which analysis workflow to run. Defaults to smd_summaries."),
-        default="smd_summaries",
+        default="smd",
     )
     args: argparse.Namespace
     extra_args: List[str]  # May have additional SLURM arguments
@@ -214,18 +228,22 @@ def main() -> None:
     std_test_config: str
     if args.fresh_install:
         lute_path = f"{results_dir}/lute"
-        # pip_install will also create directories at lute_path
-        pip_install(os.path.realpath(f"{__file__}/../.."), lute_path)
+        git_clone("slac-lcls/lute", lute_path, args.version)
+        run_build_script(lute_path)
         modify_permissions(lute_path)
-        arp_executable = f"{lute_path}/bin/submit_launch_airflow.sh"
-        launch_executable = f"{lute_path}/bin/launch_airflow.py"
+        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
+        launch_executable = f"{lute_path}/install/bin/launch_slurm"
         py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
-        std_hutch_config = f"{lute_path}/lib/{py_ver}/site-packages/config/{hutch}.yaml"
-        std_test_config = f"{lute_path}/lib/{py_ver}/site-packages/config/test.yaml"
+        std_hutch_config = (
+            f"{lute_path}/install/lib/{py_ver}/site-packages/config/{hutch}.yaml"
+        )
+        std_test_config = (
+            f"{lute_path}/install/lib/{py_ver}/site-packages/config/test.yaml"
+        )
     else:
         lute_path = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
-        arp_executable = f"{lute_path}/launch_scripts/submit_launch_airflow.sh"
-        launch_executable = f"{lute_path}/launch_scripts/launch_airflow.py"
+        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
+        launch_executable = f"{lute_path}/install/bin/launch_slurm"
         std_hutch_config = f"{lute_path}/config/{hutch}.yaml"
         std_test_config = f"{lute_path}/config/test.yaml"
 
@@ -249,7 +267,13 @@ def main() -> None:
     inplace_sed(config_path, sed_pattern)
 
     database_setup(f"{lute_output_dir}/lute.db")  # Setup permissions on database
-    param_string: str = f"{launch_executable} -c {config_path} -w {args.workflow}"
+    full_workflow_path: str = f"{lute_output_dir}/{args.workflow}.dag"
+    if not os.path.exists(full_workflow_path):
+        included_wf_defn: str = f"{lute_path}/workflows/common/{args.workflow}.dag"
+        shutil.copy(included_wf_defn, full_workflow_path)
+    os.chmod(full_workflow_path, 0o666)
+
+    param_string: str = f"{launch_executable} -c {config_path} -W {full_workflow_path}"
 
     if args.debug:
         param_string = f"{param_string} --debug"
@@ -282,13 +306,13 @@ def main() -> None:
             logger.info("Exiting.")
             sys.exit(0)
     if "ntasks" not in extra_args_str:
-        ncores: int
-        if args.workflow in ("smd_xas", "smd_xss", "test"):
-            ncores = 2
-        elif args.workflow in ("smd_summaries", "smd_xes"):
-            ncores = 5
-        else:
-            ncores = 120
+        ncores: int = 120
+        # if args.workflow in ("smd_xas", "smd_xss", "test"):
+        #     ncores = 2
+        # elif args.workflow in ("smd_summaries", "smd_xes"):
+        #     ncores = 5
+        # else:
+        #     ncores = 120
         logger.warning(
             f"No tasks/cores provided. Defaulting to {ncores}. Any key to continue. "
             "Ctrl-C to exit."
@@ -303,6 +327,7 @@ def main() -> None:
     param_string = f"{param_string} {extra_args_str}"
 
     main_workflow: Dict[str, str]
+    # if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
     if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
         main_workflow = {
             "name": "lute_smd_summaries",
@@ -313,7 +338,7 @@ def main() -> None:
             "location": "S3DF",
             "parameters": param_string,
         }
-    elif 0:
+    elif args.workflow in ("smd", "bayfai"):
         # Replace eventually with workflows which use START_OF_RUN
         main_workflow = {
             "name": f"lute_{args.workflow}",
