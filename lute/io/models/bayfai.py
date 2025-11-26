@@ -105,8 +105,8 @@ class BayFAIParameters(TaskParameters):
             description="Size of the refinement space around best parameters.",
         )
 
-        seed: int = Field(
-            0,
+        seed: Optional[int] = Field(
+            None,
             description="Random seed for reproducibility.",
         )
 

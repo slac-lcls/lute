@@ -59,8 +59,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
-from scipy.ndimage import gaussian_filter1d  # type: ignore\
-from scipy.signal import find_peaks  # type: ignore
+from scipy.ndimage import gaussian_filter1d  # type: ignore
 from mpi4py import MPI
 
 from LCLSGeom.psana2.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL  # type: ignore
@@ -375,7 +374,7 @@ class BayFAIOpt2:
         self.powder = self.generate_powder(powder, detname, smooth)
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         non_zero_pixels = self.powder[self.powder > 0]
-        self.Imin = np.percentile(non_zero_pixels, 99)
+        self.Imin = np.percentile(non_zero_pixels, 95)
         self.calibrant = self.define_calibrant(calibrant)
         self.set_search_space(fixed)
 
@@ -909,9 +908,9 @@ class BayFAIOpt2:
         self.sg = sg
 
         if sg.geometry_refinement.data is None or len(sg.geometry_refinement.data) == 0:
-            residual = 1
-            sigma = np.ones(5)
-            score = -1.0
+            residual = 0.0
+            sigma = [1.0] * 5
+            score = 0.0
             size = 0
             is_min = False
             return residual, sigma, score, size, best_param, is_min
@@ -948,7 +947,7 @@ class BayFAIOpt2:
         beta=1.96,
         step=5,
         prior=True,
-        seed=0,
+        seed=None,
     ):
         """
         Run Bayesian Optimization on a subspace of fixed distance.
@@ -977,10 +976,11 @@ class BayFAIOpt2:
             Size of the refinement space around best parameters
         prior : bool
             Whether to sample initial points around the center or randomly
-        seed : int
+        seed : optional, int
             Random seed for reproducibility
         """
-        np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
 
         # 1. Create the search space
         X, X_norm = self.create_search_space(dist, center, bounds, res)
@@ -998,20 +998,22 @@ class BayFAIOpt2:
             bo_history["params"].append(X_samples[i])
             bo_history["scores"].append(y[i])
 
-        if np.all(y == 0):
+        if np.all(y == -1.0):
             result = {
                 "bo_history": bo_history,
                 "params": [dist, 0, 0, 0, 0, 0],
-                "residual": 0,
-                "score": 0,
+                "residual": 0.0,
+                "sigma": [1.0] * 5,
+                "score": 0.0,
+                "size": 0,
                 "best_idx": 0,
+                "is_min": False,
             }
             logger.warning(
                 f"All samples have score 0 for dist={dist}. Skipping Bayesian Optimization."
             )
             return result
 
-        y[np.isnan(y)] = 0
         if np.std(y) != 0:
             y_norm = (y - np.mean(y)) / np.std(y)
         else:
@@ -1082,7 +1084,7 @@ class BayFAIOpt2:
         beta=1.96,
         step=5,
         prior=True,
-        seed=0,
+        seed=None,
     ):
         """
         Run BayFAI optimization.
@@ -1113,7 +1115,7 @@ class BayFAIOpt2:
             Size of the refinement space around best parameters
         prior : bool
             Whether to sample initial points around the center or randomly
-        seed : int
+        seed : optional, int
             Random seed for reproducibility
         """
         dist = self.distribute_distances(center, res)
@@ -1158,8 +1160,8 @@ class BayFAIOpt2:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
             non_zeros = np.where(self.scan["size"] > 0)[0]
-            thrsh = np.percentile(self.scan["size"][non_zeros], 25)
-            not_enough = self.scan["size"] <= thrsh
+            thresh = np.percentile(self.scan["size"][non_zeros], 20)
+            not_enough = self.scan["size"] < thresh
             not_min = ~self.scan["is_min"]
             self.invalid = not_enough | not_min
             self.valid = np.where(~self.invalid)[0]
@@ -1257,7 +1259,7 @@ class BayFAIOpt2:
             Matplotlib axes
         """
         bo_history = self.scan["bo_history"]
-        iters = np.arange(len(bo_history[0]["scores"]))
+        iters = np.arange(len(bo_history[self.index]["scores"]))
         ax.plot(
             iters,
             bo_history[self.index]["scores"],
@@ -1749,16 +1751,12 @@ class BayFAIOpt2:
         ----------
         powder : np.ndarray
             Powder image
+        Imin : float
+            Minimum intensity threshold for identifying Bragg peaks
         detector : PyFAI(Detector)
             Corrected PyFAI detector object
         distance : float
             Refined distance
-        low_resolution : float, optional
-            Lowest resolution value, if available
-        high_resolution : float, optional
-            Highest resolution value, if available
-        border_resolution : float, optional
-            Border resolution value, if available
         plot : str
             Path to save plot
         """
@@ -1898,12 +1896,6 @@ class BayFAIOpt2:
             Corrected PyFAI detector object
         distance : float
             Refined distance
-        low_resolution : float, optional
-            Lowest resolution value, if available
-        high_resolution : float, optional
-            Highest resolution value, if available
-        border_resolution : float, optional
-            Border resolution value, if available
         plot : str
             Path to save plot
         """
