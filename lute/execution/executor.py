@@ -44,6 +44,7 @@ from typing import (
     Literal,
     Optional,
     Protocol,
+    Set,
     Tuple,
     Type,
     Union,
@@ -452,9 +453,17 @@ class BaseExecutor(ABC):
         self,
         env: Union[Dict[str, str], Callable[[], Dict[str, str]]],
         update_path: str = "prepend",
+        use_tenv_prefix: bool = False,
     ) -> None:
+        env_update: Dict[str, str]
         if callable(env):
-            env_update: Dict[str, str] = env()
+            raw_env_update: Dict[str, str] = env()
+            if use_tenv_prefix:
+                env_update = {
+                    f"LUTE_TENV_{key}": val for key, val in raw_env_update.items()
+                }
+            else:
+                env_update = raw_env_update
             self._analysis_desc.task_env.update(env_update)
             return
 
@@ -477,6 +486,10 @@ class BaseExecutor(ABC):
                         " Options are: prepend, append, overwrite."
                     )
                 )
+        if use_tenv_prefix:
+            env_update = {f"LUTE_TENV_{key}": val for key, val in env.items()}
+        else:
+            env_update = env
         self._analysis_desc.task_env.update(env)
 
     def shell_source(self, env: str) -> None:
@@ -513,8 +526,12 @@ class BaseExecutor(ABC):
             f'{sys.executable} -c "import os; print(dict(os.environ))"\n'
         )
         logger.info(f"Sourcing file {self._shell_source_script}")
+        subproc_env: Dict[str, str] = {}
+        for key, val in os.environ.items():
+            if "CONDA" not in key:
+                subproc_env[key] = val
         o, e = subprocess.Popen(
-            ["bash", "-c", script], stdout=subprocess.PIPE
+            ["bash", "-c", script], stdout=subprocess.PIPE, env=subproc_env
         ).communicate()
         tmp_environment: Dict[str, str] = eval(o)
         new_environment: Dict[str, str] = {}
@@ -528,15 +545,16 @@ class BaseExecutor(ABC):
                 if key in os.environ and os.getenv(key) == value:
                     # Add identical items first
                     new_environment[key] = value
-                elif key == "PYTHONPATH":
+                elif key in ("PYTHONPATH", "PATH"):
                     # Handle PYTHONPATH specifically if above doesn't catch it
-                    curr: Optional[str] = os.getenv("PYTHONPATH")
+                    curr: Optional[str] = os.getenv(key)
                     if curr is not None:
                         if curr in value:
                             new_environment[key] = value
                         else:
                             # Not in PYTHONPATH, make sure to add it in
-                            new_environment[key] = f"{value}:{curr}"
+                            new_environment[key] = curr
+                            new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
 
         # Until we make LUTE installable... Need to make sure this is available
         # for first-party Tasks, regardless of the directory they run in if using
@@ -552,11 +570,15 @@ class BaseExecutor(ABC):
                 new_environment["PYTHONPATH"] = lute_path
         self._analysis_desc.task_env = new_environment
 
-    def _pre_task(self) -> None:
+    def _pre_task(self) -> str:
         """Any actions to be performed before task submission.
 
-        This method may or may not be used by subclasses. It may be useful
-        for logging etc.
+        This method should be modified carefully, if at all, by subclasses as
+        it prepares environments. This preparation is rather finicky given the
+        need to prevent collisions between various environments.
+
+        Returns:
+            lute_path (str): The path to the LUTE installation being used.
         """
         # This prevents the Executors in managed_tasks.py from all acquiring
         # resources like sockets.
@@ -576,6 +598,28 @@ class BaseExecutor(ABC):
             key: os.environ[key] for key in os.environ if "LUTE_" in key
         }
         self._analysis_desc.task_env.update(tmp)
+
+        # ********* Important ********* #
+        # If using _update_environment AND _shell_source, the environment
+        # variables in _update_environment must be prepended by LUTE_TENV_
+        lute_path: Optional[str] = os.getenv("LUTE_PATH")
+        if lute_path is None:
+            logger.debug("Absolute path to subprocess_task.py not found.")
+            lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
+            os.environ.update({"LUTE_PATH": lute_path})
+            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
+
+        use_tenv_prefix: bool = False
+        if self._shell_source_script is not None:
+            self._shell_source()
+            use_tenv_prefix = True
+
+        if self._delayed_update_env_args is not None:
+            self._update_environment(
+                *self._delayed_update_env_args, use_tenv_prefix=use_tenv_prefix
+            )
+
+        return lute_path
 
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
@@ -636,31 +680,16 @@ class BaseExecutor(ABC):
 
     def execute_task(self) -> None:
         """Run the requested Task as a subprocess."""
-        self._pre_task()
-        lute_path: Optional[str] = os.getenv("LUTE_PATH")
-        if lute_path is None:
-            logger.debug("Absolute path to subprocess_task.py not found.")
-            lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
-            os.environ.update({"LUTE_PATH": lute_path})
-            self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
+        # _pre_task does Task environment preparation. All updates are done now
+        # to prevent various Managed Tasks which are all defined in the same module
+        # from affecting each other.
+        lute_path: str = self._pre_task()
         executable_path: Optional[str] = shutil.which("subprocess_task")
         if executable_path is None:
             # Did not install and just running from a clone of repo
-            if lute_path is None:
-                logger.debug("Absolute path to subprocess_task.py not found.")
-                lute_path = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
-                os.environ.update({"LUTE_PATH": lute_path})
-                self._analysis_desc.task_env.update({"LUTE_PATH": lute_path})
             executable_path = f"{lute_path}/subprocess_task.py"
         config_path: str = self._analysis_desc.task_env["LUTE_CONFIGPATH"]
         params: str = f"-c {config_path} -t {self._analysis_desc.task_result.task_name}"
-
-        # Prevent all managed tasks from affecting each others environments
-        if self._shell_source_script is not None:
-            self._shell_source()
-
-        if self._delayed_update_env_args is not None:
-            self._update_environment(*self._delayed_update_env_args)
 
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
@@ -672,6 +701,14 @@ class BaseExecutor(ABC):
                 "status": "STARTED",
             }
             self._report_to_manager(end_point="status", json_data=json_data)
+
+        affinity: Set[int] = os.sched_getaffinity(0)
+        # By convention, the Executor takes the minimum core on this node.
+        # Task gets everything else. If we only have 1 core here then out of luck
+        # and cannot set new affinities without issues
+        if len(affinity) > 1:
+            executor_affinity: Set[int] = {min(affinity)}
+            os.sched_setaffinity(0, executor_affinity)
         while self._task_is_running(proc):
             self._task_loop(proc)
             if self._task_timeout is not None:

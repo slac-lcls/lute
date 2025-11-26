@@ -54,6 +54,25 @@ class ModelSchema(TypedDict):
     type: str
 
 
+class EnumSpec(TypedDict):
+    enum: List[Union[str, int, bool]]
+    type: str
+
+
+def _format_enum(param: str, enum_spec: EnumSpec) -> str:
+    indent: str = " " * (len(param) + 2 + 5)
+    output: str = "Enum["
+    for item in enum_spec["enum"]:
+        if output != "Enum[":
+            output += f",\n{indent}"
+        output += str(item)
+    output += "]"
+    if "type" in enum_spec:
+        output += f"({enum_spec['type']})"
+
+    return output
+
+
 def _format_parameter_row(
     param: str,
     param_description: PropertyDict,
@@ -65,7 +84,12 @@ def _format_parameter_row(
     if "type" in param_description:
         typeinfo = param_description["type"]
     elif "anyOf" in param_description:  # anyOf is present instead
-        typeinfo = " | ".join(_["type"] for _ in param_description["anyOf"])
+        typeinfo = ""
+        for item in param_description["anyOf"]:
+            if "enum" in item:
+                if typeinfo:
+                    typeinfo += "\n" + " " * (len(param) - 1) + " | "
+                typeinfo += _format_enum(param, item)
     elif "allOf" in param_description and "$ref" in param_description["allOf"][0]:
         typeinfo = param_description["allOf"][0]["$ref"].split("/")[-1]
     else:
@@ -147,14 +171,15 @@ def main() -> None:
                         task_list_msg = f"{task_list_msg} {mgd_task},"
                 params_obj: TaskParameters = getattr(lute.io.models, key)
                 parameter_schema = cast(ModelSchema, params_obj.schema())
-                description: str = parameter_schema["description"]
-                for line in description.split("\n"):
-                    new_line: str
-                    if line:
-                        new_line = f"\n\t{line}"
-                    else:
-                        new_line = f"\n{line}"
-                    task_list_msg = f"{task_list_msg}{new_line}"
+                if "description" in parameter_schema:
+                    description: str = parameter_schema["description"]
+                    for line in description.split("\n"):
+                        new_line: str
+                        if line:
+                            new_line = f"\n\t{line}"
+                        else:
+                            new_line = f"\n{line}"
+                        task_list_msg = f"{task_list_msg}{new_line}"
 
         print(task_list_msg)
 
@@ -212,13 +237,15 @@ def main() -> None:
                 if pname in parameter_model.__validators__
                 else None
             )
+            if pname == "Config":
+                continue
             out_msg = f"{out_msg}{_format_parameter_row(pname, parameter_schema['properties'][pname], validators)}"
 
         if "definitions" in parameter_schema and parameter_schema["definitions"]:
             definitions: List[str] = [
                 defn
                 for defn in parameter_schema["definitions"]
-                if defn not in ("AnalysisHeader", "TemplateConfig")
+                if defn not in ("AnalysisHeader", "TemplateConfig", "Config")
             ]
             if len(definitions) > 0:
                 out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
