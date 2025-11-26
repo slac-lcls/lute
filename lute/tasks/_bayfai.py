@@ -56,7 +56,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
-from scipy.ndimage import gaussian_filter1d # type: ignore
+from scipy.ndimage import gaussian_filter1d  # type: ignore
 from mpi4py import MPI
 
 from LCLSGeom.psana.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL  # type: ignore
@@ -1092,7 +1092,7 @@ class BayFAIOpt:
             self.valid = np.where(~self.invalid)[0]
             shift_index = np.argmin(self.scan["residual"][self.valid])
             index = self.valid[shift_index]
-            self.index = index      
+            self.index = index
             self.bo_history = self.scan["bo_history"][index]
             self.params = self.scan["params"][index]
             self.residual = self.scan["residual"][index]
