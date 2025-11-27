@@ -8,6 +8,7 @@ nav:
       - Task Configuration: "usage/configuration.md"
       - Installation: "usage/installation.md"
       - Running LUTE: "usage/running_lute.md"
+      - A complete simple example: "usage/hello_world.md"
       - Task Documentation:
           - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
           - Converting XTC1 to XTC2: "usage/tasks/xtc1_to_xtc2_conversion.md"
