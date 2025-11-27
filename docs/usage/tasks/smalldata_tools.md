@@ -234,9 +234,12 @@ One or more ROIs can be defined on a per detector basis using the parameters def
         calcPars: True
 ```
 
-Note that under each detector there is a **list** of dictionaries because multiple ROIs can be defined. For each ROI, the parameters are as follows:  
+Note that under each detector there is a **list** of dictionaries because multiple ROIs can be defined. For each ROI, the parameters are as follows:
 
 - `ROI`: This defines the ROI. The format is a list of lists, where the inner lists define a set of indices for each dimension of the array of the data that the ROI will span. E.g. `[[1,2],[157,487],[294,598]]` defines an ROI spanning 1-2 (so the index 1) of the first dimension, 157-487 of the second dimension and 294-598 of the third dimension.
+
+  - **Note:** You can alternatively set this option to `null` (as in, `ROI: null`). Instead of defining an ROI based on indices, `smalldata_tools` will take this to mean that you want to save the full detector image. As always, think if you really need to do this before choosing to do so. Things will take longer to process, will use more memory, and the data will double in size when saved to disk.
+
 - `name`: Provides a name for the ROI. There will be a default name; however, if you are defining multiple ROIs you should provide a unique name for each of them, otherwise they will overwrite each other.
 - `thresADU`: A threshold to add to the ROI.
 - `calcPars`: Whether to output some summary statistics (mean, max, etc.) along with the ROI.
