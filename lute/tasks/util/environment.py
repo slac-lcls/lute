@@ -50,7 +50,7 @@ def setup_smd2_env() -> Dict[str, str]:
                 psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/drpsrcf/ffb"
         except Exception as e:
             print(e)
-    psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/drpsrcf/ffb"
+
     # These values are the requests - may not be defined if --nodes and
     # --ntasks-per-node were not passed.
     nodes: Optional[str] = os.getenv("SLURM_NNODES")
@@ -89,6 +89,8 @@ def setup_smd2_env() -> Dict[str, str]:
         srv_cores = default_srv_cores
 
     default_eb_cores: int = (mpi_slots - srv_cores) // 16
+    if default_eb_cores == 0:
+        default_eb_cores = 1
     eb_cores: str
     if (env_eb_cores := os.getenv("PS_EB_NODES")) is not None:
         eb_cores = env_eb_cores
