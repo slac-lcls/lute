@@ -15,7 +15,10 @@ import os
 import signal
 import subprocess
 import time
+import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+import zmq
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ConvertXtc1to2Parameters
@@ -57,6 +60,20 @@ class ConvertXtc1to2(Task):
             data_spec[detname] = det_specs
             detnames.append(detname)
 
+        # Temporarily create a socket to find a free port
+        context: zmq.Context = zmq.Context()
+        data_socket: zmq.sugar.socket.Socket = context.socket(zmq.PULL)
+        logger.debug(f"Before new port")
+        new_port: int = data_socket.bind_to_random_port("tcp://*", min_port=5000, max_port=6000)
+        logger.debug(f"Using port {new_port}")
+        if new_port is None:
+            # Failed to find a port to bind
+            logger.error("Could not find a port to bind!")
+            self._result.task_status = TaskStatus.FAILED
+            return
+        data_socket.close()
+        context.term()
+
         detname_csv: str = ",".join(detnames)
         json_access_pattern: str = json.dumps(data_spec)
         lute_location: str = os.getenv("LUTE_PATH", "")
@@ -64,7 +81,7 @@ class ConvertXtc1to2(Task):
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
             f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
-            f"-a '{json_access_pattern}' -e {exp} "
+            f"-a '{json_access_pattern}' -e {exp} -p {new_port}"
             f"-r {par.lute_config.run} "
         )
         if par.eventfile != "":
@@ -83,7 +100,7 @@ class ConvertXtc1to2(Task):
             f"source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh && "
             f"python3 {lute_location}/lute/tasks/util/xtc_pull.py "
             f"-d {detname_csv} -e {exp} "
-            f"-f {par.output_file} -n {par.node_id} -r {run} "
+            f"-f {par.output_file} -n {par.node_id} -p {new_port} -r {run} "
         )
         pull_proc: subprocess.Popen = self._start_zmq_proc(
             zmq_process2_cmd, "[XTC2 Writer]"

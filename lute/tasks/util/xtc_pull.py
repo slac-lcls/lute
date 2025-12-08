@@ -107,6 +107,7 @@ def main() -> None:
         help="Node ID for the detector",
         default="1",
     )
+    parser.add_argument("-p", "--port", type=int, help="Port number.", default=5557)
     parser.add_argument("-r", "--run", type=int, help="The experiment run number.")
     args: argparse.Namespace = parser.parse_args()
 
@@ -118,7 +119,7 @@ def main() -> None:
         namesId[detname] = idx
 
     # Setup socket for zmq connection
-    socket: str = "tcp://127.0.0.1:5557"
+    socket: str = f"tcp://127.0.0.1:{args.port}"
     zmq_recv: ZmqReceiver = ZmqReceiver(socket)
 
     # Allocating memory for DgramEdit output buffer

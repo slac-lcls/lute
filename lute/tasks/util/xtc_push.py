@@ -202,13 +202,14 @@ def main() -> None:
         ),
         default=0,
     )
+    parser.add_argument("-p", "--port", type=int, help="Port number.", default=5557)
     parser.add_argument("-r", "--run", type=str, help="Run number")
 
     args: argparse.Namespace = parser.parse_args()
 
     data_def: Dict[str, Any] = json.loads(args.access_pattern)
 
-    socket: str = "tcp://127.0.0.1:5557"
+    socket: str = f"tcp://127.0.0.1:{args.port}"
     zmq_send: ZmqSender = ZmqSender(socket)
 
     mode: str = "idx"
