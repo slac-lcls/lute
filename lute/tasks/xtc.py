@@ -63,9 +63,7 @@ class ConvertXtc1to2(Task):
         # Temporarily create a socket to find a free port
         context: zmq.Context = zmq.Context()
         data_socket: zmq.sugar.socket.Socket = context.socket(zmq.PULL)
-        logger.debug(f"Before new port")
-        new_port: int = data_socket.bind_to_random_port("tcp://*", min_port=5000, max_port=6000)
-        logger.debug(f"Using port {new_port}")
+        new_port: int = data_socket.bind_to_random_port("tcp://*")
         if new_port is None:
             # Failed to find a port to bind
             logger.error("Could not find a port to bind!")
@@ -81,7 +79,7 @@ class ConvertXtc1to2(Task):
         zmq_process1_cmd: str = (
             f"source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh && "
             f"python3 {lute_location}/lute/tasks/util/xtc_push.py "
-            f"-a '{json_access_pattern}' -e {exp} -p {new_port}"
+            f"-a '{json_access_pattern}' -e {exp} -p {new_port} "
             f"-r {par.lute_config.run} "
         )
         if par.eventfile != "":
