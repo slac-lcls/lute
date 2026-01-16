@@ -70,6 +70,7 @@ class BayFAI(Task):
             "Imin": optimizer.Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
+            "step": self._task_parameters.bo_params.step,
             "seed": self._task_parameters.bo_params.seed,
         }
         optimizer.bayfai_opt(
@@ -82,8 +83,8 @@ class BayFAI(Task):
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
             params = optimizer.params
-            distance = optimizer.get_distance(params)
-            residual = optimizer.residual
+            score = optimizer.neglog_score
+            distance = params[0]
             cx = params[1]
             cy = params[2]
             logger.info(f"Detector Distance to Sample: {distance:.6f}")
@@ -91,42 +92,26 @@ class BayFAI(Task):
             logger.info(
                 f"Rotations: \u03b8x = ({params[3]:.2e}, \u03b8y = {params[4]:.2e}, \u03b8z = {params[5]:.2e})"
             )
-            logger.info(f"Final Residual: {residual:.2e}")
+            logger.info(f"Best Score: {score:.2e}")
             fig_folder = os.path.join(
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
             plot = (
-                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
             )
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
             optimizer.upload_geometry(
                 self._task_parameters.out_file, self._task_parameters.detname
             )
-            powder_plot, low_q, low_res, high_q, high_res, border_q, border_res = (
-                optimizer.create_interactive_powder(
-                    powder=optimizer.powder,
-                    detector=calib_detector,
-                    distance=distance,
-                )
-            )
+            powder_plot, qs, resolutions = optimizer.create_interactive_powder()
             diagnostics_plot = optimizer.create_diagnostics_panel(
-                powder=optimizer.powder,
-                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
-                low_resolution=low_res,
-                high_resolution=high_res,
-                border_resolution=border_res,
             )
             _ = optimizer.create_summary_plot(
-                powder=optimizer.powder,
-                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
-                low_resolution=low_res,
-                high_resolution=high_res,
-                border_resolution=border_res,
                 plot=plot,
             )
             pn.extension("matplotlib", "bokeh")
@@ -149,7 +134,7 @@ class BayFAI(Task):
                 sizing_mode="stretch_width",
             )
             content.save(
-                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.html",
                 embed=True,
             )
             plots = pn.Tabs(content)
@@ -161,17 +146,15 @@ class BayFAI(Task):
                         f"{cx/optimizer.detector.pixel_size:.3f}",
                         f"{cy/optimizer.detector.pixel_size:.3f}",
                     ),
-                    "Low q": f"{low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5",
-                    "High q": f"{border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)",
-                    "Highest q": f"{high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)",
+                    "Lowest q": f"{qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5",
+                    "Highest q": f"{qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)",
                 }
             )
-            logger.info(f">>> Low q : {low_q:.3f} \u00c5-1 | {low_res:.3f} \u00c5")
             logger.info(
-                f">>> High q : {border_q:.3f} \u00c5-1 | {border_res:.3f} \u00c5 (detector edge)"
+                f">>> Lowest q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5"
             )
             logger.info(
-                f">>> Highest q : {high_q:.3f} \u00c5-1 | {high_res:.3f} \u00c5 (detector corner)"
+                f">>> Highest q : {qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)"
             )
             self._result.summary.append(
                 ElogSummaryPlots(

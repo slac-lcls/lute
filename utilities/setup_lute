@@ -255,8 +255,6 @@ if __name__ == "__main__":
             ncores = 2
         elif args.workflow in ("smd_summaries", "smd_xes"):
             ncores = 5
-        elif args.workflow == "bayfai":
-            ncores = 101
         else:
             ncores = 120
         logger.warning(

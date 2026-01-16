@@ -97,11 +97,16 @@ class BayFAIParameters(TaskParameters):
 
         beta: float = Field(
             1.96,
-            description="Exploration-exploitation trade-off parameter for Upper Confidence Bound acquisition function.",
+            description="Exploration-exploitation trade-off hyperparameter for Upper Confidence Bound acquisition function.",
         )
 
-        seed: int = Field(
-            0,
+        step: int = Field(
+            5,
+            description="Size of the refinement space around best parameters.",
+        )
+
+        seed: Optional[int] = Field(
+            None,
             description="Random seed for reproducibility.",
         )
 
@@ -131,7 +136,7 @@ class BayFAIParameters(TaskParameters):
 
     resolutions: Dict[str, float] = Field(
         {
-            "dist": 0.0005,
+            "dist": 0.001,
             "poni1": 0.0001,
             "poni2": 0.0001,
             "rot1": 0.02,
