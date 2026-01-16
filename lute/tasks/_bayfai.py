@@ -410,7 +410,7 @@ class BayFAIOpt:
                 powder[p] = np.sqrt(gradx**2 + grady**2)
         powder[mask == 0] = 0
         return powder
-    
+
     def assemble_image(
         self, powder: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.float64]:
@@ -716,7 +716,9 @@ class BayFAIOpt:
         ix = data[:, 0]
         iy = data[:, 1]
         ring = data[:, 2].astype(np.int32)
-        score = -np.log(sg.geometry_refinement.residu2(sample, ix, iy, ring) / len(data))
+        score = -np.log(
+            sg.geometry_refinement.residu2(sample, ix, iy, ring) / len(data)
+        )
         return score
 
     def estimate_uncertainty(self, refinement, rel_eps=1e-3, abs_eps=1e-4):
@@ -804,7 +806,7 @@ class BayFAIOpt:
         sigmas = f_min * np.diag(cov) / dof
         sigmas = np.sqrt(sigmas)
         is_min = True
-        penalty = -np.log(np.linalg.det(cov)) / 2 
+        penalty = -np.log(np.linalg.det(cov)) / 2
         return sigmas, is_min, penalty
 
     def gradient_descent(self, best_param, resolutions, Imin, max_rings, step=5):
@@ -1238,8 +1240,9 @@ class BayFAIOpt:
             alpha=0.8,
         )
         ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel(r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$",
-            fontsize=6)
+        ax.set_ylabel(
+            r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$", fontsize=6
+        )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
@@ -1270,13 +1273,20 @@ class BayFAIOpt:
             self.final_score[self.invalid],
             linewidth=0.8,
             color="red",
-            marker='x',
+            marker="x",
             s=10,
         )
-        ax.scatter(self.distances[self.index], self.final_score[self.index], color="red", s=50, marker='*')
+        ax.scatter(
+            self.distances[self.index],
+            self.final_score[self.index],
+            color="red",
+            s=50,
+            marker="*",
+        )
         ax.set_xlabel("Distance (m)", fontsize=6)
-        ax.set_ylabel(r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$",
-            fontsize=6)
+        ax.set_ylabel(
+            r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$", fontsize=6
+        )
         ax.yaxis.get_offset_text().set_fontsize(6)
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
@@ -1389,21 +1399,27 @@ class BayFAIOpt:
 
         radii = calculate_radius(self.detector, params=self.params)
         closest_pixel_index = np.argmin(radii)
-        closest_pixel = (y_index.flatten()[closest_pixel_index], x_index.flatten()[closest_pixel_index])
-        closest_q = theta2q(ttha.flatten()[closest_pixel_index], self.calibrant.wavelength)
+        closest_pixel = (
+            y_index.flatten()[closest_pixel_index],
+            x_index.flatten()[closest_pixel_index],
+        )
+        closest_q = theta2q(
+            ttha.flatten()[closest_pixel_index], self.calibrant.wavelength
+        )
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(radii)
-        furthest_pixel = (y_index.flatten()[furthest_pixel_index], x_index.flatten()[furthest_pixel_index])
-        furthest_q = theta2q(ttha.flatten()[furthest_pixel_index], self.calibrant.wavelength)
+        furthest_pixel = (
+            y_index.flatten()[furthest_pixel_index],
+            x_index.flatten()[furthest_pixel_index],
+        )
+        furthest_q = theta2q(
+            ttha.flatten()[furthest_pixel_index], self.calibrant.wavelength
+        )
         furthest_resol = 2 * np.pi / furthest_q
 
-        pixel_lvls = np.array(
-            [closest_pixel, furthest_pixel]
-        )
-        resol_lvls = np.array(
-            [closest_resol, furthest_resol]
-        )
+        pixel_lvls = np.array([closest_pixel, furthest_pixel])
+        resol_lvls = np.array([closest_resol, furthest_resol])
         for pixel, resol in zip(pixel_lvls, resol_lvls):
             ax.text(
                 pixel[0],
@@ -1444,7 +1460,9 @@ class BayFAIOpt:
             y_range=(ymin, ymax),
         )
 
-        vmin, vmax = np.percentile(self.stacked_powder, 5), np.percentile(self.stacked_powder, 95)
+        vmin, vmax = np.percentile(self.stacked_powder, 5), np.percentile(
+            self.stacked_powder, 95
+        )
         color_mapper = LinearColorMapper(palette=Viridis256, low=vmin, high=vmax)
 
         p.image(
@@ -1471,21 +1489,27 @@ class BayFAIOpt:
 
         radii = calculate_radius(self.detector, params=self.params)
         closest_pixel_index = np.argmin(radii)
-        closest_pixel = (x.flatten()[closest_pixel_index], y.flatten()[closest_pixel_index])
-        closest_q = theta2q(ttha.flatten()[closest_pixel_index], self.calibrant.wavelength)
+        closest_pixel = (
+            x.flatten()[closest_pixel_index],
+            y.flatten()[closest_pixel_index],
+        )
+        closest_q = theta2q(
+            ttha.flatten()[closest_pixel_index], self.calibrant.wavelength
+        )
         closest_resol = 2 * np.pi / closest_q
 
         furthest_pixel_index = np.argmax(radii)
-        furthest_pixel = (x.flatten()[furthest_pixel_index], y.flatten()[furthest_pixel_index])
-        furthest_q = theta2q(ttha.flatten()[furthest_pixel_index], self.calibrant.wavelength)
+        furthest_pixel = (
+            x.flatten()[furthest_pixel_index],
+            y.flatten()[furthest_pixel_index],
+        )
+        furthest_q = theta2q(
+            ttha.flatten()[furthest_pixel_index], self.calibrant.wavelength
+        )
         furthest_resol = 2 * np.pi / furthest_q
 
-        pixel_lvls = np.array(
-            [closest_pixel, furthest_pixel]
-        )
-        resol_lvls = np.array(
-            [closest_resol, furthest_resol]
-        )
+        pixel_lvls = np.array([closest_pixel, furthest_pixel])
+        resol_lvls = np.array([closest_resol, furthest_resol])
         for pixel, resol in zip(pixel_lvls, resol_lvls):
             label_annotation = Label(
                 x=pixel[0],

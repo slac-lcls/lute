@@ -97,9 +97,7 @@ class BayFAI(Task):
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
-            plot = (
-                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
-            )
+            plot = f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
             optimizer.upload_geometry(
                 self._task_parameters.out_file, self._task_parameters.detname
