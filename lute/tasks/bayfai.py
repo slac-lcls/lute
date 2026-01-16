@@ -83,8 +83,8 @@ class BayFAI(Task):
             logger.info("Optimization complete")
             logger.info(f"Elapsed time: {time.time() - start_time:.2f} s")
             params = optimizer.params
-            distance = optimizer.get_distance(params)
-            residual = optimizer.residual
+            score = optimizer.neglog_score
+            distance = params[0]
             cx = params[1]
             cy = params[2]
             logger.info(f"Detector Distance to Sample: {distance:.6f}")
@@ -92,32 +92,24 @@ class BayFAI(Task):
             logger.info(
                 f"Rotations: \u03b8x = ({params[3]:.2e}, \u03b8y = {params[4]:.2e}, \u03b8z = {params[5]:.2e})"
             )
-            logger.info(f"Final Residual: {residual:.2e}")
+            logger.info(f"Best Score: {score:.2e}")
             fig_folder = os.path.join(
                 self._task_parameters.lute_config.work_dir, "figs"
             )
             os.makedirs(fig_folder, exist_ok=True)
             plot = (
-                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.png"
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
             )
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
             optimizer.upload_geometry(
                 self._task_parameters.out_file, self._task_parameters.detname
             )
-            powder_plot, qs, resolutions = optimizer.create_interactive_powder(
-                powder=optimizer.powder,
-                detector=calib_detector,
-                distance=distance,
-            )
+            powder_plot, qs, resolutions = optimizer.create_interactive_powder()
             diagnostics_plot = optimizer.create_diagnostics_panel(
-                powder=optimizer.powder,
-                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
             )
             _ = optimizer.create_summary_plot(
-                powder=optimizer.powder,
-                Imin=optimizer.Imin,
                 detector=calib_detector,
                 distance=distance,
                 plot=plot,
@@ -142,7 +134,7 @@ class BayFAI(Task):
                 sizing_mode="stretch_width",
             )
             content.save(
-                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}.html",
+                f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.html",
                 embed=True,
             )
             plots = pn.Tabs(content)
@@ -154,16 +146,12 @@ class BayFAI(Task):
                         f"{cx/optimizer.detector.pixel_size:.3f}",
                         f"{cy/optimizer.detector.pixel_size:.3f}",
                     ),
-                    "Low q": f"{qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5",
-                    "High q": f"{qs['border']:.3f} \u00c5-1 | {resolutions['border']:.3f} \u00c5 (detector edge)",
+                    "Lowest q": f"{qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5",
                     "Highest q": f"{qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)",
                 }
             )
             logger.info(
-                f">>> Low q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5"
-            )
-            logger.info(
-                f">>> High q : {qs['border']:.3f} \u00c5-1 | {resolutions['border']:.3f} \u00c5 (detector edge)"
+                f">>> Lowest q : {qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5"
             )
             logger.info(
                 f">>> Highest q : {qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)"
