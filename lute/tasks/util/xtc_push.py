@@ -14,7 +14,6 @@ import zmq
 
 from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 
-
 # Helper Classes
 ################
 
