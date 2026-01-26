@@ -187,7 +187,7 @@ if __name__ == "__main__":
             os.chmod(results_dir, 0o777)
     lute_path: str
     if args.fresh_install:
-        git_clone("LouConreux/lute", results_dir, args.version)
+        git_clone("slac-lute/lute", results_dir, args.version)
         lute_path = f"{results_dir}/lute"
         modify_permissions(lute_path)
     else:

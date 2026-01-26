@@ -387,28 +387,32 @@ class BayFAIOpt2:
         Parameters
         ----------
         powder_path : str
-            Path to the h5 file containing the powder data.
+            Path to the h5 or npy file containing the powder data.
 
         Returns
         -------
         powder : npt.NDArray[np.float64]
             The extracted powder image.
         """
-        with h5py.File(powder_path) as h5:
-            try:
-                powder = h5[f"Sums/{detname}_calib_max"][()]
-            except KeyError:
-                logger.warning(
-                    f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
-                )
+        if powder_path.endswith(".npy"):
+            powder = np.load(powder_path)
+            return powder
+        else:
+            with h5py.File(powder_path) as h5:
                 try:
-                    powder = h5[f"Sums/{detname}_calib"][()]
+                    powder = h5[f"Sums/{detname}_calib_max"][()]
                 except KeyError:
-                    logger.error(
-                        f"Cannot find {detname} Sum powder in {powder_path}. Exiting..."
+                    logger.warning(
+                        f"Cannot find {detname} Max powder in {powder_path}, defaulting to {detname} Sum instead."
                     )
-                    raise
-        return powder
+                    try:
+                        powder = h5[f"Sums/{detname}_calib"][()]
+                    except KeyError:
+                        logger.error(
+                            f"Cannot find {detname} Sum powder in {powder_path}. Exiting..."
+                        )
+                        raise
+            return powder
 
     def preprocess_powder(
         self,
@@ -467,7 +471,7 @@ class BayFAIOpt2:
         Parameters
         ----------
         powder_path : str
-            Path to the h5 file containing the powder data.
+            Path to the h5 or npy file containing the powder data.
         detname : str
             Name of the detector
         smooth : bool, optional
@@ -745,7 +749,7 @@ class BayFAIOpt2:
 
     def score(self, sample, Imin, max_rings):
         """
-        Evaluate score at a given sampled geometry based on the number of detected Bragg peaks.
+        Evaluate score at a given sampled geometry based on the residual between predicted and observed Bragg peak positions.
 
         Parameters
         ----------
