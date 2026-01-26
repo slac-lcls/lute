@@ -17,7 +17,6 @@ from lute.io.models.base import TemplateConfig, ThirdPartyParameters
 from lute.io.models.sfx_find_peaks import SZCompressorParameters
 from lute.io.models.validators import template_parameter_validator
 
-
 CommonDataSourceTypes = Literal[
     "TimestampFromEvent",
     "FloatValueFromConfiguration",
