@@ -9,12 +9,23 @@ Classes:
 __all__ = ["Task", "ThirdPartyTask"]
 __author__ = "Gabriel Dorlhiac"
 
-import time
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TextIO, Type, Union, TYPE_CHECKING
 import os
-import warnings
 import signal
+import sys
+import time
+import warnings
+from abc import ABC, abstractmethod
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    Type,
+    Union,
+    TYPE_CHECKING,
+)
 
 import lute.execution.subprocess_utils
 
@@ -136,6 +147,15 @@ class Task(ABC):
                 )
         self._use_mpi: bool = use_mpi
         self._row_ids: Optional[RowIds] = row_ids
+
+        affinity: Set[int] = os.sched_getaffinity(0)
+        # By convention, the Executor takes the minimum core on this node.
+        # Task gets everything else. If we only have 1 core here then out of luck
+        # and cannot set new affinities without issues
+        if len(affinity) > 1:
+            executor_affinity: Set[int] = {min(affinity)}
+            task_affinity: Set[int] = affinity - executor_affinity
+            os.sched_setaffinity(0, task_affinity)
 
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
@@ -335,7 +355,11 @@ class ThirdPartyTask(Task):
             )
             template_dir = "../../config/templates"
         else:
-            template_dir = f"{lute_path}/config/templates"
+            py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
+            template_dir = f"{lute_path}/lib/{py_ver}/site-packages/config/templates"
+            if not os.path.exists(template_dir):
+                # Did not install and running from clone of repo
+                template_dir = f"{lute_path}/config/templates"
         environment: Environment = Environment(loader=FileSystemLoader(template_dir))
         template: Template = environment.get_template(template_name)
 
@@ -457,8 +481,10 @@ class ThirdPartyTask(Task):
             msg: Message = Message(contents=self._formatted_command())
             self._report_to_executor(msg)
         LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
-        self._setup_env()
-        os.execvp(file=self._cmd, args=self._args_list)
+        task_env: Dict[str, str] = self._setup_env()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.execvpe(file=self._cmd, args=self._args_list, env=task_env)
 
     def _formatted_command(self) -> str:
         """Returns the command as it would passed on the command-line."""
@@ -473,11 +499,14 @@ class ThirdPartyTask(Task):
         msg: Message = Message(signal=signal)
         self._report_to_executor(msg)
 
-    def _setup_env(self) -> None:
+    def _setup_env(self) -> Dict[str, str]:
         new_env: Dict[str, str] = {}
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
-        os.environ.update(new_env)
+        if not new_env:
+            # No shell script sourced - will use the base environment
+            return os.environ.copy()
+        return new_env

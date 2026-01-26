@@ -137,8 +137,19 @@ else
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
 
-export LUTE_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd | sed s/launch_scripts//g )"
-EXECUTABLE="${LUTE_PATH}run_task.py"
+SCRIPT_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
+export LUTE_PATH="$( echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g )"
+EXECUTABLE="run_task.py"
+
+if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
+    EXECUTABLE="${LUTE_PATH}run_task.py"
+else
+    # Running from installation
+    source "${SCRIPT_DIR}/activate_installation"
+    EXECUTABLE="$(which run_task)"
+    export LUTE_PATH="${LUTE_PATH}/lib/python3.9/site-packages"
+fi
+
 
 if [[ ${DEBUG} ]]; then
     echo "Running in debug mode - verbose logging."

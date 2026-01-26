@@ -70,7 +70,10 @@ class AnalyzeSmallData(Task):
         self._events_per_rank: npt.NDArray[np.int64]
         self._start_indices_per_rank: npt.NDArray[np.int64]
         if self._mpi_rank == 0:
-            self._total_num_events: int = len(self._smd_h5["event_time"][()])
+            try:
+                self._total_num_events: int = len(self._smd_h5["event_time"][()])
+            except KeyError:
+                self._total_num_events = len(self._smd_h5["timestamp"])
             quotient: int
             remainder: int
             quotient, remainder = divmod(self._total_num_events, self._mpi_size)

@@ -16,9 +16,10 @@ Exceptions:
 __all__ = ["parse_config"]
 __author__ = "Gabriel Dorlhiac"
 
+import os
 import re
 import warnings
-from typing import List, Dict, Iterator, Any
+from typing import List, Dict, Iterator, Any, Union, Optional
 
 import pprint
 import yaml

@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
-
 """Script to setup LUTE and workflow definitions."""
 
 __author__ = "Gabriel Dorlhiac"
@@ -11,23 +9,27 @@ import requests
 import shutil
 import subprocess
 import sys
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
-from krtc import KerberosTicket
+from krtc import KerberosTicket  # type: ignore
 
 
 logging.basicConfig(level=logging.INFO)
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def _run_subprocess_log(cmd: List[str]) -> None:
+def _run_subprocess_log(cmd: List[str], env: Optional[Dict[str, str]] = None) -> None:
     """Run a subprocess with logging."""
     global logger
 
     out: str
     err: str
     out, err = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        env=env,
     ).communicate()
     if out:
         logger.info(out)
@@ -94,6 +96,55 @@ def git_clone(repo: str, location: str, tag: str) -> None:
     os.chdir(cwd)
 
 
+def run_build_script(lute_path: str) -> None:
+    """Run the LUTE build script.
+
+    Args:
+        lute_path (str): The path to the LUTE installation to build.
+    """
+
+    cwd: str = os.getcwd()
+    os.chdir(lute_path)
+    cmd: List[str] = ["./build.sh"]
+    _run_subprocess_log(cmd)
+    os.chdir(cwd)
+
+
+def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
+    """Install from a source directory to an optionally specified directory.
+
+    If no prefix (`install_dir`) is provided, this will install to the current
+    packages directory determined by, e.g., conda environment, etc.
+
+    If a prefix is provided this command will also create the directory (or
+    multiple directories) if necessary.
+
+    Args:
+        src_dir (str): Directory with the source code and setup.py.
+
+        install_dir (Optional[str]): Optionally provide a directory to install
+            install to.
+    """
+    cmd: List[str] = [
+        "pip",
+        "install",
+        "--no-deps",
+        src_dir,
+        f'--prefix="{install_dir}"',
+    ]
+    logging.info(f"Attempting to install from: {src_dir} to: {install_dir}")
+    env: Dict[str, str] = os.environ.copy()
+    env["PATH"] = (
+        f"/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.63-py3/bin:{env['PATH']}"
+    )
+    if install_dir is not None:
+        cmd.append(f"--prefix={install_dir}")
+        if not os.path.exists(install_dir):
+            mkdir_cmd: List[str] = ["mkdir", "-p", install_dir]
+            _run_subprocess_log(mkdir_cmd)
+    _run_subprocess_log(cmd, env)
+
+
 def inplace_sed(in_file: str, pattern: str) -> None:
     """Perform an in-place operation on a file using sed.
 
@@ -108,16 +159,16 @@ def inplace_sed(in_file: str, pattern: str) -> None:
 
 def modify_permissions(lute_path: str):
     """Recursively set permissions for a LUTE installation."""
-    os.chmod(lute_path, 0o755)
+    os.chmod(lute_path, 0o765)
     for root, dirs, files in os.walk(lute_path):
         for d in dirs:
-            os.chmod(os.path.join(root, d), 0o755)
+            os.chmod(os.path.join(root, d), 0o765)
 
         for f in files:
-            os.chmod(os.path.join(root, f), 0o755)
+            os.chmod(os.path.join(root, f), 0o765)
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="setup_lute",
         description="Setup LUTE work space and eLog workflows for an experiment.",
@@ -167,11 +218,11 @@ if __name__ == "__main__":
         default="dev",
     )
     parser.add_argument(
-        "-w",
+        "-W",
         "--workflow",
         type=str,
         help=("Which analysis workflow to run. Defaults to smd_summaries."),
-        default="smd_summaries",
+        default="smd",
     )
     args: argparse.Namespace
     extra_args: List[str]  # May have additional SLURM arguments
@@ -186,17 +237,31 @@ if __name__ == "__main__":
             os.makedirs(results_dir, mode=0o777)
             os.chmod(results_dir, 0o777)
     lute_path: str
+    arp_executable: str
+    launch_executable: str
+    std_hutch_config: str
+    std_test_config: str
     if args.fresh_install:
-        git_clone("slac-lcls/lute", results_dir, args.version)
         lute_path = f"{results_dir}/lute"
+        git_clone("slac-lcls/lute", lute_path, args.version)
+        run_build_script(lute_path)
         modify_permissions(lute_path)
+        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
+        launch_executable = f"{lute_path}/install/bin/launch_slurm"
+        py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        std_hutch_config = (
+            f"{lute_path}/install/lib/{py_ver}/site-packages/config/{hutch}.yaml"
+        )
+        std_test_config = (
+            f"{lute_path}/install/lib/{py_ver}/site-packages/config/test.yaml"
+        )
     else:
         lute_path = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
+        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
+        launch_executable = f"{lute_path}/install/bin/launch_slurm"
+        std_hutch_config = f"{lute_path}/config/{hutch}.yaml"
+        std_test_config = f"{lute_path}/config/test.yaml"
 
-    arp_executable: str = f"{lute_path}/launch_scripts/submit_launch_airflow.sh"
-    launch_executable: str = f"{lute_path}/launch_scripts/launch_airflow.py"
-
-    std_hutch_config: str = f"{lute_path}/config/{hutch}.yaml"
     lute_output_dir: str = f"{results_dir}/lute_output"
     if not os.path.exists(lute_output_dir):
         os.makedirs(lute_output_dir, mode=0o777)
@@ -208,16 +273,22 @@ if __name__ == "__main__":
         )
         sys.exit(-1)
     if not os.path.exists(std_hutch_config):
-        shutil.copy(f"{lute_path}/config/test.yaml", config_path)
+        shutil.copy(std_test_config, config_path)
     else:
         shutil.copy(std_hutch_config, config_path)
     os.chmod(config_path, 0o666)
     # Substitute the work_dir in LUTE's config to the experiment results folder.
-    sed_pattern: str = f"s|work_dir:\(.*\)|work_dir: \\\"{lute_output_dir}\\\"|g"
+    sed_pattern: str = f's|work_dir:\(.*\)|work_dir: \\"{lute_output_dir}\\"|g'
     inplace_sed(config_path, sed_pattern)
 
     database_setup(f"{lute_output_dir}/lute.db")  # Setup permissions on database
-    param_string: str = f"{launch_executable} -c {config_path} -w {args.workflow}"
+    full_workflow_path: str = f"{lute_output_dir}/{args.workflow}.dag"
+    if not os.path.exists(full_workflow_path):
+        included_wf_defn: str = f"{lute_path}/workflows/common/{args.workflow}.dag"
+        shutil.copy(included_wf_defn, full_workflow_path)
+    os.chmod(full_workflow_path, 0o666)
+
+    param_string: str = f"{launch_executable} -c {config_path} -W {full_workflow_path}"
 
     if args.debug:
         param_string = f"{param_string} --debug"
@@ -244,25 +315,25 @@ if __name__ == "__main__":
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            _ = input()
             extra_args_str = f"{extra_args_str} --account={account}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
     if "ntasks" not in extra_args_str:
-        ncores: int
-        if args.workflow in ("smd_xas", "smd_xss"):
-            ncores = 2
-        elif args.workflow in ("smd_summaries", "smd_xes"):
-            ncores = 5
-        else:
-            ncores = 120
+        ncores: int = 120
+        # if args.workflow in ("smd_xas", "smd_xss", "test"):
+        #     ncores = 2
+        # elif args.workflow in ("smd_summaries", "smd_xes"):
+        #     ncores = 5
+        # else:
+        #     ncores = 120
         logger.warning(
             f"No tasks/cores provided. Defaulting to {ncores}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            _ = input()
             extra_args_str = f"{extra_args_str} --ntasks={ncores}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
@@ -271,6 +342,7 @@ if __name__ == "__main__":
     param_string = f"{param_string} {extra_args_str}"
 
     main_workflow: Dict[str, str]
+    # if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
     if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
         main_workflow = {
             "name": "lute_smd_summaries",
@@ -292,7 +364,7 @@ if __name__ == "__main__":
     elif 0:
         # Replace eventually with workflows which use START_OF_RUN
         main_workflow = {
-            "name": "lute_smd_summaries",
+            "name": f"lute_{args.workflow}",
             "executable": arp_executable,
             "trigger": "START_OF_RUN",
             "location": "S3DF",
@@ -312,6 +384,9 @@ if __name__ == "__main__":
     # Will want to append additional auxiliary workflows eventually
 
     for workflow in workflows:
+        logger.info(
+            f"Creating eLog workflow named {workflow['name']} with parameters: {workflow['parameters']}"
+        )
         krbticket: Any = KerberosTicket("HTTP@pswww.slac.stanford.edu")
         krbheaders: dict = krbticket.getAuthHeaders()
         url: str = (
@@ -326,3 +401,7 @@ if __name__ == "__main__":
         resp: requests.models.Response = requests.post(**post_params)
         resp.raise_for_status()
         # Extra logging and such...
+
+
+if __name__ == "__main__":
+    main()

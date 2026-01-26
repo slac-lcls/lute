@@ -62,6 +62,34 @@ SmallDataProducer2.add_tasklet(
 )
 SmallDataProducer2.update_environment(setup_smd2_env)
 
+SmallDataProducerSpack: Executor = Executor("SubmitSMD")
+"""Runs the production of a LCLS2 smalldata HDF5 file using the spack environment."""
+SmallDataProducerSpack.shell_source(
+    "/sdf/scratch/users/d/dorlhiac/work/lcls2_spack_new/setup_env_spack.sh"
+)
+SmallDataProducerSpack.add_tasklet(
+    clone_smalldata,
+    ["{{ producer }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+SmallDataProducerSpack.update_environment(setup_smd2_env)
+
+SmallDataProducerXpp: Executor = Executor("SubmitSMD")
+"""Runs the production of a LCLS2 smalldata HDF5 file using the spack environment."""
+SmallDataProducerXpp.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_gpu.sh"
+)
+SmallDataProducerXpp.add_tasklet(
+    clone_smalldata,
+    ["{{ producer }}"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+SmallDataProducerXpp.update_environment(setup_smd2_env)
+
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
 
@@ -94,7 +122,7 @@ CrystFELIndexer.update_environment(
         "PATH": (
             "/sdf/group/lcls/ds/tools/XDS-INTEL64_Linux_x86_64:"
             "/sdf/group/lcls/ds/tools:"
-            "/sdf/group/lcls/ds/tools/crystfel/0.10.2/bin"
+            "/sdf/group/lcls/ds/tools/crystfel/0.12.0/bin"
         )
     }
 )

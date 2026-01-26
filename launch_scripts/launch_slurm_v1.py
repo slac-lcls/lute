@@ -1,5 +1,3 @@
-#!/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.62-py3/bin/python
-
 """Script submitted by Automated Run Processor (ARP) to trigger a SLURM-job workflow.
 
 This script is submitted by the ARP to the batch nodes. It runs a batch job which itself
@@ -9,14 +7,19 @@ submits the individual workflow job steps.
 __author__ = "Gabriel Dorlhiac"
 
 import argparse
+import json
 import logging
 import os
 import re
+import socket
 import subprocess
 import sys
+import threading
+import time
 import yaml
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, overload
 from typing_extensions import TypedDict
 
 logger: logging.Logger = logging.getLogger("Launch_SLURM_Workflow")
@@ -29,6 +32,66 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
+BUFFER_LOGS: bool = True
+MANAGED_TASK_STATUS: Dict[str, str] = {}
+MANAGED_TASK_LOGS: Optional[Dict[str, List[str]]] = None
+STATUS_LOCK: threading.Lock = threading.Lock()
+
+
+class JobStatusHandler(BaseHTTPRequestHandler):
+
+    def _handle_route(self, route: str, data: Dict[str, Any]) -> None:
+        global BUFFER_LOGS
+        global MANAGED_TASK_LOGS
+        global MANAGED_TASK_STATUS
+        global STATUS_LOCK
+
+        if route == "/status":
+            managed_task: str = data["managed_task"]
+            status: str = data["status"]
+            date_time: str = self.date_time_string()
+            print(f"{date_time} [{managed_task}] Status = {status}.", flush=True)
+            self.send_response(200)
+            self.end_headers()
+            with STATUS_LOCK:
+                MANAGED_TASK_STATUS[managed_task] = status
+
+        elif route == "/log":
+            managed_task = data["managed_task"]
+            message: str = data["message"]
+            date_time = self.date_time_string()
+            self.send_response(200)
+            self.end_headers()
+
+            formatted_msg: str = f"{date_time} [{managed_task}] {message}"
+            if BUFFER_LOGS:
+                assert MANAGED_TASK_LOGS is not None
+                with STATUS_LOCK:
+                    if managed_task in MANAGED_TASK_LOGS:
+                        MANAGED_TASK_LOGS[managed_task].append(formatted_msg)
+                    else:
+                        MANAGED_TASK_LOGS[managed_task] = [formatted_msg]
+            else:
+                print(formatted_msg)
+        else:
+            print(f"Invalid route: {route}", flush=True)
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, format: str, *args: Any):
+        pass
+
+    def do_POST(self) -> None:
+        content_length: int = int(self.headers.get("Content-Length", 0))
+        body: bytes = self.rfile.read(content_length)
+        try:
+            data: Dict[str, Any] = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_response(400)
+            self.end_headers()
+            return None
+        self._handle_route(route=self.path, data=data)
 
 
 class LuteParams(TypedDict):
@@ -140,6 +203,11 @@ def launch_lute_task(
     kerb_file: Optional[str] = None,
     wait_for: Optional[Future] = None,
 ) -> Tuple[str, str, str]:
+    global BUFFER_LOGS
+    global MANAGED_TASK_LOGS
+    global MANAGED_TASK_STATUS
+    global STATUS_LOCK
+
     if wait_for is not None:
         while not wait_for.done():
             ...
@@ -171,17 +239,34 @@ def launch_lute_task(
     pattern: str = r"Submitted batch job [0-9]{0,100}"
     jobid_full_str: str = re.findall(pattern, out)[0]
 
-    jobid: str = jobid_full_str.split()[-1]  # out.split()[-1]
+    jobid: str = jobid_full_str.split()[-1]
 
-    logfile_path: str = get_slurm_logfile_path(jobid=jobid)
+    # logfile_path: str = get_slurm_logfile_path(jobid=jobid)
     # Loop on task here?
-    logfile: str = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
-    while (status := get_slurm_job_status(jobid=jobid)) not in (
-        "FAILED",
-        "COMPLETED",
-        "CANCELLED",
-    ):
-        logfile = get_slurm_log(logfile_path=logfile_path)
+    logfile: str = ""
+
+    while True:
+        with STATUS_LOCK:
+            if task_name not in MANAGED_TASK_STATUS:
+                status = "PENDING"
+            else:
+                status = MANAGED_TASK_STATUS[task_name]
+
+        if BUFFER_LOGS:
+            assert MANAGED_TASK_LOGS is not None
+            with STATUS_LOCK:
+                if task_name in MANAGED_TASK_LOGS and MANAGED_TASK_LOGS[task_name]:
+                    for _ in range(len(MANAGED_TASK_LOGS[task_name])):
+                        logfile += f"{MANAGED_TASK_LOGS[task_name].pop(0)}\n"
+        # If running in unbuffered mode, the HTTPServer will just flush the log
+        # immediately as it comes in. This loop doesn't have to do anything
+
+        if status in ("FAILED", "COMPLETED", "CANCELLED", "TIMEDOUT"):
+            break
+        time.sleep(5)
+
+    if not logfile:
+        logfile = f"---- NO LOGS FOR JOB {jobid} RUNNING {task_name} ----"
 
     return task_name, status, logfile
 
@@ -193,6 +278,7 @@ def create_workflow(
     wf_dict: Union[Dict[str, Any], List[Dict[str, Any]]],
     lute_location: str,
     lute_params: LuteParams,
+    default_slurm_params: str,
     kerb_file: Optional[str] = None,
 ) -> None:
     slurm_params: str
@@ -200,6 +286,8 @@ def create_workflow(
     if isinstance(wf_dict, list):
         for task_dict in wf_dict:
             slurm_params = task_dict.get("slurm_params", "")
+            if not slurm_params:
+                slurm_params = default_slurm_params
             future = executor.submit(
                 launch_lute_task,
                 lute_location,
@@ -221,10 +309,13 @@ def create_workflow(
                         wf_dict=task,
                         lute_location=lute_location,
                         lute_params=lute_params,
+                        default_slurm_params=default_slurm_params,
                         kerb_file=kerb_file,
                     )
     else:
         slurm_params = wf_dict.get("slurm_params", "")
+        if not slurm_params:
+            slurm_params = default_slurm_params
         future = executor.submit(
             launch_lute_task,
             lute_location,
@@ -246,6 +337,7 @@ def create_workflow(
                     wf_dict=task,
                     lute_location=lute_location,
                     lute_params=lute_params,
+                    default_slurm_params=default_slurm_params,
                     kerb_file=kerb_file,
                 )
     return None
@@ -300,30 +392,50 @@ def count_tasks_and_print_wf(
             return full_branched_str, task_count
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
+def main() -> None:
+    """Run the SLURM Workflow Manager (SWM).
+
+    This will launch the a series of jobs as run
+    """
+    global BUFFER_LOGS
+    global MANAGED_TASK_LOGS
+
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="trigger_slurm_lute_workflow",
-        description="Run a batch job which executes a LUTE workflow.",
+        description="A light-weight workflow manager which executes LUTE Managed Tasks.",
         epilog="Refer to https://github.com/slac-lcls/lute for more information.",
     )
-    parser.add_argument("-c", "--config", type=str, help="Path to config YAML file.")
-    parser.add_argument("-d", "--debug", help="Run in debug mode.", action="store_true")
-    parser.add_argument(
+    # We pop out the optional args for changing the order of the help message.
+    # We'll add it back later
+    optional_args: argparse._ArgumentGroup = parser._action_groups.pop()
+
+    # Required arguments
+    required_args: argparse._ArgumentGroup = parser.add_argument_group(
+        "required arguments"
+    )
+    required_args.add_argument(
+        "-c", "--config", type=str, help="Path to config YAML file.", required=True
+    )
+    required_args.add_argument(
         "-W",
         "--workflow_defn",
         type=str,
         help="Path to a YAML file with workflow.",
-        default="",
+        required=True,
     )
-    # Optional arguments for when running from command-line
-    parser.add_argument(
+
+    # Arguments required for when running from command-line
+    non_arp_required_args: argparse._ArgumentGroup = parser.add_argument_group(
+        "required arguments when running without the ARP"
+    )
+    non_arp_required_args.add_argument(
         "-e",
         "--experiment",
         type=str,
         help="Provide an experiment if not running with ARP.",
         required=False,
     )
-    parser.add_argument(
+    non_arp_required_args.add_argument(
         "-r",
         "--run",
         type=str,
@@ -331,13 +443,29 @@ if __name__ == "__main__":
         required=False,
     )
 
+    # Optional Arguments
+    optional_args.add_argument(
+        "-d", "--debug", help="Run in debug mode.", action="store_true"
+    )
+    optional_args.add_argument(
+        "--unbuffered",
+        help=(
+            "Flush logs immediately. Warning: This can make output confusing "
+            "when running multiple managed Tasks are running in parallel."
+        ),
+        action="store_true",
+    )
+    parser._action_groups.append(optional_args)
+
     args: argparse.Namespace
     extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
 
-    use_kerberos: bool = (
-        True  # Always copy kerberos ticket so non-active experiments can work.
-    )
+    BUFFER_LOGS = not args.unbuffered
+    if BUFFER_LOGS:
+        # If buffering make sure we have a dict here.
+        MANAGED_TASK_LOGS = {}
+
     # Do we use any APIs now that need kerberos ticket if not using JID?
     # Maybe can get rid of this for the SLURM only submission?
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")
@@ -359,13 +487,27 @@ if __name__ == "__main__":
         os.environ["EXPERIMENT"] = args.experiment
         os.environ["RUN_NUM"] = args.run
 
+    is_daq2: bool = True
     wf_defn: Dict[str, Any]
+
+    def branch_daq2_constructor(
+        loader: yaml.SafeLoader, node: yaml.nodes.MappingNode
+    ) -> Any:
+        values = loader.construct_mapping(node)
+        if is_daq2:
+            return values["daq2"]
+        else:
+            return values["daq1"]
+
+    loader: Type[yaml.SafeLoader] = yaml.SafeLoader
+    loader.add_constructor("!branch_daq2", branch_daq2_constructor)
     with open(args.workflow_defn, "r") as f:
-        wf_defn = yaml.load(stream=f, Loader=yaml.FullLoader)
+        wf_defn = yaml.load(stream=f, Loader=loader)
 
     lute_location: str = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     lute_params: LuteParams = {"config_file": args.config, "debug": args.debug}
+    default_slurm_params: str = " ".join(extra_args)
 
     wf_repr: str
     task_count: int
@@ -373,6 +515,13 @@ if __name__ == "__main__":
 
     logger.info(f"Running the following workflow with {task_count} Managed Tasks:")
     print(wf_repr, flush=True)
+
+    server: HTTPServer = HTTPServer(("0.0.0.0", 41239), JobStatusHandler)
+    os.environ["LUTE_MANAGER_URL"] = f"{socket.gethostname()}:41239"
+    server_thread: threading.Thread = threading.Thread(
+        target=server.serve_forever, daemon=True
+    )
+    server_thread.start()
     with ThreadPoolExecutor(max_workers=task_count) as executor:
         all_futures: List[Future] = []
         # Recursively submit work to the ThreadPoolExecutor. The individual functions
@@ -385,6 +534,7 @@ if __name__ == "__main__":
             wf_dict=wf_defn,
             lute_location=lute_location,
             lute_params=lute_params,
+            default_slurm_params=default_slurm_params,
             kerb_file=cache_file,
         )
 
@@ -394,10 +544,11 @@ if __name__ == "__main__":
             status: str
             logfile: str
             task_name, status, logfile = future.result()
-            logger.info(f"Providing logs for {task_name}")
-            print("-" * 50, flush=True)
-            print(logfile, flush=True)
-            print("-" * 50, flush=True)
+            if not args.unbuffered:
+                logger.info(f"Providing logs for {task_name}")
+                print("-" * 50, flush=True)
+                print(logfile, flush=True)
+                print("-" * 50, flush=True)
             if status in ("FAILED", "UPSTREAM_FAILED"):
                 # Need smarter way to determine workflow failure
                 # For now count any step failing as the entire workflow failing
@@ -408,3 +559,11 @@ if __name__ == "__main__":
             sys.exit(-1)
         else:
             logger.info("Workflow exited: COMPLETED")
+
+    server.shutdown()
+    server.server_close()
+    server_thread.join()
+
+
+if __name__ == "__main__":
+    main()

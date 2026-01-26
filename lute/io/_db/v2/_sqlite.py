@@ -18,9 +18,9 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, overload
 from lute.io._db.common_sqlite import does_table_exist, DatabaseError
 
 if TYPE_CHECKING:
-    from lute.io.models.base import AnalysisHeader, TaskParameters, TemplateParameters
+    from lute.io.models.base import AnalysisHeader, TaskParameters
 else:
-    from lute.io.parameters import AnalysisHeader, TaskParameters, TemplateParameters
+    from lute.io.parameters import AnalysisHeader, TaskParameters
 from lute.io.parameters import LUTE_PARAMETER_FIELD_ATTRS, RowIds
 from lute.tasks.dataclasses import BaseSchema, DescribedAnalysis, TaskResult, TaskStatus
 
@@ -734,8 +734,15 @@ def _add_parameters(
         )
         raw_val: Any = param_dict[param]
         json_val: str
-        if isinstance(raw_val, TemplateParameters):
-            json_val = json.dumps(raw_val.params)
+        # Type checking may not work because of the parameters hack to support different
+        # environments -- so check the class name... not great...
+        if raw_val.__class__.__name__ == "TemplateParameters":
+            if hasattr(raw_val.params, "dict"):
+                json_val = json.dumps(raw_val.params.dict())
+            else:
+                json_val = json.dumps(raw_val.params)
+        elif hasattr(raw_val, "dict"):
+            json_val = json.dumps(raw_val.dict())
         else:
             json_val = json.dumps(raw_val)
         param_entries: Dict[str, Any] = {

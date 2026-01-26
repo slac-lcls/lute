@@ -1,6 +1,6 @@
-import sys
 import argparse
 import logging
+import sys
 from typing import Dict, Optional, List, Set, Tuple, Any, Callable, Generic, Union, cast
 from typing_extensions import TypedDict, TypeVar
 
@@ -9,6 +9,10 @@ import pprint
 import lute.io.models
 from lute.io.models.base import TaskParameters
 from lute import managed_tasks
+
+logging.basicConfig(level=logging.INFO)
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 T = TypeVar("T")
 
@@ -50,23 +54,23 @@ class ModelSchema(TypedDict):
     type: str
 
 
-logging.basicConfig(level=logging.INFO)
-logger: logging.Logger = logging.getLogger(__name__)
+class EnumSpec(TypedDict):
+    enum: List[Union[str, int, bool]]
+    type: str
 
-parser: argparse.ArgumentParser = argparse.ArgumentParser(
-    prog="Task parameters help utility.",
-    description="Display parameter descriptions and types for a specified Task.",
-    epilog="Refer to https://github.com/slac-lcls/lute for more information.",
-)
-parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
-parser.add_argument(
-    "-T", "--Task", type=str, help="Name of the Task to inspect.", required=False
-)
-parser.add_argument(
-    "--full_schema",
-    action="store_true",
-    help="Dump an unformated full model schema. Has more information.",
-)
+
+def _format_enum(param: str, enum_spec: EnumSpec) -> str:
+    indent: str = " " * (len(param) + 2 + 5)
+    output: str = "Enum["
+    for item in enum_spec["enum"]:
+        if output != "Enum[":
+            output += f",\n{indent}"
+        output += str(item)
+    output += "]"
+    if "type" in enum_spec:
+        output += f"({enum_spec['type']})"
+
+    return output
 
 
 def _format_parameter_row(
@@ -80,7 +84,12 @@ def _format_parameter_row(
     if "type" in param_description:
         typeinfo = param_description["type"]
     elif "anyOf" in param_description:  # anyOf is present instead
-        typeinfo = " | ".join(_["type"] for _ in param_description["anyOf"])
+        typeinfo = ""
+        for item in param_description["anyOf"]:
+            if "enum" in item:
+                if typeinfo:
+                    typeinfo += "\n" + " " * (len(param) - 1) + " | "
+                typeinfo += _format_enum(param, item)
     elif "allOf" in param_description and "$ref" in param_description["allOf"][0]:
         typeinfo = param_description["allOf"][0]["$ref"].split("/")[-1]
     else:
@@ -113,7 +122,21 @@ def _format_parameter_row(
     return msg
 
 
-if __name__ == "__main__":
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        prog="Task parameters help utility.",
+        description="Display parameter descriptions and types for a specified Task.",
+        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
+    parser.add_argument(
+        "-T", "--Task", type=str, help="Name of the Task to inspect.", required=False
+    )
+    parser.add_argument(
+        "--full_schema",
+        action="store_true",
+        help="Dump an unformated full model schema. Has more information.",
+    )
     args: argparse.Namespace = parser.parse_args()
     task_name: str
     parameter_schema: ModelSchema
@@ -148,14 +171,15 @@ if __name__ == "__main__":
                         task_list_msg = f"{task_list_msg} {mgd_task},"
                 params_obj: TaskParameters = getattr(lute.io.models, key)
                 parameter_schema = cast(ModelSchema, params_obj.schema())
-                description: str = parameter_schema["description"]
-                for line in description.split("\n"):
-                    new_line: str
-                    if line:
-                        new_line = f"\n\t{line}"
-                    else:
-                        new_line = f"\n{line}"
-                    task_list_msg = f"{task_list_msg}{new_line}"
+                if "description" in parameter_schema:
+                    description: str = parameter_schema["description"]
+                    for line in description.split("\n"):
+                        new_line: str
+                        if line:
+                            new_line = f"\n\t{line}"
+                        else:
+                            new_line = f"\n{line}"
+                        task_list_msg = f"{task_list_msg}{new_line}"
 
         print(task_list_msg)
 
@@ -213,13 +237,15 @@ if __name__ == "__main__":
                 if pname in parameter_model.__validators__
                 else None
             )
+            if pname == "Config":
+                continue
             out_msg = f"{out_msg}{_format_parameter_row(pname, parameter_schema['properties'][pname], validators)}"
 
         if "definitions" in parameter_schema and parameter_schema["definitions"]:
             definitions: List[str] = [
                 defn
                 for defn in parameter_schema["definitions"]
-                if defn not in ("AnalysisHeader", "TemplateConfig")
+                if defn not in ("AnalysisHeader", "TemplateConfig", "Config")
             ]
             if len(definitions) > 0:
                 out_msg = f"{out_msg}Template Parameters:\n--------------------\n"
@@ -232,3 +258,7 @@ if __name__ == "__main__":
                         )
                         out_msg = f"{out_msg}{row}"
         print(out_msg)
+
+
+if __name__ == "__main__":
+    main()

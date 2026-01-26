@@ -6,8 +6,12 @@ nav:
   - Quick Start: "quick_start.md"
   - Usage Manual:
       - Task Configuration: "usage/configuration.md"
+      - Installation: "usage/installation.md"
       - Running LUTE: "usage/running_lute.md"
+      - A complete simple example: "usage/hello_world.md"
       - Task Documentation:
+          - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
+          - Converting XTC1 to XTC2: "usage/tasks/xtc1_to_xtc2_conversion.md"
           - Running BayFAI: "usage/tasks/bayfai.md" 
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
@@ -17,9 +21,11 @@ nav:
           - Third Party: "development/new_task/third_party.md"
       - Creating a new Workflow:
           - Overview: "development/creating_workflows.md"
+          - With Maestro: "development/creating_workflows_maestro.md"
           - With Airflow: "development/creating_workflows_airflow.md"
           - Dynamic Run-time Workflows: "development/dynamic_workflows.md"
           #- With Prefect: "development/creating_workflows_prefect.md"
+      - Maestro Documentation: "development/maestro.md"
       - Tests: "development/tests.md"
   - Source Code:
       - managed_tasks: "source/managed_tasks.md"
