@@ -1,4 +1,5 @@
 py_sources = [
+    'calib.py',
     'config.py',
     'db.py',
     'elog.py',
