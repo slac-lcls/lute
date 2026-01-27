@@ -15,11 +15,9 @@ class ConcreteTask(Task):
 
 @pytest.fixture
 def mock_params(tmp_path):
-    # Setup a minimal TaskParameters
     work_dir = tmp_path / "work"
     work_dir.mkdir()
     header = AnalysisHeader(experiment="test_exp", run=1, work_dir=str(work_dir))
-    # Using a simple TaskParameters if possible, or mock it
     params = MagicMock(spec=TaskParameters)
     params.lute_config = header
     params.Config = MagicMock()
