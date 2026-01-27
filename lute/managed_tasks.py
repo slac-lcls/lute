@@ -180,13 +180,35 @@ PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 
 # XTC
 #####
-
 Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 """Converts Xtc1 files to Xtc2 to use in psana2"""
 
 # Cheetah
 #########
-
 CheetahRunner: Executor = Executor("RunCheetah")
 """Run Cheetah task."""
 CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/setup-om.sh")
+
+# BayFAI
+#######
+BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
+    }
+)
+
+BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer2.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PS_SRV_NODES": "0",
+        "PS_EB_NODES": "1",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
+    }
+)

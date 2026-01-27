@@ -86,6 +86,11 @@ def import_task(task_name: str) -> Type[Task]:
 
         return TestMultiNodeCommunication
 
+    if task_name == "BayFAI":
+        from .bayfai import BayFAI
+
+        return BayFAI
+
     if task_name == "OptimizeAgBhGeometryExhaustive":
         from .geometry import OptimizeAgBhGeometryExhaustive
 

@@ -391,16 +391,17 @@ class BaseExecutor(ABC):
             env (Dict[str, str]): A dictionary of "VAR":"VALUE" pairs of
                 environment variables to be added to the subprocess environment.
                 If any variables already exist, the new variables will
-                overwrite them (except PATH, see below).
+                overwrite them (except PATH and PYTHONPATH, see below).
 
-            update_path (str): If PATH is present in the new set of variables,
-                this argument determines how the old PATH is dealt with. There
-                are three options:
-                * "prepend" : The new PATH values are prepended to the old ones.
-                * "append" : The new PATH values are appended to the old ones.
-                * "overwrite" : The old PATH is overwritten by the new one.
-                "prepend" is the default option. If PATH is not present in the
-                current environment, the new PATH is used without modification.
+            update_path (str): If PATH and/or PYTHONPATH are present in the new
+                set of variables, this argument determines how the old value is
+                dealt with. There are three options:
+                * "prepend" : The new values are prepended to the old ones.
+                * "append" : The new values are appended to the old ones.
+                * "overwrite" : The old value is overwritten by the new one.
+                "prepend" is the default option. If PATH and/or PYTHONPATH is not
+                present in the current environment, the new PATH is used without
+                modification.
         """
         ...
 
@@ -431,16 +432,16 @@ class BaseExecutor(ABC):
             env (Union[Dict[str, str], Callable[[],Dict[str, str]]]): If a dictionary,
                 it contains a series of "VAR":"VALUE" pairs of environment variables to
                 be added to the subprocess environment. If any variables already exist,
-                the new variables will overwrite them (except PATH, see below). If a
-                callable, a managed-Task specific function which returns a dictionary
+                the new variables will overwrite them (except PATH/PYTHONPATH, see below).
+                If a callable, a managed-Task specific function which returns a dictionary
                 of environment variables to include in the Task environment. This function
                 can implement more complex logic to determine values for the specific
                 environment variables. If it is a callable, the `update_path` argument
                 to this method is ignored.
 
-            update_path (str): If PATH is present in the new set of variables,
-                this argument determines how the old PATH is dealt with. There
-                are three options:
+            update_path (str): If PATH and/or PYTHONPATH is present in the new
+                set of variables, this argument determines how the old value is
+                dealt with. There are three options:
                 * "prepend" : The new PATH values are prepended to the old ones.
                 * "append" : The new PATH values are appended to the old ones.
                 * "overwrite" : The old PATH is overwritten by the new one.
@@ -467,29 +468,22 @@ class BaseExecutor(ABC):
             self._analysis_desc.task_env.update(env_update)
             return
 
-        if "PATH" in env:
-            sep: str = os.pathsep
-            if update_path == "prepend":
-                env["PATH"] = (
-                    f"{env['PATH']}{sep}{self._analysis_desc.task_env['PATH']}"
-                )
-            elif update_path == "append":
-                env["PATH"] = (
-                    f"{self._analysis_desc.task_env['PATH']}{sep}{env['PATH']}"
-                )
-            elif update_path == "overwrite":
-                pass
-            else:
-                raise ValueError(
-                    (
-                        f"{update_path} is not a valid option for `update_path`!"
-                        " Options are: prepend, append, overwrite."
+        for key in ("PATH", "PYTHONPATH"):
+            if key in env and key in self._analysis_desc.task_env:
+                sep: str = os.pathsep
+                if update_path == "prepend":
+                    env[key] = f"{env[key]}{sep}{self._analysis_desc.task_env[key]}"
+                elif update_path == "append":
+                    env[key] = f"{self._analysis_desc.task_env[key]}{sep}{env[key]}"
+                elif update_path == "overwrite":
+                    pass
+                else:
+                    raise ValueError(
+                        (
+                            f"{update_path} is not a valid option for `update_path`!"
+                            " Options are: prepend, append, overwrite."
+                        )
                     )
-                )
-        if use_tenv_prefix:
-            env_update = {f"LUTE_TENV_{key}": val for key, val in env.items()}
-        else:
-            env_update = env
         self._analysis_desc.task_env.update(env)
 
     def shell_source(self, env: str) -> None:
@@ -1168,7 +1162,7 @@ class Executor(BaseExecutor):
         ) -> Optional[bool]:
             if isinstance(msg.contents, str):
                 # This should be log formatted already
-                print(msg.contents)
+                print(msg.contents, flush=True)
                 return True
             return False
 
@@ -1415,7 +1409,7 @@ class MPIExecutor(Executor):
         nprocs: int = max(
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
         )
-        mpi_cmd: str = f"mpirun -np {nprocs}"
+        mpi_cmd: str = f"mpirun -np {nprocs} --map-by core"
         if __debug__:
             py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
         else:

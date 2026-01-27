@@ -35,7 +35,6 @@ from lute.io.models.smd import (
 from lute.tasks.task import Task
 from lute.tasks.math import gaussian, sigma_to_fwhm
 
-
 logger: logging.Logger = get_logger(__name__)
 
 

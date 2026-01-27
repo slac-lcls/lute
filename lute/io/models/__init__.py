@@ -14,3 +14,4 @@ from .geometry import *
 from .nexus import *
 from .xtc import *
 from .cheetah import *
+from .bayfai import *

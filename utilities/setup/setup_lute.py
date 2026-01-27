@@ -195,6 +195,16 @@ def main() -> None:
         action="store_true",
     )
     parser.add_argument(
+        "--directory",
+        type=str,
+        help=(
+            "Subdirectory name within the experiment results folder to use for "
+            "LUTE output and LUTE fresh install if specified. If not specified, "
+            "will use results folder directly."
+        ),
+        default="",
+    )
+    parser.add_argument(
         "--test", help="Use test Airflow instance.", action="store_true"
     )
     parser.add_argument(
@@ -221,6 +231,11 @@ def main() -> None:
     hutch: str = args.experiment[:3]
 
     results_dir: str = f"/sdf/data/lcls/ds/{hutch}/{args.experiment}/results"
+    if args.directory != "":
+        results_dir = f"{results_dir}/{args.directory}"
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir, mode=0o777)
+            os.chmod(results_dir, 0o777)
     lute_path: str
     arp_executable: str
     launch_executable: str
@@ -338,7 +353,15 @@ def main() -> None:
             "location": "S3DF",
             "parameters": param_string,
         }
-    elif args.workflow in ("smd", "bayfai"):
+    elif args.workflow == "bayfai":
+        main_workflow = {
+            "name": "lute_bayfai",
+            "executable": arp_executable,
+            "trigger": "MANUAL",
+            "location": "S3DF",
+            "parameters": param_string,
+        }
+    elif 0:
         # Replace eventually with workflows which use START_OF_RUN
         main_workflow = {
             "name": f"lute_{args.workflow}",
