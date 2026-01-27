@@ -1,0 +1,58 @@
+import pytest
+from unittest.mock import MagicMock, patch
+
+from lute.tasks.task import Task
+from lute.io.models.base import TaskParameters, AnalysisHeader
+from lute.tasks.dataclasses import TaskStatus
+
+
+# Need a concrete subclass to test the ABC Task
+class ConcreteTask(Task):
+    def _run(self) -> None:
+        self._result.summary = "Success"
+        self._result.task_status = TaskStatus.COMPLETED
+
+
+@pytest.fixture
+def mock_params(tmp_path):
+    # Setup a minimal TaskParameters
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    header = AnalysisHeader(experiment="test_exp", run=1, work_dir=str(work_dir))
+    # Using a simple TaskParameters if possible, or mock it
+    params = MagicMock(spec=TaskParameters)
+    params.lute_config = header
+    params.Config = MagicMock()
+    params.Config.result_from_params = None
+    params.Config.run_directory = str(work_dir)
+    return params
+
+
+def test_task_init(mock_params):
+    with patch("os.chdir"):  # Avoid changing dir in tests
+        task = ConcreteTask(params=mock_params)
+        assert task.name == "ConcreteTask"
+        assert task.result.task_status == TaskStatus.PENDING
+
+
+def test_task_run(mock_params):
+    with (
+        patch("os.chdir"),
+        patch.object(ConcreteTask, "_report_to_executor"),
+        patch("os.kill"),
+    ):  # Avoid sending signals in tests
+        task = ConcreteTask(params=mock_params)
+        task.run()
+        assert task.result.summary == "Success"
+        assert task.result.task_status == TaskStatus.COMPLETED
+
+
+def test_task_call(mock_params):
+    with (
+        patch("os.chdir"),
+        patch.object(ConcreteTask, "_report_to_executor"),
+        patch("os.kill"),
+    ):
+        task = ConcreteTask(params=mock_params)
+        task()  # Test __call__
+        assert task.result.task_status == TaskStatus.COMPLETED
