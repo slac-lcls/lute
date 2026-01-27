@@ -93,9 +93,6 @@ def _retrieve_airflow_pw(instance: str = "prod", is_admin: bool = False) -> str:
     return pw
 
 
-
-
-
 def modify_permissions(path: str, permissions: int) -> None:
     """Recursively set permissions for a path."""
     os.chmod(path, permissions)
@@ -672,7 +669,6 @@ def run_workflow_maestro(
     jid_authorization: str = cast(str, os.getenv("Authorization"))
 
     run_type, is_daq2 = retrieve_run_info(experiment, run_num, jid_authorization)
-
 
     wf_defn: List[_maestro.JobStep] = load_lute_dag(
         workflow_path=workflow_file,
