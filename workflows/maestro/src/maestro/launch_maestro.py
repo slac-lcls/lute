@@ -13,6 +13,7 @@ from lute.execution.launch import (
     get_base_launch_parser,
     setup_launch_env,
     retrieve_run_info,
+    get_concurrent_job_steps,
 )
 from maestro._maestro import _maestro
 from maestro.parser import load_lute_dag
@@ -24,29 +25,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-def get_concurrent_job_steps(wf: List[_maestro.JobStep]) -> int:
-    """Return the maximum number of concurrent JobSteps.
-
-    This can be used to determine how many threads to add to the threadpool for the
-    workflow manager.
-
-    NOTE: This is a very basic calculation - if you have complicated branch structures
-    it may undershoot the number of concurrent jobs. For safety you can add one to
-    the returned value - this will likely cover 99% of all workflow cases.
-
-    Args:
-        wf (List[_maestro.JobStep]): The workflow.
-
-    Returns:
-        max_concurrent_jobs (int): The maximum number of jobs found to run in
-            parallel at any given time.
-    """
-    num_concurrent_steps: int = len(wf)
-    for step in wf:
-        next_concurrent_steps: int = get_concurrent_job_steps(step.next)
-        num_concurrent_steps = max(num_concurrent_steps, next_concurrent_steps)
-
-    return num_concurrent_steps
 
 
 def main():

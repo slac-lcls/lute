@@ -267,6 +267,8 @@ def get_lute_launch_config(
     lute_params: LuteParams,
     slurm_params: List[str],
     workflow_defn: Dict[str, Any] = {},
+    lute_location: Optional[str] = None,
+    executable_subdir: Optional[str] = None,
 ) -> LuteLaunchConfig:
     """Construct the standardized LUTE launch configuration dictionary.
 
@@ -284,7 +286,20 @@ def get_lute_launch_config(
 
         workflow_defn (Dict[str, Any]): The parsed workflow definition. Empty dict
             if not using YAML DAGs.
+
+        lute_location (Optional[str]): The path to the LUTE installation. If not
+            provided, it is assumed to be the parent directory of the current
+            working directory.
+
+        executable_subdir (Optional[str]): The subdirectory where the launch
+            executable is located. If not provided, it is assumed to be the
+            basename of the current working directory.
     """
+    if lute_location is None:
+        lute_location = os.path.abspath(os.path.join(os.getcwd(), ".."))
+    if executable_subdir is None:
+        executable_subdir = os.path.basename(os.getcwd())
+
     return {
         "experiment": launch_info["experiment"],
         "run_id": f"{launch_info['run_num']}_{datetime.datetime.utcnow().isoformat()}",
@@ -293,8 +308,8 @@ def get_lute_launch_config(
         "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
         "Authorization": launch_info["authorization"],
         "user": getpass.getuser(),
-        "lute_location": os.path.abspath(os.path.join(os.getcwd(), "..")),
-        "executable_subdir": os.path.basename(os.getcwd()),
+        "lute_location": lute_location,
+        "executable_subdir": executable_subdir,
         "kerb_file": launch_info["kerb_file"],
         "lute_params": lute_params,
         "slurm_params": slurm_params,
@@ -302,3 +317,29 @@ def get_lute_launch_config(
         "run_type": run_type,
         "is_daq2": is_daq2,
     }
+
+
+def get_concurrent_job_steps(wf: List[Any]) -> int:
+    """Return the maximum number of concurrent JobSteps.
+
+    This can be used to determine how many threads to add to the threadpool for the
+    workflow manager.
+
+    NOTE: This is a very basic calculation - if you have complicated branch structures
+    it may undershoot the number of concurrent jobs. For safety you can add one to
+    the returned value - this will likely cover 99% of all workflow cases.
+
+    Args:
+        wf (List[Any]): The workflow (list of JobSteps).
+
+    Returns:
+        max_concurrent_jobs (int): The maximum number of jobs found to run in
+            parallel at any given time.
+    """
+    num_concurrent_steps: int = len(wf)
+    for step in wf:
+        # Assuming step has a 'next' attribute which is a list of JobSteps
+        next_concurrent_steps: int = get_concurrent_job_steps(getattr(step, "next", []))
+        num_concurrent_steps = max(num_concurrent_steps, next_concurrent_steps)
+
+    return num_concurrent_steps

@@ -31,8 +31,19 @@ from typing import (
 import yaml
 import json
 import requests
+import socket
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
+
+from lute.execution.launch import (
+    request_arp_token,
+    retrieve_run_info,
+    get_lute_launch_config,
+    get_concurrent_job_steps,
+    EnvLaunchInfo,
+    LuteParams,
+    LuteLaunchConfig,
+)
 
 # Requests, urllib have lots of debug statements. Only set level for this logger
 logger: logging.Logger = logging.getLogger("Launch_Func_Tests")
@@ -45,54 +56,6 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
-
-
-class DagRunConf(TypedDict):
-    experiment: str
-    run_id: str
-    JID_UPDATE_COUNTERS: Optional[str]
-    ARP_ROOT_JOB_ID: str
-    ARP_LOCATION: str
-    Authorization: str
-    user: str
-    lute_location: str
-    kerb_file: Optional[str]
-    lute_params: Dict[str, Union[str, bool]]
-    slurm_params: List[str]
-    workflow: Dict[str, Any]
-    run_type: Optional[str]
-    is_daq2: Optional[bool]
-
-
-class DagRunData(TypedDict):
-    dag_run_id: str
-    conf: DagRunConf
-
-
-class LuteParams(TypedDict):
-    config_file: str
-    debug: bool
-
-
-class FlowConf(TypedDict):
-    experiment: str
-    run_id: str
-    JID_UPDATE_COUNTERS: Optional[str]
-    ARP_ROOT_JOB_ID: str
-    ARP_LOCATION: str
-    Authorization: str
-    user: str
-    lute_location: str
-    kerb_file: Optional[str]
-    lute_params: LuteParams
-    slurm_params: List[str]
-    workflow: Dict[str, Any]
-    run_type: Optional[str]
-    is_daq2: Optional[bool]
-
-
-class FlowRequestDict(TypedDict):
-    parameters: Dict[Literal["flow_conf"], FlowConf]
 
 
 def _retrieve_prefect_creds_and_url(
@@ -130,42 +93,7 @@ def _retrieve_airflow_pw(instance: str = "prod", is_admin: bool = False) -> str:
     return pw
 
 
-def _request_arp_token(exp: str, lifetime: int = 300) -> str:
-    """Request an ARP token via Kerberos endpoint.
 
-    A token is required for job submission.
-
-    Args:
-        exp (str): The experiment to request the token for. All tokens are
-            scoped to a single experiment.
-
-        lifetime (int): The lifetime, in minutes, of the token. After the token
-            expires, it can no longer be used for job submission. The maximum
-            time you can request is 480 minutes (i.e. 8 hours). NOTE: since this
-            token is used for the entirety of a workflow, it must have a lifetime
-            equal or longer than the duration of the workflow's execution time.
-    """
-    from kerberos import GSSError  # type: ignore
-    from krtc import KerberosTicket  # type: ignore
-
-    try:
-        krbheaders: Dict[str, str] = KerberosTicket(
-            "HTTP@pswww.slac.stanford.edu"
-        ).getAuthHeaders()
-    except GSSError:
-        logger.info(
-            "Cannot proceed without credentials. Try running `kinit` from the command-line."
-        )
-        raise
-    base_url: str = "https://pswww.slac.stanford.edu/ws-kerb/lgbk/lgbk"
-    token_endpoint: str = (
-        f"{base_url}/{exp}/ws/generate_arp_token?token_lifetime={lifetime}"
-    )
-    resp: requests.models.Response = requests.get(token_endpoint, headers=krbheaders)
-    resp.raise_for_status()
-    token: str = resp.json()["value"]
-    formatted_token: str = f"Bearer {token}"
-    return formatted_token
 
 
 def modify_permissions(path: str, permissions: int) -> None:
@@ -446,68 +374,30 @@ def run_workflow_airflow(
     assert isinstance(arp_job_id, str)
     assert isinstance(jid_authorization, str)
 
-    elog_auth: Dict[str, str] = {
-        "Authorization": jid_authorization,
+    run_type, is_daq2 = retrieve_run_info(experiment, run_num, jid_authorization)
+
+    launch_info: EnvLaunchInfo = {
+        "experiment": experiment,
+        "run_num": run_num,
+        "authorization": jid_authorization,
+        "arp_job_id": arp_job_id,
+        "kerb_file": cache_file,
     }
-    base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
-    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
-    run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
-    resp = requests.get(run_doc_url, headers=elog_auth)
 
-    run_type: str
-    is_daq2: Optional[bool] = None
-    if resp.status_code != 200:
-        logger.warning(
-            "Unable to retrieve run document! No `run_type` information will be used! "
-            "No information about psana1/psana2 can be retrieved. "
-            "Workflow may be able to continue but this could point to issues with "
-            "API access that lead to problems downstream."
-        )
-        run_type = "UNKNOWN"
-    else:
-        # If API request succeeds `type` should always be defined
-        run_type = resp.json()["value"]["type"]
+    conf: LuteLaunchConfig = get_lute_launch_config(
+        launch_info=launch_info,
+        run_type=run_type,
+        is_daq2=is_daq2,
+        lute_params=params,
+        slurm_params=extra_args,
+        workflow_defn=wf_defn,
+        lute_location=lute_location,
+        executable_subdir="launch_scripts",  # Airflow script location
+    )
 
-        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
-        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
-        for key in param_keys:
-            if "/drp/" in key:
-                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
-                # In LCLS1 they are sent as "DAQ Detector/<name>"
-                is_daq2 = True
-                break
-        else:
-            is_daq2 = False
-
-    if resp.status_code != 200:
-        logger.warning(
-            "Unable to retrieve run document! No `run_type` information will be used! "
-            "Workflow may be able to continue but this could point to issues with "
-            "API access that lead to problems downstream."
-        )
-        run_type = "UNKNOWN"
-    else:
-        # If API request succeeds `type` should always be defined
-        run_type = resp.json()["value"]["type"]
-
-    dag_run_data: DagRunData = {
+    dag_run_data: Dict[str, Any] = {
         "dag_run_id": str(uuid.uuid4()),
-        "conf": {
-            "experiment": cast(str, os.getenv("EXPERIMENT")),
-            "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
-            "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
-            "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
-            "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
-            "Authorization": cast(str, os.getenv("Authorization")),
-            "user": getpass.getuser(),
-            "lute_location": lute_location,
-            "kerb_file": cache_file,
-            "lute_params": params,
-            "slurm_params": extra_args,
-            "workflow": wf_defn,  # Only used for custom defined workflows.
-            "run_type": run_type,
-            "is_daq2": is_daq2,
-        },
+        "conf": conf,
     }
 
     # Get Task information
@@ -663,59 +553,31 @@ def run_workflow_prefect(
     assert isinstance(arp_job_id, str)
     assert isinstance(jid_authorization, str)
 
-    elog_auth: Dict[str, str] = {
-        "Authorization": jid_authorization,
-    }
-    base_url: str = "https://pswww.slac.stanford.edu/ws-jwt/lgbk/lgbk"
-    run_doc_endpoint: str = f"{experiment}/ws/runs/{run_num}"
-    run_doc_url: str = f"{base_url}/{run_doc_endpoint}"
-    resp = requests.get(run_doc_url, headers=elog_auth)
-
-    run_type: str
-    is_daq2: Optional[bool] = None
-    if resp.status_code != 200:
-        logger.warning(
-            "Unable to retrieve run document! No `run_type` information will be used! "
-            "No information about psana1/psana2 can be retrieved. "
-            "Workflow may be able to continue but this could point to issues with "
-            "API access that lead to problems downstream."
-        )
-        run_type = "UNKNOWN"
-    else:
-        # If API request succeeds `type` should always be defined
-        run_type = resp.json()["value"]["type"]
-
-        # Try checking for "psana1" vs "psana2" by searching for "drp" in detector names
-        param_keys: collections.abc.KeysView = resp.json()["value"]["params"].keys()
-        for key in param_keys:
-            if "/drp/" in key:
-                # Detectors in LCLS2 DAQ are sent to eLog as "DAQ Detectors/drp/<name>"
-                # In LCLS1 they are sent as "DAQ Detector/<name>"
-                is_daq2 = True
-        else:
-            is_daq2 = False
+    run_type, is_daq2 = retrieve_run_info(experiment, run_num, jid_authorization)
 
     params: LuteParams = {
         "config_file": config_file,
         "debug": True,
     }
 
-    conf: FlowConf = {
-        "experiment": cast(str, os.getenv("EXPERIMENT")),
-        "run_id": f"{cast(str, os.getenv('RUN_NUM'))}_{datetime.datetime.utcnow().isoformat()}",
-        "JID_UPDATE_COUNTERS": os.getenv("JID_UPDATE_COUNTERS"),
-        "ARP_ROOT_JOB_ID": cast(str, os.getenv("ARP_JOB_ID")),
-        "ARP_LOCATION": os.getenv("ARP_LOCATION", "S3DF"),
-        "Authorization": cast(str, os.getenv("Authorization")),
-        "user": getpass.getuser(),
-        "lute_location": lute_location,
+    launch_info: EnvLaunchInfo = {
+        "experiment": experiment,
+        "run_num": run_num,
+        "authorization": jid_authorization,
+        "arp_job_id": arp_job_id,
         "kerb_file": cache_file,
-        "lute_params": params,
-        "slurm_params": extra_args,
-        "workflow": wf_defn,
-        "run_type": run_type,
-        "is_daq2": is_daq2,
     }
+
+    conf: LuteLaunchConfig = get_lute_launch_config(
+        launch_info=launch_info,
+        run_type=run_type,
+        is_daq2=is_daq2,
+        lute_params=params,
+        slurm_params=extra_args,
+        workflow_defn=wf_defn,
+        lute_location=lute_location,
+        executable_subdir="launch_scripts",
+    )
 
     # Get CSRF
     ##############################################
@@ -736,7 +598,7 @@ def run_workflow_prefect(
         f"{PREFECT_API_URL}/deployments/{deployment_id}/create_flow_run"
     )
 
-    data: FlowRequestDict = {"parameters": {"flow_conf": conf}}
+    data: Dict[str, Any] = {"parameters": {"flow_conf": conf}}
     headers: Dict[str, str] = {
         "Prefect-Csrf-Token": token,
         "Prefect-Csrf-Client": client,
@@ -784,6 +646,68 @@ def run_workflow_prefect(
         return True
 
 
+def run_workflow_maestro(
+    lute_location: str,
+    config_file: str,
+    workflow_file: str,
+) -> bool:
+    """Run a workflow using Maestro.
+
+    Args:
+        lute_location (str): Path to the LUTE installation.
+
+        config_file (str): Path to the configuration YAML.
+
+        workflow_file (str): Path to the DAG definition YAML.
+
+    Returns:
+        is_successful (bool): True if workflow returns successful. False otherwise.
+    """
+    from maestro._maestro import _maestro
+    from maestro.parser import load_lute_dag
+
+    # Experiment, run #, and ARP env variables come from ARP submission only
+    experiment: str = cast(str, os.getenv("EXPERIMENT"))
+    run_num: str = cast(str, os.getenv("RUN_NUM"))
+    jid_authorization: str = cast(str, os.getenv("Authorization"))
+
+    run_type, is_daq2 = retrieve_run_info(experiment, run_num, jid_authorization)
+
+
+    wf_defn: List[_maestro.JobStep] = load_lute_dag(
+        workflow_path=workflow_file,
+        lute_location=lute_location,
+        executable_subdir="launch_scripts",
+        config_file=config_file,
+        debug=True,
+        default_slurm_params=" ".join(extra_args),
+    )
+
+    num_concurrent_steps: int = get_concurrent_job_steps(wf_defn)
+    manager_host: str = socket.gethostname()
+    manager_port: int = 41239
+    os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
+
+    manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
+        num_concurrent_steps,  # Manager threads
+        2,  # Server threads
+        True,  # Unbuffered logs
+        "0.0.0.0",  # Server IP
+        manager_port,  # Server port
+        _maestro.LauncherType.SlurmLauncherType,  # Launch mechanism
+        is_daq2 if is_daq2 is not None else True,  # Is daq2?
+        run_type,  # Run type
+    )
+
+    try:
+        _maestro.run_workflow(wf_defn, manager_params)
+    except Exception as e:
+        logger.error(f"Maestro workflow failed: {e}")
+        return False
+
+    return True
+
+
 def clean_up(
     cache_file: Optional[str], lute_location: str, output_location: str
 ) -> None:
@@ -826,6 +750,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_prefect",
         help="Use prefect (experimental) instead of Airflow.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--use_maestro",
+        help="Use maestro instead of Airflow.",
         action="store_true",
     )
     # Options for running specific versions of LUTE
@@ -963,7 +892,7 @@ if __name__ == "__main__":
             # run_workflow function uses them
             os.environ["EXPERIMENT"] = experiment
             os.environ["RUN_NUM"] = run
-            os.environ["Authorization"] = _request_arp_token(experiment)
+            os.environ["Authorization"] = request_arp_token(experiment)
             os.environ["ARP_JOB_ID"] = str(uuid.uuid4())
 
             run_workflow: Union[
@@ -971,7 +900,14 @@ if __name__ == "__main__":
                 Callable[[str, str, str], bool],
             ]
             is_successful: bool
-            if args.use_prefect:
+            if args.use_maestro:
+                run_workflow = run_workflow_maestro
+                is_successful = run_workflow(
+                    lute_location=lute_location,
+                    config_file=config_file,
+                    workflow_file=wf_file,
+                )
+            elif args.use_prefect:
                 run_workflow = run_workflow_prefect
                 is_successful = run_workflow(
                     lute_location=lute_location,
