@@ -136,10 +136,15 @@ namespace HTTP {
     class LogThrottler {
     public:
       LogThrottler(std::shared_ptr<spdlog::logger> logger, std::chrono::milliseconds update_interval)
-        : m_logger(logger)
+        : m_logger(std::move(logger))
         , m_update_interval(update_interval)
         , m_last_log(std::chrono::steady_clock::now())
       {}
+
+      LogThrottler(const LogThrottler&) = default;
+      LogThrottler(LogThrottler&&) noexcept = default;
+      LogThrottler& operator=(const LogThrottler&) = default;
+      LogThrottler& operator=(LogThrottler&&) noexcept = default;
 
       void info(const std::string& msg) {
         auto now = std::chrono::steady_clock::now();
@@ -149,7 +154,7 @@ namespace HTTP {
         }
       }
 
-      void debug(const std::string &msg) {
+      void debug(const std::string& msg) {
         auto now = std::chrono::steady_clock::now();
         if (now - m_last_log >= m_update_interval) {
           m_logger->debug(msg);

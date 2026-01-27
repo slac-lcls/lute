@@ -2,6 +2,7 @@
 
 #include "http.hh"
 
+#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <arpa/inet.h>
@@ -41,7 +42,13 @@ namespace HTTP {
   Server::Server(const std::string& host, std::uint16_t port)
     : m_host(host)
     , m_port(port)
-    , m_logger(spdlog::stdout_color_mt("HTTP:Server"))
+    , m_logger([] {
+      if (auto tmp = spdlog::get("HTTP:Server")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("HTTP:Server");
+      }
+    }())
     , m_throttled_logger(m_logger, std::chrono::milliseconds(100))
   {
     if ((m_sock_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0) {
