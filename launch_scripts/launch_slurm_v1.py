@@ -6,7 +6,6 @@ submits the individual workflow job steps.
 
 __author__ = "Gabriel Dorlhiac"
 
-import argparse
 import json
 import logging
 import os
@@ -21,6 +20,12 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, overload
 from typing_extensions import TypedDict
+
+from lute.execution.launch import (
+    get_base_launch_parser,
+    setup_launch_env,
+    retrieve_run_info,
+)
 
 logger: logging.Logger = logging.getLogger("Launch_SLURM_Workflow")
 handler: logging.Handler = logging.StreamHandler()
@@ -400,54 +405,10 @@ def main() -> None:
     global BUFFER_LOGS
     global MANAGED_TASK_LOGS
 
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="trigger_slurm_lute_workflow",
-        description="A light-weight workflow manager which executes LUTE Managed Tasks.",
-        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    parser = get_base_launch_parser(
+        "A light-weight workflow manager which executes LUTE Managed Tasks."
     )
-    # We pop out the optional args for changing the order of the help message.
-    # We'll add it back later
-    optional_args: argparse._ArgumentGroup = parser._action_groups.pop()
-
-    # Required arguments
-    required_args: argparse._ArgumentGroup = parser.add_argument_group(
-        "required arguments"
-    )
-    required_args.add_argument(
-        "-c", "--config", type=str, help="Path to config YAML file.", required=True
-    )
-    required_args.add_argument(
-        "-W",
-        "--workflow_defn",
-        type=str,
-        help="Path to a YAML file with workflow.",
-        required=True,
-    )
-
-    # Arguments required for when running from command-line
-    non_arp_required_args: argparse._ArgumentGroup = parser.add_argument_group(
-        "required arguments when running without the ARP"
-    )
-    non_arp_required_args.add_argument(
-        "-e",
-        "--experiment",
-        type=str,
-        help="Provide an experiment if not running with ARP.",
-        required=False,
-    )
-    non_arp_required_args.add_argument(
-        "-r",
-        "--run",
-        type=str,
-        help="Provide a run number if not running with ARP.",
-        required=False,
-    )
-
-    # Optional Arguments
-    optional_args.add_argument(
-        "-d", "--debug", help="Run in debug mode.", action="store_true"
-    )
-    optional_args.add_argument(
+    parser.add_argument(
         "--unbuffered",
         help=(
             "Flush logs immediately. Warning: This can make output confusing "
@@ -455,39 +416,25 @@ def main() -> None:
         ),
         action="store_true",
     )
-    parser._action_groups.append(optional_args)
 
-    args: argparse.Namespace
-    extra_args: List[str]  # Should contain all SLURM arguments!
     args, extra_args = parser.parse_known_args()
+
+    launch_info = setup_launch_env(args)
+    experiment = launch_info["experiment"]
+    run_num = launch_info["run_num"]
+    jid_authorization = launch_info["authorization"]
+    cache_file = launch_info["kerb_file"]
 
     BUFFER_LOGS = not args.unbuffered
     if BUFFER_LOGS:
         # If buffering make sure we have a dict here.
         MANAGED_TASK_LOGS = {}
 
-    # Do we use any APIs now that need kerberos ticket if not using JID?
-    # Maybe can get rid of this for the SLURM only submission?
-    cache_file: Optional[str] = os.getenv("KRB5CCNAME")
-    if os.getenv("EXPERIMENT") is None or os.getenv("RUN_NUM") is None:
-        if cache_file is None:
-            logger.info("No Kerberos cache. Try running `kinit` and resubmitting.")
-            sys.exit(-1)
-
-        if args.experiment is None or args.run is None:
-            logger.info(
-                (
-                    "You must provide a `-e ${EXPERIMENT}` and `-r ${RUN_NUM}` "
-                    "if not running with the ARP!\n"
-                    "If you submitted this from the eLog and are seeing this error "
-                    "please contact the maintainers."
-                )
-            )
-            sys.exit(-1)
-        os.environ["EXPERIMENT"] = args.experiment
-        os.environ["RUN_NUM"] = args.run
-
-    is_daq2: bool = True
+    run_type, is_daq2 = retrieve_run_info(
+        experiment, run_num, jid_authorization, args.type
+    )
+    if is_daq2 is None:
+        is_daq2 = True  # Fallback to original behavior if unknown
     wf_defn: Dict[str, Any]
 
     def branch_daq2_constructor(
