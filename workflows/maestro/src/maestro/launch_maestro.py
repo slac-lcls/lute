@@ -86,7 +86,9 @@ def main():
     )
     # fmt: on
 
-    _maestro.run_workflow(wf_defn, manager_params)
+    status: str = _maestro.run_workflow(wf_defn, manager_params)
+    if status == "FAILED":
+        raise RuntimeError("Workflow Failed!")
 
 
 if __name__ == "__main__":

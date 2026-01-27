@@ -5,6 +5,7 @@
 #include "../server/http.hh"
 #include "job.hh"
 
+#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <future>
@@ -44,7 +45,13 @@ namespace LWM {
     virtual bool use_server() { return m_expects_server; }
 
   protected:
-    std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:Launcher");
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:Launcher")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:Launcher");
+      }
+    }();
     virtual std::shared_ptr<spdlog::logger> logger() { return m_logger; }
     /**
      * Whether this launcher expects the status update to come from the manager's
@@ -116,7 +123,13 @@ namespace LWM {
     std::mutex m_log_mut;
     std::map<std::string, std::string> m_log_map;
 
-    std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:JsonLogHandler");
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:JsonLogHandler")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:JsonLogHandler");
+      }
+    }();
     bool m_unbuffered_logs{false};
   };
 
@@ -157,7 +170,13 @@ namespace LWM {
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
     std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
 
-    std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SubprocessLauncher");
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:SubprocessLauncher")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:SubprocessLauncher");
+      }
+    }();
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
   };
 
@@ -170,7 +189,13 @@ namespace LWM {
     PythonLauncher(const bool& unbuffered_logs) : SubprocessLauncher(unbuffered_logs) {}
   protected:
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
-    std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:PythonLauncher");
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:PythonLauncher")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:PythonLauncher");
+      }
+    }();
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
   };
 
@@ -187,7 +212,13 @@ namespace LWM {
   protected:
     void update_log(std::string& log, std::string& jobid) override;
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) override;
-    std::shared_ptr<spdlog::logger> m_logger = spdlog::stdout_color_mt("LWM:SlurmLauncher");
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:SlurmLauncher")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:SlurmLauncher");
+      }
+    }();
     virtual std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
   };
 

@@ -1,5 +1,6 @@
 #include "threadpool.hh"
 
+#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <functional>
@@ -10,7 +11,13 @@
 namespace LWM {
   ThreadPool::ThreadPool(size_t num_threads)
     : m_num_threads(num_threads)
-    , m_logger(spdlog::stdout_color_mt("LWM:ThreadPool"))
+    , m_logger([] {
+      if (auto tmp = spdlog::get("LWM:ThreadPool")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:ThreadPool");
+      }
+    }())
   {
     for (size_t i=0; i < m_num_threads; ++i) {
       m_worker_pool.emplace_back(&ThreadPool::run_jobs, this);

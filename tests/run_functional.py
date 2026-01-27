@@ -3,9 +3,6 @@
 __author__ = "Gabriel Dorlhiac"
 
 import argparse
-import collections
-import datetime
-import getpass
 import logging
 import os
 import shutil
@@ -22,7 +19,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    TypedDict,
     Union,
     cast,
     overload,
@@ -673,7 +669,7 @@ def run_workflow_maestro(
     wf_defn: List[_maestro.JobStep] = load_lute_dag(
         workflow_path=workflow_file,
         lute_location=lute_location,
-        executable_subdir="launch_scripts",
+        executable_subdir="install/bin",
         config_file=config_file,
         debug=True,
         default_slurm_params=" ".join(extra_args),
@@ -695,12 +691,12 @@ def run_workflow_maestro(
         run_type,  # Run type
     )
 
-    try:
-        _maestro.run_workflow(wf_defn, manager_params)
-    except Exception as e:
-        logger.error(f"Maestro workflow failed: {e}")
+    status: str = _maestro.run_workflow(wf_defn, manager_params)
+    if status == "FAILED":
+        logger.error(f"Maestro workflow failed: {status}")
         return False
 
+    logger.info(f"Maestro workflow exited: {status}")
     return True
 
 
@@ -733,6 +729,16 @@ if __name__ == "__main__":
     )
     # Airflow vs Prefect arguments
     parser.add_argument(
+        "--use_prefect",
+        help="Use prefect (experimental) instead of maestro.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--use_airflow",
+        help="Use Airflow instead of maestro.",
+        action="store_true",
+    )
+    parser.add_argument(
         "-a",
         "--admin",
         help="Run as Airflow admin. Requires permissions. Ignored if using prefect.",
@@ -743,17 +749,12 @@ if __name__ == "__main__":
         help="Use test Airflow instance. Ignored if using prefect.",
         action="store_true",
     )
-    parser.add_argument(
-        "--use_prefect",
-        help="Use prefect (experimental) instead of Airflow.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--use_maestro",
-        help="Use maestro instead of Airflow.",
-        action="store_true",
-    )
     # Options for running specific versions of LUTE
+    parser.add_argument(
+        "--no_clone",
+        help="If passed, will use the build of LUTE that the script was called from.",
+        action="store_true",
+    )
     parser.add_argument(
         "--git_pr_id",
         help="Check out a specific GitHub PR ID of LUTE to run (a PR branch).",
@@ -811,26 +812,32 @@ if __name__ == "__main__":
         logger.error("No Kerberos cache. Try running `kinit` and resubmitting.")
         sys.exit(-1)
 
-    logger.debug(f"Cloning LUTE to {args.run_dir}")
-    git_clone("slac-lcls/lute", args.run_dir, 0o777)
-    if args.git_tag is not None and args.git_pr_id is not None:
-        logger.warning(
-            "Provided both a git tag and git ID to use. Will default to using the ID."
-        )
-        logger.info(f"Switching to PR branch ID {args.git_pr_id}")
-        git_fetch_pr_branch(f"{args.run_dir}/lute", args.git_pr_id)
-    elif args.git_tag is not None:
-        logger.info(f"Switching to tag {args.git_tag}")
-        git_checkout_branch(f"{args.run_dir}/lute", args.git_tag)
-    elif args.git_pr_id is not None:
-        logger.info(f"Switching to PR branch ID {args.git_pr_id}")
-        git_fetch_pr_branch(f"{args.run_dir}/lute", args.git_pr_id)
+    run_dir: str
+    lute_location: str
+    if not args.no_clone:
+        run_dir = args.run_dir
+        logger.debug(f"Cloning LUTE to {run_dir}")
+        git_clone("slac-lcls/lute", run_dir, 0o777)
+        if args.git_tag is not None and args.git_pr_id is not None:
+            logger.warning(
+                "Provided both a git tag and git ID to use. Will default to using the ID."
+            )
+            logger.info(f"Switching to PR branch ID {args.git_pr_id}")
+            git_fetch_pr_branch(f"{run_dir}/lute", args.git_pr_id)
+        elif args.git_tag is not None:
+            logger.info(f"Switching to tag {args.git_tag}")
+            git_checkout_branch(f"{run_dir}/lute", args.git_tag)
+        elif args.git_pr_id is not None:
+            logger.info(f"Switching to PR branch ID {args.git_pr_id}")
+            git_fetch_pr_branch(f"{run_dir}/lute", args.git_pr_id)
+        else:
+            logger.info("Running LUTE from dev branch.")
+        lute_location = f"{run_dir}/lute"
     else:
-        logger.info("Running LUTE from dev branch.")
+        run_dir =  f"{os.path.dirname(__file__)}/../.."
+        lute_location = f"{os.path.dirname(__file__)}/.."
 
-    lute_location: str = f"{args.run_dir}/lute"
-
-    output_location: str = f"{args.run_dir}/lute_output"
+    output_location: str = f"{run_dir}/lute_output"
     logger.info(f"Will write output to {output_location}")
     os.makedirs(output_location, mode=0o777)
     os.chmod(output_location, mode=0o777)
@@ -896,12 +903,14 @@ if __name__ == "__main__":
                 Callable[[str, str, str], bool],
             ]
             is_successful: bool
-            if args.use_maestro:
-                run_workflow = run_workflow_maestro
+            if args.use_airflow:
+                run_workflow = run_workflow_airflow
                 is_successful = run_workflow(
                     lute_location=lute_location,
                     config_file=config_file,
                     workflow_file=wf_file,
+                    use_test_inst=args.test_airflow,
+                    is_admin=args.admin,
                 )
             elif args.use_prefect:
                 run_workflow = run_workflow_prefect
@@ -911,13 +920,11 @@ if __name__ == "__main__":
                     workflow_file=wf_file,
                 )
             else:
-                run_workflow = run_workflow_airflow
+                run_workflow = run_workflow_maestro
                 is_successful = run_workflow(
                     lute_location=lute_location,
                     config_file=config_file,
                     workflow_file=wf_file,
-                    use_test_inst=args.test_airflow,
-                    is_admin=args.admin,
                 )
 
             if is_successful:

@@ -17,7 +17,13 @@ namespace LWM {
     : m_params(params)
     , m_server(HTTP::Server(params.host, params.port))
     , m_job_pool(params.num_manager_threads)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
+    , m_logger([] {
+      if (auto tmp = spdlog::get("LWM:Manager")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:Manager");
+      }
+    }())
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
     std::string msg{"Running workflows with "};
