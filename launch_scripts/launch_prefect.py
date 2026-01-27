@@ -6,17 +6,12 @@ begin running the tasks of the specified deployment of a flow.
 
 __author__ = "Gabriel Dorlhiac"
 
-import argparse
-import collections
-import datetime
-import getpass
 import logging
 import os
 import sys
 import time
-import uuid
 import yaml
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, Literal, Tuple
 from typing_extensions import TypedDict
 
 import requests
@@ -43,6 +38,7 @@ if __debug__:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+
 
 class FlowRequestDict(TypedDict):
     parameters: Dict[Literal["flow_conf"], LuteLaunchConfig]

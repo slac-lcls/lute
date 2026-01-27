@@ -299,7 +299,6 @@ def main() -> None:
         logger.info(f"DAG exited: {dag_state}")
         break
 
-
     # We had to do some funny business to get Kerberos credentials...
     # Cleanup now that we're done
     logger.debug("Removing duplicate Kerberos credentials.")
