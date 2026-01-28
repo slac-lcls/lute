@@ -314,11 +314,31 @@ class SubmitSMDParameters(ThirdPartyParameters):
         )
 
         epicsPV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
-            None, description="List of PVs to save once per event."
+            None,
+            description=(
+                "LCLS1: List of PVs to save once per event. The lists are either "
+                "PV names, alias names, or tuples of (PV name, alias name).\n"
+                "LCLS2: List of PVs to grab from the ARCHIVER. The lists are either "
+                "PV names or tuples of (PV name, alias name).\n"
+                "NOTE: It appears to be shot-to-shot, but this is for convenience only."
+            ),
+        )
+
+        epicsArchFilePV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
+            None,
+            description=(
+                "List PVs to save shot-to-shot. NOTE: It appears to be shot-to-shot, "
+                "but this is for convenience only. The lists are either PV names, "
+                "alias names, or tuples of (PV name, alias name)."
+            ),
         )
 
         epicsOncePV: Optional[List[Union[str, Tuple[str, str]]]] = Field(
-            None, description="List of PVs to save once per run."
+            None,
+            description=(
+                "List of PVs to save once per run.The lists are either "
+                "PV names, alias names, or tuples of (PV name, alias name)."
+            ),
         )
 
         ttCalib: Optional[List[float]] = Field(
