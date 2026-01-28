@@ -1,6 +1,5 @@
 #include "handler.hh"
 
-#include <regex>
 #include <string>
 
 namespace HTTP {
@@ -11,37 +10,80 @@ namespace HTTP {
       ? ""
       : str.substr(first, last - first + 1);
   }
-  // Function to parse the JSON-like string into a std::map
-  void JsonHandler::parse_json(const std::string& json_string, std::map<std::string, std::string>& result) {
-    // Key is a string, value is either a string or any non-comma/non-closing-brace text
-    std::regex re(R"rs("([^"]+)"\s*:\s*("[^"]*"|[^,}]*))rs");
-    std::smatch match;
-    std::string input = json_string;
 
-    // Remove outer curly braces if present
-    if (input.front() == '{' && input.back() == '}') {
-        input = input.substr(1, input.length() - 2);  // Strip off outer {}
+  // Convert JSON strong to map
+  // This is an attempt at an O(N) implementation - the previous version
+  // was regex based and O(N^2) minimum
+  void JsonHandler::parse_json(const std::string& json_string,
+                               std::map<std::string, std::string>& result) {
+    size_t i = 0;
+    size_t len = json_string.length();
+
+    // Skip leading whitespace and '{'
+    while (i < len && (isspace(json_string[i]) || json_string[i] == '{')) {
+      i++;
     }
 
-    // Search for key-value pairs
-    while (std::regex_search(input, match, re)) {
-        std::string key = match[1].str();    // The key is captured in the first group
-        std::string value = match[2].str();  // The value is captured in the second group
-
-        // Clean the key and value by trimming spaces
-        key = trim(key);
-        value = trim(value);
-
-        // Remove quotes around values if they exist
-        if (value.front() == '"' && value.back() == '"') {
-            value = value.substr(1, value.length() - 2);
+    auto parse_string = [&](size_t& pos) -> std::string {
+      std::string res;
+      if (pos >= len || json_string[pos] != '"') {
+        return "";
+      }
+      pos++; // skip "
+      while (pos < len) {
+        if (json_string[pos] == '\\' && pos + 1 < len) {
+          if (json_string[pos + 1] == '"' || json_string[pos + 1] == '\\') {
+            res += json_string[pos + 1];
+            pos += 2;
+            continue;
+          }
         }
+        if (json_string[pos] == '"') {
+          pos++; // skip "
+          return res;
+        }
+        res += json_string[pos++];
+      }
+      return res;
+    };
 
-        // Insert into the map
+    while (i < len) {
+      // Skip whitespace, commas, and '}'
+      while (i < len
+             && (isspace(json_string[i])
+                 || json_string[i] == ','
+                 || json_string[i] == '}')) {
+        i++;
+      }
+      if (i >= len) {
+        break;
+      }
+
+      std::string key = parse_string(i);
+
+      // Skip whitespace and ':'
+      while (i < len && (isspace(json_string[i]) || json_string[i] == ':')) {
+        i++;
+      }
+      if (i >= len) {
+        break;
+      }
+
+      std::string value;
+      if (json_string[i] == '"') {
+        value = parse_string(i);
+      } else {
+        // Unquoted value (collect until comma or brace)
+        size_t start = i;
+        while (i < len && json_string[i] != ',' && json_string[i] != '}') {
+          i++;
+        }
+        value = trim(json_string.substr(start, i - start));
+      }
+
+      if (!key.empty()) {
         result[key] = value;
-
-        // Move to the next part of the string after the matched key-value pair
-        input = match.suffix().str();
+      }
     }
   }
-}
+} // namespace HTTP

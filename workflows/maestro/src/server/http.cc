@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-
 namespace HTTP {
   VERSION string_to_version(const std::string& version_string) {
     std::string version_string_uppercase;
@@ -119,7 +118,7 @@ namespace HTTP {
   size_t Request::parse_start_line(const std::string_view raw_http) {
     size_t first_crlf = raw_http.find("\r\n", 0);
     if (first_crlf == std::string::npos) {
-      throw std::invalid_argument("Could not find request start line. Missing CRLF?");
+      throw IncompleteHeader("Could not find request start line. Missing CRLF?");
     }
 
     std::string_view start_line = raw_http.substr(0, first_crlf);
@@ -146,7 +145,7 @@ namespace HTTP {
     size_t headers_end = raw_http.find("\r\n\r\n", headers_start);
 
     if (headers_end == std::string_view::npos) {
-      throw std::invalid_argument("Malformed HTTP headers (missing CRLFCRLF)");
+      throw IncompleteHeader("Malformed HTTP headers (missing CRLFCRLF)");
     }
 
     std::string_view headers = raw_http.substr(headers_start, headers_end - headers_start);
@@ -234,4 +233,4 @@ namespace HTTP {
     }
     return response_string;
   }
-}
+} // namespace HTTP
