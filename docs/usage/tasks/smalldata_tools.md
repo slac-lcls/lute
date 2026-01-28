@@ -227,7 +227,7 @@ One or more ROIs can be defined on a per detector basis using the parameters def
 ```yaml
   getROIs:
     jungfrau1M:   # Change to detector name
-      - ROI: [[[1, 2], [157, 487], [294, 598]]]
+      - ROI: [[1, 2], [157, 487], [294, 598]]
         #name: "abcd" # Providing a name is only required if you are creating multiple ROIs
         writeArea: True   # Whether to save ROI, if False, save sum but not img.
         thresADU: None
