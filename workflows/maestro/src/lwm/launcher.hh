@@ -8,11 +8,13 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
+#include <atomic>
 #include <future>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -24,6 +26,26 @@ namespace LWM {
   using JobFuture_t = std::shared_future<JobReturn>;
   using JobFutures_t = std::variant<JobFuture_t, std::vector<JobFuture_t>>;
   using MaybeJobFutures_t = std::optional<JobFuture_t>;
+
+  extern std::atomic<bool> s_interrupted;
+
+  /**
+   * Thread-safe registry for tracking active jobs (especially SLURM jobs)
+   * to allow for cancellation upon interruption.
+   */
+  class JobRegistry {
+  public:
+    static void register_job(const std::string& task_name,
+                             const std::string& job_id);
+    static void unregister_job(const std::string& task_name);
+    static void cancel_all();
+    static bool is_empty();
+
+  private:
+    static std::mutex m_registry_mut;
+    // Set of (task_name, job_id) pairs
+    static std::set<std::pair<std::string, std::string>> m_active_jobs;
+  };
 
   class Launcher {
   public:

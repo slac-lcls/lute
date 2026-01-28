@@ -149,13 +149,22 @@ namespace LWM {
     }
     int n_complete{0};
     int n_success{0};
+    bool cancellation_triggered{false};
     while (true) {
       if (m_all_futures->size() == 0) {
         break;
       }
+      if (s_interrupted && !cancellation_triggered) {
+        m_logger->warn("Interruption detected! Cancelling active jobs...");
+        JobRegistry::cancel_all();
+        cancellation_triggered = true;
+      }
+      if (s_interrupted) {
+        m_logger->warn("Interruption detected! Waiting for active tasks to shut down...");
+      }
       auto& futures = *m_all_futures;
-      for (auto return_it = futures.begin(); return_it != futures.end(); ) {
-        if (return_it->wait_for(std::chrono::milliseconds(5000)) == std::future_status::ready) {
+      for (auto return_it = futures.begin(); return_it != futures.end();) {
+        if (return_it->wait_for(std::chrono::milliseconds(200)) == std::future_status::ready) {
           ++n_complete;
           auto& [task_name, status, logfile, splits] = return_it->get();
           std::string msg = "Providing logs for " + task_name + " [Exited as: " + status
