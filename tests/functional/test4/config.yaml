@@ -2,7 +2,7 @@
 ---
 title: "LUTE Task Configuration" # Include experiment description if desired
 experiment: "mfx101344525"
-run: 70
+run: 90
 date: "2023/10/25"
 lute_version: 0.1      # Do not be change unless need to force older version
 task_timeout: 30000
@@ -22,6 +22,7 @@ SubmitSMD:
   #experiment: ""
   #stn: 0
   directory: "{{ work_dir }}"
+  nevents: 5000
   #config: "mfx_cctbx"
   #gather_interval: 25
   #norecorder: False

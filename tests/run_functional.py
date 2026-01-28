@@ -660,6 +660,7 @@ def run_workflow_maestro(
     from maestro.parser import load_lute_dag
 
     # Experiment, run #, and ARP env variables come from ARP submission only
+    # BUT, we should've added them to the env by the time this is called
     experiment: str = cast(str, os.getenv("EXPERIMENT"))
     run_num: str = cast(str, os.getenv("RUN_NUM"))
     jid_authorization: str = cast(str, os.getenv("Authorization"))
@@ -680,16 +681,18 @@ def run_workflow_maestro(
     manager_port: int = 41239
     os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
 
+    # fmt: off
     manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
-        num_concurrent_steps,  # Manager threads
-        2,  # Server threads
-        True,  # Unbuffered logs
-        "0.0.0.0",  # Server IP
-        manager_port,  # Server port
+        num_concurrent_steps,                     # Manager threads
+        2,                                        # Server threads
+        False,                                    # Unbuffered logs
+        "0.0.0.0",                                # Server IP
+        manager_port,                             # Server port
         _maestro.LauncherType.SlurmLauncherType,  # Launch mechanism
-        is_daq2 if is_daq2 is not None else True,  # Is daq2?
-        run_type,  # Run type
+        is_daq2 if is_daq2 is not None else True, # Is daq2?
+        run_type,                                 # Run type
     )
+    # fmt: on
 
     status: str = _maestro.run_workflow(wf_defn, manager_params)
     if status == "FAILED":

@@ -77,6 +77,7 @@ def getROIs(run):
     ret_dict = {}
 
     if run > 0:
+        roi_dict = {}
 {% for detector, params in getROIs.items() %}
 {{- step_parameters("roi_dict", detector, params) }}
 {% endfor %}
