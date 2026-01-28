@@ -181,7 +181,7 @@ def get_azav_pyfai(run):
 {% endif %}
         az_dict['npts'] = {{ params['npts'] }}
         az_dict['npts_az'] = {{ params['npts_az'] }}
-        az_dict['int_units'] = {{ params['2th_deg'] }}
+        az_dict['int_units'] = {{ params['int_units'] | pprint }}
         az_dict['return2d'] = {{ params['return2d'] }}
 
         ret_dict['{{ detector }}'] = az_dict
