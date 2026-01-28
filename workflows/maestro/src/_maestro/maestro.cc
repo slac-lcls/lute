@@ -5,6 +5,7 @@
 
 //#include <pybind11/chrono.h>
 //#include <pybind11/functional.h>
+#include <csignal>
 #include <cstdint>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -14,12 +15,21 @@
 
 namespace py = pybind11;
 
+void signal_handler(int signal) {
+  if (signal == SIGINT) {
+    LWM::s_interrupted = true;
+  }
+}
+
 std::string run_workflow(LWM::WfDefinition wf_defn,
                          LWM::ManagerParameters manager_params) {
+  std::signal(SIGINT, signal_handler);
   LWM::Manager manager = LWM::Manager(manager_params);
   manager.queue_workflow(wf_defn);
 
-  return manager.run_workflow();
+  std::string status = manager.run_workflow();
+  std::signal(SIGINT, SIG_DFL);
+  return status;
 }
 
 PYBIND11_MODULE(_maestro, m, py::mod_gil_not_used()) {

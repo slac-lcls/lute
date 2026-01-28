@@ -25,6 +25,51 @@ namespace fs = std::filesystem;
 
 namespace LWM {
 
+  std::atomic<bool> s_interrupted{false};
+
+  std::mutex JobRegistry::m_registry_mut;
+  std::set<std::pair<std::string, std::string>> JobRegistry::m_active_jobs;
+
+  void JobRegistry::register_job(const std::string& task_name,
+                                 const std::string& job_id) {
+    std::lock_guard<std::mutex> lock(m_registry_mut);
+    m_active_jobs.insert({task_name, job_id});
+  }
+
+  void JobRegistry::unregister_job(const std::string& task_name) {
+    std::lock_guard<std::mutex> lock(m_registry_mut);
+    for (auto it = m_active_jobs.begin(); it != m_active_jobs.end();) {
+      if (it->first == task_name) {
+        it = m_active_jobs.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+  void JobRegistry::cancel_all() {
+    std::lock_guard<std::mutex> lock(m_registry_mut);
+    if (m_active_jobs.empty()) {
+      return;
+    }
+
+    std::string cancel_cmd = "scancel";
+    for (const auto &pair : m_active_jobs) {
+      cancel_cmd += " " + pair.second;
+    }
+    // We use std::system here as a quick way to fire and forget the scancel
+    // Since we are likely in a signal handler or exiting, we don't want to get
+    // too fancy
+    int ret = std::system(cancel_cmd.c_str());
+    (void)ret;
+    m_active_jobs.clear();
+  }
+
+  bool JobRegistry::is_empty() {
+    std::lock_guard<std::mutex> lock(m_registry_mut);
+    return m_active_jobs.empty();
+  }
+
   void JsonStatusHandler::update_running_splits(JobStepSplits* splits,
                                                 std::string& managed_task_name) {
     std::lock_guard<std::mutex> lock(m_status_mut);
@@ -55,13 +100,13 @@ namespace LWM {
     return response;
   }
 
-  HTTP::Response JsonLogHandler::operator()(const HTTP::Request &request) {
+  HTTP::Response JsonLogHandler::operator()(const HTTP::Request& request) {
     std::map<std::string, std::string> log;
     if (m_unbuffered_logs) {
       parse_json(request.content(), log);
       {
-    //  std::lock_guard<std::mutex> lock(m_log_mut);
-    //  m_log_map[log["managed_task"]] = log["message"];
+        //  std::lock_guard<std::mutex> lock(m_log_mut);
+        //  m_log_map[log["managed_task"]] = log["message"];
         if (log.find("managed_task") != log.end()) {
           std::string msg = "[";
           msg += log["managed_task"] + "] ";
@@ -254,10 +299,15 @@ namespace LWM {
       std::string jobid{""};
       if (std::regex_search(log,jobid_match,jobid_regex)) {
         jobid = jobid_match[1].str();
+        JobRegistry::register_job(managed_task_name, jobid);
       }
 
       while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (s_interrupted) {
+          status = "CANCELLED";
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         // ... Need to do the status check ... //
         {
           std::lock_guard<std::mutex>(m_status_handler->m_status_mut);
@@ -269,6 +319,7 @@ namespace LWM {
         }
         logger()->debug(managed_task_name + "'s current status is " + status);
       }
+      JobRegistry::unregister_job(managed_task_name);
       update_log(log, jobid);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger

@@ -7,9 +7,12 @@ from lute.io._db.v1.api import record_analysis_db
 from lute.io.models.base import TaskParameters, AnalysisHeader
 from lute.tasks.dataclasses import TaskResult, TaskStatus, DescribedAnalysis
 
+
 class SimpleTaskParams(TaskParameters):
     """A minimal subclass of TaskParameters for testing."""
+
     pass
+
 
 @pytest.fixture
 def temp_db_dir(tmp_path):
@@ -27,11 +30,7 @@ def test_record_analysis_db_v1(temp_db_dir):
     )
 
     # Need to use real classes due to assertions in database code
-    header = AnalysisHeader(
-        experiment="test_exp",
-        run=1,
-        work_dir=temp_db_dir
-    )
+    header = AnalysisHeader(experiment="test_exp", run=1, work_dir=temp_db_dir)
 
     params = SimpleTaskParams(lute_config=header)
 

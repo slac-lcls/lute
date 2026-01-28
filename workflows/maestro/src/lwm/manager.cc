@@ -17,7 +17,13 @@ namespace LWM {
     : m_params(params)
     , m_server(HTTP::Server(params.host, params.port))
     , m_job_pool(params.num_manager_threads)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
+    , m_logger([] {
+      if (auto tmp = spdlog::get("LWM:Manager")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:Manager");
+      }
+    }())
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
     std::string msg{"Running workflows with "};
@@ -143,13 +149,22 @@ namespace LWM {
     }
     int n_complete{0};
     int n_success{0};
+    bool cancellation_triggered{false};
     while (true) {
       if (m_all_futures->size() == 0) {
         break;
       }
+      if (s_interrupted && !cancellation_triggered) {
+        m_logger->warn("Interruption detected! Cancelling active jobs...");
+        JobRegistry::cancel_all();
+        cancellation_triggered = true;
+      }
+      if (s_interrupted) {
+        m_logger->warn("Interruption detected! Waiting for active tasks to shut down...");
+      }
       auto& futures = *m_all_futures;
-      for (auto return_it = futures.begin(); return_it != futures.end(); ) {
-        if (return_it->wait_for(std::chrono::milliseconds(5000)) == std::future_status::ready) {
+      for (auto return_it = futures.begin(); return_it != futures.end();) {
+        if (return_it->wait_for(std::chrono::milliseconds(200)) == std::future_status::ready) {
           ++n_complete;
           auto& [task_name, status, logfile, splits] = return_it->get();
           std::string msg = "Providing logs for " + task_name + " [Exited as: " + status
