@@ -116,6 +116,8 @@ test('Server logic tests', test_server)
 py_sources = [
     'src/maestro/__init__.py',
     'src/maestro/parser.py',
+    'src/maestro/parser_params.py',
+    'src/maestro/config_generator.py',
 ]
 py3.install_sources(
     py_sources,

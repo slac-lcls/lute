@@ -4,6 +4,7 @@ __all__ = ["load_lute_dag"]
 __author__ = "Gabriel Dorlhiac"
 
 import collections
+import logging
 import os
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
@@ -11,12 +12,24 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 import yaml
 
 from maestro._maestro._maestro import JobParameters, JobStep, TriggerRule
+from maestro.config_generator import expand_config_for_sweep
+from maestro.parser_params import (
+    expand_param_matrix,
+    format_slurm_params,
+    validate_param_matrix,
+    get_sweep_metadata,
+)
 
 if __debug__:
     warnings.simplefilter("default")
     os.environ["PYTHONWARNINGS"] = "default"
+    logging.basicConfig(level=logging.DEBUG)
+    logging.captureWarnings(True)
 else:
     warnings.simplefilter("ignore")
+    logging.basicConfig(level=logging.INFO)
+
+logger: logging.Logger = logging.Logger(__name__)
 
 
 class DagParseError(Exception): ...
@@ -160,9 +173,24 @@ def get_lute_dag_loader(
             job_step_dicts = []
             sub_node: yaml.nodes.MappingNode
             for sub_node in node.value:
-                returned_job_steps: List[JobStep] = dag_constructor(loader, sub_node)
-                for step in returned_job_steps:
-                    job_step_dicts.append((step, step.trigger_rule))
+                # Let YAML dispatcher handle tags like !param_sweep
+                # loader.construct_object will call the appropriate constructor
+                constructed_obj = loader.construct_object(sub_node, deep=False)
+                # If it's already a list of JobSteps (from !param_sweep), extend
+                if isinstance(constructed_obj, list):
+                    for step in constructed_obj:
+                        if isinstance(step, JobStep):
+                            job_step_dicts.append((step, step.trigger_rule))
+                        else:
+                            # Shouldn't happen, but handle gracefully
+                            job_step_dicts.append((step, default_trigger_rule))
+                else:
+                    # Single JobStep or dict, call dag_constructor to process it
+                    returned_job_steps: List[JobStep] = dag_constructor(
+                        loader, sub_node
+                    )
+                    for step in returned_job_steps:
+                        job_step_dicts.append((step, step.trigger_rule))
         elif isinstance(node, yaml.nodes.MappingNode):
             node = get_branch(
                 loader=loader, node=node, branch_conditions=branch_conditions
@@ -219,8 +247,120 @@ def get_lute_dag_loader(
                 job_steps.append(job_step_dict)
         return job_steps
 
+    def param_sweep_constructor(
+        loader: yaml.SafeLoader,
+        node: yaml.nodes.MappingNode,
+    ) -> List[JobStep]:
+        """Constructor for !param_sweep tag - expands parameter matrices."""
+        # Parse the node into a dictionary
+        sweep_dict: Dict[str, Any] = {}
+        for key_node, val_node in node.value:
+            key = loader.construct_scalar(key_node)
+            if key == "next":
+                # Recursively construct next steps
+                if isinstance(val_node, yaml.nodes.SequenceNode):
+                    sweep_dict[key] = dag_constructor(loader, val_node)
+                else:
+                    sweep_dict[key] = []
+            elif key == "param_matrix":
+                # Construct param_matrix as a dictionary
+                sweep_dict[key] = loader.construct_mapping(val_node, deep=True)
+            else:
+                # Simple scalar
+                sweep_dict[key] = loader.construct_scalar(val_node)
+
+        # Extract required fields
+        managed_task_name: str = sweep_dict.get("task_name", "")
+        param_matrix: Dict[str, Any] = sweep_dict.get("param_matrix", {})
+        slurm_template: str = sweep_dict.get("slurm_params", "")
+        next_steps: List[Dict[str, Any]] = sweep_dict.get("next", [])
+
+        if not managed_task_name:
+            raise DagParseError("!param_sweep requires 'task_name' field")
+
+        # Resolve true Task name from managed Task name
+        task_name: str = managed_task_name
+        try:
+            # Non-ideal doing this... but don't have other access to underlying
+            # name...
+            from lute import managed_tasks
+            from lute.execution.executor import BaseExecutor
+
+            if hasattr(managed_tasks, managed_task_name):
+                executor: BaseExecutor = getattr(managed_tasks, managed_task_name)
+                # Executor.task_name has the actual Task name
+                if hasattr(executor, "task_name"):
+                    task_name = executor.task_name
+                    logger.info(
+                        f"Resolved '{managed_task_name}' as running Task '{task_name}'",
+                    )
+        except ImportError:
+            # If we can't import managed_tasks, use managed_task_name as fallback
+            logger.warn(
+                "Could not import managed_tasks to determine Task name. "
+                f"Using '{managed_task_name}' as-is...",
+            )
+
+        # Validate and expand parameter matrix
+        validate_param_matrix(param_matrix)
+        param_combinations: List[Dict[str, Any]] = expand_param_matrix(param_matrix)
+
+        metadata: Dict[str, Any] = get_sweep_metadata(param_combinations)
+        logger.debug(
+            f"Parameter sweep for '{managed_task_name}': "
+            f"Generating {metadata['total_tasks']} task instances with "
+            f"parameters {metadata['parameters']}",
+        )
+
+        # Expand config file with all parameter combinations
+        original_config: str = gen_params.config_file
+        expanded_config_dir: str = os.path.dirname(original_config)
+        expanded_config_path: str = expand_config_for_sweep(
+            config_path=original_config,
+            task_name=task_name,  # Use Task name, not managed Task name!
+            param_combinations=param_combinations,
+            output_dir=expanded_config_dir,
+        )
+
+        # Create a new JobParameters with the expanded config
+        expanded_gen_params: JobParameters = JobParameters(
+            gen_params.lute_location,
+            gen_params.executable_subdir,
+            expanded_config_path,
+            gen_params.debug,
+        )
+
+        # Generate JobStep for each parameter combination
+        job_steps: List[JobStep] = []
+        for idx, params in enumerate(param_combinations):
+            expanded_task_name: str = f"{managed_task_name}_{idx}"
+
+            # Format SLURM params with parameter values
+            slurm_params: str
+            if slurm_template:
+                try:
+                    slurm_params = format_slurm_params(slurm_template, params)
+                except ValueError:
+                    # If formatting fails, use template as-is
+                    slurm_params = slurm_template
+            else:
+                slurm_params: str = default_slurm_params
+
+            # Create JobStep with expanded config
+            job_step: JobStep = JobStep(
+                expanded_task_name,
+                default_trigger_rule,
+                expanded_gen_params,
+                slurm_params,
+                next_steps,  # All instances share same next steps
+            )
+            job_steps.append(job_step)
+
+        return job_steps
+
     # Add the full DAG constructor which builds JobStep objects
     loader.add_constructor("!LUTE_DAG", dag_constructor)
+    loader.add_constructor("!param_sweep", param_sweep_constructor)
 
     return loader
 

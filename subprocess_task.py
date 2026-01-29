@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import re
 import signal
 import sys
 import types
@@ -62,6 +63,7 @@ else:
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+
 def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="run_subprocess_task",
@@ -78,8 +80,13 @@ def main() -> None:
     args: argparse.Namespace = parser.parse_args()
     config: str = args.config
     task_name: str = args.taskname
-    task_parameters: TaskParameters = parse_config(task_name=task_name, config_path=config)
+    task_parameters: TaskParameters = parse_config(
+        task_name=task_name, config_path=config
+    )
 
+    # In the event we are using parameter sweeps we now need to remove the
+    # appended _XX number from the Task name
+    task_name = re.sub(r"_\d+$", "", task_name)
     # For now, we will only use the exec with first-party Task's that require a new env.
     TaskType: Type[Task]
     if isinstance(task_parameters, ThirdPartyParameters) or not setup_env():
@@ -124,7 +131,9 @@ def main() -> None:
                 use_mpi = True
                 print(f"Running in a MPI world of size: {size}", flush=True)
         except ModuleNotFoundError:
-            print("mpi4py not found. Assuming this is not an MPI-based `Task`", flush=True)
+            print(
+                "mpi4py not found. Assuming this is not an MPI-based `Task`", flush=True
+            )
         row_ids: Optional[RowIds]
         if use_mpi:
             if rank == 0:
@@ -145,6 +154,7 @@ def main() -> None:
             os.execlp("python", "python", "-B", "-c", exec_script)
         else:
             os.execlp("python", "python", "-OB", "-c", exec_script)
+
 
 if __name__ == "__main__":
     main()

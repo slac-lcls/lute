@@ -213,6 +213,14 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
+    @property
+    def task_name(self) -> str:
+        return self._analysis_desc.task_result.task_name
+
+    @task_name.setter
+    def task_name(self, new_name: str) -> None:
+        self._analysis_desc.task_result.task_name = new_name
+
     def _report_to_manager(self, end_point: str, json_data: Dict[str, str]) -> None:
         requests.post(f"http://{self._lute_manager_url}/{end_point}", json=json_data)
 
