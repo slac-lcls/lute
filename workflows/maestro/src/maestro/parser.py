@@ -175,20 +175,24 @@ def get_lute_dag_loader(
             for sub_node in node.value:
                 # Let YAML dispatcher handle tags like !param_sweep
                 # loader.construct_object will call the appropriate constructor
-                constructed_obj = loader.construct_object(sub_node, deep=False)
-                # If it's already a list of JobSteps (from !param_sweep), extend
-                if isinstance(constructed_obj, list):
-                    for step in constructed_obj:
-                        if isinstance(step, JobStep):
+                if sub_node.tag == "!param_sweep":
+                    constructed_obj = loader.construct_object(sub_node, deep=False)
+                    if isinstance(constructed_obj, list):
+                        for step in constructed_obj:
+                            if isinstance(step, JobStep):
+                                job_step_dicts.append((step, step.trigger_rule))
+                            else:
+                                # Shouldn't happen, but handle gracefully
+                                job_step_dicts.append((step, default_trigger_rule))
+                    else:
+                        # Single JobStep or dict, call dag_constructor to process it
+                        returned_job_steps: List[JobStep] = dag_constructor(
+                            loader, sub_node
+                        )
+                        for step in returned_job_steps:
                             job_step_dicts.append((step, step.trigger_rule))
-                        else:
-                            # Shouldn't happen, but handle gracefully
-                            job_step_dicts.append((step, default_trigger_rule))
                 else:
-                    # Single JobStep or dict, call dag_constructor to process it
-                    returned_job_steps: List[JobStep] = dag_constructor(
-                        loader, sub_node
-                    )
+                    returned_job_steps = dag_constructor(loader, sub_node)
                     for step in returned_job_steps:
                         job_step_dicts.append((step, step.trigger_rule))
         elif isinstance(node, yaml.nodes.MappingNode):
