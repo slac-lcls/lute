@@ -700,6 +700,10 @@ class BaseExecutor(ABC):
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
         self._task_time0 = time.monotonic()
+        # In the event we were using generated parameters, we may have a _XX suffix
+        # Now that the Task has been submitted, we can remove that from the name
+        # for storage in the database - just reset the name
+        self.task_name = re.sub(r"_\d+$", "", self.task_name)
 
         if self._lute_manager_url is not None:
             json_data: Dict[str, str] = {
