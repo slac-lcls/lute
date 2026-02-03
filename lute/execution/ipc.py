@@ -214,9 +214,16 @@ class PipeCommunicator(Communicator):
             proc.stdout.read() if proc.stdout is not None else None
         )
         if raw_signal is not None:
-            signal = raw_signal.decode()
+            try:
+                signal = raw_signal.decode()
+            except UnicodeDecodeError:
+                logger.debug(
+                    "PipeCommunicator (Executor) - Stderr signal contains non-UTF-8 bytes. "
+                    "Decoding with errors='replace'."
+                )
+                signal = raw_signal.decode(errors="replace")
         else:
-            signal = raw_signal
+            signal = None
         if raw_contents:
             if self._use_pickle:
                 try:

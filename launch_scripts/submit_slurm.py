@@ -181,7 +181,7 @@ def prepare_environment_variables(
     else:
         os.environ["LUTE_USE_TCP"] = "1"
 
-    script_dir: str = os.path.dirname(os.path.realpath(__file__))
+    script_dir: str = os.path.dirname(os.path.realpath(sys.argv[0]))
     lute_location: str = os.path.abspath(f"{script_dir}/..")
 
     bin_subdir: str = script_dir.split("/")[-1]
