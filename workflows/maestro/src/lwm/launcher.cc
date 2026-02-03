@@ -341,7 +341,7 @@ namespace LWM {
     //if (job.parameters.executable_subdir == "launch_")
     std::string executable =
       job.parameters.lute_location + "/" + job.parameters.executable_subdir
-      + "/submit_slurm.sh";
+      + "/submit_slurm";
 
     std::string config_file = job.parameters.config_file;
     std::string param_str =
