@@ -769,6 +769,12 @@ class BaseExecutor(ABC):
         else:
             status_str = "COMPLETED"
 
+        hostfile: Optional[str] = os.getenv("LUTE_MPI_HOSTFILE_PATH")
+        if hostfile is not None:
+            if os.path.exists(hostfile):
+                logger.debug(f"Removing hostfile: {hostfile}.")
+                os.remove(hostfile)
+
         if self._lute_manager_url is not None:
             json_data = {
                 "managed_task": self._m_task_name,
