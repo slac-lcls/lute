@@ -270,7 +270,7 @@ def fill_in_batch_script(
     else:
         cmd = f"python -OB {lute_executable} -c {args.config} -t {args.taskname}"
 
-    batch_script += f"srun --cpus-per-task=1 {cmd}\n"
+    batch_script += f"{cmd}\n"
 
     return batch_script
 

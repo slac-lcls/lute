@@ -837,8 +837,8 @@ if __name__ == "__main__":
             logger.info("Running LUTE from dev branch.")
         lute_location = f"{run_dir}/lute"
     else:
-        run_dir =  f"{os.path.dirname(__file__)}/../.."
-        lute_location = f"{os.path.dirname(__file__)}/.."
+        run_dir =  os.path.abspath(f"{os.path.dirname(__file__)}/../..")
+        lute_location = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     output_location: str = f"{run_dir}/lute_output"
     logger.info(f"Will write output to {output_location}")

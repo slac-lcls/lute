@@ -482,6 +482,7 @@ class ThirdPartyTask(Task):
             self._report_to_executor(msg)
         LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
         task_env: Dict[str, str] = self._setup_env()
+        task_env.update(self._non_slurm_mpi_mods(task_env=task_env))
         sys.stdout.flush()
         sys.stderr.flush()
         os.execvpe(file=self._cmd, args=self._args_list, env=task_env)
@@ -499,14 +500,71 @@ class ThirdPartyTask(Task):
         msg: Message = Message(signal=signal)
         self._report_to_executor(msg)
 
+    def _non_slurm_mpi_mods(self, task_env: Dict[str, str]) -> Dict[str, str]:
+        hostfile_path: Optional[str] = task_env.get("LUTE_MPI_HOSTFILE_PATH")
+        if hostfile_path is None:
+            return {}
+
+        critical_vars: Set[str] = {
+            "PATH",
+            "PYTHONPATH",
+            "CONDA_PREFIX",
+            "LD_LIBRARY_PATH",
+            "LUTE_CONFIG",
+            "LUTE_CONFIGPATH",
+            "EXPERIMENT",
+            "RUN_NUM",
+            "SLURM_JOB_ID",
+            "SLURM_NPROCS",
+            "SLURM_NTASKS",
+            "SLURM_JOB_NODELIST",
+        }
+
+        export_parts: List[str] = []
+        for key, val in task_env.items():
+            # if "CONDA" in key or "LUTE" in key or key in critical_vars or "PS_" in key:
+            #    # Add to the export string (verified semicolon format)
+            #    export_parts.append(f"{key}={val}")
+            if key in critical_vars or "SLURM_" not in key:
+                export_parts.append(f"{key}={val}")
+
+        # export_str = ";".join(export_parts)
+
+        mca_config: Dict[str, str] = {
+            # Use hostfile and EXPLICITLY EXCLUDE the native Slurm component
+            # "PRTE_MCA_ras": "hostfile,^slurm",
+            # "PRTE_MCA_ras": "^slurm",
+            "PRTE_MCA_ras_slurm_priority": "0",
+            # Enable overlapping steps for srun calls within the job
+            "PRTE_MCA_plm": "slurm",
+            "PRTE_MCA_plm_slurm_args": "--overlap --export=ALL",
+            "PRTE_MCA_prte_default_hostfile": hostfile_path,
+            "OMPI_MCA_orte_default_hostfile": hostfile_path,
+            "MPIEXEC_HOSTFILE": hostfile_path,
+            # "PRTE_MCA_rmaps_base_display_allocation": "1",
+            # "PRTE_MCA_prte_base_export_env_vars": export_str,
+            "PRTE_MCA_plm_rsh_pass_path": "1",
+            # "PRTE_MCA_plm_rsh_no_tree_spawn": "1",
+            # "OMPI_MCA_plm_rsh_no_tree_spawn": "1",
+        }
+
+        return mca_config
+
     def _setup_env(self) -> Dict[str, str]:
         new_env: Dict[str, str] = {}
+        mpi_hostfile: str = ""
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
+            elif key == "LUTE_MPI_HOSTFILE_PATH":
+                mpi_hostfile = value
         if not new_env:
             # No shell script sourced - will use the base environment
-            return os.environ.copy()
+            new_env = os.environ.copy()
+
+        if mpi_hostfile:
+            new_env["LUTE_MPI_HOSTFILE_PATH"] = mpi_hostfile
+
         return new_env
