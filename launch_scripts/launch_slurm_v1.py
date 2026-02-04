@@ -233,7 +233,7 @@ def launch_lute_task(
         slurm_params=slurm_params,
         kerb_file=kerb_file,
     )
-    executable: str = f"{lute_location}/launch_scripts/submit_slurm.sh"
+    executable: str = f"{lute_location}/launch_scripts/submit_slurm"
     launch_cmd: List[str] = [executable]
     launch_cmd.extend(parameter_str.split())
 

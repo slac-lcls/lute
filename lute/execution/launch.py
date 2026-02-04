@@ -155,7 +155,7 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
     Returns:
         env_cmd_vars (EnvLaunchInfo): A dictionary of variables which will
             be passed either via environment or command-line to the job submission
-            scripts (submit_slurm.sh) during workflow execution.
+            scripts (submit_slurm) during workflow execution.
     """
     cache_file: Optional[str] = os.getenv("KRB5CCNAME")
 
