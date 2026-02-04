@@ -17,6 +17,7 @@ else:
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+
 def setup_mpi_hostfile() -> None:
     """Prepare a hostfile for MPI if running in a SLURM job.
 
@@ -51,16 +52,35 @@ def setup_mpi_hostfile() -> None:
         assert isinstance(job_id, str)
         hostfile_path: str = os.path.abspath(f"lute_hostfile_{job_id}.hosts")
         executor_host: str = socket.gethostname()
+
+        # Setup MPI core affinity. The Task tries to do this as well, but MPI
+        # ignores (sometimes). The `Executor` will pin later (in `execute_task`)
+        # since the core counts may be used by various calculations.
+        mpi_cpuset: str = ""
+        try:
+            available_cores: List[int] = sorted(list(os.sched_getaffinity(0)))
+            if len(available_cores) > 1:
+                mpi_cpuset = ",".join(map(str, available_cores[1:]))
+                logger.debug(f"MPI cpuset for {executor_host}: {mpi_cpuset}")
+            else:
+                logger.warning(
+                    f"Only one core available on {executor_host} - the Executor "
+                    "and Task will share it."
+                )
+        except Exception as e:
+            logger.warning(f"Could not determine CPU affinity: {e}")
+
         with open(hostfile_path, "w") as f:
             node: str
             tpn: int
             for node, tpn in zip(nodes, tpn_list):
-                n_slots: int
-                if node == executor_host:
+                if node == executor_host and mpi_cpuset:
+                    # Explicitly assign the reserved core list to this node
                     n_slots = tpn - 1
+                    f.write(f"{node} slots={n_slots} cpuset={mpi_cpuset}\n")
                 else:
                     n_slots = tpn
-                f.write(f"{node} slots={n_slots}\n")
+                    f.write(f"{node} slots={n_slots}\n")
 
         # Task layer will look for this environment variable
         os.environ["LUTE_MPI_HOSTFILE_PATH"] = hostfile_path

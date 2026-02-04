@@ -532,6 +532,8 @@ class ThirdPartyTask(Task):
             "MPIEXEC_HOSTFILE": hostfile_path,  # Not sure if this exists/is needed?
             # Can turn this on for debugging - display MPI's discovered resources
             # "PRTE_MCA_rmaps_base_display_allocation": "1",
+            # Can turn this on for debugging - report how ranks are bound
+            # "OMPI_MCA_hwloc_base_report_bindings": "1",
             "PRTE_MCA_plm_rsh_pass_path": "1",
         }
 
