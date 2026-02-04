@@ -24,7 +24,6 @@ from typing import (
     overload,
 )
 
-import yaml
 import json
 import requests
 import socket
@@ -805,6 +804,17 @@ if __name__ == "__main__":
         ),
         action="store_true",
     )
+    # Whether to allow output location to exist or not
+    # To avoid accidental overwrites, by default we exit if the output location
+    # already existed prior to running tests
+    parser.add_argument(
+        "--exist_ok",
+        help=(
+            "If passed, tests will continue even if the determined output directory "
+            "already existed. It is possible things may be overwritten in this case."
+        ),
+        action="store_true",
+    )
 
     args: argparse.Namespace
     extra_args: List[str]
@@ -837,13 +847,22 @@ if __name__ == "__main__":
             logger.info("Running LUTE from dev branch.")
         lute_location = f"{run_dir}/lute"
     else:
-        run_dir =  os.path.abspath(f"{os.path.dirname(__file__)}/../..")
+        run_dir = os.path.abspath(f"{os.path.dirname(__file__)}/../..")
         lute_location = os.path.abspath(f"{os.path.dirname(__file__)}/..")
 
     output_location: str = f"{run_dir}/lute_output"
     logger.info(f"Will write output to {output_location}")
-    os.makedirs(output_location, mode=0o777)
-    os.chmod(output_location, mode=0o777)
+    if not os.path.exists(output_location):
+        os.makedirs(output_location, mode=0o777)
+        os.chmod(output_location, mode=0o777)
+    else:
+        if not args.exist_ok:
+            logger.error(
+                f"Output location ({output_location}) already exists! Exiting now. "
+                "If you intended this, you can resubmit with the `--exist_ok` flag."
+            )
+            sys.exit(-1)
+        logger.warning(f"Output location ({output_location}) already exists.")
 
     func_tests_dir: str
     if args.tests_dir is not None:

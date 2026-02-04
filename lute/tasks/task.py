@@ -501,51 +501,38 @@ class ThirdPartyTask(Task):
         self._report_to_executor(msg)
 
     def _non_slurm_mpi_mods(self, task_env: Dict[str, str]) -> Dict[str, str]:
+        """Configure MPI to use a hostfile for resource determination.
+
+        In the event the ThirdPartyTask is calling `mpirun` or similar, the automated
+        resource determination can fail inside the SLURM job depending on the
+        environment and/or MPI version. By using a hostfile, the resources can
+        always be determined. The execution layer sets this up before hand
+        and defines the `LUTE_MPI_HOSTFILE_PATH` environment variable.
+
+        Args:
+            task_env (Dict[str, str]): The new Task environment. It should already
+                be processed (e.g. LUTE_TENV_ removal). It will be checked for the
+                `LUTE_MPI_HOSTFILE_PATH` environment variable.
+
+        Returns:
+            mpi_updates (Dict[str, str]): A set of new environment variables which
+                should be added to the Task environment dictionary for MPI
+                configuration.
+        """
         hostfile_path: Optional[str] = task_env.get("LUTE_MPI_HOSTFILE_PATH")
         if hostfile_path is None:
             return {}
 
-        critical_vars: Set[str] = {
-            "PATH",
-            "PYTHONPATH",
-            "CONDA_PREFIX",
-            "LD_LIBRARY_PATH",
-            "LUTE_CONFIG",
-            "LUTE_CONFIGPATH",
-            "EXPERIMENT",
-            "RUN_NUM",
-            "SLURM_JOB_ID",
-            "SLURM_NPROCS",
-            "SLURM_NTASKS",
-            "SLURM_JOB_NODELIST",
-        }
-
-        export_parts: List[str] = []
-        for key, val in task_env.items():
-            # if "CONDA" in key or "LUTE" in key or key in critical_vars or "PS_" in key:
-            #    # Add to the export string (verified semicolon format)
-            #    export_parts.append(f"{key}={val}")
-            if key in critical_vars or "SLURM_" not in key:
-                export_parts.append(f"{key}={val}")
-
-        # export_str = ";".join(export_parts)
-
         mca_config: Dict[str, str] = {
-            # Use hostfile and EXPLICITLY EXCLUDE the native Slurm component
-            # "PRTE_MCA_ras": "hostfile,^slurm",
-            # "PRTE_MCA_ras": "^slurm",
             "PRTE_MCA_ras_slurm_priority": "0",
-            # Enable overlapping steps for srun calls within the job
             "PRTE_MCA_plm": "slurm",
             "PRTE_MCA_plm_slurm_args": "--overlap --export=ALL",
             "PRTE_MCA_prte_default_hostfile": hostfile_path,
             "OMPI_MCA_orte_default_hostfile": hostfile_path,
-            "MPIEXEC_HOSTFILE": hostfile_path,
+            "MPIEXEC_HOSTFILE": hostfile_path,  # Not sure if this exists/is needed?
+            # Can turn this on for debugging - display MPI's discovered resources
             # "PRTE_MCA_rmaps_base_display_allocation": "1",
-            # "PRTE_MCA_prte_base_export_env_vars": export_str,
             "PRTE_MCA_plm_rsh_pass_path": "1",
-            # "PRTE_MCA_plm_rsh_no_tree_spawn": "1",
-            # "OMPI_MCA_plm_rsh_no_tree_spawn": "1",
         }
 
         return mca_config
@@ -558,6 +545,9 @@ class ThirdPartyTask(Task):
                 # Set if using a custom environment
                 new_key: str = key[10:]
                 new_env[new_key] = value
+            # SLURM vars and the hostfile are needed for MPI
+            elif "SLURM_" in key:
+                new_env[key] = value
             elif key == "LUTE_MPI_HOSTFILE_PATH":
                 mpi_hostfile = value
         if not new_env:

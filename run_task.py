@@ -17,32 +17,14 @@ else:
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+def setup_mpi_hostfile() -> None:
+    """Prepare a hostfile for MPI if running in a SLURM job.
 
-def main() -> None:
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog="run_managed_task",
-        description="Run a LUTE managed task.",
-        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
-    )
-    parser.add_argument(
-        "-c", "--config", type=str, help="Path to config file with Task parameters."
-    )
-    parser.add_argument(
-        "-t",
-        "--taskname",
-        type=str,
-        help="Name of the Managed Task to run.",
-        default="test",
-    )
-
-    args: argparse.Namespace = parser.parse_args()
-    config: str = args.config
-    task_name: str = args.taskname
-
-    # Environment variables need to be set before importing Executors
-    os.environ["LUTE_CONFIGPATH"] = config
-
-    # Setup SLURM env host file to facilitate MPI stuff
+    This function creates a hostfile and sets an environment variable to the path
+    where it was created. The hostfile can be used by Tasks that use MPI to determine
+    available resources in a SLURM allocation. Depending on environment configuration
+    and/or MPI version, the automated MPI mechanism may not work.
+    """
     nodelist: str = os.getenv("SLURM_JOB_NODELIST", "")
     if nodelist:
         result: subprocess.CompletedProcess = subprocess.run(
@@ -70,6 +52,8 @@ def main() -> None:
         hostfile_path: str = os.path.abspath(f"lute_hostfile_{job_id}.hosts")
         executor_host: str = socket.gethostname()
         with open(hostfile_path, "w") as f:
+            node: str
+            tpn: int
             for node, tpn in zip(nodes, tpn_list):
                 n_slots: int
                 if node == executor_host:
@@ -78,7 +62,36 @@ def main() -> None:
                     n_slots = tpn
                 f.write(f"{node} slots={n_slots}\n")
 
+        # Task layer will look for this environment variable
         os.environ["LUTE_MPI_HOSTFILE_PATH"] = hostfile_path
+
+
+def main() -> None:
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        prog="run_managed_task",
+        description="Run a LUTE managed task.",
+        epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument(
+        "-c", "--config", type=str, help="Path to config file with Task parameters."
+    )
+    parser.add_argument(
+        "-t",
+        "--taskname",
+        type=str,
+        help="Name of the Managed Task to run.",
+        default="test",
+    )
+
+    args: argparse.Namespace = parser.parse_args()
+    config: str = args.config
+    task_name: str = args.taskname
+
+    # Environment variables need to be set before importing Executors
+    os.environ["LUTE_CONFIGPATH"] = config
+
+    # Prepare hostfile in case using MPI
+    setup_mpi_hostfile()
 
     if hasattr(managed_tasks, task_name):
         managed_task: Executor = getattr(managed_tasks, task_name)
