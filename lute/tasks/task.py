@@ -542,9 +542,11 @@ class ThirdPartyTask(Task):
     def _setup_env(self) -> Dict[str, str]:
         new_env: Dict[str, str] = {}
         mpi_hostfile: str = ""
+        found_tenv: bool = False
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
+                found_tenv = True
                 new_key: str = key[10:]
                 new_env[new_key] = value
             # SLURM vars and the hostfile are needed for MPI
@@ -552,8 +554,9 @@ class ThirdPartyTask(Task):
                 new_env[key] = value
             elif key == "LUTE_MPI_HOSTFILE_PATH":
                 mpi_hostfile = value
-        if not new_env:
+        if not found_tenv:
             # No shell script sourced - will use the base environment
+            # The SLURM_ keys will be in this copy.
             new_env = os.environ.copy()
 
         if mpi_hostfile:
