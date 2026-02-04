@@ -44,7 +44,7 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS1 smalldata HDF5 file."""
 SmallDataProducer.add_tasklet(
     clone_smalldata,
-    ["{{ producer }}"],
+    ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
     when="before",
     set_result=False,
     set_summary=False,
