@@ -1,5 +1,5 @@
 diff --git a/lcls1_producers/smd_producer.py b/lcls1_producers/smd_producer.py
-index 4c2fe87..af212d8 100755
+index 4c2fe87..dcdf7d4 100755
 --- a/lcls1_producers/smd_producer.py
 +++ b/lcls1_producers/smd_producer.py
 @@ -654,7 +654,7 @@ for evt_num, evt in enumerate(ds.events()):
@@ -11,6 +11,15 @@ index 4c2fe87..af212d8 100755
              if ds.size == 1:
                  requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Current Event</b>", "value": evt_num+1}])
              elif ds.rank == 0:
+@@ -703,7 +703,7 @@ if ds.rank==0:
+ 
+ #finishing up here....
+ logger.debug('rank {0} on {1} is finished'.format(ds.rank, hostname))
+-if os.environ.get('ARP_JOB_ID', None) is not None:
++if os.environ.get('ARP_JOB_ID', None) is not None and os.getenv("JID_UPDATE_COUNTERS") is not None:
+     if ds.size > 1:
+         if ds.rank == 0:
+             requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Last Event</b>", "value": "~ %d cores * %d evts"%(ds.size,evt_num)},{"key": "<b>Duration</b>", "value": "%f min"%(prod_time)}])
 diff --git a/lcls2_producers/smd_producer.py b/lcls2_producers/smd_producer.py
 index 9f52b00..2b50c9b 100755
 --- a/lcls2_producers/smd_producer.py
