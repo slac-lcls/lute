@@ -4,6 +4,8 @@ Executor-managed Tasks with specific environment specifications are defined
 here.
 """
 
+import os
+
 from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.util.environment import setup_smd2_env
 from lute.tasks.tasklets import (
@@ -42,7 +44,7 @@ SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS1 smalldata HDF5 file."""
 SmallDataProducer.add_tasklet(
     clone_smalldata,
-    ["{{ producer }}"],
+    ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
     when="before",
     set_result=False,
     set_summary=False,
@@ -55,7 +57,7 @@ SmallDataProducer2.shell_source(
 )
 SmallDataProducer2.add_tasklet(
     clone_smalldata,
-    ["{{ producer }}"],
+    ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
     when="before",
     set_result=False,
     set_summary=False,

@@ -482,6 +482,7 @@ class ThirdPartyTask(Task):
             self._report_to_executor(msg)
         LUTE_DEBUG_EXIT("LUTE_DEBUG_BEFORE_TPP_EXEC")
         task_env: Dict[str, str] = self._setup_env()
+        task_env.update(self._non_slurm_mpi_mods(task_env=task_env))
         sys.stdout.flush()
         sys.stderr.flush()
         os.execvpe(file=self._cmd, args=self._args_list, env=task_env)
@@ -499,14 +500,68 @@ class ThirdPartyTask(Task):
         msg: Message = Message(signal=signal)
         self._report_to_executor(msg)
 
+    def _non_slurm_mpi_mods(self, task_env: Dict[str, str]) -> Dict[str, str]:
+        """Configure MPI to use a hostfile for resource determination.
+
+        In the event the ThirdPartyTask is calling `mpirun` or similar, the automated
+        resource determination can fail inside the SLURM job depending on the
+        environment and/or MPI version. By using a hostfile, the resources can
+        always be determined. The execution layer sets this up before hand
+        and defines the `LUTE_MPI_HOSTFILE_PATH` environment variable.
+
+        Args:
+            task_env (Dict[str, str]): The new Task environment. It should already
+                be processed (e.g. LUTE_TENV_ removal). It will be checked for the
+                `LUTE_MPI_HOSTFILE_PATH` environment variable.
+
+        Returns:
+            mpi_updates (Dict[str, str]): A set of new environment variables which
+                should be added to the Task environment dictionary for MPI
+                configuration.
+        """
+        hostfile_path: Optional[str] = task_env.get("LUTE_MPI_HOSTFILE_PATH")
+        if hostfile_path is None:
+            return {}
+
+        # You may find some info here: https://docs.open-mpi.org/en/v5.0.7/mca.html
+        # BUT - things change between versions. Tread carefully...
+        mca_config: Dict[str, str] = {
+            "PRTE_MCA_ras_slurm_priority": "0",
+            "PRTE_MCA_plm": "slurm",
+            "PRTE_MCA_plm_slurm_args": "--overlap --export=ALL",
+            "PRTE_MCA_prte_default_hostfile": hostfile_path,
+            "OMPI_MCA_orte_default_hostfile": hostfile_path,
+            "MPIEXEC_HOSTFILE": hostfile_path,  # Not sure if this exists/is needed?
+            # Can turn this on for debugging - display MPI's discovered resources
+            # "PRTE_MCA_rmaps_base_display_allocation": "1",
+            # Can turn this on for debugging - report how ranks are bound
+            # "OMPI_MCA_hwloc_base_report_bindings": "1",
+            "PRTE_MCA_plm_rsh_pass_path": "1",
+        }
+
+        return mca_config
+
     def _setup_env(self) -> Dict[str, str]:
         new_env: Dict[str, str] = {}
+        mpi_hostfile: str = ""
+        found_tenv: bool = False
         for key, value in os.environ.items():
             if "LUTE_TENV_" in key:
                 # Set if using a custom environment
+                found_tenv = True
                 new_key: str = key[10:]
                 new_env[new_key] = value
-        if not new_env:
+            # SLURM vars and the hostfile are needed for MPI
+            elif "SLURM_" in key:
+                new_env[key] = value
+            elif key == "LUTE_MPI_HOSTFILE_PATH":
+                mpi_hostfile = value
+        if not found_tenv:
             # No shell script sourced - will use the base environment
-            return os.environ.copy()
+            # The SLURM_ keys will be in this copy.
+            new_env = os.environ.copy()
+
+        if mpi_hostfile:
+            new_env["LUTE_MPI_HOSTFILE_PATH"] = mpi_hostfile
+
         return new_env

@@ -288,7 +288,7 @@ class JIDSlurmOperator(BaseOperator):
         jid_job_definition: Dict[str, str] = {
             "_id": str(uuid.uuid4()),
             "name": self.lute_task_id,
-            "executable": f"{self.lute_location}/{executable_subdir}/submit_slurm.sh",
+            "executable": f"{self.lute_location}/{executable_subdir}/submit_slurm",
             "trigger": "MANUAL",
             "location": dagrun_config.get("ARP_LOCATION", "S3DF"),
             "parameters": parameter_str,
