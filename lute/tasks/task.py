@@ -523,6 +523,8 @@ class ThirdPartyTask(Task):
         if hostfile_path is None:
             return {}
 
+        # You may find some info here: https://docs.open-mpi.org/en/v5.0.7/mca.html
+        # BUT - things change between versions. Tread carefully...
         mca_config: Dict[str, str] = {
             "PRTE_MCA_ras_slurm_priority": "0",
             "PRTE_MCA_plm": "slurm",

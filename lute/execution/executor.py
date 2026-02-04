@@ -772,7 +772,7 @@ class BaseExecutor(ABC):
         hostfile: Optional[str] = os.getenv("LUTE_MPI_HOSTFILE_PATH")
         if hostfile is not None:
             if os.path.exists(hostfile):
-                logger.debug(f"Removing hostfile: {hostfile}.")
+                logger.debug(f"Removing (temporary) MPI hostfile: {hostfile}.")
                 os.remove(hostfile)
 
         if self._lute_manager_url is not None:
