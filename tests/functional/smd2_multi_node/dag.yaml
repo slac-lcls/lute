@@ -2,7 +2,6 @@
 task_name: SmallDataProducer2
 slurm_params: '--account=lcls:data --partition=milano --ntasks-per-node=50 --nodes=4 --exclusive'
 next:
-- !ALWAYS
-  task_name: SmallDataXSSAnalyzer
+- task_name: SmallDataXSSAnalyzer
   slurm_params: '--account=lcls:data --partition=milano'
   next: []
