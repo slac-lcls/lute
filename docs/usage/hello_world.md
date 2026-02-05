@@ -14,7 +14,7 @@ Note: this file can created anywhere, it does not need (and probably should not)
 ---
 title: "LUTE Simple test"
 experiment: "dummy"
-lute_version: 0.1
+lute_version: 0.1.1
 task_timeout: 6000
 work_dir: "/sdf/scratch/users/e/espov/lute_tests"  # <-- Replace with your preferred location. This is where the LUTE database will be created
 ...
