@@ -74,6 +74,9 @@ if [[ $HOSTNAME =~ "sdf" ]]; then
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
 
+# Save host/conda env Python for later
+HOST_PYTHON=$(which python3)
+
 # Create a build environment if it doesn't yet exist
 if [ ! -d "${BUILD_ENV}" ]; then
     LINES=("Creating isolated build environment in ${BUILD_ENV}...")
@@ -124,9 +127,16 @@ meson install -C "${BUILD_DIR}"
 # It can be pointed at the build directory to prevent `pip` from trying to rebuild
 # the rest of the stuff from scratch.
 
+# We will also use the underlying Python (e.g. from psconda.sh)
+# This way, the build env can be kept small, and it can be deleted as well.
+# Otherwise, the Python scripts would end up pointing to the Python from that env.
 LINES=("Creating Python entry points")
 print_banner "${LINES[@]}"
-pip install . \
+
+BUILD_VENV_SITE_PACKAGES=(${BUILD_ENV}/lib/python*/site-packages)
+PYTHONPATH="${BUILD_VENV_SITE_PACKAGES}:${PYTHONPATH}" \
+PATH="${BUILD_ENV}/bin:${PATH}" \
+${HOST_PYTHON} -m pip install . \
     --prefix="${INSTALL_DIR}" \
     --no-dependencies \
     --no-build-isolation \
