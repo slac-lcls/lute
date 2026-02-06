@@ -59,7 +59,7 @@ Refer to https://github.com/slac-lcls/lute for more information.
 - `--num_server_threads` is an optional flag which will override the default number of threads setup by the built-in HTTP server.
 - `--unbuffered` is an optional flag which will display logs immediately as the are written. By default, logs are collected and displayed at the end of each step of the workflow. This unbuffered option will print them immediately. This is probably not useful if you have multiple things running in parallel as part of your workflow, but if all the steps are running serially it could be useful for more immediate feedback.
 
-- `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm.sh` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
+- `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
 
 
 #### Lifetime

@@ -2,6 +2,7 @@
 
 #include "http.hh"
 
+#include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <arpa/inet.h>
@@ -41,7 +42,13 @@ namespace HTTP {
   Server::Server(const std::string& host, std::uint16_t port)
     : m_host(host)
     , m_port(port)
-    , m_logger(spdlog::stdout_color_mt("HTTP:Server"))
+    , m_logger([] {
+      if (auto tmp = spdlog::get("HTTP:Server")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("HTTP:Server");
+      }
+    }())
     , m_throttled_logger(m_logger, std::chrono::milliseconds(100))
   {
     if ((m_sock_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0) {
@@ -72,7 +79,7 @@ namespace HTTP {
     inet_pton(AF_INET, m_host.c_str(), &(server_addr.sin_addr.s_addr));
     server_addr.sin_port = htons(m_port);
 
-    if (bind(m_sock_fd, reinterpret_cast<sockaddr *>(&server_addr),
+    if (bind(m_sock_fd, reinterpret_cast<sockaddr*>(&server_addr),
              sizeof(sockaddr_in)) < 0) {
       m_logger->critical("Unable to bind socket for " + m_host + ":" + std::to_string(m_port));
       throw std::runtime_error("Failed to bind socket.");
@@ -354,7 +361,8 @@ namespace HTTP {
       mod_epoll_event(event, EPOLLIN);
       return;
     }
-    std::string request_string(buffer.data());
+    // Must use begin and end to avoid truncating null-bytes
+    std::string request_string(buffer.begin(), buffer.end());
 
     Request request;
     Response response;
@@ -362,8 +370,8 @@ namespace HTTP {
     try {
       request = Request(request_string);
       auto headers = request.headers();
-      if (headers.find("Content-Length") != headers.end()) {
-        int diff = std::stoi(request.headers()["Content-Length"])
+      if (headers.count("Content-Length")) {
+        int diff = std::stoi(headers["Content-Length"])
                    - static_cast<int>(request.content_length());
         if (diff) {
           // Need to read more data
@@ -371,6 +379,7 @@ namespace HTTP {
             std::lock_guard<std::mutex> shard_lock(shard.shard_mutex);
             shard.missing_chunk[event.data.fd] = diff;
           }
+          // Don't think lock needs to be held at this point?
           mod_epoll_event(event, EPOLLIN);
           return;
         }
@@ -383,15 +392,19 @@ namespace HTTP {
           shard.non_persistent_fds.insert(event.data.fd);
         }
       }
+    } catch (const IncompleteHeader& e) {
+      // Need more data for headers
+      mod_epoll_event(event, EPOLLIN);
+      return;
     } catch (const std::invalid_argument& e) {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());
-    } catch (const std::logic_error &e) {
+    } catch (const std::logic_error& e) {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());

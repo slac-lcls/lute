@@ -6,5 +6,5 @@ py_sources = [
 py3.install_sources(
     py_sources,
     pure: false,
-    subdir: 'utilities/dbview',
+    subdir: 'lute_utilities/dbview',
 )

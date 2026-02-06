@@ -2,10 +2,10 @@
 #define HTTP_HH
 
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
-
 
 namespace HTTP {
   enum class METHOD {
@@ -35,6 +35,11 @@ namespace HTTP {
     NotFound = 404,
     MethodNotAllowed = 405,
     InternalServerError = 500
+  };
+
+  class IncompleteHeader : public std::invalid_argument {
+  public:
+    using std::invalid_argument::invalid_argument;
   };
 
   class Interface {
@@ -116,6 +121,7 @@ namespace HTTP {
      *
      * @return header_start The position in the string that the headers begin.
      *         This is after the `\r\n` of the first start line.
+     * @throw IncompleteHeader if `\r\n` is missing.
      * @throw invalid_argument if it cannot parse out the information.
      */
     size_t parse_start_line(const std::string_view raw_http);
@@ -128,6 +134,7 @@ namespace HTTP {
      *
      * @return body_start The position in the string that the body begins. If any.
      *         This is after the `\r\n\r\n` marking the end of headers.
+     * @throw IncompleteHeader if `\r\n\r\n` is missing.
      * @throw invalid_argument if it cannot parse out the information.
      */
     size_t parse_headers(const std::string_view raw_http, size_t& headers_start);
@@ -171,6 +178,7 @@ namespace HTTP {
      * Return the entire HTTP response as a string.
      */
     std::string to_string() const;
+
   private:
     CODE m_status_code;
   };

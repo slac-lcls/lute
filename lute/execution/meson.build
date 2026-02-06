@@ -4,6 +4,7 @@ py_sources = [
     '__init__.py',
     'ipc.py',
     'logging.py',
+    'launch.py',
     'subprocess_utils.py',
 ]
 

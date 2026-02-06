@@ -8,6 +8,7 @@ __all__ = ["setup_smd2_env"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
+import re
 
 # import subprocess
 from typing import List, Dict, Optional
@@ -62,8 +63,15 @@ def setup_smd2_env() -> Dict[str, str]:
         cpus_per_node_str: Optional[str] = os.getenv("SLURM_JOB_CPUS_PER_NODE")
         cpus_per_node: List[int] = []
         if cpus_per_node_str:
-            # str has format of 6,4,6,2,... for each node in allocation
-            cpus_per_node = [int(c) for c in cpus_per_node_str.split(",")]
+            # Check the compact version first: 8(x3),4 ...
+            # Otherwise has format of 6,4,6,2,... for each node in allocation
+            for part in cpus_per_node_str.split(","):
+                m: Optional[re.Match] = re.match(r"(\d+)\(x(\d+)\)", part)
+                if m:
+                    cpus, count = map(int, m.groups())
+                    cpus_per_node.extend([cpus] * count)
+                else:
+                    cpus_per_node.append(int(part))
             nodes = str(len(cpus_per_node))
             # Take average for cores_per_node??
             cores_per_node = str(sum(cpus_per_node) // len(cpus_per_node))

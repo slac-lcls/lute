@@ -4,7 +4,7 @@ title: "Config to run smalldata_tools on converted XTC1 files."
 experiment: "mfx100903824"
 run: "27"
 date: "2025/09/29"
-lute_version: 0.1      # Do not be change unless need to force older version
+lute_version: 0.1.1      # Do not be change unless need to force older version
 task_timeout: 6000
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...

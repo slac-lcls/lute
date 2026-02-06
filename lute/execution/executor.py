@@ -484,7 +484,11 @@ class BaseExecutor(ABC):
                             " Options are: prepend, append, overwrite."
                         )
                     )
-        self._analysis_desc.task_env.update(env)
+        if use_tenv_prefix:
+            env_update = {f"LUTE_TENV_{key}": val for key, val in env.items()}
+        else:
+            env_update = env
+        self._analysis_desc.task_env.update(env_update)
 
     def shell_source(self, env: str) -> None:
         """Source a script.
@@ -764,6 +768,12 @@ class BaseExecutor(ABC):
             status_str = "TIMEDOUT"
         else:
             status_str = "COMPLETED"
+
+        hostfile: Optional[str] = os.getenv("LUTE_MPI_HOSTFILE_PATH")
+        if hostfile is not None:
+            if os.path.exists(hostfile):
+                logger.debug(f"Removing (temporary) MPI hostfile: {hostfile}.")
+                os.remove(hostfile)
 
         if self._lute_manager_url is not None:
             json_data = {

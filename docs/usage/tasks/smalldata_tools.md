@@ -101,7 +101,7 @@ SubmitSMD:
   #    - "calib_skipFirst_max"
   #getROIs:
   #  jungfrau1M:   # Change to detector name
-  #    - ROIs: [[[1, 2], [157, 487], [294, 598]]]
+  #    - ROI: [[[1, 2], [157, 487], [294, 598]]]
   #      #name: "abcd" # Providing a name is only required if you are creating multiple ROIs
   #      writeArea: True   # Whether to save ROI, if False, save sum but not img.
   #      thresADU: None

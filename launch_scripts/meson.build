@@ -2,7 +2,7 @@ bash_scripts = [
     'submit_launch_airflow.sh',
     'submit_launch_prefect.sh',
     'submit_launch_slurm.sh',
-    'submit_slurm.sh',
+    # 'submit_slurm.sh',
 ]
 
 install_data(
@@ -15,6 +15,7 @@ py_sources = [
     'launch_airflow.py',
     'launch_prefect.py',
     'launch_slurm_v1.py',
+    'submit_slurm.py',
 ]
 
 py3.install_sources(

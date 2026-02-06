@@ -15,7 +15,6 @@ import os
 import signal
 import subprocess
 import time
-import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import zmq
