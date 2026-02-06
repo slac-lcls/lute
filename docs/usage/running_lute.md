@@ -108,7 +108,9 @@ Upon clicking create you will see a new entry in the table on the definitions pa
 ### Maestro Launch and DAG Execution Steps
 The above steps describe use of the `maestro` workflow backend. LUTE supports the use of multiple backends for workflow management.
 
-`maestro` is a new manager built for this project and additional documentation is in the works. For using other backends see below.
+`maestro` is a new manager built for this project. For more information on actually writing DAGs with `maestro`, please refer to the [creating workflows documentation](/development/creating_workflows_maestro/#creating-a-new-workflow).
+
+For using other backends see below - do note that the preference is to run with `maestro` and while these backends are supported, development priority will be given to `maestro`.
 
 ### Other backends
 #### Airflow Launch and DAG Execution Steps
