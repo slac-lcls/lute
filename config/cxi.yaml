@@ -4,11 +4,7 @@ title: "LUTE Task Configuration" # Include experiment description if desired
 experiment: "{{ $EXPERIMENT }}"
 #run: "{{ $RUN_NUM }}"
 date: "2023/10/25"
-<<<<<<< HEAD
-lute_version: 0.1      # Do not be change unless need to force older version
-=======
 lute_version: 0.1.1      # Do not be change unless need to force older version
->>>>>>> 5a4d71e3118b20639003e2949b6b0782116afcd6
 task_timeout: 6000
 work_dir: ""
 ...
