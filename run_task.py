@@ -1,8 +1,10 @@
-import sys
 import argparse
 import logging
 import os
 import re
+import socket
+import subprocess
+import sys
 from typing import List, Optional
 
 from lute.execution.executor import BaseExecutor
@@ -14,6 +16,74 @@ else:
     logging.basicConfig(level=logging.INFO)
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+def setup_mpi_hostfile() -> None:
+    """Prepare a hostfile for MPI if running in a SLURM job.
+
+    This function creates a hostfile and sets an environment variable to the path
+    where it was created. The hostfile can be used by Tasks that use MPI to determine
+    available resources in a SLURM allocation. Depending on environment configuration
+    and/or MPI version, the automated MPI mechanism may not work.
+    """
+    nodelist: str = os.getenv("SLURM_JOB_NODELIST", "")
+    if nodelist:
+        result: subprocess.CompletedProcess = subprocess.run(
+            ["scontrol", "show", "hostnames", nodelist],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        nodes: List[str] = result.stdout.splitlines()
+        tpn_str: str = os.getenv("SLURM_TASKS_PER_NODE", "")
+        tpn_list: List[int] = []
+        for part in tpn_str.split(","):
+            m: Optional[re.Match] = re.match(r"(\d+)\(x(\d+)\)", part)
+            if m:
+                tasks: int = int(m.group(1))
+                count: int = int(m.group(2))
+                tpn_list.extend([tasks] * count)
+            else:
+                try:
+                    tpn_list.append(int(part))
+                except ValueError:
+                    pass
+        job_id: Optional[str] = os.getenv("SLURM_JOB_ID")
+        assert isinstance(job_id, str)
+        hostfile_path: str = os.path.abspath(f"lute_hostfile_{job_id}.hosts")
+        executor_host: str = socket.gethostname()
+
+        # Setup MPI core affinity. The Task tries to do this as well, but MPI
+        # ignores (sometimes). The `Executor` will pin later (in `execute_task`)
+        # since the core counts may be used by various calculations.
+        mpi_cpuset: str = ""
+        try:
+            available_cores: List[int] = sorted(list(os.sched_getaffinity(0)))
+            if len(available_cores) > 1:
+                mpi_cpuset = ",".join(map(str, available_cores[1:]))
+                logger.debug(f"MPI cpuset for {executor_host}: {mpi_cpuset}")
+            else:
+                logger.warning(
+                    f"Only one core available on {executor_host} - the Executor "
+                    "and Task will share it."
+                )
+        except Exception as e:
+            logger.warning(f"Could not determine CPU affinity: {e}")
+
+        with open(hostfile_path, "w") as f:
+            node: str
+            tpn: int
+            for node, tpn in zip(nodes, tpn_list):
+                if node == executor_host and mpi_cpuset:
+                    # Explicitly assign the reserved core list to this node
+                    n_slots = tpn - 1
+                    f.write(f"{node} slots={n_slots} cpuset={mpi_cpuset}\n")
+                else:
+                    n_slots = tpn
+                    f.write(f"{node} slots={n_slots}\n")
+
+        # Task layer will look for this environment variable
+        os.environ["LUTE_MPI_HOSTFILE_PATH"] = hostfile_path
 
 
 def main() -> None:
@@ -39,6 +109,9 @@ def main() -> None:
 
     # Environment variables need to be set before importing Executors
     os.environ["LUTE_CONFIGPATH"] = config
+
+    # Prepare hostfile in case using MPI
+    setup_mpi_hostfile()
 
     # Try to find the *managed* Task - In case of generated parameter combos, there
     # may be a suffix in the name, e.g. Tester_0, Tester_1, so check for this

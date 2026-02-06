@@ -192,7 +192,7 @@ def create_control_doc(
     jid_job_definition: Dict[str, str] = {
         "_id": str(uuid.uuid4()),
         "name": lute_task_id,
-        "executable": f"{lute_location}/{executable_subdir}/submit_slurm.sh",
+        "executable": f"{lute_location}/{executable_subdir}/submit_slurm",
         "trigger": "MANUAL",
         "location": conf.get("ARP_LOCATION", "S3DF"),
         "parameters": parameter_str,

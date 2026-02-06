@@ -120,7 +120,7 @@ There are currently two `Launcher` implementations. They are selected via the `L
 ```
 
 - The `PythonLauncher` runs the job steps directly calling the `python` interpreter - this is a blocking call.
-- The `SlurmLauncher` submits the `submit_slurm.sh` batch script to launch the `JobStep` as a batch job.
+- The `SlurmLauncher` submits the `submit_slurm` batch script to launch the `JobStep` as a batch job.
 
 ### `Handler` implementations
 

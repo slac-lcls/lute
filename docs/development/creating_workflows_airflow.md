@@ -7,7 +7,7 @@ In addition to the core LUTE package, a number of components are generally invol
 For building and running workflows using SLURM and Airflow, the following components are necessary, and will be described in more detail below:
 - Airflow launch script: `launch_airflow.py`
   - This has a wrapper batch submission script: `submit_launch_airflow.sh` . When running using the ARP (from the eLog), you **MUST** use this wrapper script instead of the Python script directly.
-- SLURM submission script: `submit_slurm.sh`
+- SLURM submission script: `submit_slurm`
 - Airflow operators:
   - `JIDSlurmOperator`
 
@@ -57,7 +57,7 @@ launch_airflow.py [-a | --admin] -c <path_to_config_yaml> [-d | --debug] [--test
     - `-e` is used to pass the experiment name. Needed if not using the ARP, i.e. running from the command-line.
     - `-r` is used to pass a run number. Needed if not using the ARP, i.e. running from the command-line.
 
-- `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm.sh` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
+- `SLURM_ARGS` are SLURM arguments to be passed to the `submit_slurm` script which are used for each individual **managed** `Task`. These arguments to do NOT affect the submission parameters for the job running `launch_airflow.py` (if using `submit_launch_airflow.sh` below).
 
 
 #### Lifetime
@@ -75,10 +75,10 @@ Usage:
 submit_launch_airflow.sh /path/to/launch_airflow.py [-a | --admin] -c <path_to_config_yaml> [-d | --debug] [--test] [--type <TYPE>] -w <workflow_name> [-W <patch_to_dag] [-e <exp>] [-r <run>] [SLURM_ARGS]
 ```
 
-### `submit_slurm.sh`
+### `submit_slurm`
 Launches a job on the S3DF batch nodes using the SLURM job scheduler. This script launches a single **managed** `Task` at a time. The usage is as follows:
 ```bash
-submit_slurm.sh -c <path_to_config_yaml> -t <MANAGED_task_name> [--debug] [SLURM_ARGS ...]
+submit_slurm -c <path_to_config_yaml> -t <MANAGED_task_name> [--debug] [SLURM_ARGS ...]
 ```
 As a reminder the **managed** `Task` refers to the `Executor`-`Task` combination. The script does not parse any SLURM specific parameters, and instead passes them transparently to SLURM. At least the following two SLURM arguments must be provided:
 ```bash
@@ -87,7 +87,7 @@ As a reminder the **managed** `Task` refers to the `Executor`-`Task` combination
 ```
 Generally, resource requests will also be included, such as the number of cores to use. A complete call may look like the following:
 ```bash
-submit_slurm.sh -c /sdf/data/lcls/ds/hutch/experiment/scratch/config.yaml -t Tester --partition=milano --account=lcls:experiment --ntasks=100 [...]
+submit_slurm -c /sdf/data/lcls/ds/hutch/experiment/scratch/config.yaml -t Tester --partition=milano --account=lcls:experiment --ntasks=100 [...]
 ```
 
 When running a workflow using the `launch_airflow.py` script, each step of the workflow will be submitted using this script.
@@ -95,7 +95,7 @@ When running a workflow using the `launch_airflow.py` script, each step of the w
 ## Operators
 `Operator`s are the objects submitted as individual steps of a DAG by Airflow. They are conceptually linked to the idea of a task in that each task of a workflow is generally an operator. Care should be taken, not to confuse them with LUTE `Task`s or **managed** `Task`s though. There is, however, usually a one-to-one correspondance between a `Task` and an `Operator`.
 
-Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an `Operator` for each step of the DAG. However, the `Operator` itself cannot perform productive analysis without access to the data. The solution employed by `LUTE` is to have a limited set of `Operator`s which do not perform analysis, but instead request that a `LUTE` **managed** `Task`s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided `Operator`s do this, but in general they will all make a request to the **job interface daemon** (JID) that a new SLURM job be scheduled using the `submit_slurm.sh` script described above.
+Airflow runs on a K8S cluster which has no access to the experiment data. When we ask Airflow to run a DAG, it will launch an `Operator` for each step of the DAG. However, the `Operator` itself cannot perform productive analysis without access to the data. The solution employed by `LUTE` is to have a limited set of `Operator`s which do not perform analysis, but instead request that a `LUTE` **managed** `Task`s be submitted on the batch nodes where it can access the data. There may be small differences between how the various provided `Operator`s do this, but in general they will all make a request to the **job interface daemon** (JID) that a new SLURM job be scheduled using the `submit_slurm` script described above.
 
 Therefore, running a typical Airflow DAG involves the following steps:
 
@@ -211,7 +211,7 @@ task1 >> task3
 
 As each DAG is defined in pure Python, standard control structures (loops, if statements, etc.) can be used to create more complex workflow arrangements.
 
-**Note:** Your DAG will not be available to the production Airflow instance until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm.sh` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [dynamic workflows page](dynamic_workflows.md), or work against the test Airflow instance described below.
+**Note:** Your DAG will not be available to the production Airflow instance until your PR including the file you have defined is merged! Once merged the file will be synced with the Airflow instance and can be run using the scripts described earlier in this document. For testing it is generally preferred that you run each step of your DAG individually using the `submit_slurm` script and the independent **managed** `Task` names. If, however, you want to test the behaviour of Airflow itself (in a modified form) you can either use the "dynamic" run-time DAGs described on the [dynamic workflows page](dynamic_workflows.md), or work against the test Airflow instance described below.
 
 ### `psdag` repository and the production vs test Airflow instances
 

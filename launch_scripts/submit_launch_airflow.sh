@@ -30,6 +30,9 @@ cp $KERB_CACHE_PATH $HOME/.tmp_cache/kerbcache
 echo $?
 export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
+LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
+source "${LUTE_BIN_PATH}/activate_installation"
+
 CMD="${@}"
 CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"
 echo $CMD

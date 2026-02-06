@@ -3,7 +3,7 @@
 After a YAML file has been filled in you can run a `Task` (really, a **managed** `Task`). There are multiple ways to submit a `Task`, but there are 3 that are most likely:
 
 1. Run a single **managed** `Task` interactively by running `python ...`
-2. Run a single **managed** `Task` as a batch job (e.g. on S3DF) via a SLURM submission `submit_slurm.sh ...`
+2. Run a single **managed** `Task` as a batch job (e.g. on S3DF) via a SLURM submission `submit_slurm ...`
 3. Run a DAG (workflow with multiple **managed** `Task`s).
 
 These will be covered in turn below; however, in general all methods will require two parameters: the path to a configuration YAML file, and the name of the **managed** `Task` or workflow you want to run. When submitting via SLURM or submitting an entire workflow there are additional parameters to control these processes.
@@ -40,10 +40,10 @@ If you are submitting a **managed** `Task` that uses MPI you may encounter an is
 For additional debugging variables see the advanced usage section below.
 
 ### Submitting a single managed `Task` as a batch job
-On S3DF you can also submit individual **managed** `Task`s to run as batch jobs. To do so use `launch_scripts/submit_slurm.sh`. If you sourced the "activation" script described in the installation documentation, it is added to path as `submit_slurm.sh`
+On S3DF you can also submit individual **managed** `Task`s to run as batch jobs. To do so use `launch_scripts/submit_slurm.py`. If you sourced the "activation" script described in the installation documentation, it is added to path as `submit_slurm`
 
 ```bash
-> submit_slurm.sh -t <ManagedTaskName> -c </path/to/config/yaml> [--debug] [--psana2] $SLURM_ARGS
+> submit_slurm -t <ManagedTaskName> -c </path/to/config/yaml> [--debug] [--psana2] $SLURM_ARGS
 ```
 
 As before command-line arguments in square brackets `[]` are optional, while those in `<>` must be provided
@@ -69,7 +69,7 @@ In general, it is best to prefer the long-form of the SLURM-argument (`--arg=<..
 If you are not providing a specific experiment and run in your configuration YAML, you can additionally pass these values as arguments on the command-line:
 
 ```bash
-> submit_slurm.sh -t <ManagedTaskName> -c </path/to/config/yaml> [-e EXPERIMENT] [-r RUN] [--debug] $SLURM_ARGS
+> submit_slurm -t <ManagedTaskName> -c </path/to/config/yaml> [-e EXPERIMENT] [-r RUN] [--debug] $SLURM_ARGS
 ```
 
 ### Workflow (DAG) submission
@@ -117,7 +117,7 @@ The Airflow launch process actually involves two steps. There is a wrapper prior
 1. `launch_scripts/submit_launch_airflow.sh` is run.
 2. This script runs the `launch_scripts/launch_airflow.py` script which was provided as the first argument. This is the **true** launch script
 3. `launch_airflow.py` communicates with the Airflow API, requesting that a specific DAG be launched. It then continues to run, and gathers the individual logs and the exit status of each step of the DAG.
-4. Airflow will then enter a loop of communication where it asks the JID to submit each step of the requested DAG as batch job using `launch_scripts/submit_slurm.sh`.
+4. Airflow will then enter a loop of communication where it asks the JID to submit each step of the requested DAG as batch job using `launch_scripts/submit_slurm.py`.
 
 There are some specific reasons for this complexity:
 

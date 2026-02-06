@@ -113,7 +113,9 @@ def modify_permissions(path: str, permissions: int) -> None:
             os.chmod(os.path.join(root, f), permissions)
 
 
-def git_clone(repo: str, location: str, permissions: int) -> None:
+def git_clone(
+    repo: str, location: str, permissions: int, patch: Optional[str] = None
+) -> None:
     """Clone a git repository.
 
     Will not overwrite a directory of there is already a folder at the specified
@@ -126,6 +128,8 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
         location (str): Path to the location to clone to.
 
         permissions (str): Permissions to set on the repository.
+
+        patch (Optional[str]): The path to a patch to apply (if desired).
     """
     repo_only: str = repo.split("/")[1]
     if os.path.exists(f"{location}/{repo_only}"):
@@ -143,20 +147,44 @@ def git_clone(repo: str, location: str, permissions: int) -> None:
     out, _ = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
     ).communicate()
+
+    # Apply patch if requested
+    if patch is not None:
+        if not os.path.exists(patch):
+            logger.warning(f"Patch requested, but path does not exist: {patch}")
+        else:
+            cwd: str = os.getcwd()
+            os.chdir(f"{location}/{repo_only}")
+            patch_cmd: List[str] = [
+                "git",
+                "apply",
+                patch,
+            ]
+            subprocess.Popen(
+                patch_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            ).communicate()
+            logger.debug(f"Applied patch ({patch}) to {location}/{repo_only}.")
+            os.chdir(cwd)
+
     modify_permissions(f"{location}/{repo_only}", permissions)
 
 
-def clone_smalldata(producer_location: str) -> None:
+def clone_smalldata(producer_location: str, patch: Optional[str] = None) -> None:
     """Clone smalldata_tools based on producer location.
 
     Args:
         producer_location (str): Full path to the producer to be used.
+
+        patch (Optional[str]): The path to a patch to apply (if desired).
     """
     from pathlib import Path
 
     repo: str = "slac-lcls/smalldata_tools"
     location: str = str(Path(producer_location).parent.parent.parent)
-    git_clone(repo, location, 0o777)
+    git_clone(repo, location, 0o777, patch)
 
 
 def grep(match_str: str, in_file: str) -> List[str]:
