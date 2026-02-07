@@ -85,12 +85,12 @@ def git_clone(repo: str, location: str, tag: str) -> None:
         "git",
         "clone",
         f"https://github.com/{repo}.git",
-        f"{location}/{repo_only}",
+        location,
     ]
     _run_subprocess_log(cmd)
 
     cwd: str = os.getcwd()
-    os.chdir(f"{location}/{repo_only}")
+    os.chdir(location)
     cmd = ["git", "checkout", tag]
     _run_subprocess_log(cmd)
     os.chdir(cwd)
