@@ -12,7 +12,7 @@ nav:
       - Task Documentation:
           - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
           - Converting XTC1 to XTC2: "usage/tasks/xtc1_to_xtc2_conversion.md"
-          - Running BayFAI: "usage/tasks/bayfai.md" 
+          - Running BayFAI: "usage/tasks/bayfai.md"
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task:
@@ -30,10 +30,12 @@ nav:
   - Source Code:
       - managed_tasks: "source/managed_tasks.md"
       - execution:
+          - debug_utils: "source/execution/debug_utils.md"
           - executor: "source/execution/executor.md"
           - ipc: "source/execution/ipc.md"
-          - debug_utils: "source/execution/debug_utils.md"
+          - launch: "source/execution/launch.md"
           - logging: "source/execution/logging.md"
+          - subprocess_utils: "source/execution/subprocess_utils.md"
       - tasks:
           - task: "source/tasks/task.md"
           - tasklets: "source/tasks/tasklets.md"

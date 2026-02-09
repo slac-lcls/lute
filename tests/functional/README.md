@@ -12,11 +12,12 @@
 
 ## List of tests
 
-| Test Name       | Workflow              | Experiment   | Run | Additional Comments                                                   |
-|:---------------:|:---------------------:|:------------:|:---:|:---------------------------------------------------------------------:|
-| basic_tests     | Basic LUTE test Tasks | xpptut15     | 670 | Experiment/run are not used by test Tasks. Required for compatibility |
-| smd_xpp_default | SmallDataProducer     | xpptut15     | 650 | xpplv9818 run 127. This is to test default production only.           |
-| smd_mfx_default | SmallDataProducer     | mfxx49820    | 15  | Default small data production                                         |
-| smd2_mfx_prod   | SmallDataProducer2    | mfx101344525 | 70  | LCLS2 non-default SMD (MFX).                                          |
-| smd2_multi_node | SmallDataProducer2    | mfx101262725 | 96  | LCLS2 non-default SMD (MFX) submitted across multiple nodes.          |
-|                 |                       |              |     |                                                                       |
+| Test Name        | Workflow                            | Experiment   | Run | Additional Comments                                                   |
+|:----------------:|:-----------------------------------:|:------------:|:---:|:---------------------------------------------------------------------:|
+| basic_tests      | Basic LUTE test Tasks               | xpptut15     | 670 | Experiment/run are not used by test Tasks. Required for compatibility |
+| smd_xpp_default  | SmallDataProducer                   | xpptut15     | 650 | xpplv9818 run 127. This is to test default production only.           |
+| smd_mfx_default  | SmallDataProducer                   | mfxx49820    | 15  | Default small data production                                         |
+| smd2_mfx_prod    | SmallDataProducer2                  | mfx101344525 | 70  | LCLS2 non-default SMD (MFX).                                          |
+| smd2_multi_node  | SmallDataProducer2                  | mfx101262725 | 96  | LCLS2 non-default SMD (MFX) submitted across multiple nodes.          |
+| param_generation | Basic LUTE tests + param generation | xpptut15     | 670 | Experiment/run not used by the test but required for compatibility.   |
+|                  |                                     |              |     |                                                                       |

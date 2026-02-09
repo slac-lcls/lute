@@ -121,7 +121,11 @@ As an example we will consider the following test workflow.
   - A custom string of SLURM arguments in `slurm_params`. This can be used to override the arguments which are passed in the command-line, but if it is provided, it must provide **EVERY** SLURM argument. Currently, only replacing some arguments is not supported.
   - A field called `next` which is a list which sets up the **managed** `Task`s that will be submitted after this one completes. If it is left empty, then this branch of the workflow ends here.
 
-Additionally, a set of trigger rules can be provided before each step definition:
+A number of additional special tags can be used as described below in the relevant sections.
+
+### Trigger Rules
+
+A set of trigger rules can be provided before each step definition with an appropriate tag:
 
 - `!ALL_SUCCESS`: This job step will only be submitted if all previous steps in its branch succeed (This is the default)
 - `!ANY_SUCCESS`: This job step will be submitted as soon as any previous step in its branch succeed.
@@ -130,4 +134,59 @@ Additionally, a set of trigger rules can be provided before each step definition
 - `!ANY_FAILED`: This job step will be submitted as soon as any previous step fails.
 - `!ALWAYS`: This job step will always run as soon as it is reached in the DAG.
 
+### Setting up branching
+
 A number of branching conditions can be defined as well. Currently supported are branching based on LCLS1 vs LCLS2 DAQ, and the run type. These are defined by using the tag `!branch_daq2` (for example) and defining two dictionaries underneath it for the various cases (`daq2` or `daq1` in this example).
+
+### Parameter generation
+
+A not infrequent requirement is to rerun a workflow where some set of the `Task` parameters is modified each time. Parameter "sweeps" or generation can be configured from the DAG definition to simplify this process.
+
+A `!param_sweep` tag can be prepended before the relevant step in the DAG. When adding this tag, in addition to `task_name`, `slurm_params`, and `next` keys which must be defined for every step in the DAG, a `param_matrix` key is included. Under this key, the set of `Task` parameter values should be provided.
+
+For example, the `SocketTester` **managed** `Task`, runs `TestSocket`. This has a parameter `num_arrays` which takes an integer. If we want to run that `Task` five times, with a different value each time for this parameter, we can define the DAG as:
+
+```yaml
+!LUTE_DAG
+task_name: Tester
+slurm_params: "--partition=milano --account=lcls:data --ntasks=1"
+next:
+- !param_sweep
+  task_name: SocketTester
+  param_matrix:
+    num_arrays: [5, 10, 15, 20, 25]
+  slurm_params: "--partition=milano --account=lcls:data --ntasks=1"
+  next: []
+```
+
+This will create a workflow which runs four instances of the **managed** `Task` **IN PARALLEL**.
+
+```
+          - SocketTester_0   # Has 5 for num_arrays
+        /
+       /  - SocketTester_1   # Has 10 for num_arrays
+      / /
+Tester    - SocketTester_2   # Has 15 for num_arrays
+      \ \
+       \  - SocketTester_2   # Has 20 for num_arrays
+        \
+          - SocketTester_3   # Has 25 for num_arrays
+```
+
+#### How does this actually work? Important notes for developers
+
+The parameter generation mechanism works by creating a new temporary config YAML. The original that the user has provided is used as the starting point. When using parameter generation it is generally still required to provide a config YAML to start with.
+
+The `maestro` parser will take the parameter matrix provided in the DAG definition and create copies for the relevant `Task` that include modified versions of the specified parameters. Note how in the example above, the **managed** `Task`s have been denoted with a `_X` suffix. This suffix is intentional, and is used for determining which set of parameters each job will use. The suffix will be eventually removed; however, it is important for the lookup process.
+
+In particular, the process works as:
+
+1. When `run_task.py` sees a **managed** `Task` with this suffix, it will look for the underlying **managed** `Task` that it corresponds to. E.g., using the above definition, it will see `SocketTester_0` and determine that it must run `SocketTester`.
+
+    - I.e., `SocketTester_0` -> `SocketTester`
+
+2. This determination is not enough, however. For this **managed** `Task` instance, it will then make sure that t modifies the name of the `Task` that it is running. So, it will take the stripped suffix and add it to the `Task` name. `TestSocket` will become `TestSocket_0`. This allows the underlying `Task` layer to lookup the information in the config YAML transparently.
+
+    - More specifically, it will do `SocketTester.task_name = "TestSocket"` -> `SocketTester.task_name = "TestSocket_0"`
+
+3. Both the Execution and Task layers, once the config lookup process has completed, will remove the suffix where appropriate. E.g., we don't want to store information in the database under a `Task` named `TestSocket_0`. Ultimately, all these instances are running `TestSocket`, and the database will reflect that. The suffixes are just used internally to facilitate the parameter generation process.

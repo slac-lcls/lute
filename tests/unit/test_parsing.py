@@ -79,10 +79,22 @@ SIMPLE_BRANCH_DAG: str = """
         next: []
 """
 
+PARAM_GENERATION_DAG = f"""
+!LUTE_DAG
+task_name: "Tester"
+next:
+- !param_sweep
+  task_name: SocketTester
+  param_matrix:
+    num_arrays: [5, 10, 15]
+  next: []
+"""
+
 
 def print_wf(wf: List[JobStep]):
     for job in wf:
         print(f"{job.managed_task_name} triggers on {job.trigger_rule}")
+        print(f"\t{job.managed_task_name} uses {job.parameters.config_file}")
         print_wf(job.next)
 
 
@@ -341,3 +353,90 @@ class TestParsing:
             branch_conditions={"daq2": False},
         )
         assert is_equal(wf_defn, job_steps)
+
+    def test_param_generation(self):
+        import tempfile
+        import yaml
+        import os
+
+        # This one actual needs a config file
+        config_data = [
+            {"experiment": "test", "run": 1, "work_dir": "/tmp"},
+            {"SocketTester": {"num_arrays": 10}},
+        ]
+
+        fd: int
+        temp_config: str
+        fd, temp_config = tempfile.mkstemp(suffix=".yaml")
+        expanded_config_stored: str = ""
+        try:
+            with os.fdopen(fd, "w") as f:
+                yaml.dump_all(config_data, f)
+
+            wf_defn: List[JobStep] = load_lute_dag_str(
+                workflow_str=PARAM_GENERATION_DAG,
+                lute_location=TestParsing.lute_location,
+                executable_subdir=TestParsing.executable_subdir,
+                config_file=temp_config,
+                debug=TestParsing.debug,
+                branch_conditions={"daq2": True},
+            )
+
+            expanded_config_stored = wf_defn[0].next[0].parameters.config_file
+
+            starting_params: JobParameters = JobParameters(
+                TestParsing.lute_location,
+                TestParsing.executable_subdir,
+                temp_config,
+                TestParsing.debug,
+            )
+            starting_params.config_file = temp_config
+            expanded_params: JobParameters = JobParameters(
+                TestParsing.lute_location,
+                TestParsing.executable_subdir,
+                expanded_config_stored,
+                TestParsing.debug,
+            )
+
+            job_steps: List[JobStep] = [
+                JobStep(
+                    "Tester",
+                    TriggerRule.ALL_SUCCESS,
+                    starting_params,
+                    "",
+                    [
+                        JobStep(
+                            "SocketTester_0",
+                            TriggerRule.ALL_SUCCESS,
+                            expanded_params,
+                            "",
+                            [],
+                        ),
+                        JobStep(
+                            "SocketTester_1",
+                            TriggerRule.ALL_SUCCESS,
+                            expanded_params,
+                            "",
+                            [],
+                        ),
+                        JobStep(
+                            "SocketTester_2",
+                            TriggerRule.ALL_SUCCESS,
+                            expanded_params,
+                            "",
+                            [],
+                        ),
+                    ],
+                )
+            ]
+
+            assert is_equal(job_steps, wf_defn)
+
+        finally:
+            # Clean up temp config
+            if os.path.exists(temp_config):
+                os.unlink(temp_config)
+
+            # Clean up any expanded config that was created
+            if os.path.exists(expanded_config_stored):
+                os.unlink(expanded_config_stored)

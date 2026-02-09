@@ -213,6 +213,14 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
+    @property
+    def task_name(self) -> str:
+        return self._analysis_desc.task_result.task_name
+
+    @task_name.setter
+    def task_name(self, new_name: str) -> None:
+        self._analysis_desc.task_result.task_name = new_name
+
     def _report_to_manager(self, end_point: str, json_data: Dict[str, str]) -> None:
         requests.post(f"http://{self._lute_manager_url}/{end_point}", json=json_data)
 
@@ -692,6 +700,10 @@ class BaseExecutor(ABC):
         cmd: str = self._submit_cmd(executable_path, params)
         proc: subprocess.Popen = self._submit_task(cmd)
         self._task_time0 = time.monotonic()
+        # In the event we were using generated parameters, we may have a _XX suffix
+        # Now that the Task has been submitted, we can remove that from the name
+        # for storage in the database - just reset the name
+        self.task_name = re.sub(r"_\d+$", "", self.task_name)
 
         if self._lute_manager_url is not None:
             json_data: Dict[str, str] = {
