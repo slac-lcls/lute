@@ -45,10 +45,10 @@ install = ['--skip-subprojects', 'spdlog']
 # pp* (PyPy)
 # cp36-* (Python 3.6)
 # cp37-* (Python 3.7)
-# *-manylinux_i686 (32-bit builds)
+# *i686 (32-bit builds)
 # Once code updated, will need to exclude: *-win32
 # -- But maestro code is Linux only atm
-skip = ["pp*", "cp36-*", "cp37-*", "*-manylinux_i686"]
+skip = ["pp*", "cp36-*", "cp37-*", "*i686"]
 
 # Setup tests for build CI - not working atm
 # test-requires = "pytest"
