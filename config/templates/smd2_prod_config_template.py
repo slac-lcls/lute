@@ -170,24 +170,10 @@ def get_azav_pyfai(run):
     if run>0:
         az_dict = {}
 {% for detector, params in getAzIntPyFAIParams.items() %}
-{%- if params['poni_file'] -%}
-        az_dict['poni_file'] = {{ params['poni_file'] }}
-{% else %}
-        ai_kwargs = {}
-        ai_kwargs['dist'] = {{ params['ai_kwargs']['dist'] }}
-        ai_kwargs['poni1'] = {{ params['ai_kwargs']['poni1'] }}
-        ai_kwargs['poni2'] = {{ params['ai_kwargs']['poni2'] }}
-        az_dict['ai_kwargs'] = ai_kwargs
-{% endif %}
-        az_dict['npts'] = {{ params['npts'] }}
-        az_dict['npts_az'] = {{ params['npts_az'] }}
-        az_dict['int_units'] = {{ params['int_units'] | pprint }}
-        az_dict['return2d'] = {{ params['return2d'] }}
-
-        ret_dict['{{ detector }}'] = az_dict
+        {{- step_parameters("az_dict", detector, params) }}
 {% endfor %}
     return ret_dict
-{%- endif %}
+{% endif %}
 
 {%- if getPolynomialCorrection is defined and getWfIntegrate %}
 def get_polynomial_correction(run):
