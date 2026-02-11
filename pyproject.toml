@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "numpy", "mypy", "meson-python", "pybind11", "meson>=1.10.1"]
+requires = ["numpy", "mypy", "meson-python", "pybind11", "meson>=1.10.1"]
 build-backend = "mesonpy"
 
 [project]
@@ -15,6 +15,24 @@ dependencies = [
     "zmq",
     "jinja2",
 ]
+authors = [
+    { name = "psrel", email = "psrel@slac.stanford.edu" },
+]
+license = { text = "BSD-3-Clause" }
+readme = "README.md"
+urls = { Homepage = "https://github.com/slac-lcls/lute" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
 
 [tool.meson-python.args]
 # Need to do this.... I couldn't for the life of me figure out how to get meson
@@ -22,6 +40,17 @@ dependencies = [
 # shared library...
 install = ['--skip-subprojects', 'spdlog']
 
+[tool.cibuildwheel]
+# Build for everything except:
+# pp* (PyPy)
+# cp36-* (Python 3.6)
+# cp37-* (Python 3.7)
+# *-win32 and *-manylinux_i686 (32-bit builds)
+skip = ["pp*", "cp36-*", "cp37-*", "*-win32", "*-manylinux_i686"]
+
+# Setup tests for build CI - not working atm
+# test-requires = "pytest"
+# test-command = "pytest ./tests/unit"
 
 [project.optional-dependencies]
 mypy = ["mypy"]
@@ -34,6 +63,7 @@ docs = [
     "mkdocs-material-extensions",
 ]
 mpi = ["mpi4py"]
+test = ["pytest"]
 
 [project.scripts]
 run_task = "run_task:main"
