@@ -64,6 +64,20 @@ SmallDataProducer2.add_tasklet(
 )
 SmallDataProducer2.update_environment(setup_smd2_env)
 
+SmallDataProducer2Test: Executor = Executor("SubmitSMD")
+"""Runs the production of a LCLS2 smalldata HDF5 file using the test environment."""
+SmallDataProducer2Test.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/pscondatest.sh"
+)
+SmallDataProducer2Test.add_tasklet(
+    clone_smalldata,
+    ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
+    when="before",
+    set_result=False,
+    set_summary=False,
+)
+SmallDataProducer2Test.update_environment(setup_smd2_env)
+
 SmallDataProducerSpack: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file using the spack environment."""
 SmallDataProducerSpack.shell_source(
