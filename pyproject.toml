@@ -54,6 +54,43 @@ skip = ["pp*", "cp36-*", "cp37-*", "*i686"]
 # test-requires = "pytest"
 # test-command = "pytest ./tests/unit"
 
+# Try to set things up to cache what's possible to make things faster
+build-frontend = { name = "pip", args = ["--no-build-isolation"] }
+
+before-build = [
+    "pip install -U pip",
+    "pip install 'meson>=1.10.1' meson-python ninja numpy pybind11 setuptools",
+    "ccache -z",
+]
+[tool.cibuildwheel.linux]
+before-all = [
+    """
+    if command -v apt-get >/dev/null; then
+        apt-get update && apt-get install -y ccache
+    elif command -v dnf >/dev/null; then
+        dnf install -y ccache
+    elif command -v yum >/dev/null; then
+        yum install -y ccache
+    elif command -v apk >/dev/null; then
+        apk add ccache
+    fi
+    """,
+]
+[tool.cibuildwheel.linux.environment]
+CC = "ccache gcc"
+CXX = "ccache g++"
+CCACHE_DIR = "/project/.ccache"
+
+#[tool.cibuildwheel.macos.environment]
+#CC = "ccache clang"
+#CXX = "ccache clang++"
+#CCACHE_DIR = "/project/.ccache"
+
+#[tool.cibuildwheel.windows.environment]
+#CMAKE_C_COMPILER_LAUNCHER = "sccache"
+#CMAKE_CXX_COMPILER_LAUNCHER = "sccache"
+#SCCACHE_DIR = "/project/.ccache"
+
 [project.optional-dependencies]
 mypy = ["mypy"]
 docs = [

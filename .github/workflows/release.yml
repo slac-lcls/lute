@@ -1,11 +1,10 @@
 # Will change name once `psrel` PyPI account can be created
 # name: Build wheels, create release, and publish to PyPI
 name: Build wheels and create release
-
 on:
   push:
     # Disable this for forks. Its expensive, and the PyPI portion will fail later
-    if: github.repository_owner == "slac-lcls"
+    #if: github.repository_owner == "slac-lcls"
     # For now, only build for release tags
     tags:
       - 'v*'
@@ -23,13 +22,36 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+        # Add back Mac and Windows builds when maestro supports them
+        # os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
 
+      # Cache pip (for speedup)
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Cache ccache (for speedup)
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+
       - name: Build wheels
         # Check pyproject.toml for supported versions and additional config
         uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_AFTER_BUILD: "ccache -s"
 
       - uses: actions/upload-artifact@v4
         with:
