@@ -4,7 +4,7 @@ name: Build wheels and create release
 on:
   push:
     # Disable this for forks. Its expensive, and the PyPI portion will fail later
-    #if: github.repository_owner == "slac-lcls"
+    if: github.repository_owner == "slac-lcls"
     # For now, only build for release tags
     tags:
       - 'v*'
