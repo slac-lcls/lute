@@ -337,7 +337,7 @@ class Task(ABC):
         self._report_to_executor(msg=req_msg)
 
         communicator: PipeCommunicator = PipeCommunicator()
-        return communicator.read()
+        return communicator.read(wait=2)
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""

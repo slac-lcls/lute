@@ -38,6 +38,7 @@ import io
 import logging
 import os
 import pickle
+import select
 import socket
 import subprocess
 import sys
@@ -48,7 +49,7 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, ClassVar, List, Optional, Set, Tuple, Union, cast
+from typing import Any, ClassVar, IO, List, Optional, Set, Tuple, Union, cast
 from typing_extensions import Self
 
 LUTE_SIGNALS: Set[str] = {
@@ -158,12 +159,14 @@ class Communicator(ABC):
         self.desc = "Communicator abstract base class."
 
     @abstractmethod
-    def read(self, proc: subprocess.Popen) -> Message:
+    def read(
+        self, proc: Optional[subprocess.Popen], wait: Optional[float] = None
+    ) -> Message:
         """Method for reading data through the communication mechanism."""
         ...
 
     @abstractmethod
-    def write(self, msg: Message) -> None:
+    def write(self, msg: Message, proc: Optional[subprocess.Popen] = None) -> None:
         """Method for sending data through the communication mechanism."""
         ...
 
@@ -224,11 +227,17 @@ class PipeCommunicator(Communicator):
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc = "Communicates through stderr and stdout using pickle."
 
-    def read(self, proc: Optional[subprocess.Popen] = None) -> Message:
+    def read(
+        self, proc: Optional[subprocess.Popen] = None, wait: Optional[float] = None
+    ) -> Message:
         """Read from stdout and stderr (Executor) or stdin (Task).
 
         Args:
             proc (subprocess.Popen): The process to read from (Executor side).
+
+            wait (Optional[float]): Optionally wait for data for the specified time.
+                By default all operations are non-blocking, by setting wait to some
+                non-zero value, the Communicator will block for that amount of time.
 
         Returns:
             msg (Message): The message read, containing contents and signal.
@@ -237,6 +246,16 @@ class PipeCommunicator(Communicator):
         contents: Optional[Any]
         raw_signal: Optional[bytes]
         raw_contents: Optional[bytes]
+
+        if wait is not None:
+            wait_on: List[IO]
+            if self._party == Party.EXECUTOR:
+                assert proc is not None
+                wait_on = [fd for fd in [proc.stderr, proc.stdin] if fd is not None]
+            else:
+                wait_on = [sys.stdin]
+            # We're ignoring the output here to not rewrite the rest of the code
+            select.select(wait_on, [], [], wait)
 
         if self._party == Party.EXECUTOR:
             assert proc is not None
@@ -552,7 +571,9 @@ class SocketCommunicator(Communicator):
     # Read
     ############################################################################
 
-    def read(self, proc: subprocess.Popen) -> Message:
+    def read(
+        self, proc: Optional[subprocess.Popen] = None, wait: Optional[float] = None
+    ) -> Message:
         """Return a message from the queue if available.
 
         Socket(s) are continuously monitored, and read from when new data is
@@ -715,7 +736,7 @@ class SocketCommunicator(Communicator):
             assert isinstance(self._data_socket, socket.socket)
             self._data_socket.sendall(packed_msg)
 
-    def write(self, msg: Message) -> None:
+    def write(self, msg: Message, proc: Optional[subprocess.Popen] = None) -> None:
         """Send a single Message.
 
         The entire Message (signal and contents) is serialized and sent through

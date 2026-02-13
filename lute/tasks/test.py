@@ -147,7 +147,7 @@ class TestRequest(Task):
 
     def _run(self) -> None:
         self._report_to_executor(Message(contents="Got to run"))
-        time.sleep(3)
+        time.sleep(1)
 
         # Format should be:
         # {
@@ -157,20 +157,17 @@ class TestRequest(Task):
         #     ]
         # }
         resp: Message = self.get_running_tasks()
-        time.sleep(1)
         self._parse_response(resp=resp)
         time.sleep(1)
 
         resp = self.get_running_tasks()
-        time.sleep(1)
         self._parse_response(resp=resp)
         time.sleep(1)
 
         resp = self.get_running_tasks()
-        time.sleep(1)
         self._parse_response(resp=resp)
-
         time.sleep(1)
+
         self._report_to_executor(Message(contents="And done..."))
 
     def _post_run(self) -> None:
