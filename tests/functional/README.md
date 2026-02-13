@@ -20,4 +20,5 @@
 | smd2_mfx_prod    | SmallDataProducer2                  | mfx101344525 | 70  | LCLS2 non-default SMD (MFX).                                          |
 | smd2_multi_node  | SmallDataProducer2                  | mfx101262725 | 96  | LCLS2 non-default SMD (MFX) submitted across multiple nodes.          |
 | param_generation | Basic LUTE tests + param generation | xpptut15     | 670 | Experiment/run not used by the test but required for compatibility.   |
+| basic_rest       | Basic tests of `maestro` REST APIs  | xpptut15     | 670 | Experiment/run are not used by test Tasks. Required for compatibility |
 |                  |                                     |              |     |                                                                       |
