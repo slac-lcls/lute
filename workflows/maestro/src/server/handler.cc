@@ -4,7 +4,6 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
-#include <iostream>
 #include <string>
 
 namespace HTTP {
@@ -27,8 +26,7 @@ namespace HTTP {
     }
     for (auto member = json.MemberBegin(); member != json.MemberEnd(); ++member) {
       std::string key {member->name.GetString()};
-      std::cout << " Working on key " << key << std::endl;
-      std::string val;// {member->value.GetString()};
+      std::string val;
       // We don't do multiple layers at the moment. If its not an actual string
       // we'll just put it back in as a string
       if (member->value.IsString()) {
@@ -41,7 +39,6 @@ namespace HTTP {
         val = buffer.GetString();
       }
       result[key] = val;
-      std::cout << "Grabbed " << key << " with value " << val << std::endl;
     }
   }
 } // namespace HTTP

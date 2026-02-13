@@ -12,7 +12,7 @@ Classes:
         database access.
 """
 
-__all__ = ["Test", "TestSocket", "TestWriteOutput", "TestReadOutput"]
+__all__ = ["Test", "TestSocket", "TestWriteOutput", "TestReadOutput", "TestRequest"]
 __author__ = "Gabriel Dorlhiac"
 
 import time
@@ -121,5 +121,35 @@ class TestReadOutput(Task):
     def _post_run(self) -> None:
         super()._post_run()
         self._result.summary = "Was able to load data."
+        self._result.payload = "This Task produces no output."
+        self._result.task_status = TaskStatus.COMPLETED
+
+
+class TestRequest(Task):
+    """Simple test Task to try to send requests to and from via workflow manager."""
+
+    def __init__(self, *, params: TestReadOutputParameters) -> None:
+        super().__init__(params=params)
+
+    def _run(self) -> None:
+        self._report_to_executor(Message(contents="Got to run"))
+        self.get_running_tasks()
+        self._report_to_executor(
+            Message(contents="After first attempt at Task list retrieval")
+        )
+        time.sleep(1)
+        self._report_to_executor(
+            Message(contents="After second attempt at Task list retrieval")
+        )
+        self.get_running_tasks()
+        self._report_to_executor(
+            Message(contents="After third attempt at Task list retrieval")
+        )
+        time.sleep(1)
+        self._report_to_executor(Message(contents="And done..."))
+
+    def _post_run(self) -> None:
+        super()._post_run()
+        self._result.summary = "Was able to request via workflow manager.."
         self._result.payload = "This Task produces no output."
         self._result.task_status = TaskStatus.COMPLETED

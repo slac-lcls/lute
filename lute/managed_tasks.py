@@ -38,6 +38,9 @@ ReadTester: Executor = Executor("TestReadOutput")
 MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunication")
 """Runs a test to confirm communication works between multiple nodes."""
 
+RequestTester: Executor = Executor("TestRequest")
+"""Runs a test whether requests go from Task to Executor to Workflow manager."""
+
 # SmallData-related
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
