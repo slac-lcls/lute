@@ -89,7 +89,7 @@ namespace LWM {
     }
 
     std::string cancel_cmd = "scancel";
-    for (const auto &pair : m_active_jobs) {
+    for (const auto& pair : m_active_jobs) {
       cancel_cmd += " " + pair.second;
     }
     // We use std::system here as a quick way to fire and forget the scancel
@@ -119,14 +119,23 @@ namespace LWM {
   }
 
   HTTP::Response JsonStatusHandler::operator()(const HTTP::Request& request) {
-    std::map<std::string,std::string> status;
-    parse_json(request.content(), status); // Implemented by HTTP::JsonHandler
-    {
+    std::map<std::string,std::string> status_plus_data;
+    parse_json(request.content(), status_plus_data); // Implemented by HTTP::JsonHandler
+    if (status_plus_data.count("managed_task")) {
       std::lock_guard<std::mutex> lock(m_status_mut);
-      m_status_map[status["managed_task"]] = status["status"];
-      if (status["status"] == "STARTED" &&
-          m_splits_map.find(status["managed_task"]) != m_splits_map.end()) {
-        m_splits_map[status["managed_task"]]->running_point = std::chrono::steady_clock::now();
+      std::string task_name = status_plus_data["managed_task"];
+      if (status_plus_data.count("status")) {
+        m_status_map[task_name] = status_plus_data["status"];
+        if (status_plus_data["status"] == "STARTED" && m_splits_map.count(task_name)) {
+          m_splits_map[status_plus_data["managed_task"]]->running_point = std::chrono::steady_clock::now();
+        }
+      }
+
+      // Store additional fields as metadata
+      for (auto const& [key, val] : status_plus_data) {
+        if (key != "managed_task" && key != "status") {
+          m_metadata_map[task_name][key] = val;
+        }
       }
     }
 
@@ -136,6 +145,9 @@ namespace LWM {
   }
 
   HTTP::Response JsonLogHandler::operator()(const HTTP::Request& request) {
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string GREEN = "\033[32m";
     std::map<std::string, std::string> log;
     if (m_unbuffered_logs) {
       parse_json(request.content(), log);
@@ -143,19 +155,106 @@ namespace LWM {
         //  std::lock_guard<std::mutex> lock(m_log_mut);
         //  m_log_map[log["managed_task"]] = log["message"];
         if (log.find("managed_task") != log.end()) {
-          std::string msg = "[";
-          msg += log["managed_task"] + "] ";
+          std::string msg {
+            "\n\t" + BOLD + GREEN + "[Logs from **" + log["managed_task"] + "**]" + RESET + "\n"
+          };
           if (log.find("log") != log.end()) {
-            m_logger->info(msg + log["log"]);
+            msg += log["log"];
           } else if (log.find("message") != log.end()) {
-            m_logger->info(msg + log["message"]);
+            msg += log["message"];
           }
+          m_logger->info(msg);
         }
       }
     }
     HTTP::Response response(HTTP::CODE::OK);
     response.set_content("Log received.");
     return response;
+  }
+
+  HTTP::Response JsonTasksHandler::operator()(const HTTP::Request& request) {
+    std::string json_res = "{ \"managed_tasks\": [";
+    {
+      std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+      bool first = true;
+
+      for (auto const& [task, status] : m_status_handler->m_status_map) {
+        if (!first) {
+          json_res += ", ";
+        }
+        json_res += "{ \"name\": \"" + task + "\", \"status\": \"" + status + "\"";
+
+        if (m_status_handler->m_metadata_map.count(task)) {
+          for (auto const& [key, val] : m_status_handler->m_metadata_map[task]) {
+            json_res += ", \"" + key + "\": \"" + val + "\"";
+          }
+        }
+        json_res += " }";
+        first = false;
+      }
+    }
+    json_res += "] }";
+
+    HTTP::Response response(HTTP::CODE::OK);
+    response.set_header("Content-Type", "application/json");
+    response.set_content(json_res);
+    return response;
+  }
+
+  HTTP::Response JsonRpcHandler::operator()(const HTTP::Request& request) {
+    if (request.method() == HTTP::METHOD::POST) {
+      std::map<std::string, std::string> rpc_data;
+      parse_json(request.content(), rpc_data);
+
+      if (rpc_data.find("target") != rpc_data.end()
+          && rpc_data.find("message") != rpc_data.end()) {
+        std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+        m_status_handler->m_rpc_queues[rpc_data["target"]].push(rpc_data["message"]);
+
+        HTTP::Response response(HTTP::CODE::OK);
+        response.set_content("Message queued.");
+        return response;
+      }
+      return HTTP::Response(HTTP::CODE::BadRequest);
+    } else if (request.method() == HTTP::METHOD::GET) {
+      // Basic query param parsing for ?task=...
+      std::string task_name;
+      size_t pos = request.url().find("task=");
+      if (pos != std::string::npos) {
+        task_name = request.url().substr(pos + 5);
+        size_t amp_pos = task_name.find('&');
+        if (amp_pos != std::string::npos) {
+          task_name = task_name.substr(0, amp_pos);
+        }
+      } else {
+        // Try body if not in query param
+        std::map<std::string, std::string> rpc_data;
+        parse_json(request.content(), rpc_data);
+        if (rpc_data.find("task") != rpc_data.end()) {
+          task_name = rpc_data["task"];
+        }
+      }
+
+      if (!task_name.empty()) {
+        std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+        if (m_status_handler->m_rpc_queues.find(task_name) != m_status_handler->m_rpc_queues.end()
+            && !m_status_handler->m_rpc_queues[task_name].empty()) {
+          std::string msg = m_status_handler->m_rpc_queues[task_name].front();
+          m_status_handler->m_rpc_queues[task_name].pop();
+
+          HTTP::Response response(HTTP::CODE::OK);
+          response.set_header("Content-Type", "application/json");
+          response.set_content("{ \"message\": \"" + msg + "\" }");
+          return response;
+        }
+      }
+
+      HTTP::Response response(HTTP::CODE::OK);
+      response.set_header("Content-Type", "application/json");
+      response.set_content("{ \"message\": null }");
+      return response;
+    }
+    return HTTP::Response(HTTP::CODE::MethodNotAllowed);
   }
 
   bool Launcher::can_task_run(const JobStep& job, MaybeJobFutures_t wait_for, std::string& reason) {
