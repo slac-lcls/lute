@@ -61,6 +61,7 @@ from lute.execution.ipc import (
     Party,
     PipeCommunicator,
     SocketCommunicator,
+    TaskMetadataMessage,
     TaskRequest,
     TaskRequestMessage,
 )
@@ -757,10 +758,13 @@ class BaseExecutor(ABC):
         self.task_name = re.sub(r"_\d+$", "", self.task_name)
 
         if self._lute_manager_url is not None:
+            # On STARTED we will store some information that could be useful for `maestro`
             json_data: Dict[str, str] = {
                 "managed_task": self._m_task_name,
                 "task": self.task_name,
                 "status": "STARTED",
+                # This should be set by now
+                "executor_hostname": os.getenv("LUTE_EXECUTOR_HOST", "UNKNOWN"),
             }
             self._report_to_manager(end_point="status", json_data=json_data)
 
@@ -1140,6 +1144,17 @@ class Executor(BaseExecutor):
                 f"{executor._analysis_desc.task_result.task_name} status": "RUNNING",
             }
             post_elog_run_status(elog_data)
+            # Tell `maestro` we're RUNNING as well
+            if executor._lute_manager_url is not None:
+                json_data: Dict[str, Any] = {
+                    "managed_task": executor.managed_task_name,
+                    "task": executor.task_name,
+                    "status": "RUNNING",
+                }
+                executor._report_to_manager(
+                    end_point="status",
+                    json_data=json_data,
+                )
             return None
 
         self.add_hook("task_started", task_started)
@@ -1281,9 +1296,36 @@ class Executor(BaseExecutor):
                     "Task Request improperly formatted. Received message of "
                     f"type: {type(msg)}"
                 )
-            return False
+            return None
 
         self.add_hook("task_request", task_request)
+
+        def task_metadata(
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
+            if isinstance(msg, TaskMetadataMessage):
+                # Maestro just updates all metadata if its provided on any status
+                # update. So this can be a simple call.
+                if executor._lute_manager_url is not None:
+                    json_data: Dict[str, Any] = {
+                        "managed_task": executor.managed_task_name,
+                        "task": executor.task_name,
+                        "status": "RUNNING",
+                    }
+                    # Add in the Task's metadata
+                    json_data.update(msg.contents)
+                    executor._report_to_manager(
+                        end_point="status",
+                        json_data=json_data,
+                    )
+            else:
+                logger.debug("Got metadata signal without metadata message.")
+
+            return None
+
+        self.add_hook("task_metadata", task_metadata)
 
     def _task_loop(self, proc: subprocess.Popen) -> None:
         """Actions to perform while the Task is running.

@@ -49,7 +49,7 @@ import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, ClassVar, IO, List, Optional, Set, Tuple, Union, cast
+from typing import Any, ClassVar, Dict, IO, List, Optional, Set, Tuple, Union, cast
 from typing_extensions import Self
 
 LUTE_SIGNALS: Set[str] = {
@@ -63,6 +63,7 @@ LUTE_SIGNALS: Set[str] = {
     "TASK_LOG",
     "TASK_REQUEST",
     "TASK_RESPONSE",
+    "TASK_METADATA",
 }
 
 if __debug__:
@@ -142,6 +143,12 @@ class TaskRequestMessage(Message):
 class TaskResponseMessage(Message):
     contents: TaskResponse
     signal: str = "TASK_RESPONSE"
+
+
+@dataclass
+class TaskMetadataMessage(Message):
+    contents: Dict[str, Any]
+    signal: str = "TASK_METADATA"
 
 
 class Communicator(ABC):

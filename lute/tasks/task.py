@@ -11,6 +11,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 import signal
+import socket
 import sys
 import time
 import warnings
@@ -52,6 +53,7 @@ from lute.execution.ipc import (
     SocketCommunicator,
     TaskRequest,
     TaskRequestMessage,
+    TaskMetadataMessage,
 )
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 from lute.io.parameters import RowIds
@@ -242,6 +244,21 @@ class Task(ABC):
             else:
                 os.kill(os.getpid(), signal.SIGSTOP)
 
+        # Upon resuming, we will also send some metadata that can be logged
+        # for inter-Task communication later
+        hostnames: List[str] = []
+        metadata: Dict[str, List[str]] = {}
+        hostname: str
+        if self._use_mpi:
+            comm = MPI.COMM_WORLD
+            hostname = MPI.Get_processor_name()
+            hostnames = comm.allgather(hostname)
+        else:
+            hostname = socket.gethostname()
+            hostnames.append(hostname)
+        metadata["task_hostnames"] = hostnames
+        self.publish_metadata(metadata=metadata)
+
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
         signal: str = "TASK_RESULT"
@@ -338,6 +355,16 @@ class Task(ABC):
 
         communicator: PipeCommunicator = PipeCommunicator()
         return communicator.read(wait=2)
+
+    def publish_metadata(self, metadata: Dict[str, Any]) -> None:
+        """Send a message containing metadata that can be accessed by other Tasks.
+
+        Args:
+            metadata (Dict[str, Any]): A dictionary of key/value pairs that contains
+                data that other Tasks running in parallel could find useful.
+        """
+        meta_msg: TaskMetadataMessage = TaskMetadataMessage(contents=metadata)
+        self._report_to_executor(msg=meta_msg)
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""
