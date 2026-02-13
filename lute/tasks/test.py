@@ -16,7 +16,7 @@ __all__ = ["Test", "TestSocket", "TestWriteOutput", "TestReadOutput", "TestReque
 __author__ = "Gabriel Dorlhiac"
 
 import time
-from typing import cast
+from typing import List, cast
 
 import numpy as np
 
@@ -131,20 +131,45 @@ class TestRequest(Task):
     def __init__(self, *, params: TestReadOutputParameters) -> None:
         super().__init__(params=params)
 
+    def _parse_response(self, resp: Message) -> None:
+        running_managed_tasks: List[str] = []
+        running_tasks: List[str] = []
+        if isinstance(resp.contents, dict):
+            for managed_task_dict in resp.contents["managed_tasks"]:
+                running_managed_tasks.append(managed_task_dict["name"])
+                running_tasks.append(managed_task_dict["task"])
+
+        n_tasks: int = len(running_managed_tasks)
+        msg_str: str = f"TestRequest acknowledges that {n_tasks} Tasks are running\n"
+        msg_str += "Their names are: " + ",".join(running_managed_tasks)
+
+        self._report_to_executor(msg=Message(contents=msg_str))
+
     def _run(self) -> None:
         self._report_to_executor(Message(contents="Got to run"))
-        self.get_running_tasks()
-        self._report_to_executor(
-            Message(contents="After first attempt at Task list retrieval")
-        )
+        time.sleep(3)
+
+        # Format should be:
+        # {
+        #     "managed_tasks": [
+        #         { "name": "...", "status": "...", "task": "...", OTHER KEYS MAYBE },
+        #         { "name": "...", "status": "...", "task": "...", OTHER KEYS MAYBE },
+        #     ]
+        # }
+        resp: Message = self.get_running_tasks()
         time.sleep(1)
-        self._report_to_executor(
-            Message(contents="After second attempt at Task list retrieval")
-        )
-        self.get_running_tasks()
-        self._report_to_executor(
-            Message(contents="After third attempt at Task list retrieval")
-        )
+        self._parse_response(resp=resp)
+        time.sleep(1)
+
+        resp = self.get_running_tasks()
+        time.sleep(1)
+        self._parse_response(resp=resp)
+        time.sleep(1)
+
+        resp = self.get_running_tasks()
+        time.sleep(1)
+        self._parse_response(resp=resp)
+
         time.sleep(1)
         self._report_to_executor(Message(contents="And done..."))
 

@@ -674,10 +674,13 @@ class BaseExecutor(ABC):
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
             cmd.split(),
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=self._analysis_desc.task_env,
         )
+        if proc.stdin is not None:
+            os.set_blocking(proc.stdin.fileno(), False)
         if proc.stdout is not None:
             os.set_blocking(proc.stdout.fileno(), False)
         if proc.stderr is not None:
@@ -773,12 +776,16 @@ class BaseExecutor(ABC):
                     self._sigalrm_task(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
+        if proc.stdin is not None:
+            os.set_blocking(proc.stdin.fileno(), True)
         if proc.stdout is not None:
             os.set_blocking(proc.stdout.fileno(), True)
         if proc.stderr is not None:
             os.set_blocking(proc.stderr.fileno(), True)
 
         self._finalize_task(proc)
+        if proc.stdin is not None:
+            proc.stdin.close()
         if proc.stdout is not None:
             proc.stdout.close()
         if proc.stderr is not None:
@@ -1248,12 +1255,16 @@ class Executor(BaseExecutor):
                         if self._lute_manager_url is not None:
                             # Ask `maestro` for the running Tasks
                             # Response is returned, but ignoring for now
-                            self._report_to_manager(
+                            resp: Any = self._report_to_manager(
                                 end_point="tasks",
                                 json_data=None,
                                 method="GET",
                             )
-
+                            for communicator in self._communicators:
+                                if isinstance(communicator, PipeCommunicator):
+                                    communicator.write(
+                                        Message(contents=resp), proc=proc
+                                    )
                 else:
                     # Task wants to ask something of another Task
                     # This still goes via the workflow manager. But different APIs

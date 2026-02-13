@@ -34,16 +34,17 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
+import io
 import logging
 import os
 import pickle
 import socket
 import subprocess
 import sys
-import time
 import threading
-import warnings
+import time
 import queue
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -223,58 +224,74 @@ class PipeCommunicator(Communicator):
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc = "Communicates through stderr and stdout using pickle."
 
-    def read(self, proc: subprocess.Popen) -> Message:
-        """Read from stdout and stderr.
+    def read(self, proc: Optional[subprocess.Popen] = None) -> Message:
+        """Read from stdout and stderr (Executor) or stdin (Task).
 
         Args:
-            proc (subprocess.Popen): The process to read from.
+            proc (subprocess.Popen): The process to read from (Executor side).
 
         Returns:
             msg (Message): The message read, containing contents and signal.
         """
         signal: Optional[str]
-        contents: Optional[str]
-        raw_signal: Optional[bytes] = (
-            proc.stderr.read() if proc.stderr is not None else None
-        )
-        raw_contents: Optional[bytes] = (
-            proc.stdout.read() if proc.stdout is not None else None
-        )
+        contents: Optional[Any]
+        raw_signal: Optional[bytes]
+        raw_contents: Optional[bytes]
+
+        if self._party == Party.EXECUTOR:
+            assert proc is not None
+            raw_signal = proc.stderr.read() if proc.stderr is not None else None
+            raw_contents = proc.stdout.read() if proc.stdout is not None else None
+        else:
+            # Task side - reading from stdin which Executor writes to.
+            # Do not currently have a split like Executor using stderr/stdout
+            raw_signal = None
+            try:
+                raw_contents = sys.stdin.buffer.read()
+            except (AttributeError, io.UnsupportedOperation):
+                # Fallback if stdin is not a buffer or closed
+                raw_contents = None
+
         if raw_signal is not None:
             try:
                 signal = raw_signal.decode()
             except UnicodeDecodeError:
                 logger.debug(
-                    "PipeCommunicator (Executor) - Stderr signal contains non-UTF-8 bytes. "
+                    "PipeCommunicator - Stderr signal contains non-UTF-8 bytes. "
                     "Decoding with errors='replace'."
                 )
                 signal = raw_signal.decode(errors="replace")
         else:
             signal = None
+
         if raw_contents:
             if self._use_pickle:
                 try:
                     contents = pickle.loads(raw_contents)
+                    if self._party == Party.TASK and isinstance(contents, Message):
+                        # Executor writes a whole Message object to stdin
+                        signal = contents.signal
+                        contents = contents.contents
                 except (
                     pickle.UnpicklingError,
                     ValueError,
                     EOFError,
                     ModuleNotFoundError,
                 ):
-                    logger.debug("PipeCommunicator (Executor) - Set _use_pickle=False")
+                    logger.debug("PipeCommunicator - Set _use_pickle=False")
                     self._use_pickle = False
                     contents = self._safe_unpickle_decode(raw_contents)
             else:
                 try:
                     contents = raw_contents.decode()
                 except UnicodeDecodeError:
-                    logger.debug("PipeCommunicator (Executor) - Set _use_pickle=True")
+                    logger.debug("PipeCommunicator - Set _use_pickle=True")
                     self._use_pickle = True
                     contents = self._safe_unpickle_decode(raw_contents)
         else:
             contents = None
 
-        if signal and signal not in LUTE_SIGNALS:
+        if self._party == Party.EXECUTOR and signal and signal not in LUTE_SIGNALS:
             # Some tasks write on stderr
             # If the signal channel has "non-signal" info, add it to
             # contents
@@ -350,15 +367,37 @@ class PipeCommunicator(Communicator):
                     contents = None
         return contents
 
-    def write(self, msg: Message) -> None:
-        """Write to stdout and stderr.
+    def write(self, msg: Message, proc: Optional[subprocess.Popen] = None) -> None:
+        """Write to stdout and stderr (Task) or proc.stdin (Executor).
 
          The signal component is sent to `stderr` while the contents of the
          Message are sent to `stdout`.
 
         Args:
             msg (Message): The Message to send.
+            proc (subprocess.Popen, optional): The process to write to (Executor side).
         """
+        if self._party == Party.EXECUTOR:
+            assert proc is not None
+            if proc.stdin is None:
+                logger.error("Attempted to write to process with no stdin pipe!")
+                return
+
+            if self._use_pickle:
+                # We don't have separate signal/content channels for reverse yet
+                # Just send the whole message object
+                data: bytes = pickle.dumps(msg)
+                proc.stdin.write(data)
+                proc.stdin.flush()
+            else:
+                if not isinstance(msg.contents, str) and msg.contents is not None:
+                    raise ValueError(f"Cannot send {type(msg.contents)} without pickle")
+                data_str: str = str(msg.contents or "")
+                proc.stdin.write(data_str)
+                proc.stdin.flush()
+            return
+
+        # Task side
         if self._use_pickle:
             signal: bytes
             if msg.signal:
@@ -391,6 +430,8 @@ class PipeCommunicator(Communicator):
                 )
             sys.stderr.write(raw_signal)
             sys.stdout.write(raw_contents)
+            sys.stderr.flush()
+            sys.stdout.flush()
 
 
 class SocketCommunicator(Communicator):

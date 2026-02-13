@@ -159,6 +159,10 @@ class Task(ABC):
             task_affinity: Set[int] = affinity - executor_affinity
             os.sched_setaffinity(0, task_affinity)
 
+        # We can use `stdin` to receive Message's back from the Executor
+        # Set non-blocking otherwise reads would hang
+        os.set_blocking(sys.stdin.fileno(), False)
+
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
 
@@ -302,8 +306,13 @@ class Task(ABC):
         )
         req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
         self._report_to_executor(msg=req_msg)
+        if wait_for_resp:
+            communicator: PipeCommunicator = PipeCommunicator()
+            # Ignoring for now...
+            # resp_msg: Message = communicator.read()
+            communicator.read()
 
-    def get_running_tasks(self) -> None:
+    def get_running_tasks(self) -> Message:
         """Send a message with a request to know any other running Tasks.
 
         Args:
@@ -319,13 +328,16 @@ class Task(ABC):
                 method.
 
         Returns:
-            resp
+            resp (Message): Response from the workflow manager (if any).
         """
         req: TaskRequest = TaskRequest(
             request="RUNNING_TASKS", for_task=None, for_manager=True
         )
         req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
         self._report_to_executor(msg=req_msg)
+
+        communicator: PipeCommunicator = PipeCommunicator()
+        return communicator.read()
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""
