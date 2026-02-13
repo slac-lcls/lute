@@ -59,6 +59,8 @@ LUTE_SIGNALS: Set[str] = {
     "TASK_CANCELLED",
     "TASK_RESULT",
     "TASK_LOG",
+    "TASK_REQUEST",
+    "TASK_RESPONSE",
 }
 
 if __debug__:
@@ -113,6 +115,31 @@ class Party(Enum):
 class Message:
     contents: Optional[Any] = None
     signal: Optional[str] = None
+
+
+@dataclass
+class TaskRequest:
+    request: Any
+    for_task: Optional[str] = None
+    for_manager: bool = False
+
+
+@dataclass
+class TaskResponse:
+    response: Optional[Any] = None
+    for_task: Optional[str] = None
+
+
+@dataclass
+class TaskRequestMessage(Message):
+    contents: TaskRequest
+    signal: str = "TASK_REQUEST"
+
+
+@dataclass
+class TaskResponseMessage(Message):
+    contents: TaskResponse
+    signal: str = "TASK_RESPONSE"
 
 
 class Communicator(ABC):

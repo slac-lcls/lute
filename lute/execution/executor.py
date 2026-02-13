@@ -55,12 +55,14 @@ from typing_extensions import TypedDict, TypeAlias
 
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
-    Party,
+    Communicator,
+    LUTE_SIGNALS,
     Message,
+    Party,
     PipeCommunicator,
     SocketCommunicator,
-    LUTE_SIGNALS,
-    Communicator,
+    TaskRequest,
+    TaskRequestMessage,
 )
 from lute.tasks.dataclasses import (
     DescribedAnalysis,
@@ -133,6 +135,7 @@ class ExecutorHooks:
     task_cancelled: Hook
     task_result: Hook
     task_log: Hook
+    task_request: Hook
 
 
 class BaseExecutor(ABC):
@@ -221,8 +224,49 @@ class BaseExecutor(ABC):
     def task_name(self, new_name: str) -> None:
         self._analysis_desc.task_result.task_name = new_name
 
-    def _report_to_manager(self, end_point: str, json_data: Dict[str, str]) -> None:
-        requests.post(f"http://{self._lute_manager_url}/{end_point}", json=json_data)
+    def _report_to_manager(
+        self,
+        end_point: str,
+        json_data: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> Any:
+        try:
+            func = getattr(requests, method.lower())
+        except AttributeError:
+            logger.error(f"Unable to send an HTTP request of type {method}")
+            return
+
+        # Set a timeout so we don't hang if the workflow manager dies
+        timeout: float = 5.0
+        try:
+            resp: requests.models.Response
+            if json_data is not None:
+                resp = func(
+                    f"http://{self._lute_manager_url}/{end_point}",
+                    json=json_data,
+                    timeout=timeout,
+                )
+            else:
+                resp = func(
+                    f"http://{self._lute_manager_url}/{end_point}", timeout=timeout
+                )
+
+            if hasattr(resp, "json"):
+                try:
+                    good_json: Any = resp.json()
+                    return good_json
+                except requests.JSONDecodeError:
+                    # logger.debug("Bad json.")
+                    # Don't know if we want to check this?
+                    # Probably available via headers whether it should be decoded
+                    # as json
+                    ...
+            if hasattr(resp, "content"):
+                return resp.content
+        except requests.ConnectTimeout:
+            logger.error(
+                f"HTTP request to workflow manager timed out after {timeout} seconds!"
+            )
 
     def add_tasklet(
         self,
@@ -708,6 +752,7 @@ class BaseExecutor(ABC):
         if self._lute_manager_url is not None:
             json_data: Dict[str, str] = {
                 "managed_task": self._m_task_name,
+                "task": self.task_name,
                 "status": "STARTED",
             }
             self._report_to_manager(end_point="status", json_data=json_data)
@@ -1189,6 +1234,38 @@ class Executor(BaseExecutor):
             return False
 
         self.add_hook("task_log", task_log)
+
+        def task_request(
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
+            if isinstance(msg, TaskRequestMessage):
+                req: TaskRequest = msg.contents
+                if req.for_manager:
+                    # Task wants to ask something of the workflow manager directly
+                    if req.request == "RUNNING_TASKS":
+                        if self._lute_manager_url is not None:
+                            # Ask `maestro` for the running Tasks
+                            # Response is returned, but ignoring for now
+                            self._report_to_manager(
+                                end_point="tasks",
+                                json_data=None,
+                                method="GET",
+                            )
+
+                else:
+                    # Task wants to ask something of another Task
+                    # This still goes via the workflow manager. But different APIs
+                    ...
+            else:
+                logger.error(
+                    "Task Request improperly formatted. Received message of "
+                    f"type: {type(msg)}"
+                )
+            return False
+
+        self.add_hook("task_request", task_request)
 
     def _task_loop(self, proc: subprocess.Popen) -> None:
         """Actions to perform while the Task is running.

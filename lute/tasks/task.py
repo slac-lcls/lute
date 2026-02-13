@@ -46,10 +46,12 @@ else:
         AnalysisHeader,
     )
 from lute.execution.ipc import (
+    Communicator,
     Message,
     PipeCommunicator,
     SocketCommunicator,
-    Communicator,
+    TaskRequest,
+    TaskRequestMessage,
 )
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 from lute.io.parameters import RowIds
@@ -270,6 +272,60 @@ class Task(ABC):
         communicator.delayed_setup()
         communicator.write(msg)
         communicator.clear_communicator()
+
+    def task_request(
+        self, for_task: str, request: Any, wait_for_resp: bool = True
+    ) -> None:
+        """Send a message with a request for another Task.
+
+        The other `Task` may or may not be running. The request is sent to the
+        Executor that is managing this Task. A response can be waited for, or
+        it can be checked for later.
+
+        Args:
+            for_task (str): The name of the `Task` the request should be routed to.
+                This is the `Task` (NOT **managed** Task) name. It can be running in
+                any environment etc. The details of how the request is routed are
+                not relevant to the Task layer.
+
+            request (Any): The request to be sent. It must be JSON serializable.
+
+            wait_for_resp (bool): Whether to block on the response. If False, the
+                Task can check at a later time using the `check_request_response`
+                method.
+
+        Returns:
+            resp
+        """
+        req: TaskRequest = TaskRequest(
+            request=request, for_task=for_task, for_manager=False
+        )
+        req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
+        self._report_to_executor(msg=req_msg)
+
+    def get_running_tasks(self) -> None:
+        """Send a message with a request to know any other running Tasks.
+
+        Args:
+            for_task (str): The name of the `Task` the request should be routed to.
+                This is the `Task` (NOT **managed** Task) name. It can be running in
+                any environment etc. The details of how the request is routed are
+                not relevant to the Task layer.
+
+            request (Any): The request to be sent. It must be JSON serializable.
+
+            wait_for_resp (bool): Whether to block on the response. If False, the
+                Task can check at a later time using the `check_request_response`
+                method.
+
+        Returns:
+            resp
+        """
+        req: TaskRequest = TaskRequest(
+            request="RUNNING_TASKS", for_task=None, for_manager=True
+        )
+        req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
+        self._report_to_executor(msg=req_msg)
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""
