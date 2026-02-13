@@ -224,6 +224,10 @@ class BaseExecutor(ABC):
     def task_name(self, new_name: str) -> None:
         self._analysis_desc.task_result.task_name = new_name
 
+    @property
+    def managed_task_name(self) -> str:
+        return self._m_task_name
+
     def _report_to_manager(
         self,
         end_point: str,
@@ -1252,19 +1256,22 @@ class Executor(BaseExecutor):
                 if req.for_manager:
                     # Task wants to ask something of the workflow manager directly
                     if req.request == "RUNNING_TASKS":
-                        if self._lute_manager_url is not None:
+                        if executor._lute_manager_url is not None:
                             # Ask `maestro` for the running Tasks
                             # Response is returned, but ignoring for now
-                            resp: Any = self._report_to_manager(
+                            resp: Any = executor._report_to_manager(
                                 end_point="tasks",
                                 json_data=None,
                                 method="GET",
                             )
-                            for communicator in self._communicators:
+                            for communicator in executor._communicators:
                                 if isinstance(communicator, PipeCommunicator):
                                     communicator.write(
                                         Message(contents=resp), proc=proc
                                     )
+                            # Immediately read again in this case, since the Task
+                            # may have an answer instantly
+                            executor._task_loop(proc=proc)  # type: ignore
                 else:
                     # Task wants to ask something of another Task
                     # This still goes via the workflow manager. But different APIs
