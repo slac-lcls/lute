@@ -178,23 +178,30 @@ namespace LWM {
       std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
       bool first = true;
 
-      for (auto const& [task, status] : m_status_handler->m_status_map) {
+      // I kinda regret how I set this up now... but will recombine
+      // stuff into a single map to do the JSON string conversion
+      // TODO: Probably need to restructure all this key/val handling to be smarter...
+      for (const auto& [managed_task_name, status] : m_status_handler->m_status_map) {
         if (!first) {
           json_res += ", ";
         }
-        json_res += "{ \"name\": \"" + task + "\", \"status\": \"" + status + "\"";
-
-        if (m_status_handler->m_metadata_map.count(task)) {
-          for (auto const& [key, val] : m_status_handler->m_metadata_map[task]) {
-            json_res += ", \"" + key + "\": \"" + val + "\"";
-          }
+        std::map<std::string, std::string> json_map;
+        json_map["name"] = managed_task_name;
+        json_map["status"] = status;
+        if (m_status_handler->m_metadata_map.count(managed_task_name)) {
+          const auto& task_meta = m_status_handler->m_metadata_map[managed_task_name];
+          json_map.insert(task_meta.begin(), task_meta.end());
         }
-        json_res += " }";
-        first = false;
+        try {
+          json_res += to_json_str(json_map);
+          first = false;
+        } catch (const HTTP::InvalidJsonMaps& e) {
+          m_logger->error("Can't JSONify data for: " + managed_task_name + ". " + e.what());
+        }
       }
     }
     json_res += "] }";
-
+    m_logger->debug("Created response: {}", json_res);
     HTTP::Response response(HTTP::CODE::OK);
     response.set_header("Content-Type", "application/json");
     response.set_content(json_res);

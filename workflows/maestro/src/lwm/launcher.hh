@@ -177,6 +177,15 @@ namespace LWM {
 
   private:
     std::shared_ptr<JsonStatusHandler> m_status_handler;
+
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:JsonTasksHandler")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:JsonTasksHandler");
+      }
+    }();
+    bool m_unbuffered_logs{false};
   };
 
   /**
@@ -195,6 +204,15 @@ namespace LWM {
 
   private:
     std::shared_ptr<JsonStatusHandler> m_status_handler;
+
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:JsonRpcHandler")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:JsonRpcHandler");
+      }
+    }();
+    bool m_unbuffered_logs{false};
   };
 
   /**

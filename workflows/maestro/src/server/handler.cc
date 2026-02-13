@@ -41,4 +41,91 @@ namespace HTTP {
       result[key] = val;
     }
   }
+
+  /**
+   * Convert a map directly into a JSON string.
+   * Every key/value pair will be added directly to the JSON string.
+   *
+   * @param[in] json_map The map to JSON "stringify".
+   * @returns JSON string representation of the map.
+   */
+  std::string JsonHandler::to_json_str(const std::map<std::string, std::string>& json_map) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    writer.StartObject();
+
+    for (const auto& [key, val] : json_map) {
+      bool success = writer.Key(key.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on key " + key);
+      }
+      success = writer.String(val.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on value " + val);
+      }
+    }
+
+    writer.EndObject();
+
+    return buffer.GetString();
+  }
+
+  /**
+   * Convert a set of maps into a JSON string.
+   * This is conceptually like `boost:combine` or various implementations of `zip`
+   * applied to maps.
+   *
+   * In this case, the value map (`vals`) may have had the keys removed, so a new
+   * map `keys` can be provided.
+   * E.g. keys may look like: {"val0_name": "val1_name"}
+   *  and vals may look like: {"val0": "val1"}
+   * The resultant string will give you:
+   * {"val0_name": "val0", "val1_name": "val1"}
+   *
+   * @param[in] keys The key map to JSON "stringify".
+   * @param[in] vals The value map to JSON "stringify".
+   * @returns JSON string representation of the map.
+   */
+  std::string JsonHandler::to_json_str(const std::map<std::string, std::string>& keys,
+                                       const std::map<std::string, std::string>& vals) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+    if (keys.size() != vals.size()) {
+      throw InvalidJsonMaps("Length of keys and does not match length of vals!");
+    }
+    writer.StartObject();
+
+    const auto key_end = keys.end();
+    const auto val_end = vals.end();
+
+    auto key_it = keys.begin();
+    auto val_it = vals.begin();
+    for (; key_it != key_end && val_it != val_end; ++key_it, ++val_it) {
+      const auto& [key1, key2] = *key_it;
+      const auto& [val1, val2] = *val_it;
+      bool success = writer.Key(key1.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on key " + key1);
+      }
+      success = writer.String(val1.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on value " + val1);
+      }
+
+      success = writer.Key(key2.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on key " + key2);
+      }
+      success = writer.String(val2.c_str());
+      if (!success) {
+        throw InvalidJsonMaps("Error creating JSON string on value " + val2);
+      }
+    }
+
+    writer.EndObject();
+
+    return buffer.GetString();
+  }
 } // namespace HTTP
