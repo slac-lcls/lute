@@ -1,6 +1,4 @@
-# Will change name once `psrel` PyPI account can be created
-# name: Build wheels, create release, and publish to PyPI
-name: Build wheels and create release
+name: Build wheels and create release and publish to PyPI
 on:
   push:
     # Disable this for forks. Its expensive, and the PyPI portion will fail later
@@ -88,9 +86,7 @@ jobs:
           path: dist/*.tar.gz
 
   # Create release, publish
-  # Will change name once `psrel` PyPI account can be created
-  # create_release_and_publish_to_pypi:
-  create_release:
+  create_release_and_publish_to_pypi:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     environment: pypi
@@ -106,9 +102,9 @@ jobs:
           path: dist
           merge-multiple: true
 
-      # Will enable once `psrel` PyPI account can be created
-      # - name: Publish to PyPI
-      #   uses: pypa/gh-action-pypi-publish@release/v1
+      # This will publish to PyPI as `psrel`. Only this workflow is linked to the PyPI account
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
