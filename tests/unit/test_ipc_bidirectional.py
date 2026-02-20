@@ -45,7 +45,7 @@ class TestBidirectionalIPC(unittest.TestCase):
         exec_comm.write(msg_e2t, proc=mock_proc)
 
         # Verify Executor wrote on proc.stdin
-        self.assertTrue(mock_proc.stdin.buffer.write.called)
+        self.assertTrue(mock_proc.stdin.write.called)
 
         # Verify Task read it
         with patch("sys.stdin.buffer.read") as mock_stdin:
