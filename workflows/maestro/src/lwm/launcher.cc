@@ -378,13 +378,6 @@ namespace LWM {
 
     int status = std::system(final_cmd.c_str());
 
-    if (WEXITSTATUS(status)) {
-      std::string msg{
-        "Error running subprocess. Return code: " + std::to_string(WEXITSTATUS(status))
-      };
-      m_logger->error(msg);
-    }
-
     if (!return_output) {
       return std::make_pair("", status);
     } else {
@@ -427,6 +420,10 @@ namespace LWM {
       int ret_status;
       std::tie(log, ret_status) = run_subprocess_log(launch_cmd, true);
       if (ret_status != 0) {
+        m_logger->error("Error submitting job for {}. Subprocess return code: {}",
+                        job.managed_task_name,
+                        std::to_string(WEXITSTATUS(ret_status)));
+
         status = "SUBPROCESS_FAILED";
         return JobReturn(managed_task_name, status, log, splits);
       }
@@ -502,7 +499,16 @@ namespace LWM {
       logger()->error("Trying to get information for an empty SLURM jobid!");
     }
     std::string get_logfile_cmd{"sacct -j " + jobid + " -o StdOut%200"};
+    m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
     auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+
+    if (WEXITSTATUS(ret_code)) {
+      logger()->error("Unable to run {}. Return code: {}",
+                      get_logfile_cmd,
+                      std::to_string(WEXITSTATUS(ret_code)));
+      return;
+    }
+
 
     std::regex logfile_regex(R"((/[^\s]+\.out))");
     std::smatch logfile_match;
@@ -510,6 +516,8 @@ namespace LWM {
     if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
       logfile_path = logfile_match[1].str();
     } else {
+      logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
+                      slurm_info);
       return;
     }
 
@@ -521,7 +529,28 @@ namespace LWM {
     }
 
     std::string get_slurm_log_cmd{"cat "+logfile_path};
+    logger()->debug("Attempting to grab output from log file using: {}",
+                    get_slurm_log_cmd);
+
+    // Wait some milliseconds if it fails. Then wait longer until more than 10 s
+    size_t wait_ms { 500 };
     std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+    if (WEXITSTATUS(ret_code) == 0) {
+      return;
+    }
+    while (WEXITSTATUS(ret_code) && wait_ms < 10000) {
+      logger()->error("Trying to `cat` log file failed. Will wait {} ms and try again.",
+                      wait_ms);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+      std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+      if (WEXITSTATUS(ret_code) == 0) {
+        return;
+      }
+      wait_ms << 2;
+    }
+
+    logger()->error("Unable to read log file: {}", logfile_path);
   }
 
   std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
