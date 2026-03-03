@@ -98,11 +98,14 @@ SmallDataProducerSpack.update_environment(setup_smd2_env)
 SmallDataProducerXpp: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file using the spack environment."""
 SmallDataProducerXpp.shell_source(
-    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_gpu.sh"
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_cpu.sh"
 )
 SmallDataProducerXpp.add_tasklet(
     clone_smalldata,
-    ["{{ producer }}"],
+    [
+        "{{ producer }}",
+        f"{os.getenv('LUTE_PATH')}/config/templates/smd_compression.patch",
+    ],
     when="before",
     set_result=False,
     set_summary=False,
@@ -243,3 +246,4 @@ BayFAIOptimizer2.update_environment(
         "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
     }
 )
+
