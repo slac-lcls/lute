@@ -56,10 +56,10 @@ def import_task(task_name: str) -> Type[Task]:
 
         return TestWriteOutput
 
-    if task_name == "FindPeaksPyAlgos":
-        from .sfx_find_peaks import FindPeaksPyAlgos
+    if task_name == "FindPeaksSFX":
+        from .sfx_find_peaks import FindPeaksSFX
 
-        return FindPeaksPyAlgos
+        return FindPeaksSFX
 
     if task_name == "ConcatenateStreamFiles":
         from .sfx_index import ConcatenateStreamFiles

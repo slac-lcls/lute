@@ -4,7 +4,7 @@ from typing import Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
 
-from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
+from lute.io.models.base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
 class SZCompressorParameters(BaseModel):
@@ -19,7 +19,7 @@ class SZCompressorParameters(BaseModel):
     )
 
 
-class FindPeaksPyAlgosParameters(TaskParameters):
+class FindPeaksSFXParameters(TaskParameters):
     """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
 
     This peak finding Task optionally has the ability to compress/decompress
@@ -29,6 +29,11 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     class Config(TaskParameters.Config):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
+
+    algorithm: Literal["PyAlgos", "Peakfinder8"] = Field(
+        default="Peakfinder8",
+        description="The peakfinding algorithm to use. Either Peakfinder8 or PyAlgos.",
+    )
 
     outdir: str = Field(
         description="Output directory for cxi files",
@@ -118,9 +123,12 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     out_file: str = Field(
         "",
         description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
         is_result=True,
+    )
+
+    geometry_file: Optional[Union[str, os.PathLike]] = Field(
+        None,
+        description="A path to a CrystFEL geometry file (for pf8).",
     )
 
     @validator("out_file", always=True)
