@@ -20,7 +20,12 @@ class SZCompressorParameters(BaseModel):
 
 
 class FindPeaksSFXParameters(TaskParameters):
-    """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
+    """Parameters for crystallographic (Bragg) peak finding using PyAlgos or Peakfinder8.
+
+    The Peakfinder8 algorithm comes in two flavors "Peakfinder8" and "Peakfinder8_v2",
+    the latter does not use a "slab" geometry. This, however, is not currently supported
+    by downstream CrystFEL so should not yet be used for full pipelines.
+
 
     This peak finding Task optionally has the ability to compress/decompress
     data with SZ for the purpose of compression validation.
@@ -30,9 +35,9 @@ class FindPeaksSFXParameters(TaskParameters):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
 
-    algorithm: Literal["PyAlgos", "Peakfinder8"] = Field(
+    algorithm: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"] = Field(
         default="Peakfinder8",
-        description="The peakfinding algorithm to use. Either Peakfinder8 or PyAlgos.",
+        description="The peakfinding algorithm to use. Either Peakfinder8 (v1 or v2) or PyAlgos.",
     )
 
     outdir: str = Field(
@@ -125,10 +130,13 @@ class FindPeaksSFXParameters(TaskParameters):
         description="Path to output file.",
         is_result=True,
     )
-
     geometry_file: Optional[str] = Field(
         None,
         description="A path to a CrystFEL geometry file (for pf8).",
+    )
+    make_powder_plots: bool = Field(
+        True,
+        description="Whether to generate assembled powder plots in the eLog.",
     )
 
     @validator("out_file", always=True)

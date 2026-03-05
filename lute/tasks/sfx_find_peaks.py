@@ -11,6 +11,7 @@ Classes:
 __all__ = ["CxiWriter", "FindPeaksSFX"]
 __author__ = "Valerio Mariani, Gabriel Dorlhiac"
 
+import logging
 import random
 import sys
 from collections import namedtuple
@@ -41,14 +42,18 @@ import numpy.typing as npt
 import panel as pn
 from mpi4py.MPI import COMM_WORLD, SUM
 
-from lute.tasks.algorithms import _peakfinders_ext  # type: ignore
+from lute.execution.logging import get_logger
 from lute.execution.ipc import Message
 from lute.io.models.sfx_find_peaks import FindPeaksSFXParameters
+from lute.tasks.algorithms import _peakfinders_ext  # type: ignore
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 
 hv.extension("bokeh")
 pn.extension()
+
+
+logger: logging.Logger = get_logger("FindPeaksSFX", is_task=True)
 
 
 class RadialStatistics(TypedDict):
@@ -68,9 +73,25 @@ class Peakfinder8PeakList(TypedDict):
     snr: List[float]
 
 
+class Peakfinder8_v2PeakList(TypedDict):
+    num_peaks: int
+    fs: List[float]
+    ss: List[float]
+    intensity: List[float]
+    num_pixels: List[float]
+    max_pixel_intensity: List[float]
+    snr: List[float]
+    panel_number: List[int]
+
+
+EventMaskData = namedtuple(
+    "EventMaskData",
+    ["data", "mask", "seconds", "nanoseconds", "fiducials", "clen", "photon_energy"],
+)
+
 EventData = namedtuple(
     "EventData",
-    ["data", "mask", "seconds", "nanoseconds", "fiducials", "clen", "photon_energy"],
+    ["data", "seconds", "nanoseconds", "fiducials", "clen", "photon_energy"],
 )
 
 DetectorGeomInfo = namedtuple("DetectorGeomInfo", ["i_x", "i_y", "ipx", "ipy"])
@@ -97,7 +118,7 @@ class CxiWriter:
         ipx: Any,  # Not typed becomes it comes from psana
         ipy: Any,  # Not typed becomes it comes from psana
         tag: str,
-        algo: Literal["Peakfinder8", "PyAlgos"] = "Peakfinder8",
+        algo: Literal["Peakfinder8", "Peakfinder8_v2", "PyAlgos"] = "Peakfinder8",
     ):
         """
         Set up the CXI files to which peak finding results will be saved.
@@ -153,7 +174,7 @@ class CxiWriter:
         entry_1: Any = self._outh5.create_group("entry_1")
 
         keys: List[str]
-        if algo == "Peakfinder8":
+        if "Peakfinder8" in algo:
             keys = [
                 "nPeaks",
                 "peakXPosRaw",
@@ -163,6 +184,8 @@ class CxiWriter:
                 "peakMaxIntensity",
                 "peakSNR",
             ]
+            if algo == "Peakfinder8_v2":
+                keys.append("peakPanelNumRaw")
         else:
             keys = [
                 "nPeaks",
@@ -190,13 +213,14 @@ class CxiWriter:
             dtype=np.float32,
         )
         data_1.attrs["axes"] = "experiment_identifier"
+
         key: str
         for key in ["powderHits", "powderMisses", "mask"]:
             entry_1.create_dataset(
                 f"/entry_1/data_1/{key}",
-                (det_shape[0], det_shape[1]),
-                chunks=(det_shape[0], det_shape[1]),
-                maxshape=(det_shape[0], det_shape[1]),
+                det_shape,
+                chunks=det_shape,
+                maxshape=det_shape,
                 dtype=float,
             )
 
@@ -256,7 +280,7 @@ class CxiWriter:
         timestamp_fiducials: int,
         photon_energy: float,
         clen: float,
-        algo: Literal["Peakfinder8", "PyAlgos"] = "Peakfinder8",
+        algo: Literal["Peakfinder8", "Peakfinder8_v2", "PyAlgos"] = "Peakfinder8",
     ):
         """
         Write peak finding results for an event into the HDF5 file.
@@ -290,7 +314,15 @@ class CxiWriter:
                 photon_energy=photon_energy,
                 clen=clen,
             )
-        elif algo == "Peakfinder8":
+        elif algo not in ("Peakfinder8", "Peakfinder8_v2"):
+            raise ValueError(f"Unsupported peakfinding algorithm {algo}!")
+        else:
+            v2: bool = False
+            if algo == "Peakfinder8":
+                v2 = False
+            elif algo == "Peakfinder8_v2":
+                v2 = True
+
             self._write_event_peakfinder8(
                 img=img,
                 peaks=peaks,
@@ -299,19 +331,19 @@ class CxiWriter:
                 timestamp_fiducials=timestamp_fiducials,
                 photon_energy=photon_energy,
                 clen=clen,
+                v2=v2,
             )
-        else:
-            raise ValueError(f"Unsupported peakfinding algorithm {algo}!")
 
     def _write_event_peakfinder8(
         self,
         img: npt.NDArray[np.float64],
-        peaks: Peakfinder8PeakList,
+        peaks: Union[Peakfinder8PeakList, Peakfinder8_v2PeakList],
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
         timestamp_fiducials: int,
         photon_energy: float,
         clen: float,
+        v2: bool = False,
     ) -> None:
         if self._outh5["/entry_1/data_1/data"].shape[0] <= self._index:
             self._outh5["entry_1/data_1/data"].resize(self._index + 1, axis=0)
@@ -341,6 +373,11 @@ class CxiWriter:
         self._outh5["/entry_1/result_1/peakYPosRaw"][self._index, :num_peaks] = (
             np.array(peaks["ss"], dtype=np.float32)
         )
+        if v2:
+            peaks = cast(Peakfinder8_v2PeakList, peaks)
+            self._outh5["/entry_1/result_1/peakPanelNumRaw"][
+                self._index, :num_peaks
+            ] = np.array(peaks["panel_number"], dtype=np.float32)
         self._outh5["/entry_1/result_1/peakNPixels"][self._index, :num_peaks] = (
             np.array(peaks["num_pixels"], dtype=np.float32)
         )
@@ -471,7 +508,7 @@ class CxiWriter:
         self,
         powder_hits: npt.NDArray[np.float64],
         powder_misses: npt.NDArray[np.float64],
-        mask: npt.NDArray[np.uint16],
+        mask: npt.NDArray[np.uint8],
     ):
         """
         Write to the file data that is not related to a specific event (masks, powders)
@@ -487,12 +524,8 @@ class CxiWriter:
         """
         # Add powders and mask to files, reshaping them to match the crystfel
         # convention
-        self._outh5["/entry_1/data_1/powderHits"][:] = powder_hits.reshape(
-            -1, powder_hits.shape[-1]
-        )
-        self._outh5["/entry_1/data_1/powderMisses"][:] = powder_misses.reshape(
-            -1, powder_misses.shape[-1]
-        )
+        self._outh5["/entry_1/data_1/powderHits"][:] = powder_hits
+        self._outh5["/entry_1/data_1/powderMisses"][:] = powder_misses
         self._outh5["/entry_1/data_1/mask"][:] = (1 - mask).reshape(
             -1, mask.shape[-1]
         )  # Crystfel expects inverted values
@@ -501,6 +534,7 @@ class CxiWriter:
         self,
         num_hits: int,
         max_peaks: int,
+        algo: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"] = "Peakfinder8",
     ):
         """
         Resize data blocks and write additional information to the file
@@ -512,6 +546,10 @@ class CxiWriter:
 
             max_peaks (int): Maximum number of peaks (per event) for which information
                 can be written into the file
+
+            algo (Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"]): The algorithm
+                being used for peakfinding. This affects the exact keys that are
+                saved.
         """
 
         # Resize the entry_1 entry
@@ -520,20 +558,36 @@ class CxiWriter:
             (num_hits, data_shape[1], data_shape[2])
         )
         self._outh5["/entry_1/result_1/nPeaks"].resize((num_hits,))
+
+        keys: List[str]
+        if "Peakfinder8" in algo:
+            keys = [
+                "peakXPosRaw",
+                "peakYPosRaw",
+                "peakNPixels",
+                "peakTotalIntensity",
+                "peakMaxIntensity",
+                "peakSNR",
+            ]
+            if algo == "Peakfinder8_v2":
+                keys.append("peakPanelNumRaw")
+        else:
+            keys = [
+                "peakXPosRaw",
+                "peakYPosRaw",
+                "rcent",
+                "ccent",
+                "rmin",
+                "rmax",
+                "cmin",
+                "cmax",
+                "peakTotalIntensity",
+                "peakMaxIntensity",
+                "peakRadius",
+            ]
+
         key: str
-        for key in [
-            "peakXPosRaw",
-            "peakYPosRaw",
-            "rcent",
-            "ccent",
-            "rmin",
-            "rmax",
-            "cmin",
-            "cmax",
-            "peakTotalIntensity",
-            "peakMaxIntensity",
-            "peakRadius",
-        ]:
+        for key in keys:
             self._outh5[f"/entry_1/result_1/{key}"].resize((num_hits, max_peaks))
 
         # Resize LCLS entry
@@ -607,7 +661,7 @@ def write_master_file(
 
     # Compute cumulative powder hits and misses for all files
     # Copy mask as well
-    mask: Optional[npt.NDArray[np.uint16]] = None
+    mask: Optional[npt.NDArray[np.uint8]] = None
     powder_hits: Optional[npt.NDArray[np.float64]] = None
     powder_misses: Optional[npt.NDArray[np.float64]] = None
     for fn in fnames:
@@ -767,8 +821,8 @@ def _libpressio_config_pf8(
 
 def add_peaks_to_libpressio_configuration(
     lp_json: Dict[str, Any],
-    peaks: Union[Peakfinder8PeakList, Any],
-    algo: Literal["Peakfinder8", "PyAlgos"],
+    peaks: Union[Peakfinder8PeakList, Peakfinder8_v2PeakList, Any],
+    algo: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"],
 ) -> Dict[str, Any]:
     """
     Add peak infromation to libpressio configuration
@@ -784,7 +838,7 @@ def add_peaks_to_libpressio_configuration(
 
         lp_json: Updated configuration JSON structure for the libpressio library.
     """
-    if algo == "Peakfinder8":
+    if "Peakfinder8" in algo:
         return _libpressio_config_pf8(lp_json=lp_json, peaks=peaks)
     else:
         return _libpressio_config_pyalgos(lp_json=lp_json, peaks=peaks)
@@ -800,7 +854,9 @@ class FindPeaksSFX(Task):
         self._task_parameters: FindPeaksSFXParameters = params
         super().__init__(params=params, use_mpi=use_mpi)
 
-        self._algo: Literal["PyAlgos", "Peakfinder8"] = self._task_parameters.algorithm
+        self._algo: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"] = (
+            self._task_parameters.algorithm
+        )
 
     def get_radius_map(self) -> npt.NDArray[np.float64]:
         from lute.tasks.util.geometry import (
@@ -819,10 +875,17 @@ class FindPeaksSFX(Task):
         else:
             raise RuntimeError("Need a geometry file to compute radius map!")
 
+    def _compute_num_radial_bins(
+        self, indices: Tuple[slice, ...], radius_map: npt.NDArray[np.float64]
+    ) -> int:
+        return int(np.ceil(radius_map[indices].max()) + 1)
+
     def compute_radial_statistics(
-        self, shape: Tuple[int, ...], num_bins: int = 100
+        self,
+        radius_map: npt.NDArray[np.float64],
+        shape: Tuple[int, ...],
+        num_bins: int = 100,
     ) -> RadialStatistics:
-        radius_map: npt.NDArray[np.float64] = self.get_radius_map()
         radius_map_int: npt.NDArray[np.int8] = np.rint(radius_map).astype(int).ravel()
         peak_index: List[int] = []
         radius: List[int] = []
@@ -843,10 +906,15 @@ class FindPeaksSFX(Task):
         )
         rstats_radius: npt.NDArray[np.int32] = np.array(radius).astype(np.int32)
 
+        logger.debug(
+            f"Computed radial statistics for {num_bins} bins. "
+            f"rstats_num_pix: {rstats_pixel_index.size}"
+        )
+
         return {
-            "rstats_pixel_index": rstats_pixel_index.reshape(shape),
-            "rstats_radius": rstats_radius.reshape(shape),
-            "rstats_num_pix": rstats_pixel_index.shape[0],
+            "rstats_pixel_index": rstats_pixel_index,
+            "rstats_radius": rstats_radius,
+            "rstats_num_pix": rstats_pixel_index.size,
             "radial_map": radius_map.reshape(shape),
         }
 
@@ -883,17 +951,24 @@ class FindPeaksSFX(Task):
 
             return DetectorGeomInfo(i_x=i_x, i_y=i_y, ipx=ipx, ipy=ipy)
 
-    def _event_generator(self, lcls2: bool = True) -> Generator[EventData, None, None]:
+    def _event_generator(
+        self, lcls2: bool = True
+    ) -> Generator[Union[EventMaskData, EventData], None, None]:
         exp: str = self._task_parameters.lute_config.experiment
         run_num: int = int(self._task_parameters.lute_config.run)
 
+        first_event: bool = True
         if lcls2:
             import psana  # type: ignore
 
-            ds2: psana.psexp.mpi_ds.ParallelDataSource = psana.DataSource(
-                exp=exp,
-                run=run_num,
-            )
+            kwargs: Dict[str, Any] = {
+                "exp": exp,
+                "run": run_num,
+            }
+            if self._task_parameters.n_events != 0:
+                kwargs["max_events"] = self._task_parameters.n_events
+
+            ds2: psana.psexp.mpi_ds.ParallelDataSource = psana.DataSource(**kwargs)
             run2: psana.psexp.mpi_ds.RunParallel = next(ds2.runs())
             timing2 = run2.Detector("timing")
 
@@ -902,7 +977,8 @@ class FindPeaksSFX(Task):
             # TODO: Need to handle other BLD?
             ebeamh = run2.Detector("ebeamh")
 
-            mask2: Optional[npt.NDArray[np.uint8]] = None
+            if first_event:
+                mask2: Optional[npt.NDArray[np.uint8]] = None
             for evt in run2.events():
                 data: Optional[npt.NDArray[np.float32]] = det2.raw.calib(evt)
 
@@ -941,20 +1017,31 @@ class FindPeaksSFX(Task):
                         det2_shape = (det2_shape[0] * det2_shape[1], det2_shape[2])
                     else:
                         det2_shape = data.shape
-                    if hasattr(det2.raw, "_mask"):
-                        mask2 = det2.raw._mask()
-                    else:
-                        mask2 = np.ones(det2_shape).astype(np.uint16)
+                    if first_event:
+                        if hasattr(det2.raw, "_mask"):
+                            mask2 = det2.raw._mask()
+                        else:
+                            mask2 = np.ones(det2_shape, dtype=np.uint8)
 
-                yield EventData(
-                    data,
-                    mask2,
-                    seconds2,
-                    nanoseconds2,
-                    raw_fiducial2,
-                    clen2,
-                    photon_energy2,
-                )
+                        first_event = False
+                        yield EventMaskData(
+                            data,
+                            mask2,
+                            seconds2,
+                            nanoseconds2,
+                            raw_fiducial2,
+                            clen2,
+                            photon_energy2,
+                        )
+                    else:
+                        yield EventData(
+                            data,
+                            seconds2,
+                            nanoseconds2,
+                            raw_fiducial2,
+                            clen2,
+                            photon_energy2,
+                        )
         else:
             from psana import Detector, EventId, MPIDataSource  # type: ignore
 
@@ -986,26 +1073,6 @@ class FindPeaksSFX(Task):
                     if self._task_parameters.event_code not in event_codes:
                         continue
 
-                data = det.calib(evt)
-                mask: Optional[npt.NDArray[np.uint16]] = None
-                if data:
-                    det_shape: Tuple[int, ...] = data.shape
-                    if len(det_shape) == 3:
-                        det_shape = (det_shape[0] * det_shape[1], det_shape[2])
-                    else:
-                        det_shape = data.shape
-
-                        mask = np.ones(det_shape).astype(np.uint16)
-                        mask = det.mask(
-                            self._task_parameters.lute_config.run,
-                            calib=False,
-                            status=True,
-                            edges=False,
-                            centra=False,
-                            unbond=False,
-                            unbondnbrs=False,
-                        ).astype(np.uint16)
-
                 photon_energy: float
                 try:
                     photon_energy = Detector("EBeam").get(evt).ebeamPhotonEnergy()
@@ -1017,9 +1084,50 @@ class FindPeaksSFX(Task):
                         / ds.env().epicsStore().value("SIOC:SYS0:ML00:AO192")
                     ) * 1e9
 
-                yield EventData(
-                    data, mask, seconds, nanoseconds, fiducials, clen, photon_energy
-                )
+                data = det.calib(evt)
+                if first_event:
+                    mask: Optional[npt.NDArray[np.uint8]] = None
+                if data:
+                    det_shape: Tuple[int, ...] = data.shape
+                    if len(det_shape) == 3:
+                        det_shape = (det_shape[0] * det_shape[1], det_shape[2])
+                    else:
+                        det_shape = data.shape
+
+                        if first_event:
+                            mask = np.ones(det_shape, dtype=np.uint8)
+                            psana_mask = det.mask(
+                                self._task_parameters.lute_config.run,
+                                calib=False,
+                                status=True,
+                                edges=False,
+                                centra=False,
+                                unbond=False,
+                                unbondnbrs=False,
+                            ).astype(np.uint8)
+                            if psana_mask:
+                                mask = psana_mask
+
+                            first_event = False
+
+                            yield EventMaskData(
+                                data,
+                                mask,
+                                seconds,
+                                nanoseconds,
+                                fiducials,
+                                clen,
+                                photon_energy,
+                            )
+                        else:
+                            yield EventData(
+                                data,
+                                seconds,
+                                nanoseconds,
+                                fiducials,
+                                clen,
+                                photon_energy,
+                            )
 
     def _run(self) -> None:
         rank: int = COMM_WORLD.Get_rank()
@@ -1027,7 +1135,11 @@ class FindPeaksSFX(Task):
 
         i_x, i_y, ipx, ipy = self._retrieve_psana_detector_data()
 
-        alg: Optional[Union[PyAlgos, _peakfinders_ext.peakfinder_8]] = None
+        alg: Optional[
+            Union[
+                PyAlgos, _peakfinders_ext.peakfinder_8, _peakfinders_ext.peakfinder_8_v2
+            ]
+        ] = None
         num_hits: int = 0
         num_events: int = 0
         num_empty_images: int = 0
@@ -1036,16 +1148,32 @@ class FindPeaksSFX(Task):
         if (tag != "") and (tag[0] != "_"):
             tag = "_" + tag
 
+        first_event: bool = True
+        mask: Optional[npt.NDArray[np.uint8]] = None
         for event_data in self._event_generator():
-            (
-                img,
-                mask,
-                timestamp_seconds,
-                timestamp_nanoseconds,
-                timestamp_fiducials,
-                clen,
-                photon_energy,
-            ) = event_data
+            if first_event:
+                assert isinstance(event_data, EventMaskData)
+                (
+                    img,
+                    mask,
+                    timestamp_seconds,
+                    timestamp_nanoseconds,
+                    timestamp_fiducials,
+                    clen,
+                    photon_energy,
+                ) = event_data
+
+                first_event = False
+            else:
+                assert isinstance(event_data, EventData)
+                (
+                    img,
+                    timestamp_seconds,
+                    timestamp_nanoseconds,
+                    timestamp_fiducials,
+                    clen,
+                    photon_energy,
+                ) = event_data
             if img is None:
                 num_empty_images += 1
                 continue
@@ -1058,27 +1186,25 @@ class FindPeaksSFX(Task):
 
             shape: Tuple[int, ...] = img.shape
             img_reshaped: npt.NDArray[np.float32]
-            mask_reshaped: npt.NDArray[np.int8]
-            if len(shape) == 2:
+            if len(shape) == 2 or self._algo == "Peakfinder8_v2":
                 img_reshaped = img
-                mask_reshaped = mask
             else:
                 img_reshaped = img.reshape(shape[0] * shape[1], shape[2])
-                mask_reshaped = mask.reshape(shape[0] * shape[1], shape[2])
 
             radial_stats: Optional[RadialStatistics] = None
             base_peakfinder_options: Dict[str, Any]
             if alg is None:
-                if self._algo == "Peakfinder8":
-                    radial_stats = self.compute_radial_statistics(
-                        shape=det_shape, num_bins=100
-                    )
-                    alg = _peakfinders_ext.peakfinder_8
+                # Mask should only come on first event
+                assert mask is not None
 
-                    asic_nx = img_reshaped.shape[1]  # fs size
-                    asic_ny = img_reshaped.shape[0]  # ss size
-                    nasics_x = img.shape[0]  # Number of panels in fs dim
-                    nasics_y = 1  # Number of panels in ss dim
+                mask_reshaped: npt.NDArray[np.uint8]
+                if len(shape) == 2 or self._algo == "Peakfinder8_v2":
+                    mask_reshaped = mask
+                else:
+                    mask_reshaped = mask.reshape(shape[0] * shape[1], shape[2])
+
+                if "Peakfinder8" in self._algo:
+                    radius_map: npt.NDArray[np.float64] = self.get_radius_map()
                     adc_thresh = (
                         self._task_parameters.amax_thr
                     )  # Minimum ADC threshold for peak detection
@@ -1087,27 +1213,73 @@ class FindPeaksSFX(Task):
                     hitfinder_max_pix_count = self._task_parameters.npix_max
                     local_bg_radius = self._task_parameters.r0
 
-                    base_peakfinder_options = {
-                        "max_num_peaks": self._task_parameters.max_peaks,
-                        "data": img_reshaped,  # Must be updated each time afterwards
-                        "mask": mask_reshaped.astype(np.int8),
-                        "pix_r": radial_stats["radial_map"],
-                        "rstats_num_pix": radial_stats["rstats_num_pix"],
-                        "rstats_pidx": radial_stats["rstats_pixel_index"],
-                        "rstats_radius": radial_stats["rstats_radius"],
-                        "fast": 1,
-                        "asic_nx": asic_nx,
-                        "asic_ny": asic_ny,
-                        "nasics_x": nasics_x,
-                        "nasics_y": nasics_y,
-                        "adc_thresh": adc_thresh,
-                        "hitfinder_min_snr": hitfinder_min_snr,
-                        "hitfinder_min_pix_count": hitfinder_min_pix_count,
-                        "hitfinder_max_pix_count": hitfinder_max_pix_count,
-                        "hitfinder_local_bg_radius": int(
-                            local_bg_radius
-                        ),  # Must be int
-                    }
+                    if self._algo == "Peakfinder8":
+                        alg = _peakfinders_ext.peakfinder_8
+
+                        num_radial_bins: int = self._compute_num_radial_bins(
+                            indices=tuple(slice(None, dim) for dim in radius_map.shape),
+                            radius_map=radius_map,
+                        )
+                        radial_stats = self.compute_radial_statistics(
+                            radius_map=radius_map,
+                            shape=det_shape,
+                            num_bins=num_radial_bins,
+                        )
+
+                        asic_nx: int  # Size in the fs axis (1 panel/asic)
+                        asic_ny: int  # Size in the ss axis (1 panel/asic)
+                        nasics_x: int  # Number of asics/panels in the fs axis
+                        nasics_y: int  # Number of asics/pnaels in the ss axis
+                        if len(shape) > 2:
+                            asic_nx = img.shape[2]  # fs size
+                            asic_ny = img.shape[1]  # ss size
+                            nasics_x = 1  # Number of panels in fs dim
+                            nasics_y = img.shape[0]  # Number of panels in ss dim
+                        else:
+                            asic_nx = img.shape[1]
+                            asic_ny = img.shape[0]
+                            nasics_x = 1
+                            nasics_y = 1
+                        base_peakfinder_options = {
+                            "max_num_peaks": self._task_parameters.max_peaks,
+                            "data": img_reshaped,  # Must be updated each time afterwards
+                            "mask": mask_reshaped.astype(np.int8),
+                            "pix_r": radial_stats["radial_map"],
+                            "rstats_num_pix": radial_stats["rstats_num_pix"],
+                            "rstats_pidx": radial_stats["rstats_pixel_index"],
+                            "rstats_radius": radial_stats["rstats_radius"],
+                            "fast": 1,
+                            "asic_nx": asic_nx,
+                            "asic_ny": asic_ny,
+                            "nasics_x": nasics_x,
+                            "nasics_y": nasics_y,
+                            "adc_thresh": adc_thresh,
+                            "hitfinder_min_snr": hitfinder_min_snr,
+                            "hitfinder_min_pix_count": hitfinder_min_pix_count,
+                            "hitfinder_max_pix_count": hitfinder_max_pix_count,
+                            "hitfinder_local_bg_radius": int(
+                                local_bg_radius
+                            ),  # Must be int
+                        }
+                    else:
+                        alg = _peakfinders_ext.peakfinder_8_v2
+
+                        base_peakfinder_options = {
+                            "max_num_peaks": self._task_parameters.max_peaks,
+                            "data": img,  # Must be updated each time afterwards
+                            "mask": mask.astype(np.int8),
+                            "pix_r": radius_map,
+                            "adc_thresh": adc_thresh,
+                            "hitfinder_min_snr": hitfinder_min_snr,
+                            "hitfinder_min_pix_count": hitfinder_min_pix_count,
+                            "hitfinder_max_pix_count": hitfinder_max_pix_count,
+                            "hitfinder_local_bg_radius": int(
+                                local_bg_radius
+                            ),  # Must be int
+                        }
+
+                        # Reset the det_shape since we don't use the "slab" in v2
+                        det_shape = img.shape
                 else:
                     alg = PyAlgos(mask=mask, pbits=0)  # pbits controls verbosity
                     base_peakfinder_options = {
@@ -1130,7 +1302,7 @@ class FindPeaksSFX(Task):
                         loaded_mask: npt.NDArray[np.int64] = hdffh[
                             "entry_1/data_1/mask"
                         ][:]
-                        mask *= loaded_mask.astype(np.uint16)
+                        mask *= loaded_mask.astype(np.uint8)
 
                 file_writer: CxiWriter = CxiWriter(
                     outdir=self._task_parameters.outdir,
@@ -1160,10 +1332,8 @@ class FindPeaksSFX(Task):
                         libpressio_mask=mask,
                     )
 
-                # powder_hits: npt.NDArray[np.float64] = np.zeros(det_shape)
-                # powder_misses: npt.NDArray[np.float64] = np.zeros(det_shape)
-                powder_hits: npt.NDArray[np.float64] = np.zeros(img.shape)
-                powder_misses: npt.NDArray[np.float64] = np.zeros(img.shape)
+                powder_hits: npt.NDArray[np.float64] = np.zeros(det_shape)
+                powder_misses: npt.NDArray[np.float64] = np.zeros(det_shape)
 
             peaks: Union[Peakfinder8PeakList, Any]
             num_peaks: int = 0
@@ -1197,9 +1367,36 @@ class FindPeaksSFX(Task):
                     "max_pixel_intensity": raw_pf8_lists[5],
                     "snr": raw_pf8_lists[6],
                 }
-                num_peaks = pf8_peaks["num_peaks"]
 
+                num_peaks = pf8_peaks["num_peaks"]
                 peaks = pf8_peaks
+            elif self._algo == "Peakfinder8_v2":
+                # Update the options each time
+                base_peakfinder_options["data"] = img
+                raw_pf8_v2_lists: Tuple[
+                    List[float],
+                    List[float],
+                    List[float],
+                    List[int],
+                    List[float],
+                    List[float],
+                    List[float],
+                    List[float],
+                    List[int],
+                ] = alg(**base_peakfinder_options)
+                pf8_v2_peaks: Peakfinder8_v2PeakList = {
+                    "num_peaks": len(raw_pf8_v2_lists[0]),
+                    "fs": raw_pf8_v2_lists[0],
+                    "ss": raw_pf8_v2_lists[1],
+                    "intensity": raw_pf8_v2_lists[2],
+                    "num_pixels": raw_pf8_v2_lists[4],
+                    "max_pixel_intensity": raw_pf8_v2_lists[5],
+                    "snr": raw_pf8_v2_lists[6],
+                    "panel_number": raw_pf8_v2_lists[8],
+                }
+
+                num_peaks = pf8_v2_peaks["num_peaks"]
+                peaks = pf8_v2_peaks
             else:
                 raw_pyalgos_peaks = alg(img, **base_peakfinder_options)
                 num_peaks = raw_pyalgos_peaks.shape[0]
@@ -1238,20 +1435,19 @@ class FindPeaksSFX(Task):
                     timestamp_fiducials=timestamp_fiducials,
                     photon_energy=photon_energy,
                     clen=clen,
+                    algo=self._algo,
                 )
                 num_hits += 1
 
-            # TODO: Fix bug here
-            # generate / update powders
             if num_peaks >= self._task_parameters.min_peaks:
                 powder_hits = np.maximum(
                     powder_hits,
-                    img.reshape(-1, img.shape[-1]),
+                    img.reshape(det_shape),
                 )
             else:
                 powder_misses = np.maximum(
                     powder_misses,
-                    img.reshape(-1, img.shape[-1]),
+                    img.reshape(det_shape),
                 )
 
         if num_empty_images != 0:
@@ -1260,6 +1456,9 @@ class FindPeaksSFX(Task):
             )
             self._report_to_executor(msg)
 
+        assert mask is not None
+        assert powder_hits is not None
+        assert powder_misses is not None
         file_writer.write_non_event_data(
             powder_hits=powder_hits,
             powder_misses=powder_misses,
@@ -1267,7 +1466,9 @@ class FindPeaksSFX(Task):
         )
 
         file_writer.optimize_and_close_file(
-            num_hits=num_hits, max_peaks=self._task_parameters.max_peaks
+            num_hits=num_hits,
+            max_peaks=self._task_parameters.max_peaks,
+            algo=self._algo,
         )
 
         COMM_WORLD.Barrier()
@@ -1311,23 +1512,31 @@ class FindPeaksSFX(Task):
                 ][:]
                 f.close()
 
-            powder_plots: pn.Tabs = self._create_powder_plots(
-                powder_hits=final_powder_hits.astype(np.float64),
-                powder_misses=final_powder_misses.astype(np.float64),
-                i_x=i_x,
-                i_y=i_y,
-            )
             text_summary: Dict[str, str] = {
                 "Number of events processed": str(num_events_total),
                 "Number of hits found": str(num_hits_total),
                 "Fractional hit rate": f"{num_hits_total/num_events_total:.2f}",
             }
-            self._result.summary = (
-                text_summary,
-                ElogSummaryPlots(
-                    f"r{self._task_parameters.lute_config.run}/powders", powder_plots
-                ),
-            )
+
+            task_summary: Union[Dict[str, str], Tuple[Dict[str, str], ElogSummaryPlots]]
+            if self._task_parameters.make_powder_plots:
+                powder_plots: pn.Tabs = self._create_powder_plots(
+                    powder_hits=final_powder_hits.astype(np.float64),
+                    powder_misses=final_powder_misses.astype(np.float64),
+                    i_x=i_x,
+                    i_y=i_y,
+                )
+                task_summary = (
+                    text_summary,
+                    ElogSummaryPlots(
+                        f"r{self._task_parameters.lute_config.run}/powders",
+                        powder_plots,
+                    ),
+                )
+            else:
+                task_summary = text_summary
+
+            self._result.summary = task_summary
             with open(Path(self._task_parameters.out_file), "w") as f:
                 print(f"{master_fname}", file=f)
 
@@ -1354,16 +1563,13 @@ class FindPeaksSFX(Task):
         Returns:
             assembled_img(np.ndarray[np.float64]): Assembled 2D image.
         """
-        pixel_map: npt.NDArray[np.uint64] = np.zeros(
-            i_x.shape[1:] + (2,), dtype=np.uint64
+        img_reshaped: npt.NDArray[np.float64] = img.reshape(i_x.shape)
+        idx_max_y: int = int(np.max(i_x) + 1)
+        idx_max_x: int = int(np.max(i_y) + 1)
+        assembled_img: npt.NDArray[np.float64] = np.zeros(
+            (idx_max_y, idx_max_x), dtype=np.float64
         )
-        pixel_map[..., 0] = i_x[0]
-        pixel_map[..., 1] = i_y[0]
-        unflattened_img: npt.NDArray[np.float64] = img.reshape(pixel_map.shape[:-1])
-        idx_max_y: int = int(np.max(pixel_map[..., 0]) + 1)
-        idx_max_x: int = int(np.max(pixel_map[..., 1]) + 1)
-        assembled_img: npt.NDArray[np.float64] = np.zeros((idx_max_y, idx_max_x))
-        assembled_img[pixel_map[..., 0], pixel_map[..., 1]] = unflattened_img
+        assembled_img[i_x, i_y] = img_reshaped
 
         return assembled_img
 

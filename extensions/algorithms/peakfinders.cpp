@@ -400,18 +400,18 @@ extern "C" {
         int* rstats_pidx = NULL;
         int* rstats_radius = NULL;
         if (rstats_pidx_obj != Py_None) {
-            if (!is_array_okay(rstats_pidx_obj, 2, NPY_INT32)) {
+            if (!is_array_okay(rstats_pidx_obj, 1, NPY_INT32)) {
                 PyErr_SetString(Peakfinder8Exception,
-                                "rstats_pidx must be a 2D NumPy array of int or None.");
+                                "rstats_pidx must be a 1D NumPy array of int or None.");
                 return NULL;
             }
             PyArrayObject* rstats_pidx_arr = reinterpret_cast<PyArrayObject*>(rstats_pidx_obj);
             rstats_pidx = reinterpret_cast<int*>(PyArray_DATA(rstats_pidx_arr));
         }
         if (rstats_radius_obj != Py_None) {
-            if (!is_array_okay(rstats_radius_obj, 2, NPY_INT32)) {
+            if (!is_array_okay(rstats_radius_obj, 1, NPY_INT32)) {
                 PyErr_SetString(Peakfinder8Exception,
-                                "rstats_radius must be a 2D NumPy array of int or None.");
+                                "rstats_radius must be a 1D NumPy array of int or None.");
                 return NULL;
             }
             PyArrayObject* rstats_radius_arr = reinterpret_cast<PyArrayObject*>(rstats_radius_obj);
