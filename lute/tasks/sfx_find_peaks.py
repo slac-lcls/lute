@@ -4,8 +4,9 @@ Classes for peak finding tasks in SFX.
 Classes:
     CxiWriter: utility class for writing peak finding results to CXI files.
 
-    FindPeaksPyAlgos: peak finding using psana's PyAlgos algorithm. Optional data
-        compression and decompression with libpressio for data reduction tests.
+    FindPeaksSFX: peak finding using psana's PyAlgos algorithm or peakfinder8.
+        Optional data compression and decompression with libpressio for data
+        reduction tests.
 """
 
 __all__ = ["CxiWriter", "FindPeaksSFX"]
@@ -22,10 +23,11 @@ from typing import (
     Generator,
     List,
     Literal,
+    Optional,
     TextIO,
     Tuple,
     TypedDict,
-    Optional,
+    TYPE_CHECKING,
     Union,
     cast,
 )
@@ -44,10 +46,17 @@ from mpi4py.MPI import COMM_WORLD, SUM
 
 from lute.execution.logging import get_logger
 from lute.execution.ipc import Message
-from lute.io.models.sfx_find_peaks import FindPeaksSFXParameters
 from lute.tasks.algorithms import _peakfinders_ext  # type: ignore
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
+
+if TYPE_CHECKING:
+    from lute.io.models.sfx_find_peaks import FindPeaksSFXParameters
+else:
+    from lute.io.parameters import TaskParameters
+
+    FindPeaksSFXParameters = TaskParameters
+
 
 hv.extension("bokeh")
 pn.extension()
@@ -850,9 +859,11 @@ class FindPeaksSFX(Task):
     writes the peak information to CXI files.
     """
 
-    def __init__(self, *, params: FindPeaksSFXParameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: FindPeaksSFXParameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
         self._task_parameters: FindPeaksSFXParameters = params
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
         self._algo: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"] = (
             self._task_parameters.algorithm

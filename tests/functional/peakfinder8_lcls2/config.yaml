@@ -37,4 +37,44 @@ FindPeaksSFX:
     n_events: 10 # Only a handful of events
     geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/jf16mgeom.geom"
     make_powder_plots: false # Don't write powder summary to experiment
+
+# You must provide a geometry file. Cell file is optional but improves results
+# mosflm is fast, you can provide additional methods for improved results at cost of speed
+IndexCrystFEL:
+  #in_file: ""            # Location of a `.lst` file listing CXI files
+  #out_file: ""           # Where to write the output stream file
+  geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/jf16mgeom.geom"
+  indexing: "mosflm"      # Indeexing methods - e.g. mosflm,xgandalf
+  int_radius: "3,4,5"     # Integration radii
+  tolerance: "5,5,5,1.5"  # Tolerances
+  multi: True
+  profile: True
+  no_revalidate: True
+  cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/maybe_lyso.cell"
+  peaks: "cxi"
+
+# You must set symmetry
+MergePartialator:
+  #in_file: ""
+  #out_file: ""
+  #model: "unity"
+  #niter: 1
+  symmetry: "2/m_uab"
+
+CompareHKL:
+  #in_files: ""
+  #fom: "Rsplit"
+  #nshells: 10
+  #shell_file: ""
+  #cell_file: ""
+  symmetry: "2/m_uab"
+
+# Select a different output format if desired. Dimple requires mtz
+#ManipulateHKL:
+  #output_format: "mtz"
+  #out_file: "..."
+
+# You must provide a PDB file to use Dimple.
+DimpleSolve:
+  pdb: "/path/to/pdb/XYZ.pdb"
 ...
