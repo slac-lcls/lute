@@ -416,9 +416,9 @@ class IndexCrystFELParameters(ThirdPartyParameters):
                 "result.payload",
             )
             if filename is None:
-                # Check PyAlgos
+                # Check FindPeaksSFX
                 filename = read_latest_db_entry(
-                    f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "out_file"
+                    f"{values['lute_config'].work_dir}", "FindPeaksSFX", "out_file"
                 )
                 if filename is None:
                     # Check Psocake last
@@ -464,7 +464,7 @@ class IndexCrystFELParameters(ThirdPartyParameters):
                 run: int = int(values["lute_config"].run)
                 work_dir: str = values["lute_config"].work_dir
                 tag: Optional[str] = read_latest_db_entry(
-                    f"{values['lute_config'].work_dir}", "FindPeaksPyAlgos", "tag"
+                    f"{values['lute_config'].work_dir}", "FindPeaksSFX", "tag"
                 )
                 if tag is None:
                     tag = read_latest_db_entry(
