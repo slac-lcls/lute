@@ -1,6 +1,6 @@
 py_sources = [
     'environment.py',
-    'geometry',
+    'geometry.py',
     'html.py',
     '__init__.py',
     'xtc_pull.py',
