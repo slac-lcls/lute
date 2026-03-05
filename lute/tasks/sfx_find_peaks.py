@@ -819,7 +819,9 @@ class FindPeaksSFX(Task):
         else:
             raise RuntimeError("Need a geometry file to compute radius map!")
 
-    def compute_radial_statistics(self, num_bins: int = 100) -> RadialStatistics:
+    def compute_radial_statistics(
+        self, shape: Tuple[int, ...], num_bins: int = 100
+    ) -> RadialStatistics:
         radius_map: npt.NDArray[np.float64] = self.get_radius_map()
         radius_map_int: npt.NDArray[np.int8] = np.rint(radius_map).astype(int).ravel()
         peak_index: List[int] = []
@@ -842,10 +844,10 @@ class FindPeaksSFX(Task):
         rstats_radius: npt.NDArray[np.int32] = np.array(radius).astype(np.int32)
 
         return {
-            "rstats_pixel_index": rstats_pixel_index,
-            "rstats_radius": rstats_radius,
+            "rstats_pixel_index": rstats_pixel_index.reshape(shape),
+            "rstats_radius": rstats_radius.reshape(shape),
             "rstats_num_pix": rstats_pixel_index.shape[0],
-            "radial_map": radius_map,
+            "radial_map": radius_map.reshape(shape),
         }
 
     def _retrieve_psana_detector_data(self, lcls2: bool = True) -> DetectorGeomInfo:
@@ -1068,7 +1070,9 @@ class FindPeaksSFX(Task):
             base_peakfinder_options: Dict[str, Any]
             if alg is None:
                 if self._algo == "Peakfinder8":
-                    radial_stats = self.compute_radial_statistics()
+                    radial_stats = self.compute_radial_statistics(
+                        shape=det_shape, num_bins=100
+                    )
                     alg = _peakfinders_ext.peakfinder_8
 
                     asic_nx = img_reshaped.shape[1]  # fs size
@@ -1086,7 +1090,7 @@ class FindPeaksSFX(Task):
                     base_peakfinder_options = {
                         "max_num_peaks": self._task_parameters.max_peaks,
                         "data": img_reshaped,  # Must be updated each time afterwards
-                        "mask": mask_reshaped,
+                        "mask": mask_reshaped.astype(np.int8),
                         "pix_r": radial_stats["radial_map"],
                         "rstats_num_pix": radial_stats["rstats_num_pix"],
                         "rstats_pidx": radial_stats["rstats_pixel_index"],
@@ -1100,7 +1104,9 @@ class FindPeaksSFX(Task):
                         "hitfinder_min_snr": hitfinder_min_snr,
                         "hitfinder_min_pix_count": hitfinder_min_pix_count,
                         "hitfinder_max_pix_count": hitfinder_max_pix_count,
-                        "hitfinder_local_bg_radius": local_bg_radius,
+                        "hitfinder_local_bg_radius": int(
+                            local_bg_radius
+                        ),  # Must be int
                     }
                 else:
                     alg = PyAlgos(mask=mask, pbits=0)  # pbits controls verbosity

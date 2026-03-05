@@ -52,7 +52,7 @@ class FindPeaksSFXParameters(TaskParameters):
         "",
         description="Tag to add to the output file names",
     )
-    pv_camera_length: Union[str, float] = Field(
+    pv_camera_length: Union[float, str] = Field(
         description="PV associated with camera length "
         "(if a number, camera length directly)",
     )
@@ -126,7 +126,7 @@ class FindPeaksSFXParameters(TaskParameters):
         is_result=True,
     )
 
-    geometry_file: Optional[Union[str, os.PathLike]] = Field(
+    geometry_file: Optional[str] = Field(
         None,
         description="A path to a CrystFEL geometry file (for pf8).",
     )
