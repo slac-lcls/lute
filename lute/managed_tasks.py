@@ -187,6 +187,12 @@ DimpleSolver.add_tasklet(
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 
+PeakFinderSFXPressio: MPIExecutor = MPIExecutor("FindPeaksSFX")
+"""Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
+PeakFinderSFXPressio.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_cpu.sh"
+)
+
 SHELXCRunner: Executor = Executor("RunSHELXC")
 """Runs CCP4 SHELXC - needed for crystallographic phasing."""
 SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
