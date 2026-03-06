@@ -282,7 +282,7 @@ class CxiWriter:
 
     def write_event(
         self,
-        img: npt.NDArray[np.float64],
+        img: npt.NDArray[np.float32],
         peaks: Any,  # Not typed becomes it comes from psana
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
@@ -296,7 +296,7 @@ class CxiWriter:
 
         Parameters:
 
-            img (npt.NDArray[np.float64]): Detector data for the event
+            img (npt.NDArray[np.float32]): Detector data for the event
 
             peaks: (Any): Peak information for the event, as recovered from the PyAlgos
                 algorithm
@@ -345,7 +345,7 @@ class CxiWriter:
 
     def _write_event_peakfinder8(
         self,
-        img: npt.NDArray[np.float64],
+        img: npt.NDArray[np.float32],
         peaks: Union[Peakfinder8PeakList, Peakfinder8_v2PeakList],
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
@@ -412,7 +412,7 @@ class CxiWriter:
 
     def _write_event_pyalgos(
         self,
-        img: npt.NDArray[np.float64],
+        img: npt.NDArray[np.float32],
         peaks: Any,  # Not typed becomes it comes from psana
         timestamp_seconds: int,
         timestamp_nanoseconds: int,
@@ -1456,7 +1456,7 @@ class FindPeaksSFX(Task):
                         img_reshaped = decompressed_img
 
                 file_writer.write_event(
-                    img=img_reshaped,
+                    img=img_reshaped if self._algo == "Peakfinder8" else img,
                     peaks=peaks,
                     timestamp_seconds=timestamp_seconds,
                     timestamp_nanoseconds=timestamp_nanoseconds,
