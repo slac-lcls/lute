@@ -1115,24 +1115,26 @@ def select_param_from_db(
             are stored serialized as json. This function deserializes and returns
             the Python object.
     """
+    safe_condition: Dict[str, str] = dict(condition)
 
-    condition["param"] = param_name
-    condition["task"] = task_name
-    where_clause: str = "WHERE "
-    for key in condition:
-        if where_clause != "WHERE ":
-            where_clause = f"{where_clause} AND "
+    safe_condition["param"] = param_name
+    safe_condition["task"] = task_name
+
+    formatted_conditions: List[str] = []
+    for key in safe_condition.keys():
         if key == "valid_flag":
-            where_clause = f"{where_clause} r.valid_flag = :valid_flag"
+            formatted_conditions.append("r.valid_flag = :valid_flag")
         elif key == "run":
-            where_clause = f"{where_clause} c.run = :run"
+            formatted_conditions.append("c.run = :run")
         elif key == "param":
-            if is_result:
-                where_clause = f"{where_clause} p.name = :param"
-            else:
-                where_clause = f"{where_clause} p.name = :param"
+            if not is_result:
+                formatted_conditions.append("p.name = :param")
         elif key == "task":
-            where_clause = f"{where_clause} t.name = :task"
+            formatted_conditions.append("t.name = :task")
+
+    where_clause: str = (
+        f"WHERE {' AND '.join(formatted_conditions)}" if formatted_conditions else ""
+    )
 
     join_query: str
     if is_result:
@@ -1150,6 +1152,7 @@ def select_param_from_db(
         SELECT r.{param_name}
         FROM results r
         JOIN executions e ON e.result_id = r.id
+        JOIN config c ON e.config_id = c.id
         JOIN tasks t ON e.task_id = t.id
         {where_clause}
         ORDER BY e.timestamp DESC
@@ -1170,10 +1173,17 @@ def select_param_from_db(
     with con:
         con.executescript(PRAGMAS)
 
-        cur: sqlite3.Cursor = con.execute(join_query, condition)
+        cur: sqlite3.Cursor = con.execute(join_query, safe_condition)
         row: Any = cur.fetchone()
 
-        return json.loads(row[0]) if row else None
+        if not row:
+            return None
+
+        try:
+            return json.loads(row[0])
+        except (TypeError, json.JSONDecodeError):
+            # For straight strings just return. Hopefully only strings
+            return row[0]
 
 
 def executions_summary(
