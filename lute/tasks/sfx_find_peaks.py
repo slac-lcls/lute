@@ -756,6 +756,15 @@ def generate_libpressio_configuration(
     elif compressor == "sz3":
         pressio_opts = {"pressio:abs": abs_error}
 
+    ndims: int = len(libpressio_mask.shape)
+    roi_size: List[int] = [roi_window_size, roi_window_size]
+    bin_dims: List[int] = [bin_size, bin_size]
+    if ndims > 2:
+        other_dims_roi: List[int] = [0] * (ndims - 2)
+        other_dims_bin: List[int] = [1] * (ndims - 2)
+        roi_size = other_dims_roi + roi_size
+        bin_dims = other_dims_bin + bin_dims
+
     lp_json: Dict[str, Any] = {
         "compressor_id": "pressio",
         "early_config": {
@@ -784,13 +793,13 @@ def generate_libpressio_configuration(
         "compressor_config": {
             "pressio": {
                 "roibin": {
-                    "roibin:roi_size": [roi_window_size, roi_window_size, 0],
+                    "roibin:roi_size": roi_size,
                     "roibin:centers": None,  # "roibin:roi_strategy": "coordinates",
                     "roibin:nthreads": 4,
                     "roi": {"fpzip:prec": 0},
                     "background": {
                         "mask_binning:mask": None,
-                        "mask_binning:shape": [bin_size, bin_size, 1],
+                        "mask_binning:shape": bin_dims,
                         "mask_binning:nthreads": 4,
                         "pressio": pressio_opts,
                     },
@@ -1340,7 +1349,9 @@ class FindPeaksSFX(Task):
                         roi_window_size=self._task_parameters.compression.roi_window_size,
                         bin_size=self._task_parameters.compression.bin_size,
                         abs_error=self._task_parameters.compression.abs_error,
-                        libpressio_mask=mask,
+                        libpressio_mask=(
+                            mask_reshaped if self._algo == "Peakfinder8" else mask
+                        ),
                     )
 
                 powder_hits: npt.NDArray[np.float64] = np.zeros(det_shape)
@@ -1433,13 +1444,19 @@ class FindPeaksSFX(Task):
                     compressor = PressioCompressor.from_config(
                         libpressio_config_with_peaks
                     )
-                    compressed_img = compressor.encode(img)
-                    decompressed_img = np.zeros_like(img)
-                    _ = compressor.decode(compressed_img, decompressed_img)
-                    img = decompressed_img
+                    if self._algo == "Peakfinder8_v2" or self._algo == "PyAlgos":
+                        compressed_img = compressor.encode(img)
+                        decompressed_img = np.zeros_like(img)
+                        _ = compressor.decode(compressed_img, decompressed_img)
+                        img = decompressed_img
+                    else:
+                        compressed_img = compressor.encode(img_reshaped)
+                        decompressed_img = np.zeros_like(img_reshaped)
+                        _ = compressor.decode(compressed_img, decompressed_img)
+                        img_reshaped = decompressed_img
 
                 file_writer.write_event(
-                    img=img,
+                    img=img_reshaped,
                     peaks=peaks,
                     timestamp_seconds=timestamp_seconds,
                     timestamp_nanoseconds=timestamp_nanoseconds,
