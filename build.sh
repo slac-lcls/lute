@@ -34,6 +34,9 @@ $(basename "$0"):
           Re-run the meson setup. This is only required if meson.build files have been
           modified, or meson options/the install prefix have changed since the last
           time it was run.
+        -s|--source_pyenv
+          Use an additional source environment. Can be used to build multiple versions
+          of the extensions. E.g. to have 3.9 and 3.11 Python extension libraries.
 EOF
 }
 
@@ -54,6 +57,11 @@ do
         ;;
     -r|--reconfigure)
         NEED_RECONFIG=1
+        shift
+        ;;
+    -s|--source_pyenv)
+        SOURCE_PYENV="${2}"
+        shift
         shift
         ;;
     -h|--help)
@@ -83,8 +91,6 @@ center_text() {
                "${LEFT_PAD}" "" \
                "${TEXT}" \
                "${RIGHT_PAD}" ""
-        #NEW_LINE=$(printf "%*s%s%*s\n" "${PAD_SIZE}" "" "${TEXT}" "$((WIDTH - LEN - PAD_SIZE))" " ")
-        #echo "===== ${NEW_LINE} ====="
     fi
 }
 
@@ -123,27 +129,33 @@ print_banner() {
     printf '%*s\n' "${BORDERLEN}" '' | tr ' ' '='
 }
 
-
-# Determine build directories, install directory, and where to put the build env
-BASE_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
-BUILD_DIR="${BASE_DIR}/_build"
-INSTALL_DIR="${BASE_DIR}/install"
-
-# Virtual environment needs to be outside the source tree
-# Otherwise you get some path errors with meson
-# At least I couldn't figure out any other way to do it...
-BUILD_ENV="${HOME}/.cache/lute_build_env_$(echo ${BASE_DIR} | md5sum | cut -d' ' -f1)"
-
-mkdir -p "${INSTALL_DIR}"
-mkdir -p "${BUILD_DIR}"
-mkdir -p "${HOME}/.cache"
-
-# On S3DF get a standard Python3 - otherwise you're on your own
-if [[ $HOSTNAME =~ "sdf" ]]; then
+# On S3DF get a standard Python3, unless a source directive provided explicitly
+if [[ $SOURCE_PYENV ]]; then
+    LINES=("Sourcing ${SOURCE_PYENV}")
+    print_banner "${LINES[@]}"
+    source "${SOURCE_PYENV}"
+elif [[ $HOSTNAME =~ "sdf" ]]; then
     LINES=("Sourcing the Psana1 environment (for Python3)")
     print_banner "${LINES[@]}"
     source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 fi
+
+# We will append Python Version info to the build directories for side-by-side builds
+PY_VER=$(python3 -V | awk '{print $2}')
+
+# Determine build directories, install directory, and where to put the build env
+BASE_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
+BUILD_DIR="${BASE_DIR}/_build_${PY_VER}"
+INSTALL_DIR="${BASE_DIR}/install" # All Python versions go in install, though
+
+# Virtual environment needs to be outside the source tree
+# Otherwise you get some path errors with meson
+# At least I couldn't figure out any other way to do it...
+BUILD_ENV="${HOME}/.cache/lute_build_env_$(echo ${BASE_DIR} | md5sum | cut -d' ' -f1)_${PY_VER}"
+
+mkdir -p "${INSTALL_DIR}"
+mkdir -p "${BUILD_DIR}"
+mkdir -p "${HOME}/.cache"
 
 # Save host/conda env Python for later
 HOST_PYTHON=$(which python3)
@@ -215,7 +227,7 @@ meson install -C "${BUILD_DIR}"
 # We will also use the underlying Python (e.g. from psconda.sh)
 # This way, the build env can be kept small, and it can be deleted as well.
 # Otherwise, the Python scripts would end up pointing to the Python from that env.
-if [[ ${FIRST_BUILD} || ${NEED_ENTRYPOINTS} ]]; then
+if [[ ${NEED_ENTRYPOINTS} ]]; then
     LINES=("Creating Python entry points")
     print_banner "${LINES[@]}"
     BUILD_VENV_SITE_PACKAGES=(${BUILD_ENV}/lib/python*/site-packages)
