@@ -12,7 +12,7 @@ $(basename "$0"):
     Build an installation of LUTE.
 
     This build script will create an isolated build environment. It is cached in
-    your home directory under ~/.cache/lute_build_env_XXXX where the final portion
+    your home directory under ~/.cache/lute_build_env_XXXX_PYVER where the final portion
     is created from a hash of base installation directory.
 
     Subsequent runs of the build will not need to re-create the build environment,
