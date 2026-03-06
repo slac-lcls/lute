@@ -574,11 +574,15 @@ class BaseExecutor(ABC):
         if not os.path.exists(self._shell_source_script):
             logger.error(f"Cannot source environment from {self._shell_source_script}!")
             return
-
+        # Get both the environment and the python version of the target environment
         script: str = (
             f"set -a\n"
             f'source "{self._shell_source_script}" >/dev/null\n'
-            f'{sys.executable} -c "import os; print(dict(os.environ))"\n'
+            f'NEW_PYVER=$(python3 -c "import sys; '
+            "print(f'python{sys.version_info.major}.{sys.version_info.minor}')\")\n"
+            f'python3 -c "import os; env=dict(os.environ); '
+            "env['LUTE_NEW_PYVER']=os.environ.get('NEW_PYVER', ''); "
+            'print(env)"\n'
         )
         logger.info(f"Sourcing file {self._shell_source_script}")
         subproc_env: Dict[str, str] = {}
@@ -590,6 +594,10 @@ class BaseExecutor(ABC):
         ).communicate()
         tmp_environment: Dict[str, str] = eval(o)
         new_environment: Dict[str, str] = {}
+
+        # For picking up LUTE, the new environment may be a different python version
+        # So we need to make sure to pick it up appropriately for C-extension usage
+        new_pyver: str = tmp_environment.get("LUTE_NEW_PYVER", "python3.9")
         for key, value in tmp_environment.items():
             # Make sure LUTE vars are available
             if "LUTE_" in key or "SLURM_" in key or key in ("RUN", "EXPERIMENT"):
@@ -601,28 +609,55 @@ class BaseExecutor(ABC):
                     # Add identical items first
                     new_environment[key] = value
                 elif key in ("PYTHONPATH", "PATH"):
-                    # Handle PYTHONPATH specifically if above doesn't catch it
                     curr: Optional[str] = os.getenv(key)
                     if curr is not None:
                         if curr in value:
-                            new_environment[key] = value
+                            new_environment[key] = f"{curr}:{value}"
                         else:
-                            # Not in PYTHONPATH, make sure to add it in
-                            new_environment[key] = curr
+                            # Make sure to keep our env first, for dependencies
+                            # e.g. pydantic
+                            new_environment[key] = f"{curr}:{value}"
+                            # For the TENV, make sure they get the environment requested
                             new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
 
         # Until we make LUTE installable... Need to make sure this is available
         # for first-party Tasks, regardless of the directory they run in if using
         # a new environment
         old_python_path: str = new_environment.get("PYTHONPATH", "")
+        new_python_path: str = new_environment.get("LUTE_TENV_PYTHONPATH", "")
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
+        new_lute_path: Optional[str] = lute_path
         if lute_path is None:
             logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
         else:
+            assert new_lute_path
             if old_python_path:
                 new_environment["PYTHONPATH"] = f"{lute_path}:{old_python_path}"
             else:
                 new_environment["PYTHONPATH"] = lute_path
+
+            if new_pyver not in lute_path:
+                # We have a new lute_path to use for a different Python version
+                old_pyver: str = f"python{sys.version_info[0]}.{sys.version_info[1]}"
+                new_lute_path = lute_path.replace(old_pyver, new_pyver)
+                logger.debug(f"Task will use LUTE from: {new_lute_path}")
+
+            if not os.path.exists(new_lute_path):
+                logger.warning(
+                    f"Task will be running in {new_pyver}, but no LUTE installation "
+                    "for that version exists! Things may fail if depending on C "
+                    "extensions!"
+                )
+
+            if new_python_path:
+                new_environment["LUTE_TENV_PYTHONPATH"] = (
+                    f"{new_lute_path}:{new_python_path}"
+                )
+            elif new_lute_path:
+                new_environment["LUTE_TENV_PYTHONPATH"] = new_lute_path
+            else:
+                logger.warning("Could not determine a new Python version LUTE_PATH!")
+
         self._analysis_desc.task_env = new_environment
 
     def _pre_task(self) -> str:
