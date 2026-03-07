@@ -73,8 +73,4 @@ CompareHKL:
 #ManipulateHKL:
   #output_format: "mtz"
   #out_file: "..."
-
-# You must provide a PDB file to use Dimple.
-DimpleSolve:
-  pdb: "/path/to/pdb/XYZ.pdb"
 ...
