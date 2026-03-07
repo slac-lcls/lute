@@ -417,4 +417,9 @@ def construct_task_parameters(schema: Dict[str, Any], values: Dict[str, Any]) ->
         obj = obj_type(**fields_for_params)
     else:
         obj = obj_type(schema, **fields_for_params)
+
+    if hasattr(obj, "_dict"):
+        # This is messy - leftover from the object construction.
+        # TODO: The above process should be cleaned up at some point.
+        del obj._dict
     return obj
