@@ -190,10 +190,16 @@ DimpleSolver.add_tasklet(
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 
-PeakFinderSFXPressio: MPIExecutor = MPIExecutor("FindPeaksSFX")
+PeakFinderSFXXpp: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
-PeakFinderSFXPressio.shell_source(
+PeakFinderSFXXpp.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_cpu.sh"
+)
+
+PeakFinderSFXXppGpu: MPIExecutor = MPIExecutor("FindPeaksSFX")
+"""Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
+PeakFinderSFXXppGpu.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_gpu.sh"
 )
 
 SHELXCRunner: Executor = Executor("RunSHELXC")

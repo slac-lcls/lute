@@ -757,13 +757,17 @@ def generate_libpressio_configuration(
         pressio_opts = {"pressio:abs": abs_error}
 
     ndims: int = len(libpressio_mask.shape)
-    roi_size: List[int] = [roi_window_size, roi_window_size]
-    bin_dims: List[int] = [bin_size, bin_size]
-    if ndims > 2:
-        other_dims_roi: List[int] = [0] * (ndims - 2)
-        other_dims_bin: List[int] = [1] * (ndims - 2)
-        roi_size = other_dims_roi + roi_size
-        bin_dims = other_dims_bin + bin_dims
+
+    # Add padding for non-row/col dims
+    other_dims: List[int] = [1] * (ndims - 2)
+    roi_size: List[int] = other_dims * (ndims - 2) + [roi_window_size, roi_window_size]
+    bin_dims: List[int] = other_dims * (ndims - 2) + [bin_size, bin_size]
+
+    # Libpressio bug requires 4D data
+    if len(roi_size) < 4:
+        other_dims = [1] * (4 - len(roi_size))
+        roi_size = other_dims + roi_size
+        bin_dims = other_dims + bin_dims
 
     lp_json: Dict[str, Any] = {
         "compressor_id": "pressio",
@@ -794,8 +798,9 @@ def generate_libpressio_configuration(
             "pressio": {
                 "roibin": {
                     "roibin:roi_size": roi_size,
-                    "roibin:centers": None,  # "roibin:roi_strategy": "coordinates",
-                    "roibin:nthreads": 4,
+                    "roibin:centers": None,
+                    "roibin:roi_strategy": "coordinates",
+                    "roibin:nthreads": 1,
                     "roi": {"fpzip:prec": 0},
                     "background": {
                         "mask_binning:mask": None,
@@ -809,18 +814,30 @@ def generate_libpressio_configuration(
         "name": "pressio",
     }
 
+    # Need 4D array for libpressio bug
+    reshaped_mask: npt.NDArray[np.uint8]
+    if libpressio_mask.ndim < 4:
+        new_shape: Tuple[int, ...] = (
+            (1,) * (4 - libpressio_mask.ndim)
+        ) + libpressio_mask.shape
+        reshaped_mask = libpressio_mask.reshape(new_shape)
+    else:
+        reshaped_mask = libpressio_mask
+
     lp_json["compressor_config"]["pressio"]["roibin"]["background"][
         "mask_binning:mask"
-    ] = (1 - libpressio_mask)
+    ] = (1 - reshaped_mask)
 
     return lp_json
 
 
 def _libpressio_config_pyalgos(lp_json: Dict[str, Any], peaks: Any) -> Dict[str, Any]:
     # assert not isinstance(peaks, dict)
-    lp_json["compressor_config"]["pressio"]["roibin"]["roibin:centers"] = (
-        np.ascontiguousarray(np.uint64(peaks[:, [2, 1, 0]])).astype(np.uint64)
+    peaks_new: npt.NDArray[np.uint64] = np.zeros((len(peaks), 4), dtype=np.uint64)
+    peaks_new[:, 1:] = np.ascontiguousarray(np.uint64(peaks[:, [0, 1, 2]])).astype(
+        np.uint64
     )
+    lp_json["compressor_config"]["pressio"]["roibin"]["roibin:centers"] = peaks_new
 
     return lp_json
 
@@ -829,10 +846,10 @@ def _libpressio_config_pf8(
     lp_json: Dict[str, Any], peaks: Peakfinder8PeakList
 ) -> Dict[str, Any]:
     peaks_rotated: npt.NDArray[np.uint64] = np.zeros(
-        (peaks["num_peaks"], 2), dtype=np.uint64
+        (peaks["num_peaks"], 4), dtype=np.uint64
     )
-    peaks_rotated[:, 0] = np.array(peaks["fs"]).astype(np.uint64)
-    peaks_rotated[:, 1] = np.array(peaks["ss"]).astype(np.uint64)
+    peaks_rotated[:, 2] = np.array(peaks["ss"]).astype(np.uint64)
+    peaks_rotated[:, 3] = np.array(peaks["fs"]).astype(np.uint64)
     lp_json["compressor_config"]["pressio"]["roibin"]["roibin:centers"] = peaks_rotated
     return lp_json
 
@@ -1444,16 +1461,34 @@ class FindPeaksSFX(Task):
                     compressor = PressioCompressor.from_config(
                         libpressio_config_with_peaks
                     )
-                    if self._algo == "Peakfinder8_v2" or self._algo == "PyAlgos":
-                        compressed_img = compressor.encode(img)
-                        decompressed_img = np.zeros_like(img)
-                        _ = compressor.decode(compressed_img, decompressed_img)
-                        img = decompressed_img
+                    # Currently have a bug in libpressio so need 4D array
+                    original_shape: Tuple[int, ...]
+                    new_shape: Tuple[int, ...]
+                    data_for_libpressio: npt.NDArray[np.float32]
+                    if self._algo in ("Peakfinder8_v2", "PyAlgos"):
+                        original_shape = img.shape
+                        if img.ndim < 4:
+                            new_shape = ((1,) * (4 - img.ndim)) + img.shape
+                            data_for_libpressio = img.reshape(new_shape)
+                        else:
+                            data_for_libpressio = img
                     else:
-                        compressed_img = compressor.encode(img_reshaped)
-                        decompressed_img = np.zeros_like(img_reshaped)
-                        _ = compressor.decode(compressed_img, decompressed_img)
-                        img_reshaped = decompressed_img
+                        original_shape = img_reshaped.shape
+                        new_shape = (
+                            1,
+                            1,
+                        ) + img_reshaped.shape
+                        data_for_libpressio = img_reshaped.reshape(new_shape)
+
+                    compressed_img: bytes = compressor.encode(data_for_libpressio)
+                    decompressed_img: npt.NDArray[np.float32] = np.zeros_like(
+                        data_for_libpressio
+                    )
+                    _ = compressor.decode(compressed_img, decompressed_img)
+                    if self._algo in ("Peakfinder8_v2", "PyAlgos"):
+                        img = decompressed_img.reshape(original_shape)
+                    else:
+                        img_reshaped = decompressed_img.reshape(original_shape)
 
                 file_writer.write_event(
                     img=img_reshaped if self._algo == "Peakfinder8" else img,
