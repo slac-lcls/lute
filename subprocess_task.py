@@ -1,11 +1,13 @@
 import argparse
+import json
 import logging
 import os
 import re
 import signal
 import sys
+import time
 import types
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Tuple, Type, cast
 
 import lute.execution.subprocess_utils
 from lute.tasks.task import Task, ThirdPartyTask
@@ -52,6 +54,33 @@ def setup_env() -> bool:
     if setup_new_env:
         os.environ.update(new_env)
     return setup_new_env
+
+
+def is_mpi_job() -> Tuple[bool, int]:
+    """Determine whether this is an MPI submission without initializing a context.
+
+    Returns:
+        is_mpi_job (bool): Whether it is an MPI submission.
+
+        mpi_rank (int): The MPI rank for this process, or -1 if not an MPI job.
+    """
+    # MPI rank returned as negative if not an MPI submission
+    mpi_rank: int = -1
+    mpi_size: int = 1
+    if "OMPI_COMM_WORLD_RANK" in os.environ:
+        mpi_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
+        mpi_size = int(os.environ.get("OMPI_COMM_WORLD_SIZE", 1))
+    elif "PMI_RANK" in os.environ:
+        mpi_rank = int(os.environ["PMI_RANK"])
+        mpi_size = int(os.environ.get("PMI_SIZE", 1))
+    elif "SLURM_PROCID" in os.environ:
+        mpi_rank = int(os.environ["SLURM_PROCID"])
+        mpi_size = int(os.environ.get("SLURM_NTASKS", 1))
+        # When using SLURM to figure out MPI/non-MPI, subtract 1 for Executor core
+        if mpi_size > 1:
+            mpi_size -= 1
+    # Need other env vars? PMIX_RANK, MV2_COMM_WORLD_RANK?
+    return mpi_size > 1, mpi_rank
 
 
 signal.signal(signal.SIGALRM, timeout_handler)
@@ -119,29 +148,39 @@ def main() -> None:
 
         # We are a first-party Task that needs a new environment
         # Record the parameters - but only once if using MPI
-        use_mpi: bool = False
-        rank: int = 0
-        try:
-            from mpi4py import MPI
+        use_mpi: bool
+        rank: int
+        use_mpi, rank = is_mpi_job()
 
-            comm: MPI.Intracomm = MPI.COMM_WORLD
-            size: int = comm.Get_size()
-            rank = comm.Get_rank()
-            if size > 1:
-                use_mpi = True
-                print(f"Running in a MPI world of size: {size}", flush=True)
-        except ModuleNotFoundError:
-            print(
-                "mpi4py not found. Assuming this is not an MPI-based `Task`", flush=True
-            )
         row_ids: Optional[RowIds]
         if use_mpi:
+            # Use args.task_name for the files in case of parameter sweeps
+            row_id_file: str = f"{args.taskname}_row_ids.out"
+            temp_row_id_file: str = f"{args.taskname}_row_ids.inprogress"
             if rank == 0:
+                print("Running a first-party Task in a new environment.", flush=True)
                 row_ids = record_parameters_db(task_parameters)
+                assert row_ids is not None
+                with open(temp_row_id_file, "w") as f:
+                    f.write("\n")
+
+                with open(row_id_file, "w") as f:
+                    json.dump(row_ids, f)
+                os.remove(temp_row_id_file)
+                # This allows rank 0 to delete it later - this is done internally
+                # in Task. It occurs in _signal_start after a Barrier so rank 0 knows
+                # other ranks have actually started before deleting anything
+                os.environ["LUTE_BOOTSTRAP_FILE"] = row_id_file
             else:
-                row_ids = None
-            row_ids = comm.bcast(row_ids, root=0)
+                while not os.path.exists(row_id_file) or os.path.exists(
+                    temp_row_id_file
+                ):
+                    time.sleep(0.01)
+
+                with open(row_id_file, "r") as f:
+                    row_ids = cast(RowIds, json.load(f))
         else:
+            print("Running a first-party Task in a new environment.", flush=True)
             row_ids = record_parameters_db(task_parameters)
         work_dir: str = task_parameters.lute_config.work_dir
 
