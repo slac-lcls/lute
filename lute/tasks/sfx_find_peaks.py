@@ -647,10 +647,12 @@ def write_master_file(
     """
     # Retrieve paths to the files containing data
     fnames: List[Path] = []
-    fi: int
+    # Need to keep track of these for indexing later during master file creation
+    ranks_with_hits: List[int] = []
     for fi in range(mpi_size):
         if n_hits_per_rank[fi] > 0:
             fnames.append(Path(outdir) / f"{exp}_r{run:0>4}_{fi}{tag}.cxi")
+            ranks_with_hits.append(fi)
     if len(fnames) == 0:
         sys.exit("No hits found")
 
@@ -692,7 +694,6 @@ def write_master_file(
 
     vfname: Path = Path(outdir) / f"{exp}_r{run:0>4}{tag}.cxi"
     with h5py.File(vfname, "w") as vdf:
-
         # Write the virtual hdf5 file
         for dnum in range(len(dname_list)):
             dname = f"{dname_list[dnum]}/{key_list[dnum]}"
@@ -702,14 +703,19 @@ def write_master_file(
                 )
                 cursor = 0
                 for i, fn in enumerate(fnames):
+                    # Use the correct rank hit count or you get a malformed VDS
+                    rank_idx: int = ranks_with_hits[i]
                     vsrc = h5py.VirtualSource(
-                        fn, dname, shape=(n_hits_per_rank[i],) + shape_list[dnum][1:]
+                        fn,
+                        dname,
+                        shape=(n_hits_per_rank[rank_idx],) + shape_list[dnum][1:],
                     )
+
                     if len(shape_list[dnum]) == 1:
-                        layout[cursor : cursor + n_hits_per_rank[i]] = vsrc
+                        layout[cursor : cursor + n_hits_per_rank[rank_idx]] = vsrc
                     else:
-                        layout[cursor : cursor + n_hits_per_rank[i], :] = vsrc
-                    cursor += n_hits_per_rank[i]
+                        layout[cursor : cursor + n_hits_per_rank[rank_idx], :] = vsrc
+                    cursor += n_hits_per_rank[rank_idx]
                 vdf.create_virtual_dataset(dname, layout, fillvalue=-1)
 
         vdf["entry_1/data_1/powderHits"] = powder_hits
