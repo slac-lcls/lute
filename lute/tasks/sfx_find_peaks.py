@@ -1187,6 +1187,10 @@ class FindPeaksSFX(Task):
 
         first_event: bool = True
         mask: Optional[npt.NDArray[np.uint8]] = None
+        # Need to make this None.... psana2 ranks don't all get into this loop...
+        file_writer: Optional[CxiWriter] = None
+        powder_hits: Optional[npt.NDArray[np.float64]] = None
+        powder_misses: Optional[npt.NDArray[np.float64]] = None
         for event_data in self._event_generator():
             if first_event:
                 assert isinstance(event_data, EventMaskData)
@@ -1341,7 +1345,7 @@ class FindPeaksSFX(Task):
                         ][:]
                         mask *= loaded_mask.astype(np.uint8)
 
-                file_writer: CxiWriter = CxiWriter(
+                file_writer = CxiWriter(
                     outdir=self._task_parameters.outdir,
                     rank=rank,
                     exp=self._task_parameters.lute_config.experiment,
@@ -1371,8 +1375,8 @@ class FindPeaksSFX(Task):
                         ),
                     )
 
-                powder_hits: npt.NDArray[np.float64] = np.zeros(det_shape)
-                powder_misses: npt.NDArray[np.float64] = np.zeros(det_shape)
+                powder_hits = np.zeros(det_shape)
+                powder_misses = np.zeros(det_shape)
 
             peaks: Union[Peakfinder8PeakList, Any]
             num_peaks: int = 0
@@ -1490,6 +1494,7 @@ class FindPeaksSFX(Task):
                     else:
                         img_reshaped = decompressed_img.reshape(original_shape)
 
+                assert file_writer is not None
                 file_writer.write_event(
                     img=img_reshaped if self._algo == "Peakfinder8" else img,
                     peaks=peaks,
@@ -1503,11 +1508,13 @@ class FindPeaksSFX(Task):
                 num_hits += 1
 
             if num_peaks >= self._task_parameters.min_peaks:
+                assert powder_hits is not None
                 powder_hits = np.maximum(
                     powder_hits,
                     img.reshape(det_shape),
                 )
             else:
+                assert powder_misses is not None
                 powder_misses = np.maximum(
                     powder_misses,
                     img.reshape(det_shape),
@@ -1519,20 +1526,21 @@ class FindPeaksSFX(Task):
             )
             self._report_to_executor(msg)
 
-        assert mask is not None
-        assert powder_hits is not None
-        assert powder_misses is not None
-        file_writer.write_non_event_data(
-            powder_hits=powder_hits,
-            powder_misses=powder_misses,
-            mask=mask,
-        )
+        if file_writer is not None:
+            assert mask is not None
+            assert powder_hits is not None
+            assert powder_misses is not None
+            file_writer.write_non_event_data(
+                powder_hits=powder_hits,
+                powder_misses=powder_misses,
+                mask=mask,
+            )
 
-        file_writer.optimize_and_close_file(
-            num_hits=num_hits,
-            max_peaks=self._task_parameters.max_peaks,
-            algo=self._algo,
-        )
+            file_writer.optimize_and_close_file(
+                num_hits=num_hits,
+                max_peaks=self._task_parameters.max_peaks,
+                algo=self._algo,
+            )
 
         COMM_WORLD.Barrier()
 

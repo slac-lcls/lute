@@ -34,11 +34,11 @@ FindPeaksSFX:
     dr: 2.0
     nsigm: 10.0
     pv_camera_length: 100.0 # Could be PV, but just using fixed distance
-    n_events: 10 # Only a handful of events
+    n_events: 500 # Only a handful of events
     geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/jf16mgeom.geom"
     make_powder_plots: false # Don't write powder summary to experiment
     compression:
-      compressor: "qoz" # "qoz" or "sz3"
+      compressor: "sz3" # "qoz" or "sz3"
       abs_error: 1.0
       bin_size: 2
       roi_window_size: 9
