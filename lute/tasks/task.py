@@ -228,6 +228,13 @@ class Task(ABC):
             comm.Barrier()
             if rank == 0:
                 self._report_to_executor(start_msg)
+
+                # In first-party, different environment Tasks the bootstrap process
+                # will create a file to share RowIds. The path is stored in an env var
+                # and it can now be deleted safely since we're past the Barrier above
+                bootstrap_file: Optional[str] = os.getenv("LUTE_BOOTSTRAP_FILE")
+                if bootstrap_file is not None and os.path.exists(bootstrap_file):
+                    os.remove(bootstrap_file)
         else:
             self._report_to_executor(start_msg)
 
