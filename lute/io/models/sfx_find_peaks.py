@@ -4,7 +4,7 @@ from typing import Any, Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
 
-from .base import ThirdPartyParameters, TaskParameters, TemplateConfig
+from lute.io.models.base import ThirdPartyParameters, TaskParameters, TemplateConfig
 
 
 class SZCompressorParameters(BaseModel):
@@ -19,8 +19,13 @@ class SZCompressorParameters(BaseModel):
     )
 
 
-class FindPeaksPyAlgosParameters(TaskParameters):
-    """Parameters for crystallographic (Bragg) peak finding using PyAlgos.
+class FindPeaksSFXParameters(TaskParameters):
+    """Parameters for crystallographic (Bragg) peak finding using PyAlgos or Peakfinder8.
+
+    The Peakfinder8 algorithm comes in two flavors "Peakfinder8" and "Peakfinder8_v2",
+    the latter does not use a "slab" geometry. This, however, is not currently supported
+    by downstream CrystFEL so should not yet be used for full pipelines.
+
 
     This peak finding Task optionally has the ability to compress/decompress
     data with SZ for the purpose of compression validation.
@@ -29,6 +34,11 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     class Config(TaskParameters.Config):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
+
+    algorithm: Literal["PyAlgos", "Peakfinder8", "Peakfinder8_v2"] = Field(
+        default="Peakfinder8",
+        description="The peakfinding algorithm to use. Either Peakfinder8 (v1 or v2) or PyAlgos.",
+    )
 
     outdir: str = Field(
         description="Output directory for cxi files",
@@ -47,7 +57,7 @@ class FindPeaksPyAlgosParameters(TaskParameters):
         "",
         description="Tag to add to the output file names",
     )
-    pv_camera_length: Union[str, float] = Field(
+    pv_camera_length: Union[float, str] = Field(
         description="PV associated with camera length "
         "(if a number, camera length directly)",
     )
@@ -118,9 +128,15 @@ class FindPeaksPyAlgosParameters(TaskParameters):
     out_file: str = Field(
         "",
         description="Path to output file.",
-        flag_type="-",
-        rename_param="o",
         is_result=True,
+    )
+    geometry_file: Optional[str] = Field(
+        None,
+        description="A path to a CrystFEL geometry file (for pf8).",
+    )
+    make_powder_plots: bool = Field(
+        True,
+        description="Whether to generate assembled powder plots in the eLog.",
     )
 
     @validator("out_file", always=True)

@@ -642,6 +642,7 @@ def run_workflow_maestro(
     lute_location: str,
     config_file: str,
     workflow_file: str,
+    extra_args: List[str],
 ) -> bool:
     """Run a workflow using Maestro.
 
@@ -651,6 +652,9 @@ def run_workflow_maestro(
         config_file (str): Path to the configuration YAML.
 
         workflow_file (str): Path to the DAG definition YAML.
+
+        extra_args (List[str]): The set of additional arguments which should be
+            for SLURM.
 
     Returns:
         is_successful (bool): True if workflow returns successful. False otherwise.
@@ -909,6 +913,12 @@ if __name__ == "__main__":
                 True if os.path.exists(f"{test_dir}/SHOULD_FAIL") else False
             )
 
+            # Replace DAG SLURM account for account provided on command-line
+            for arg in extra_args:
+                if "--account=" in arg:
+                    sed_pattern = f"s|--account=[^[:space:]]*|{arg}|g"
+                    inplace_sed(wf_file, sed_pattern)
+
             # Retrieve the experiment and run from each test YAML
             experiment: str = parse_yaml_value(config_file, "experiment")
             run: str = parse_yaml_value(config_file, "run")
@@ -923,6 +933,7 @@ if __name__ == "__main__":
             run_workflow: Union[
                 Callable[[str, str, str, bool, bool], bool],
                 Callable[[str, str, str], bool],
+                Callable[[str, str, str, List[str]], bool],
             ]
             is_successful: bool
             if args.use_airflow:
@@ -947,6 +958,7 @@ if __name__ == "__main__":
                     lute_location=lute_location,
                     config_file=config_file,
                     workflow_file=wf_file,
+                    extra_args=extra_args,
                 )
 
             if is_successful:
