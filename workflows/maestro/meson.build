@@ -117,6 +117,29 @@ test_server = executable(
 )
 test('Server logic tests', test_server)
 
+test_maestro_api = executable(
+    'test_maestro_api',
+    [
+        'tests/cpp/test_maestro_api.cc',
+        'src/server/http.cc',
+        'src/server/handler.cc',
+        'src/lwm/launcher.cc',
+        'src/lwm/job.cc',
+        'src/parallel/threadpool.cc'
+    ],
+    dependencies: [
+        gtest_dep,
+        spdlog_dep,
+        rapidjson_dep,
+    ],
+    install: true,
+    install_rpath: '$ORIGIN',
+    include_directories: ['src', 'src/server', 'src/lwm', 'src/parallel'],
+    link_args: ['-lpthread'],
+)
+test('Maestro REST API tests', test_maestro_api)
+
+
 # Install the Python modules
 # Could do this "properly" with subdir and iterative meson.build files but its
 # only a handful of modules
