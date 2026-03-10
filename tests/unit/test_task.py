@@ -27,35 +27,31 @@ def mock_params(tmp_path):
 
 
 def test_task_init(mock_params):
-    with (
-        patch("os.chdir"),
-        patch("sys.stdin") as mock_stdin,
-    ):  # Avoid changing dir in tests
-        task = ConcreteTask(params=mock_params)
-        assert task.name == "ConcreteTask"
-        assert task.result.task_status == TaskStatus.PENDING
+    with patch("os.chdir"):
+        with patch("sys.stdin") as mock_stdin:
+            # Avoid changing dir in tests
+            task = ConcreteTask(params=mock_params)
+            assert task.name == "ConcreteTask"
+            assert task.result.task_status == TaskStatus.PENDING
 
 
 def test_task_run(mock_params):
-    with (
-        patch("os.chdir"),
-        patch.object(ConcreteTask, "_report_to_executor"),
-        patch("os.kill"),
-        patch("sys.stdin") as mock_stdin,
-    ):  # Avoid sending signals in tests
-        task = ConcreteTask(params=mock_params)
-        task.run()
-        assert task.result.summary == "Success"
-        assert task.result.task_status == TaskStatus.COMPLETED
+    with patch("os.chdir"):
+        with patch.object(ConcreteTask, "_report_to_executor"):
+            with patch("os.kill"):
+                with patch("sys.stdin") as mock_stdin:
+                    # Avoid sending signals in tests
+                    task = ConcreteTask(params=mock_params)
+                    task.run()
+                    assert task.result.summary == "Success"
+                    assert task.result.task_status == TaskStatus.COMPLETED
 
 
 def test_task_call(mock_params):
-    with (
-        patch("os.chdir"),
-        patch.object(ConcreteTask, "_report_to_executor"),
-        patch("os.kill"),
-        patch("sys.stdin") as mock_stdin,
-    ):
-        task = ConcreteTask(params=mock_params)
-        task()  # Test __call__
-        assert task.result.task_status == TaskStatus.COMPLETED
+    with patch("os.chdir"):
+        with patch.object(ConcreteTask, "_report_to_executor"):
+            with patch("os.kill"):
+                with patch("sys.stdin") as mock_stdin:
+                    task = ConcreteTask(params=mock_params)
+                    task()  # Test __call__
+                    assert task.result.task_status == TaskStatus.COMPLETED

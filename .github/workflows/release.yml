@@ -49,6 +49,9 @@ jobs:
         # Check pyproject.toml for supported versions and additional config
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_TEST_REQUIRES: "pytest"
+          # Include the C++ test suite binaries
+          CIBW_TEST_COMMAND: "test_http && test_server && pytest {project}/tests/unit"
           CIBW_AFTER_BUILD: "ccache -s"
 
       - uses: actions/upload-artifact@v4

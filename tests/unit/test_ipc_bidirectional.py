@@ -31,14 +31,12 @@ class TestBidirectionalIPC(unittest.TestCase):
         # Send Message from Task to Executor (our standard operation)
         msg_t2e: Message = Message(contents="Hello Executor", signal="TASK_STARTED")
 
-        with (
-            patch("sys.stdout.buffer.write") as mock_stdout,
-            patch("sys.stderr.buffer.write") as mock_stderr,
-        ):
-            task_comm.write(msg_t2e)
-            # Just verify it calls writes
-            self.assertTrue(mock_stdout.called)
-            self.assertTrue(mock_stderr.called)
+        with patch("sys.stdout.buffer.write") as mock_stdout:
+            with patch("sys.stderr.buffer.write") as mock_stderr:
+                task_comm.write(msg_t2e)
+                # Just verify it calls writes
+                self.assertTrue(mock_stdout.called)
+                self.assertTrue(mock_stderr.called)
 
         # See that Executor can write back to Task
         msg_e2t = Message(contents="Go Task!", signal="TASK_RESPONSE")

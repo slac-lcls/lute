@@ -7,6 +7,7 @@ project(
     ],
 )
 add_project_arguments('-frtti', language: 'cpp')
+add_project_arguments('-Wno-class-memaccess', language: 'cpp')
 
 pymod = import('python')
 
