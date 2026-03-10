@@ -67,8 +67,10 @@ CompareHKL:
   symmetry: "2/m_uab"
 
 # Select a different output format if desired. Dimple requires mtz
-#ManipulateHKL:
+ManipulateHKL:
   #output_format: "mtz"
   #out_file: "..."
+  # Since no cell was provided during indexing, provide it here
+  cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/maybe_lyso.cell"
 ...
 
