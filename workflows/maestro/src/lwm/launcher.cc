@@ -547,7 +547,7 @@ namespace LWM {
       if (WEXITSTATUS(ret_code) == 0) {
         return;
       }
-      wait_ms << 2;
+      wait_ms <<= 2;
     }
 
     logger()->error("Unable to read log file: {}", logfile_path);
