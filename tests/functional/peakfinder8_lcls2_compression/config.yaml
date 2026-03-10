@@ -9,11 +9,8 @@ task_timeout: 30000
 work_dir: "/tmp"
 ...
 ---
-# You must provide det_name and pv_camera_length
-# pv_camera_length is the detector distance
-# It can be a PV, or alternative a float for a fixed offset
-# Example PVs are commented below, ask beamline staff for relevant PV
-# Change outdir to an appropriate directory for CXI files.
+# Parameters here are setup to try and get results through the pipeline.
+# This is not for scientific accuracy.
 FindPeaksSFX:
     outdir: "{{ work_dir }}"
     det_name: "jungfrau"
@@ -26,11 +23,10 @@ FindPeaksSFX:
     max_peaks: 2048
     npix_min: 2
     npix_max: 30
-    amax_thr: 40
-    atot_thr: 180
-    son_min: 10.0
+    amax_thr: 1000 # ADC Threshold (Peakfinder8)
+    son_min: 4.0   # Minimum SNR (Peakfinder8)
     peak_rank: 3
-    r0: 3.0
+    r0: 8.0        # Local background radius (Peakfinder8)
     dr: 2.0
     nsigm: 10.0
     pv_camera_length: 100.0 # Could be PV, but just using fixed distance
@@ -38,27 +34,27 @@ FindPeaksSFX:
     geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/jf16mgeom.geom"
     make_powder_plots: false # Don't write powder summary to experiment
     compression:
-      compressor: "sz3" # "qoz" or "sz3"
+      compressor: "sz3" # "qoz" Does not work currently
       abs_error: 1.0
       bin_size: 2
       roi_window_size: 9
 
-# You must provide a geometry file. Cell file is optional but improves results
-# mosflm is fast, you can provide additional methods for improved results at cost of speed
+# Setting parameters to try to get SOMETHING through the infrastructure.
+# This is just an infrastructure test.
 IndexCrystFEL:
   #in_file: ""            # Location of a `.lst` file listing CXI files
   #out_file: ""           # Where to write the output stream file
   geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/jf16mgeom.geom"
-  indexing: "mosflm"      # Indeexing methods - e.g. mosflm,xgandalf
-  int_radius: "3,4,5"     # Integration radii
-  tolerance: "5,5,5,1.5"  # Tolerances
+  indexing: "mosflm,xgandalf,asdf"  # Trying multiple methods for blind indexing
+  int_radius: "3,4,7"               # Slightly larger background ring
+  tolerance: "10,10,10,2"           # More lenient cell/angle tolerances
   multi: True
-  profile: True
+  # profile: True
   no_revalidate: True
-  cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/maybe_lyso.cell"
+  # Not using cell file for the time being
+  # cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/maybe_lyso.cell"
   peaks: "cxi"
 
-# You must set symmetry
 MergePartialator:
   #in_file: ""
   #out_file: ""
@@ -71,7 +67,8 @@ CompareHKL:
   #fom: "Rsplit"
   #nshells: 10
   #shell_file: ""
-  #cell_file: ""
+  # Since no cell was provided during indexing, provide it here
+  cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/maybe_lyso.cell"
   symmetry: "2/m_uab"
 
 # Select a different output format if desired. Dimple requires mtz
@@ -79,3 +76,4 @@ CompareHKL:
   #output_format: "mtz"
   #out_file: "..."
 ...
+
