@@ -3,7 +3,7 @@ requires = ["numpy", "mypy", "meson-python", "pybind11", "meson>=1.10.1"]
 build-backend = "mesonpy"
 
 [project]
-name = "lute"
+name = "lute-lcls"
 description="LCLS Unified Task Executor."
 requires-python = ">=3.8"
 dynamic = ["version"]
