@@ -49,7 +49,23 @@ jobs:
         # Check pyproject.toml for supported versions and additional config
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_TEST_REQUIRES: "pytest"
+          # Include the C++ test suite binaries
+          CIBW_TEST_COMMAND: "test_http && test_server && test_maestro_api && pytest {project}/tests/unit"
           CIBW_AFTER_BUILD: "ccache -s"
+          # Could not do tests, but then I can't run them above
+          # CIBW_CONFIG_SETTINGS: "setup-args=\"-Dinstall_tests=false\" setup-args=\"-Dinstall_utilities=false\""
+
+      # Instead of disabling, will just remove them from the wheels afterwards
+      # Not sure this will work on platforms other than Linux? Not building for those though..
+      - name: Prune tests from wheels
+        run: |
+          for whl in wheelhouse/*.whl; do
+            echo "Pruning $whl..."
+            # Find all files inside the wheel that match our test names
+            # and delete them regardless of which .data/scripts folder they are in
+            zip -d "$whl" "*test_http" "*test_server" "*test_maestro_api" "*activate_installation"
+          done
 
       - uses: actions/upload-artifact@v4
         with:

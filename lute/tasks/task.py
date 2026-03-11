@@ -11,6 +11,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 import signal
+import socket
 import sys
 import time
 import warnings
@@ -46,10 +47,13 @@ else:
         AnalysisHeader,
     )
 from lute.execution.ipc import (
+    Communicator,
     Message,
     PipeCommunicator,
     SocketCommunicator,
-    Communicator,
+    TaskRequest,
+    TaskRequestMessage,
+    TaskMetadataMessage,
 )
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 from lute.io.parameters import RowIds
@@ -157,6 +161,10 @@ class Task(ABC):
             task_affinity: Set[int] = affinity - executor_affinity
             os.sched_setaffinity(0, task_affinity)
 
+        # We can use `stdin` to receive Message's back from the Executor
+        # Set non-blocking otherwise reads would hang
+        os.set_blocking(sys.stdin.fileno(), False)
+
     def run(self) -> None:
         """Calls the analysis routines and any pre/post task functions.
 
@@ -243,6 +251,21 @@ class Task(ABC):
             else:
                 os.kill(os.getpid(), signal.SIGSTOP)
 
+        # Upon resuming, we will also send some metadata that can be logged
+        # for inter-Task communication later
+        hostnames: List[str] = []
+        metadata: Dict[str, List[str]] = {}
+        hostname: str
+        if self._use_mpi:
+            comm = MPI.COMM_WORLD
+            hostname = MPI.Get_processor_name()
+            hostnames = comm.allgather(hostname)
+        else:
+            hostname = socket.gethostname()
+            hostnames.append(hostname)
+        metadata["task_hostnames"] = hostnames
+        self.publish_metadata(metadata=metadata)
+
     def _signal_result(self) -> None:
         """Send the signal that results are ready along with the results."""
         signal: str = "TASK_RESULT"
@@ -277,6 +300,78 @@ class Task(ABC):
         communicator.delayed_setup()
         communicator.write(msg)
         communicator.clear_communicator()
+
+    def task_request(
+        self, for_task: str, request: Any, wait_for_resp: bool = True
+    ) -> None:
+        """Send a message with a request for another Task.
+
+        The other `Task` may or may not be running. The request is sent to the
+        Executor that is managing this Task. A response can be waited for, or
+        it can be checked for later.
+
+        Args:
+            for_task (str): The name of the `Task` the request should be routed to.
+                This is the `Task` (NOT **managed** Task) name. It can be running in
+                any environment etc. The details of how the request is routed are
+                not relevant to the Task layer.
+
+            request (Any): The request to be sent. It must be JSON serializable.
+
+            wait_for_resp (bool): Whether to block on the response. If False, the
+                Task can check at a later time using the `check_request_response`
+                method.
+
+        Returns:
+            resp
+        """
+        req: TaskRequest = TaskRequest(
+            request=request, for_task=for_task, for_manager=False
+        )
+        req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
+        self._report_to_executor(msg=req_msg)
+        if wait_for_resp:
+            communicator: PipeCommunicator = PipeCommunicator()
+            # Ignoring for now...
+            # resp_msg: Message = communicator.read()
+            communicator.read()
+
+    def get_running_tasks(self) -> Message:
+        """Send a message with a request to know any other running Tasks.
+
+        Args:
+            for_task (str): The name of the `Task` the request should be routed to.
+                This is the `Task` (NOT **managed** Task) name. It can be running in
+                any environment etc. The details of how the request is routed are
+                not relevant to the Task layer.
+
+            request (Any): The request to be sent. It must be JSON serializable.
+
+            wait_for_resp (bool): Whether to block on the response. If False, the
+                Task can check at a later time using the `check_request_response`
+                method.
+
+        Returns:
+            resp (Message): Response from the workflow manager (if any).
+        """
+        req: TaskRequest = TaskRequest(
+            request="RUNNING_TASKS", for_task=None, for_manager=True
+        )
+        req_msg: TaskRequestMessage = TaskRequestMessage(contents=req)
+        self._report_to_executor(msg=req_msg)
+
+        communicator: PipeCommunicator = PipeCommunicator()
+        return communicator.read(wait=2)
+
+    def publish_metadata(self, metadata: Dict[str, Any]) -> None:
+        """Send a message containing metadata that can be accessed by other Tasks.
+
+        Args:
+            metadata (Dict[str, Any]): A dictionary of key/value pairs that contains
+                data that other Tasks running in parallel could find useful.
+        """
+        meta_msg: TaskMetadataMessage = TaskMetadataMessage(contents=metadata)
+        self._report_to_executor(msg=meta_msg)
 
     def clean_up_timeout(self) -> None:
         """Perform any necessary cleanup actions before exit if timing out."""

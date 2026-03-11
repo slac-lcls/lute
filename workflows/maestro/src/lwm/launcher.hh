@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <queue>
 #include <set>
 #include <string>
 #include <tuple>
@@ -84,7 +85,6 @@ namespace LWM {
     bool m_expects_server{true};
     std::map<std::pair<std::string,HTTP::METHOD>,std::shared_ptr<HTTP::Handler>> m_request_handlers;
 
-
     /**
      * Checks whether a job can be executed/run based on upstream job return statuses
      * passed along via futures in the `wait_for` argument. This compares the return
@@ -107,6 +107,10 @@ namespace LWM {
     // Mutexes and status will be held by the handler
     // The launcher may access them through it however
     friend class SubprocessLauncher;
+    // To make the Python code simpler, everything goes through here
+    // We'll expose the private stuff to the other Handlers.
+    friend class JsonRpcHandler;
+    friend class JsonTasksHandler;
 
   public:
     JsonStatusHandler() = default;
@@ -117,6 +121,8 @@ namespace LWM {
   private:
     std::mutex m_status_mut;
     std::map<std::string, std::string> m_status_map;
+    std::map<std::string, std::map<std::string, std::string>> m_metadata_map;
+    std::map<std::string, std::queue<std::string>> m_rpc_queues;
 
     void update_running_splits(JobStepSplits* splits, std::string& managed_task_name);
     // Should be protected behind the m_status_mut as well.
@@ -156,6 +162,60 @@ namespace LWM {
   };
 
   /**
+   * Handler for listing discovered tasks and their current status/metadata.
+   */
+  class JsonTasksHandler : public HTTP::JsonHandler {
+    friend class SubprocessLauncher;
+
+  public:
+    JsonTasksHandler(std::shared_ptr<JsonStatusHandler> status_handler)
+      : m_status_handler(status_handler)
+    {}
+    ~JsonTasksHandler() = default;
+
+    HTTP::Response operator()(const HTTP::Request& request) override;
+
+  private:
+    std::shared_ptr<JsonStatusHandler> m_status_handler;
+
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:JsonTasksHandler")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:JsonTasksHandler");
+      }
+    }();
+    bool m_unbuffered_logs{false};
+  };
+
+  /**
+   * Handler for sending and receiving RPC messages.
+   */
+  class JsonRpcHandler : public HTTP::JsonHandler {
+    friend class SubprocessLauncher;
+
+  public:
+    JsonRpcHandler(std::shared_ptr<JsonStatusHandler> status_handler)
+      : m_status_handler(status_handler)
+    {}
+    ~JsonRpcHandler() = default;
+
+    HTTP::Response operator()(const HTTP::Request& request) override;
+
+  private:
+    std::shared_ptr<JsonStatusHandler> m_status_handler;
+
+    std::shared_ptr<spdlog::logger> m_logger = [] {
+      if (auto tmp = spdlog::get("LWM:JsonRpcHandler")) {
+        return tmp;
+      } else {
+        return spdlog::stdout_color_mt("LWM:JsonRpcHandler");
+      }
+    }();
+    bool m_unbuffered_logs{false};
+  };
+
+  /**
    * Launcher implementation which runs the job it is passed via a subprocess
    * using popen (or another subprocess mechanism with pipes).
    *
@@ -169,10 +229,16 @@ namespace LWM {
     SubprocessLauncher() : Launcher() {
       m_request_handlers[std::make_pair("/status", HTTP::METHOD::POST)] = m_status_handler;
       m_request_handlers[std::make_pair("/log", HTTP::METHOD::POST)] = m_log_handler;
+      m_request_handlers[std::make_pair("/tasks", HTTP::METHOD::GET)] = m_tasks_handler;
+      m_request_handlers[std::make_pair("/rpc", HTTP::METHOD::GET)] = m_rpc_handler;
+      m_request_handlers[std::make_pair("/rpc", HTTP::METHOD::POST)] = m_rpc_handler;
     }
     SubprocessLauncher(const bool& unbuffered_logs) : Launcher(unbuffered_logs) {
       m_request_handlers[std::make_pair("/status", HTTP::METHOD::POST)] = m_status_handler;
       m_request_handlers[std::make_pair("/log", HTTP::METHOD::POST)] = m_log_handler;
+      m_request_handlers[std::make_pair("/tasks", HTTP::METHOD::GET)] = m_tasks_handler;
+      m_request_handlers[std::make_pair("/rpc", HTTP::METHOD::GET)] = m_rpc_handler;
+      m_request_handlers[std::make_pair("/rpc", HTTP::METHOD::POST)] = m_rpc_handler;
     }
     JobReturn launch_task(const JobStep& job,
                           bool is_daq2,
@@ -191,6 +257,8 @@ namespace LWM {
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
     std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
+    std::shared_ptr<JsonTasksHandler> m_tasks_handler = std::make_shared<JsonTasksHandler>(m_status_handler);
+    std::shared_ptr<JsonRpcHandler> m_rpc_handler = std::make_shared<JsonRpcHandler>(m_status_handler);
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:SubprocessLauncher")) {

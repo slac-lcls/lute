@@ -106,4 +106,9 @@ def import_task(task_name: str) -> Type[Task]:
 
         return ConvertXtc1to2
 
+    if task_name == "TestRequest":
+        from .test import TestRequest
+
+        return TestRequest
+
     raise TaskNotFoundError

@@ -14,6 +14,11 @@ spdlog_dep = declare_dependency(
     include_directories: spdlog_inc,
 )
 
+# RapidJSON for JSON parsing
+rapidjson_proj = subproject('rapidjson')
+rapidjson_dep = rapidjson_proj.get_variable('rapidjson_dep')
+rapidjson_inc = rapidjson_proj.get_variable('rapidjson_inc')
+
 liblwmhttp = shared_library(
     'lwmhttp',
     [
@@ -21,7 +26,7 @@ liblwmhttp = shared_library(
         'src/server/http.cc',
         'src/server/server.cc'
     ],
-    dependencies: [spdlog_dep],
+    dependencies: [spdlog_dep, rapidjson_dep],
     include_directories: spdlog_inc,
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
@@ -45,7 +50,7 @@ liblwm = shared_library(
     ],
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
-    dependencies: [spdlog_dep, lwm_http_dep],
+    dependencies: [spdlog_dep, lwm_http_dep, rapidjson_dep],
     include_directories: spdlog_inc,
     version: '1',
     soversion: '1',
@@ -84,8 +89,9 @@ test_http = executable(
     dependencies: [
         gtest_dep,
         spdlog_dep,
+        rapidjson_dep,
     ],
-    install: true,
+    install: get_option('install_tests'),
     install_rpath: '$ORIGIN',
     include_directories: ['src/server'],
 )
@@ -102,13 +108,37 @@ test_server = executable(
     dependencies: [
         gtest_dep,
         spdlog_dep,
+        rapidjson_dep,
     ],
-    install: true,
+    install: get_option('install_tests'),
     install_rpath: '$ORIGIN',
     include_directories: ['src/server'],
     link_args: ['-lpthread'],
 )
 test('Server logic tests', test_server)
+
+test_maestro_api = executable(
+    'test_maestro_api',
+    [
+        'tests/cpp/test_maestro_api.cc',
+        'src/server/http.cc',
+        'src/server/handler.cc',
+        'src/lwm/launcher.cc',
+        'src/lwm/job.cc',
+        'src/parallel/threadpool.cc'
+    ],
+    dependencies: [
+        gtest_dep,
+        spdlog_dep,
+        rapidjson_dep,
+    ],
+    install: get_option('install_tests'),
+    install_rpath: '$ORIGIN',
+    include_directories: ['src', 'src/server', 'src/lwm', 'src/parallel'],
+    link_args: ['-lpthread'],
+)
+test('Maestro REST API tests', test_maestro_api)
+
 
 # Install the Python modules
 # Could do this "properly" with subdir and iterative meson.build files but its

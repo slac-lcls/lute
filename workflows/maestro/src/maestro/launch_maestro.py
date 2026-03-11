@@ -5,9 +5,10 @@ __author__ = "Gabriel Dorlhiac"
 
 import logging
 import os
+import random
 import socket
 import sys
-from typing import List
+from typing import List, Optional
 
 from lute.execution.launch import (
     get_base_launch_parser,
@@ -25,6 +26,22 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
+def find_random_port(
+    min_port: int = 41923, max_port: int = 64324, max_tries: int = 20
+) -> Optional[int]:
+    ports: List[int] = random.choices(range(min_port, max_port), k=max_tries)
+
+    for port in ports:
+        sock: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            sock.bind(("", port))
+            sock.close()
+            del sock
+            return port
+        except Exception:
+            continue
+    return None
 
 
 def main():
@@ -71,7 +88,9 @@ def main():
 
     num_concurrent_steps: int = get_concurrent_job_steps(wf_defn)
     manager_host: str = socket.gethostname()
-    manager_port: int = 41239
+    manager_port: Optional[int] = find_random_port()
+    if manager_port is None:
+        raise RuntimeError("Cannot bind a port!")
     os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
     # fmt: off
     manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(

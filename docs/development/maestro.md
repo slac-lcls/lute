@@ -30,11 +30,261 @@ Currently, the `launch_maestro.py` script (refer to the [creating workflows with
 
 **Important:** HTTPS is **NOT** implemented - this communication is not intended to run over anything but a trusted local network (such as within the batch cluster).
 
-| Endpoint  | Message Structure                        | Example                                                            |
-|:---------:|:----------------------------------------:|:------------------------------------------------------------------:|
-| `/status` | `{"managed_task":"...","status":"..."}`  | `{"managed_task": "SmallDataProducer", "status": "STARTED"}`       |
-| `/log`    | `{"managed_task":"...","message":"..."}` | `{"managed_task": "SmallDataProducer", "message": "Test message"}` |
+### Endpoints
+#### `/status`
+##### Methods
 
+- `GET`
+
+##### Query Parameters
+
+None
+
+##### Request Body
+```json
+    {
+        "managed_task": "...",
+        "status": "...",
+        # additional keys to be available to other running managed Tasks
+    }
+```
+
+- Additional keys may be provided beyond the two above (which are required). This allows **managed** `Task`s to attach additional metadata to their entry in the `maestro` tracker. This metadata will be available to other **managed** `Task`s that run in parallel - it therefore provides a mechanism for IPC between processes without dealing with host/port discovery.
+
+##### Response
+HTTP OK
+
+##### Example
+
+```py3
+import requests
+
+json_data: Dict[str, str] = {"managed_task": "SmallDataProducer", "status": "STARTED"}
+resp: requests.models.Response = requests.post(
+    "http://MANAGER_URL/status", json=json_data
+)
+```
+
+#### `/log`
+##### Methods
+
+- `POST`
+
+##### Query Parameters
+
+None
+
+##### Request Body
+```json
+    {
+        "managed_task": "...",
+        "message": "..."
+    }
+```
+
+##### Response
+HTTP OK
+
+##### Example
+
+```py3
+import requests
+
+json_data: Dict[str, str] = {
+    "managed_task": "SmallDataProducer", "message": "Test message"
+}
+resp: requests.models.Response = requests.post(
+    "http://MANAGER_URL/status", json=json_data
+)
+```
+
+#### `/tasks`
+##### Methods
+
+- `GET`
+
+##### Query Parameters
+
+None
+
+##### Request Body
+
+None
+
+##### Response
+
+```json
+{
+    "managed_tasks": [
+        { "name": "Task1Manager", "status": "RUNNING", /* other keys */ },
+        { "name": "Task2Manager", "status": "RUNNING", /* other keys */ }
+    ]
+}
+```
+
+- The `/tasks` API will return a set of keys that can change. In addition to just the name and status which is always provided, the **managed** `Task`s themselves may give information to `maestro` which will then be returned to other running processes that request it. This is provided via `/status` updates, which can include arbitrary keys in addition to the status update.
+
+    - In general, this will usually include the name of the `Task` (in addition to **managed** `Task`) and host names for the processes.
+
+##### Example
+
+```py3
+import requests
+
+json_data: Dict[str, str] = {
+    "managed_task": "SmallDataProducer", "message": "Test message"
+}
+resp: requests.models.Response = requests.get("http://MANAGER_URL/status")
+
+resp_json: Dict[str, Any] = resp.json()
+# resp_json should look like:
+# {
+#     "managed_tasks": [
+#         { "name": "...", "status": "...", "task": "...", OTHER KEYS MAYBE },
+#         { "name": "...", "status": "...", "task": "...", OTHER KEYS MAYBE },
+#     ]
+# }
+```
+
+### `/rpc`
+
+The `rpc` endpoint consists of a `GET` and `POST` mechanism which allow **managed** `Task`s to request procedures be done by or information returned from other running **managed** `Task`s.
+
+For requesting a procedure, it involves:
+
+- **managed** `Task` 1 will use `POST` to request something of a target `Task` 2.
+- **managed** `Task` 2 will use `GET` to see if there is some pending work. It then runs the requested procedure.
+
+While not the explicit purpose of the endpoint, clever crafting of messages also enables it be used for general IPC.
+
+- **managed** `Task` 1 will use `POST` to request something of **managed** `Task` 2.
+- **managed** `Task` 2 will use `GET` to see if any requests are waiting for it.
+- **managed** `Task` 2 will use `POST` to put up a response.
+- **managed** `Task` 1 will use `GET` to read the response.
+
+`maestro` maintains a queue system to allow work to be scheduled and acknowledged by various processes running in parallel without those processes having to deal with the routing of messages.
+
+NOTE: This endpoint will be updated to bring terminology inline with the rest of the project. Currently `Task` is misused here, referring to a **managed** `Task`. Use caution.
+
+##### Methods
+
+- `GET`
+- `POST`
+
+##### Query Parameters
+
+###### `GET`
+
+- `?task=XYZ` : The **managed** `Task` for which the message is directed. This information may alternatively be provided in the request body.
+
+###### `POST`
+
+None
+
+##### Request Body
+
+###### `GET`
+
+- `{ "task": "..." }`
+
+###### `POST`
+
+```json
+{
+    "target": "...",
+    "message": "..."
+}
+```
+
+- This will queue a message to be processed by the **managed** `Task` defined in `target`. The meaning of `message` is defined by the **managed** `Task`.
+
+##### Response
+
+###### `GET`
+
+
+```json
+{
+    "message": "output."
+}
+```
+
+
+###### `POST`
+
+```json
+"Message queued."
+```
+
+##### Example
+**Example 1 - The intended purpose of RPC**
+```python3
+import requests
+
+# From managed Task 1
+
+json_data: Dict[str, str] = {
+    "target": "Task2Manager", "message": "run_cleanup_function"
+}
+resp: requests.models.Response = requests.post("http://MANAGER_URL/rpc", json=json_data)
+```
+```python3
+# From managed Task 2
+## Check for messages
+
+resp: requests.models.Response = requests.get(
+    "http://MANAGER_URL/rpc?task=Task2Manager", json=json_data
+)
+
+## Would generally do error handling and so on, but ignore for now.
+if resp.json()["message"] == "run_cleanup_function":
+    run_cleanup_function()
+```
+
+**Example 2 - Adapted for more general IPC**
+```python3
+## Use structured messages to allow responses
+## requester includes name in message so answer can be routed back
+
+# From managed Task 1
+json_data: Dict[str, str] = {
+    "target": "Task2Manager", "message": "Task1Manager: What is the answer?"
+}
+resp: requests.models.Response = requests.post(
+    "http://MANAGER_URL/rpc", json=json_data
+)
+```
+```python3
+# From managed Task 2
+## Check for messages
+resp: requests.models.Response = requests.get(
+    "http://MANAGER_URL/rpc?task=Task2Manager"
+)
+
+## Would generally do error handling and so on, but ignore for now.
+requester_and_request: str = resp.json()["message"]
+
+requester, request = [item.strip() for item in requester_and_request.split(":")]
+
+answer: str = "I don't know"
+if request == "What is the answer":
+    answer = "42 is the answer"
+
+### Send response back
+json_data: Dict[str, str] = {
+    "target": requester, "message": answer
+}
+```
+```python3
+# Finally back to managed Task 1
+resp: requests.models.Response = requests.get(
+    "http://MANAGER_URL/rpc?task=Task1Manager"
+)
+
+## Would generally do error handling and so on, but ignore for now.
+answer: str = resp.json()["message"]
+print(answer)
+```
 
 ## `JobStep` class
 

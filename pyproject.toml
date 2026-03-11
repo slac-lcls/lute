@@ -9,7 +9,7 @@ requires-python = ">=3.8"
 dynamic = ["version"]
 dependencies = [
     "pyyaml",
-    "pydantic==1.10",
+    "pydantic>1.10.0,<2",
     "numpy",
     "requests",
     "zmq",
@@ -50,9 +50,7 @@ install = ['--skip-subprojects', 'spdlog']
 # -- But maestro code is Linux only atm
 skip = ["pp*", "cp36-*", "cp37-*", "*i686"]
 
-# Setup tests for build CI - not working atm
-# test-requires = "pytest"
-# test-command = "pytest ./tests/unit"
+# Tests are directly in the GitHub action
 
 # Try to set things up to cache what's possible to make things faster
 build-frontend = { name = "pip", args = ["--no-build-isolation"] }

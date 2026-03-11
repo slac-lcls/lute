@@ -55,12 +55,15 @@ from typing_extensions import TypedDict, TypeAlias
 
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
-    Party,
+    Communicator,
+    LUTE_SIGNALS,
     Message,
+    Party,
     PipeCommunicator,
     SocketCommunicator,
-    LUTE_SIGNALS,
-    Communicator,
+    TaskMetadataMessage,
+    TaskRequest,
+    TaskRequestMessage,
 )
 from lute.tasks.dataclasses import (
     DescribedAnalysis,
@@ -133,6 +136,7 @@ class ExecutorHooks:
     task_cancelled: Hook
     task_result: Hook
     task_log: Hook
+    task_request: Hook
 
 
 class BaseExecutor(ABC):
@@ -221,8 +225,53 @@ class BaseExecutor(ABC):
     def task_name(self, new_name: str) -> None:
         self._analysis_desc.task_result.task_name = new_name
 
-    def _report_to_manager(self, end_point: str, json_data: Dict[str, str]) -> None:
-        requests.post(f"http://{self._lute_manager_url}/{end_point}", json=json_data)
+    @property
+    def managed_task_name(self) -> str:
+        return self._m_task_name
+
+    def _report_to_manager(
+        self,
+        end_point: str,
+        json_data: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> Any:
+        try:
+            func = getattr(requests, method.lower())
+        except AttributeError:
+            logger.error(f"Unable to send an HTTP request of type {method}")
+            return
+
+        # Set a timeout so we don't hang if the workflow manager dies
+        timeout: float = 5.0
+        try:
+            resp: requests.models.Response
+            if json_data is not None:
+                resp = func(
+                    f"http://{self._lute_manager_url}/{end_point}",
+                    json=json_data,
+                    timeout=timeout,
+                )
+            else:
+                resp = func(
+                    f"http://{self._lute_manager_url}/{end_point}", timeout=timeout
+                )
+
+            if hasattr(resp, "json"):
+                try:
+                    good_json: Any = resp.json()
+                    return good_json
+                except requests.JSONDecodeError:
+                    # logger.debug("Bad json.")
+                    # Don't know if we want to check this?
+                    # Probably available via headers whether it should be decoded
+                    # as json
+                    ...
+            if hasattr(resp, "content"):
+                return resp.content
+        except requests.ConnectTimeout:
+            logger.error(
+                f"HTTP request to workflow manager timed out after {timeout} seconds!"
+            )
 
     def add_tasklet(
         self,
@@ -665,10 +714,13 @@ class BaseExecutor(ABC):
     def _submit_task(self, cmd: str) -> subprocess.Popen:
         proc: subprocess.Popen = subprocess.Popen(
             cmd.split(),
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=self._analysis_desc.task_env,
         )
+        if proc.stdin is not None:
+            os.set_blocking(proc.stdin.fileno(), False)
         if proc.stdout is not None:
             os.set_blocking(proc.stdout.fileno(), False)
         if proc.stderr is not None:
@@ -741,9 +793,13 @@ class BaseExecutor(ABC):
         self.task_name = re.sub(r"_\d+$", "", self.task_name)
 
         if self._lute_manager_url is not None:
+            # On STARTED we will store some information that could be useful for `maestro`
             json_data: Dict[str, str] = {
                 "managed_task": self._m_task_name,
+                "task": self.task_name,
                 "status": "STARTED",
+                # This should be set by now
+                "executor_hostname": os.getenv("LUTE_EXECUTOR_HOST", "UNKNOWN"),
             }
             self._report_to_manager(end_point="status", json_data=json_data)
 
@@ -763,12 +819,16 @@ class BaseExecutor(ABC):
                     self._sigalrm_task(proc)
             time.sleep(self._analysis_desc.poll_interval)
 
+        if proc.stdin is not None:
+            os.set_blocking(proc.stdin.fileno(), True)
         if proc.stdout is not None:
             os.set_blocking(proc.stdout.fileno(), True)
         if proc.stderr is not None:
             os.set_blocking(proc.stderr.fileno(), True)
 
         self._finalize_task(proc)
+        if proc.stdin is not None:
+            proc.stdin.close()
         if proc.stdout is not None:
             proc.stdout.close()
         if proc.stderr is not None:
@@ -1119,6 +1179,17 @@ class Executor(BaseExecutor):
                 f"{executor._analysis_desc.task_result.task_name} status": "RUNNING",
             }
             post_elog_run_status(elog_data)
+            # Tell `maestro` we're RUNNING as well
+            if executor._lute_manager_url is not None:
+                json_data: Dict[str, Any] = {
+                    "managed_task": executor.managed_task_name,
+                    "task": executor.task_name,
+                    "status": "RUNNING",
+                }
+                executor._report_to_manager(
+                    end_point="status",
+                    json_data=json_data,
+                )
             return None
 
         self.add_hook("task_started", task_started)
@@ -1224,6 +1295,72 @@ class Executor(BaseExecutor):
             return False
 
         self.add_hook("task_log", task_log)
+
+        def task_request(
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
+            if isinstance(msg, TaskRequestMessage):
+                req: TaskRequest = msg.contents
+                if req.for_manager:
+                    # Task wants to ask something of the workflow manager directly
+                    if req.request == "RUNNING_TASKS":
+                        if executor._lute_manager_url is not None:
+                            # Ask `maestro` for the running Tasks
+                            # Response is returned, but ignoring for now
+                            resp: Any = executor._report_to_manager(
+                                end_point="tasks",
+                                json_data=None,
+                                method="GET",
+                            )
+                            for communicator in executor._communicators:
+                                if isinstance(communicator, PipeCommunicator):
+                                    communicator.write(
+                                        Message(contents=resp), proc=proc
+                                    )
+                            # Immediately read again in this case, since the Task
+                            # may have an answer instantly
+                            executor._task_loop(proc=proc)  # type: ignore
+                else:
+                    # Task wants to ask something of another Task
+                    # This still goes via the workflow manager. But different APIs
+                    ...
+            else:
+                logger.error(
+                    "Task Request improperly formatted. Received message of "
+                    f"type: {type(msg)}"
+                )
+            return None
+
+        self.add_hook("task_request", task_request)
+
+        def task_metadata(
+            executor: Executor_T,
+            msg: Message,
+            proc: Optional[subprocess.Popen] = None,
+        ) -> Optional[bool]:
+            if isinstance(msg, TaskMetadataMessage):
+                # Maestro just updates all metadata if its provided on any status
+                # update. So this can be a simple call.
+                if executor._lute_manager_url is not None:
+                    json_data: Dict[str, Any] = {
+                        "managed_task": executor.managed_task_name,
+                        "task": executor.task_name,
+                        "status": "RUNNING",
+                    }
+                    # Add in the Task's metadata
+                    json_data.update(msg.contents)
+                    executor._report_to_manager(
+                        end_point="status",
+                        json_data=json_data,
+                    )
+            else:
+                logger.debug("Got metadata signal without metadata message.")
+
+            return None
+
+        self.add_hook("task_metadata", task_metadata)
 
     def _task_loop(self, proc: subprocess.Popen) -> None:
         """Actions to perform while the Task is running.

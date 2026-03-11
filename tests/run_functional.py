@@ -5,6 +5,7 @@ __author__ = "Gabriel Dorlhiac"
 import argparse
 import logging
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -638,6 +639,24 @@ def run_workflow_prefect(
         return True
 
 
+def find_random_port(
+    min_port: int = 41923, max_port: int = 64324, max_tries: int = 20
+) -> Optional[int]:
+    ports: List[int] = random.choices(range(min_port, max_port), k=max_tries)
+
+    for port in ports:
+        sock: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            sock.bind(("", port))
+            sock.close()
+            del sock
+            return port
+        except Exception:
+            continue
+    return None
+
+
 def run_workflow_maestro(
     lute_location: str,
     config_file: str,
@@ -681,14 +700,16 @@ def run_workflow_maestro(
 
     num_concurrent_steps: int = get_concurrent_job_steps(wf_defn)
     manager_host: str = socket.gethostname()
-    manager_port: int = 41239
+    manager_port: Optional[int] = find_random_port()
+    if manager_port is None:
+        raise RuntimeError("Cannot bind a port!")
     os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
 
     # fmt: off
     manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
         num_concurrent_steps,                     # Manager threads
         2,                                        # Server threads
-        False,                                    # Unbuffered logs
+        True,                                     # Unbuffered logs
         "0.0.0.0",                                # Server IP
         manager_port,                             # Server port
         _maestro.LauncherType.SlurmLauncherType,  # Launch mechanism

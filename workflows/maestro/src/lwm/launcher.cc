@@ -89,7 +89,7 @@ namespace LWM {
     }
 
     std::string cancel_cmd = "scancel";
-    for (const auto &pair : m_active_jobs) {
+    for (const auto& pair : m_active_jobs) {
       cancel_cmd += " " + pair.second;
     }
     // We use std::system here as a quick way to fire and forget the scancel
@@ -119,14 +119,23 @@ namespace LWM {
   }
 
   HTTP::Response JsonStatusHandler::operator()(const HTTP::Request& request) {
-    std::map<std::string,std::string> status;
-    parse_json(request.content(), status); // Implemented by HTTP::JsonHandler
-    {
+    std::map<std::string,std::string> status_plus_data;
+    parse_json(request.content(), status_plus_data); // Implemented by HTTP::JsonHandler
+    if (status_plus_data.count("managed_task")) {
       std::lock_guard<std::mutex> lock(m_status_mut);
-      m_status_map[status["managed_task"]] = status["status"];
-      if (status["status"] == "STARTED" &&
-          m_splits_map.find(status["managed_task"]) != m_splits_map.end()) {
-        m_splits_map[status["managed_task"]]->running_point = std::chrono::steady_clock::now();
+      std::string task_name = status_plus_data["managed_task"];
+      if (status_plus_data.count("status")) {
+        m_status_map[task_name] = status_plus_data["status"];
+        if (status_plus_data["status"] == "STARTED" && m_splits_map.count(task_name)) {
+          m_splits_map[status_plus_data["managed_task"]]->running_point = std::chrono::steady_clock::now();
+        }
+      }
+
+      // Store additional fields as metadata
+      for (auto const& [key, val] : status_plus_data) {
+        if (key != "managed_task" && key != "status") {
+          m_metadata_map[task_name][key] = val;
+        }
       }
     }
 
@@ -136,6 +145,9 @@ namespace LWM {
   }
 
   HTTP::Response JsonLogHandler::operator()(const HTTP::Request& request) {
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+    const std::string GREEN = "\033[32m";
     std::map<std::string, std::string> log;
     if (m_unbuffered_logs) {
       parse_json(request.content(), log);
@@ -143,19 +155,113 @@ namespace LWM {
         //  std::lock_guard<std::mutex> lock(m_log_mut);
         //  m_log_map[log["managed_task"]] = log["message"];
         if (log.find("managed_task") != log.end()) {
-          std::string msg = "[";
-          msg += log["managed_task"] + "] ";
+          std::string msg {
+            "\n\t" + BOLD + GREEN + "[Logs from **" + log["managed_task"] + "**]" + RESET + "\n"
+          };
           if (log.find("log") != log.end()) {
-            m_logger->info(msg + log["log"]);
+            msg += log["log"];
           } else if (log.find("message") != log.end()) {
-            m_logger->info(msg + log["message"]);
+            msg += log["message"];
           }
+          m_logger->info(msg);
         }
       }
     }
     HTTP::Response response(HTTP::CODE::OK);
     response.set_content("Log received.");
     return response;
+  }
+
+  HTTP::Response JsonTasksHandler::operator()(const HTTP::Request& request) {
+    std::string json_res = "{ \"managed_tasks\": [";
+    {
+      std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+      bool first = true;
+
+      // I kinda regret how I set this up now... but will recombine
+      // stuff into a single map to do the JSON string conversion
+      // TODO: Probably need to restructure all this key/val handling to be smarter...
+      for (const auto& [managed_task_name, status] : m_status_handler->m_status_map) {
+        if (!first) {
+          json_res += ", ";
+        }
+        std::map<std::string, std::string> json_map;
+        json_map["name"] = managed_task_name;
+        json_map["status"] = status;
+        if (m_status_handler->m_metadata_map.count(managed_task_name)) {
+          const auto& task_meta = m_status_handler->m_metadata_map[managed_task_name];
+          json_map.insert(task_meta.begin(), task_meta.end());
+        }
+        try {
+          json_res += to_json_str(json_map);
+          first = false;
+        } catch (const HTTP::InvalidJsonMaps& e) {
+          m_logger->error("Can't JSONify data for: " + managed_task_name + ". " + e.what());
+        }
+      }
+    }
+    json_res += "] }";
+    m_logger->debug("Created response: {}", json_res);
+    HTTP::Response response(HTTP::CODE::OK);
+    response.set_header("Content-Type", "application/json");
+    response.set_content(json_res);
+    return response;
+  }
+
+  HTTP::Response JsonRpcHandler::operator()(const HTTP::Request& request) {
+    if (request.method() == HTTP::METHOD::POST) {
+      std::map<std::string, std::string> rpc_data;
+      parse_json(request.content(), rpc_data);
+
+      if (rpc_data.find("target") != rpc_data.end()
+          && rpc_data.find("message") != rpc_data.end()) {
+        std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+        m_status_handler->m_rpc_queues[rpc_data["target"]].push(rpc_data["message"]);
+
+        HTTP::Response response(HTTP::CODE::OK);
+        response.set_content("Message queued.");
+        return response;
+      }
+      return HTTP::Response(HTTP::CODE::BadRequest);
+    } else if (request.method() == HTTP::METHOD::GET) {
+      // Basic query param parsing for ?task=...
+      std::string task_name;
+      size_t pos = request.url().find("task=");
+      if (pos != std::string::npos) {
+        task_name = request.url().substr(pos + 5);
+        size_t amp_pos = task_name.find('&');
+        if (amp_pos != std::string::npos) {
+          task_name = task_name.substr(0, amp_pos);
+        }
+      } else {
+        // Try body if not in query param
+        std::map<std::string, std::string> rpc_data;
+        parse_json(request.content(), rpc_data);
+        if (rpc_data.find("task") != rpc_data.end()) {
+          task_name = rpc_data["task"];
+        }
+      }
+
+      if (!task_name.empty()) {
+        std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+        if (m_status_handler->m_rpc_queues.find(task_name) != m_status_handler->m_rpc_queues.end()
+            && !m_status_handler->m_rpc_queues[task_name].empty()) {
+          std::string msg = m_status_handler->m_rpc_queues[task_name].front();
+          m_status_handler->m_rpc_queues[task_name].pop();
+
+          HTTP::Response response(HTTP::CODE::OK);
+          response.set_header("Content-Type", "application/json");
+          response.set_content("{ \"message\": \"" + msg + "\" }");
+          return response;
+        }
+      }
+
+      HTTP::Response response(HTTP::CODE::OK);
+      response.set_header("Content-Type", "application/json");
+      response.set_content("{ \"message\": null }");
+      return response;
+    }
+    return HTTP::Response(HTTP::CODE::MethodNotAllowed);
   }
 
   bool Launcher::can_task_run(const JobStep& job, MaybeJobFutures_t wait_for, std::string& reason) {
@@ -272,13 +378,6 @@ namespace LWM {
 
     int status = std::system(final_cmd.c_str());
 
-    if (WEXITSTATUS(status)) {
-      std::string msg{
-        "Error running subprocess. Return code: " + std::to_string(WEXITSTATUS(status))
-      };
-      m_logger->error(msg);
-    }
-
     if (!return_output) {
       return std::make_pair("", status);
     } else {
@@ -321,6 +420,10 @@ namespace LWM {
       int ret_status;
       std::tie(log, ret_status) = run_subprocess_log(launch_cmd, true);
       if (ret_status != 0) {
+        m_logger->error("Error submitting job for {}. Subprocess return code: {}",
+                        job.managed_task_name,
+                        std::to_string(WEXITSTATUS(ret_status)));
+
         status = "SUBPROCESS_FAILED";
         return JobReturn(managed_task_name, status, log, splits);
       }
@@ -396,7 +499,16 @@ namespace LWM {
       logger()->error("Trying to get information for an empty SLURM jobid!");
     }
     std::string get_logfile_cmd{"sacct -j " + jobid + " -o StdOut%200"};
+    m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
     auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+
+    if (WEXITSTATUS(ret_code)) {
+      logger()->error("Unable to run {}. Return code: {}",
+                      get_logfile_cmd,
+                      std::to_string(WEXITSTATUS(ret_code)));
+      return;
+    }
+
 
     std::regex logfile_regex(R"((/[^\s]+\.out))");
     std::smatch logfile_match;
@@ -404,6 +516,8 @@ namespace LWM {
     if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
       logfile_path = logfile_match[1].str();
     } else {
+      logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
+                      slurm_info);
       return;
     }
 
@@ -415,7 +529,28 @@ namespace LWM {
     }
 
     std::string get_slurm_log_cmd{"cat "+logfile_path};
+    logger()->debug("Attempting to grab output from log file using: {}",
+                    get_slurm_log_cmd);
+
+    // Wait some milliseconds if it fails. Then wait longer until more than 10 s
+    size_t wait_ms { 500 };
     std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+    if (WEXITSTATUS(ret_code) == 0) {
+      return;
+    }
+    while (WEXITSTATUS(ret_code) && wait_ms < 10000) {
+      logger()->error("Trying to `cat` log file failed. Will wait {} ms and try again.",
+                      wait_ms);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+      std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+      if (WEXITSTATUS(ret_code) == 0) {
+        return;
+      }
+      wait_ms <<= 2;
+    }
+
+    logger()->error("Unable to read log file: {}", logfile_path);
   }
 
   std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
