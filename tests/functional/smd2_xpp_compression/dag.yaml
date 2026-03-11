@@ -1,0 +1,4 @@
+!LUTE_DAG
+task_name: "SmallDataProducerXppOrig"
+slurm_params: "--psana2 --partition=milano --account=lcls:data --ntasks-per-node=50 --nodes=1"
+next: []
