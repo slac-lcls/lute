@@ -1,6 +1,6 @@
 # LUTE
 [![Docs](https://img.shields.io/badge/Docs-GH_Pages-blue)](https://slac-lcls.github.io/lute/dev)
-[![Release build](https://github.com/slac-lcls/lute/actions/workflows/build.yml/badge.svg)](https://github.com/slac-lcls/lute/actions/workflows/release.yml)
+[![Release build](https://github.com/slac-lcls/lute/actions/workflows/release.yml/badge.svg)](https://github.com/slac-lcls/lute/actions/workflows/release.yml)
 
 ## Description
 `lute`, or `LUTE`, is the LCLS Unified Task Executor - an automated workflow package for running analysis pipelines at SLAC's LCLS. This project is the next iteration of [btx](https://github.com/lcls-users/btx).
