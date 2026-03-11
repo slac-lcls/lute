@@ -99,7 +99,7 @@ def main():
         args.unbuffered,                         # Unbuffered logs
         "0.0.0.0",                               # Server IP
         manager_port,                            # Server port
-        _maestro.LauncherType.PythonLauncherType, # Launch mechanism
+        _maestro.LauncherType.SlurmLauncherType, # Launch mechanism
         is_daq2,                                 # Is daq2?
         run_type,                                # Run type
     )
