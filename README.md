@@ -135,4 +135,4 @@ Debug logging code (i.e. `logger.debug("my message")`) need not be placed inside
 This project's license is available in `LICENSE.md`.
 
 ## Project status
-Early active development - pre-alpha.
+Early active development - the public API is still subject to change, but some degree of stability can be expected at this point. The codebase is in active usage in production.

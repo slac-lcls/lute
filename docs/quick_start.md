@@ -85,7 +85,7 @@ title: "Doing Peakfinding" # Include experiment description if desired
 experiment: "{{ $EXPERIMENT }}"
 #run: "{{ $RUN }}"
 date: "2023/10/25"
-lute_version: 0.1.1      # Do not be change unless need to force older version
+lute_version: 0.2.0      # Do not be change unless need to force older version
 task_timeout: 6000
 work_dir: ""
 ...
