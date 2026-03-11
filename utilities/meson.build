@@ -2,10 +2,12 @@ bash_scripts = [
     'activate_installation'
 ]
 
-install_data(
-    bash_scripts,
-    install_dir: get_option('bindir'),
-)
+if get_option('install_utilities')
+    install_data(
+        bash_scripts,
+        install_dir: get_option('bindir'),
+    )
+endif
 
 py_sources = [
     '__init__.py',
