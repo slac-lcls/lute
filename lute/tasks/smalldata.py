@@ -45,6 +45,11 @@ def laser_on_mean(
     return laser_on0.sum(axis=0) + laser_on1.sum(axis=0)
 
 
+def laser_off_mean(
+    laser_off0: npt.NDArray[np.float64], laser_off1: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
+    return laser_off0.sum(axis=0) + laser_off1.sum(axis=0)
+
 class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
@@ -60,35 +65,43 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
         # Currently scattering data is extracted as standard since its used
         # for all analysis types (XSS, XAS, XES,...)
         self._extract_standard_data()
+        self._extract_xss(self._task_parameters.xss_event_codes)
 
     def _run(self) -> None:
         diff: Optional[npt.NDArray[np.float64]]
         bins: npt.NDArray[np.float64]
-        laser_on: Optional[npt.NDArray[np.float64]]
-        bins, diff, laser_on = self._calc_scan_binned_difference_xss()
+        laser_on: npt.NDArray[np.float64]
+        laser_off: npt.NDArray[np.float64]
+        bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xss()
 
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=sum_diff)
             laser_on = self._mpi_comm.reduce(laser_on, op=laser_on_mean)
-        else:
-            laser_on = np.nansum(laser_on, axis=0)
-
-        if self._mpi_rank == 0 and diff is not None and laser_on is not None:
+            laser_off = self._mpi_comm.reduce(laser_off, op=laser_off_mean)
+        if (
+            self._mpi_rank == 0
+            and diff is not None
+            and laser_on is not None
+            and laser_off is not None
+        ):
             diff /= self._mpi_size
-            laser_on /= self._total_num_events
-            name: str = self._scan_var_name if self._scan_var_name else "By_Event"
-            plots: pn.Tabs = self.plot_all_xss(laser_on, bins, diff, name)
+            laser_on /= self._num_events
+            laser_off /= self._num_events
+            name: str = self._scan_var_name if self._scan_var_name else "by_event"
+            plots = self.plot_all_xss(bins, diff, name)
             plot_display_name: str
             run: int
             try:
                 run = int(self._task_parameters.lute_config.run)
             except ValueError:
                 run = 0
-            exp_run: str = f"{run:04d}_{name}_XSS"
+            
             if "lens" in name:
-                plot_display_name = f"lens_scans/{exp_run}"
+                plot_display_name = f"XSS/{run:04d}/lens_scans/{name}"
+            elif name == "by_event":
+                plot_display_name = f"XSS/{run:04d}/event_scans/by_event"
             else:
-                plot_display_name = f"time_scans/{exp_run}"
+                plot_display_name = f"XSS/{run:04d}/time_scans/{name}"
 
             self._result.payload = ElogSummaryPlots(plot_display_name, plots)
 
@@ -148,8 +161,7 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             laser_on /= self._mpi_size
             laser_off /= self._mpi_size
             plots = self.plot_all_xas(laser_on, laser_off, ccm_bins, diff)
-            exp_run = f"{run:04d}_XAS"
-            plot_display_name = f"XAS/{exp_run}"
+            plot_display_name = f"XAS/{run:04d}"
             all_plots.append(ElogSummaryPlots(plot_display_name, plots))
 
         scan_bins: Optional[npt.NDArray[np.float64]]
@@ -168,14 +180,15 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
         ):
             plots = self.plot_xas_scan_hv(laser_on, laser_off, scan_bins, diff)
             if plots is not None:
-                name: str = self._scan_var_name if self._scan_var_name else "By_Event"
-                exp_run = f"{run:04d}_{name}_XAS"
+                name: str = self._scan_var_name if self._scan_var_name else "by_event"
                 if "lens" in name:
-                    plot_display_name = f"lens_scans/{exp_run}"
+                    plot_display_name = f"XAS/{run:04d}/lens_scans/{name}"
                 elif "lxe_opa" in name:
-                    plot_display_name = f"power_scans/{exp_run}"
+                    plot_display_name = f"XAS/{run:04d}/power_scans/{name}"
+                elif name == "by_event":
+                    plot_display_name = f"XAS/{run:04d}/event_scans/by_event"
                 else:
-                    plot_display_name = f"time_scans/{exp_run}"
+                    plot_display_name = f"XAS/{run:04d}/time_scans/{name}"
 
                 all_plots.append(ElogSummaryPlots(plot_display_name, plots))
         self._result.payload = all_plots
@@ -233,8 +246,7 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
             laser_off /= self._mpi_size
             energy_bins: Optional[npt.NDArray[np.float64]] = None
             plots = self.plot_xes_hv(laser_on, laser_off, energy_bins, diff)
-            exp_run = f"{run:04d}_XES"
-            plot_display_name = f"XES/{exp_run}"
+            plot_display_name = f"XES/{run:04d}"
             all_plots.append(ElogSummaryPlots(plot_display_name, plots))
 
         scan_bins: npt.NDArray[np.float64]
@@ -252,14 +264,16 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
         ):
             plots = self.plot_xes_scan_hv(laser_on, laser_off, scan_bins, diff)
             if plots is not None:
-                name: str = self._scan_var_name if self._scan_var_name else "By_Event"
+                name: str = self._scan_var_name if self._scan_var_name else "by_event"
                 exp_run = f"{run:04d}_{name}_XES"
                 if "lens" in name:
-                    plot_display_name = f"lens_scans/{exp_run}"
+                    plot_display_name = f"XES/{run:04d}/lens_scans/{name}"
                 elif "lxe_opa" in name:
-                    plot_display_name = f"power_scans/{exp_run}"
+                    plot_display_name = f"XES/{run:04d}/power_scans/{name}"
+                elif "by_event" in name:
+                    plot_display_name = f"XES/{run:04d}/event_scans/{name}"
                 else:
-                    plot_display_name = f"time_scans/{exp_run}"
+                    plot_display_name = f"XES/{run:04d}/time_scans/{name}"
 
                 all_plots.append(ElogSummaryPlots(plot_display_name, plots))
         self._result.payload = all_plots

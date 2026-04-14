@@ -625,17 +625,24 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     scanned motors.
     """
 
-    class Thresholds(BaseModel):
+    class AnalysisParameters(BaseModel):
         min_Iscat: float = Field(
             10.0, description="Minimum scattering intensity to use for filtering."
         )
         min_ipm: float = Field(
             1000.0, description="Minimum X-ray intensity to use for filtering."
         )
-
-    class AnalysisFlags(BaseModel):
-        use_pyfai: bool = True
-        use_asymls: bool = False
+        q_norm: Tuple[float, float] = Field(
+            (0.9, 3.5),
+            description=("Q-range to use for normalization of scattering signal."
+            ),
+        )
+        median_filter_size: int = Field(
+            12, description="Size of median filter to apply to scattering profiles."
+        )
+        num_intensity_bins: int = Field(
+            100, description="Number of bins for total intensity based subsampling."
+        )
 
     _find_smd_path = validate_smd_path("smd_path")
 
@@ -645,6 +652,10 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     xss_detname: Optional[str] = Field(
         None, description="Name of the detector with scattering data."
     )
+    xss_event_codes: Optional[List[int]] = Field(
+        None,
+        description="List of event codes to use for XSS analysis other than laser on/off."
+    )   
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
     )
@@ -655,8 +666,13 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
-    # analysis_flags: AnalysisFlags
+    output_dir: Optional[str] = Field(
+        None, description=(
+            "Optional directory to save XSS analysis results. "
+            "If None, no results will be saved."
+        )
+    )
+    analysis_parameters: AnalysisParameters = Field(AnalysisParameters(min_Iscat=10.0, min_ipm=1000.0, q_range=(0.9, 3.5), q_norm=(0.9, 3.5)))
 
 
 class AnalyzeSmallDataXASParameters(TaskParameters):
