@@ -50,6 +50,7 @@ def laser_off_mean(
 ) -> npt.NDArray[np.float64]:
     return laser_off0.sum(axis=0) + laser_off1.sum(axis=0)
 
+
 class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
@@ -95,7 +96,7 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
                 run = int(self._task_parameters.lute_config.run)
             except ValueError:
                 run = 0
-            
+
             if "lens" in name:
                 plot_display_name = f"XSS/{run:04d}/lens_scans/{name}"
             elif name == "by_event":

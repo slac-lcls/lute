@@ -374,18 +374,18 @@ class AnalyzeSmallData(Task):
 
         return total_filter
 
-    def _calc_xss_dark_mean(
-        self
-    ) -> npt.NDArray[np.float64]:
+    def _calc_xss_dark_mean(self) -> npt.NDArray[np.float64]:
         """Calculate the dark (X-ray off) mean of a set of XSS 2D profiles.
-    
+
         Returns:
             dark_mean (npt.NDArray[np.float64]): The calculated dark mean.
                 Shape: (phi_bins, q_bins)
         """
         dark_mean: npt.NDArray[np.float64]
         try:
-            dark_mean = np.nanmean(self._az_int[self._filter_dict["xray off"], :, :], axis=0)
+            dark_mean = np.nanmean(
+                self._az_int[self._filter_dict["xray off"], :, :], axis=0
+            )
             dark_mean = self._mpi_comm.allreduce(dark_mean, op=MPI.SUM)
             dark_mean /= self._mpi_size
         except KeyError:
@@ -575,10 +575,10 @@ class AnalyzeSmallData(Task):
     # XSS - Extraction and filter by event code
     ############################################################################
     def _extract_xss(self, event_codes: Optional[List[int]]) -> None:
-        """Extract XSS additional event codes other than laser on/off 
+        """Extract XSS additional event codes other than laser on/off
         and setup event code filters.
 
-        Sets up filters for each event code provided in the input list. 
+        Sets up filters for each event code provided in the input list.
         Will search for both psana1 and psana2 formats of event code storage.
 
         Args:
@@ -588,15 +588,21 @@ class AnalyzeSmallData(Task):
         self._xss_event_codes = []
         if event_codes:
             for code in event_codes:
-                try: # psana1
+                try:  # psana1
                     self._filter_dict[f"code {code}"] = (
-                        self._smd_h5["evr"][f"code_{code}"][self._start_idx : self._stop_idx] == 1
+                        self._smd_h5["evr"][f"code_{code}"][
+                            self._start_idx : self._stop_idx
+                        ]
+                        == 1
                     )
                     self._xss_event_codes.append(code)
                 except Exception:
-                    try: # psana2
+                    try:  # psana2
                         self._filter_dict[f"code {code}"] = (
-                            self._smd_h5["timing"]["eventcodes"][self._start_idx : self._stop_idx][:, code] == 1
+                            self._smd_h5["timing"]["eventcodes"][
+                                self._start_idx : self._stop_idx
+                            ][:, code]
+                            == 1
                         )
                         self._xss_event_codes.append(code)
                     except Exception:
@@ -944,9 +950,9 @@ class AnalyzeSmallData(Task):
         self,
     ) -> Tuple[
         npt.NDArray[np.float64],
-        npt.NDArray[np.float64], 
-        npt.NDArray[np.float64], 
-        npt.NDArray[np.float64]
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
     ]:
         """Calculate the binned difference scattering.
 
@@ -972,7 +978,9 @@ class AnalyzeSmallData(Task):
             self._az_int -= dark_mean
         q_limits = self._task_parameters.analysis_parameters.q_norm
         norm: npt.NDArray[np.float64] = self._calc_norm_by_qrange(q_limits)
-        self._norm_az_int = self._az_int / norm[:, :, np.newaxis]                                # [events, phi_bins, q_bins]
+        self._norm_az_int = (
+            self._az_int / norm[:, :, np.newaxis]
+        )  # [events, phi_bins, q_bins]
         del dark_mean
         del norm
 
@@ -982,30 +990,46 @@ class AnalyzeSmallData(Task):
         filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        normed_xss_las_on: npt.NDArray[np.float64] = self._norm_az_int[filter_las_on]            # [events_las_on, phi_bins, q_bins]
-        normed_xss_las_off: npt.NDArray[np.float64] = self._norm_az_int[filter_las_off]          # [events_las_off, phi_bins, q_bins]
+        normed_xss_las_on: npt.NDArray[np.float64] = self._norm_az_int[
+            filter_las_on
+        ]  # [events_las_on, phi_bins, q_bins]
+        normed_xss_las_off: npt.NDArray[np.float64] = self._norm_az_int[
+            filter_las_off
+        ]  # [events_las_off, phi_bins, q_bins]
 
-        scanvals_las_on: npt.NDArray[np.float64] = self._scan_values[filter_las_on]              # [events_las_on]
+        scanvals_las_on: npt.NDArray[np.float64] = self._scan_values[
+            filter_las_on
+        ]  # [events_las_on]
 
         lxt_fast_scan: bool = (
             self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
         )
 
         bins: npt.NDArray[np.float64] = self._calc_scan_bins()
-        binned_xss_las_on: npt.NDArray[np.float64] = np.zeros((len(self._q_vals), len(bins)))    # [q_bins, scan_bins]
-        xss_las_off: npt.NDArray[np.float64] = np.nanmean(normed_xss_las_off, axis=(0, 1))       # [q_bins]
+        binned_xss_las_on: npt.NDArray[np.float64] = np.zeros(
+            (len(self._q_vals), len(bins))
+        )  # [q_bins, scan_bins]
+        xss_las_off: npt.NDArray[np.float64] = np.nanmean(
+            normed_xss_las_off, axis=(0, 1)
+        )  # [q_bins]
         for idx, scan_bin in enumerate(bins):
             if lxt_fast_scan:
                 if idx == len(bins) - 1:
                     continue
                 mask = (scanvals_las_on >= scan_bin) * (scanvals_las_on < bins[idx + 1])
-                binned_xss_las_on[:, idx] = np.nanmean(normed_xss_las_on[mask], axis=(0, 1))
+                binned_xss_las_on[:, idx] = np.nanmean(
+                    normed_xss_las_on[mask], axis=(0, 1)
+                )
 
             else:
                 mask = scanvals_las_on == scan_bin
-                binned_xss_las_on[:, idx] = np.nanmean(normed_xss_las_on[mask], axis=(0, 1))
+                binned_xss_las_on[:, idx] = np.nanmean(
+                    normed_xss_las_on[mask], axis=(0, 1)
+                )
 
-        diff: npt.NDArray[np.float64] = np.nan_to_num(binned_xss_las_on) - np.nan_to_num(xss_las_off[:, np.newaxis])
+        diff: npt.NDArray[np.float64] = np.nan_to_num(
+            binned_xss_las_on
+        ) - np.nan_to_num(xss_las_off[:, np.newaxis])
         return bins, diff, normed_xss_las_on, normed_xss_las_off
 
     def _calc_scan_binned_difference_xas(
@@ -1178,7 +1202,7 @@ class AnalyzeSmallData(Task):
 
             diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
                 (q_bins, scan_bins)
-            
+
             scan_var_name (str): Name of the scan variable.
 
         Returns:
@@ -1196,13 +1220,28 @@ class AnalyzeSmallData(Task):
         # Plot 2D mean azimuthal integration
         cake: npt.NDArray[np.float64] = np.nanmean(self._norm_az_int, axis=0)
         phis, qs = np.meshgrid(self._phi_vals, self._q_vals)
-        ax[0, 0].pcolormesh(phis, qs, cake.T, shading="nearest", cmap="viridis", vmin=np.nanpercentile(cake, 5), vmax=np.nanpercentile(cake, 95))
+        ax[0, 0].pcolormesh(
+            phis,
+            qs,
+            cake.T,
+            shading="nearest",
+            cmap="viridis",
+            vmin=np.nanpercentile(cake, 5),
+            vmax=np.nanpercentile(cake, 95),
+        )
         ax[0, 0].set_title(f"Run {run} - 2D Az Int")
         ax[0, 0].set_xlabel("$\phi$ (deg)")
         ax[0, 0].set_ylabel("Q ($\AA^{-1}$)")
         ax2 = ax[0, 0].twinx()
         phi_avgs = np.nanmean(cake, axis=1)
-        ax2.plot(self._phi_vals, phi_avgs, '-o', markerfacecolor='white', markeredgecolor='black', color='black')
+        ax2.plot(
+            self._phi_vals,
+            phi_avgs,
+            "-o",
+            markerfacecolor="white",
+            markeredgecolor="black",
+            color="black",
+        )
         ax2.set_ylim([0, np.nanmax(phi_avgs)])
         ax2.set_ylabel("Avg $\phi$-Intensity")
 
@@ -1219,7 +1258,9 @@ class AnalyzeSmallData(Task):
         colors = plt.cm.viridis(percentages)
         for i, pct in enumerate(percentages):
             idx = sorted_indices[int(np.ceil(pct * n_events)) - 1]
-            ax[0, 1].plot(self._q_vals, np.nanmean(az_av_laser_on[idx], axis=0), color=colors[i])
+            ax[0, 1].plot(
+                self._q_vals, np.nanmean(az_av_laser_on[idx], axis=0), color=colors[i]
+            )
         ax[0, 1].set_title("$S_{on}$ 1D Az Int")
         ax[0, 1].set_xlabel("Q ($\AA^{-1}$)")
         ax[0, 1].set_ylabel("Intensity (a.u.)")
@@ -1239,8 +1280,10 @@ class AnalyzeSmallData(Task):
         spacing = np.nanmax(np.abs(diff_slices))
         colors = plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
         for i in range(diff_slices.shape[1]):
-            ax[1, 1].axhline(i*spacing, color='gray', linestyle='--', linewidth=0.3)
-            ax[1, 1].plot(self._q_vals, diff_slices[:, i] + i*spacing, color=colors[i])
+            ax[1, 1].axhline(i * spacing, color="gray", linestyle="--", linewidth=0.3)
+            ax[1, 1].plot(
+                self._q_vals, diff_slices[:, i] + i * spacing, color=colors[i]
+            )
         ax[1, 1].set_title("$\Delta S$ slices")
         ax[1, 1].set_xlabel("Q ($\AA^{-1}$)")
         ax[1, 1].set_yticks([])
@@ -1259,17 +1302,21 @@ class AnalyzeSmallData(Task):
                 )
                 if np.sum(filter_code) == 0:
                     continue
-                diff_trace = np.nanmean(self._norm_az_int[filter_code], axis=(0, 1)) - laser_off
+                diff_trace = (
+                    np.nanmean(self._norm_az_int[filter_code], axis=(0, 1)) - laser_off
+                )
                 diff_traces.append(diff_trace)
                 valid_codes.append(code)
-                ax[2, 0].plot(self._q_vals, diff_trace, color=colors[i], label=f"{code}")
+                ax[2, 0].plot(
+                    self._q_vals, diff_trace, color=colors[i], label=f"{code}"
+                )
             ax[2, 0].set_title(f"$\Delta S$ relative to laser off")
             ax[2, 0].set_xlabel("Q ($\AA^{-1}$)")
             ax[2, 0].set_ylabel("Normalized intensity (a.u.)")
-            ax[2, 0].legend(fontsize='small')
+            ax[2, 0].legend(fontsize="small")
 
             labels = [f"{code}" for code in valid_codes]
-            ax[2, 1].imshow(diff_traces, aspect='auto', cmap='coolwarm_r')
+            ax[2, 1].imshow(diff_traces, aspect="auto", cmap="coolwarm_r")
             ax[2, 1].set_title(f"$\Delta S$ cross-talk relative to laser off")
             ax[2, 1].set_xlabel("Q ($\AA^{-1}$)")
             ax[2, 1].set_xticks([])
@@ -1277,9 +1324,10 @@ class AnalyzeSmallData(Task):
 
         plt.tight_layout()
         if self._task_parameters.output_dir:
-            fig.savefig(f"{self._task_parameters.output_dir}/{exp}_r{run:04d}_xss_summary.png")
+            fig.savefig(
+                f"{self._task_parameters.output_dir}/{exp}_r{run:04d}_xss_summary.png"
+            )
         return fig
-
 
     # XAS
     def plot_all_xas(

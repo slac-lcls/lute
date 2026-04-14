@@ -634,8 +634,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         )
         q_norm: Tuple[float, float] = Field(
             (0.9, 3.5),
-            description=("Q-range to use for normalization of scattering signal."
-            ),
+            description=("Q-range to use for normalization of scattering signal."),
         )
         median_filter_size: int = Field(
             12, description="Size of median filter to apply to scattering profiles."
@@ -654,8 +653,8 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     )
     xss_event_codes: Optional[List[int]] = Field(
         None,
-        description="List of event codes to use for XSS analysis other than laser on/off."
-    )   
+        description="List of event codes to use for XSS analysis other than laser on/off.",
+    )
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
     )
@@ -667,12 +666,17 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         ),
     )
     output_dir: Optional[str] = Field(
-        None, description=(
+        None,
+        description=(
             "Optional directory to save XSS analysis results. "
             "If None, no results will be saved."
+        ),
+    )
+    analysis_parameters: AnalysisParameters = Field(
+        AnalysisParameters(
+            min_Iscat=10.0, min_ipm=1000.0, q_range=(0.9, 3.5), q_norm=(0.9, 3.5)
         )
     )
-    analysis_parameters: AnalysisParameters = Field(AnalysisParameters(min_Iscat=10.0, min_ipm=1000.0, q_range=(0.9, 3.5), q_norm=(0.9, 3.5)))
 
 
 class AnalyzeSmallDataXASParameters(TaskParameters):
