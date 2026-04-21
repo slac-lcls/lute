@@ -168,7 +168,6 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
         except ValueError:
             run = 0
         plot_display_name: str
-        exp_run: str
         plots: Optional[pn.Tabs]
         if (
             self._mpi_rank == 0
@@ -286,7 +285,6 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
             plots = self.plot_xes_scan_hv(laser_on, laser_off, scan_bins, diff)
             if plots is not None:
                 name: str = self._scan_var_name if self._scan_var_name else "by_event"
-                exp_run = f"{run:04d}_{name}_XES"
                 if "lens" in name:
                     plot_display_name = f"XES/{run:04d}/lens_scans/{name}"
                 elif "lxe_opa" in name:

@@ -22,7 +22,6 @@ import numpy.typing as npt
 import panel as pn
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.colors import to_hex  # type: ignore
-from matplotlib.ticker import MaxNLocator  # type: ignore
 from mpi4py import MPI
 from scipy.signal import find_peaks  # type: ignore
 from scipy.optimize import curve_fit  # type: ignore
@@ -1584,7 +1583,7 @@ class AnalyzeSmallData(Task):
             ).opts(
                 cmap="coolwarm_r",
                 colorbar=True,
-                title=f"dS cross-talk to laser off",
+                title="dS cross-talk to laser off",
                 shared_axes=False,
             )
             tjump_grid[0, 1] = tjump_img
@@ -1601,7 +1600,7 @@ class AnalyzeSmallData(Task):
             ).opts(
                 cmap="coolwarm_r",
                 colorbar=True,
-                title=f"Processed dS cross-talk to laser off",
+                title="Processed dS cross-talk to laser off",
                 shared_axes=False,
             )
             tjump_grid[1, 1] = processed_tjump_img
