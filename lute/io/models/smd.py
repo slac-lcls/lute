@@ -634,8 +634,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         )
         q_norm: Tuple[float, float] = Field(
             (0.9, 3.5),
-            description=("Q-range to use for normalization of scattering signal."
-            ),
+            description=("Q-range to use for normalization of scattering signal."),
         )
         median_filter_size: int = Field(
             12, description="Size of median filter to apply to scattering profiles."

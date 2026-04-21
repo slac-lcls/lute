@@ -398,18 +398,18 @@ class AnalyzeSmallData(Task):
 
         return total_filter
 
-    def _calc_xss_dark_mean(
-        self
-    ) -> npt.NDArray[np.float64]:
+    def _calc_xss_dark_mean(self) -> npt.NDArray[np.float64]:
         """Calculate the dark (X-ray off) mean of a set of XSS 2D profiles.
-    
+
         Returns:
             dark_mean (npt.NDArray[np.float64]): The calculated dark mean.
                 Shape: (phi_bins, q_bins)
         """
         dark_mean: npt.NDArray[np.float64]
         try:
-            dark_mean = np.nanmean(self._az_int[self._filter_dict["xray off"], :, :], axis=0)
+            dark_mean = np.nanmean(
+                self._az_int[self._filter_dict["xray off"], :, :], axis=0
+            )
             dark_mean = self._mpi_comm.allreduce(dark_mean, op=MPI.SUM)
             dark_mean /= self._mpi_size
         except KeyError:
@@ -636,10 +636,10 @@ class AnalyzeSmallData(Task):
     # XSS - Extraction and TR difference
     ############################################################################
     def _extract_xss(self, event_codes: Optional[List[int]]) -> None:
-        """Extract XSS additional event codes other than laser on/off 
+        """Extract XSS additional event codes other than laser on/off
         and setup event code filters.
 
-        Sets up filters for each event code provided in the input list. 
+        Sets up filters for each event code provided in the input list.
         Will search for both psana1 and psana2 formats of event code storage.
 
         Args:
@@ -652,13 +652,19 @@ class AnalyzeSmallData(Task):
             for code in xss_codes:
                 try: # psana1
                     self._filter_dict[f"code {code}"] = (
-                        self._smd_h5["evr"][f"code_{code}"][self._start_idx : self._stop_idx] == 1
+                        self._smd_h5["evr"][f"code_{code}"][
+                            self._start_idx : self._stop_idx
+                        ]
+                        == 1
                     )
                     self._xss_event_codes.append(code)
                 except Exception:
-                    try: # psana2
+                    try:  # psana2
                         self._filter_dict[f"code {code}"] = (
-                            self._smd_h5["timing"]["eventcodes"][self._start_idx : self._stop_idx][:, code] == 1
+                            self._smd_h5["timing"]["eventcodes"][
+                                self._start_idx : self._stop_idx
+                            ][:, code]
+                            == 1
                         )
                         self._xss_event_codes.append(code)
                     except Exception:
@@ -1058,9 +1064,9 @@ class AnalyzeSmallData(Task):
         self,
     ) -> Tuple[
         npt.NDArray[np.float64],
-        npt.NDArray[np.float64], 
-        npt.NDArray[np.float64], 
-        npt.NDArray[np.float64]
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
     ]:
         """Calculate the binned difference scattering.
 
@@ -1086,7 +1092,9 @@ class AnalyzeSmallData(Task):
             self._az_int -= dark_mean
         q_limits = self._task_parameters.analysis_parameters.q_norm
         norm: npt.NDArray[np.float64] = self._calc_norm_by_qrange(q_limits)
-        self._norm_az_int = self._az_int / norm[:, :, np.newaxis]                                # [events, phi_bins, q_bins]
+        self._norm_az_int = (
+            self._az_int / norm[:, :, np.newaxis]
+        )  # [events, phi_bins, q_bins]
         del dark_mean
         del norm
 
@@ -1096,10 +1104,16 @@ class AnalyzeSmallData(Task):
         filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
-        normed_xss_las_on: npt.NDArray[np.float64] = self._norm_az_int[filter_las_on]            # [events_las_on, phi_bins, q_bins]
-        normed_xss_las_off: npt.NDArray[np.float64] = self._norm_az_int[filter_las_off]          # [events_las_off, phi_bins, q_bins]
+        normed_xss_las_on: npt.NDArray[np.float64] = self._norm_az_int[
+            filter_las_on
+        ]  # [events_las_on, phi_bins, q_bins]
+        normed_xss_las_off: npt.NDArray[np.float64] = self._norm_az_int[
+            filter_las_off
+        ]  # [events_las_off, phi_bins, q_bins]
 
-        scanvals_las_on: npt.NDArray[np.float64] = self._scan_values[filter_las_on]              # [events_las_on]
+        scanvals_las_on: npt.NDArray[np.float64] = self._scan_values[
+            filter_las_on
+        ]  # [events_las_on]
 
         lxt_fast_scan: bool = (
             self._scan_var_name is not None and "lxt_fast" in self._scan_var_name
@@ -1114,11 +1128,15 @@ class AnalyzeSmallData(Task):
                 if idx == len(bins) - 1:
                     continue
                 mask = (scanvals_las_on >= scan_bin) * (scanvals_las_on < bins[idx + 1])
-                binned_xss_las_on[:, idx] = np.nanmean(normed_xss_las_on[mask], axis=(0, 1))
+                binned_xss_las_on[:, idx] = np.nanmean(
+                    normed_xss_las_on[mask], axis=(0, 1)
+                )
 
             else:
                 mask = scanvals_las_on == scan_bin
-                binned_xss_las_on[:, idx] = np.nanmean(normed_xss_las_on[mask], axis=(0, 1))
+                binned_xss_las_on[:, idx] = np.nanmean(
+                    normed_xss_las_on[mask], axis=(0, 1)
+                )
 
         diff: npt.NDArray[np.float64] = np.nan_to_num(binned_xss_las_on) - np.nan_to_num(xss_las_off[:, np.newaxis])
 
@@ -1297,7 +1315,7 @@ class AnalyzeSmallData(Task):
 
             diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
                 (q_bins, scan_bins)
-            
+
             scan_var_name (str): Name of the scan variable.
 
             tjumps (npt.NDArray[np.float64]): T-jump traces for each event code.
@@ -1542,7 +1560,6 @@ class AnalyzeSmallData(Task):
             overlap_grid[0, 1] = hv.Curve((bins, gaussian(bins, *opt)), kdims=[hv.Dimension((f"{self._scan_var_name}", "Scan Variable"))], vdims=hv.Dimension(("diff", "dS"))).opts(color="orange", title="Gaussian Fit", xlabel=f"Scan Variable ({self._scan_var_name})", ylabel="dS")
 
         return overlap_grid
-
 
     # XAS
     def plot_all_xas(
