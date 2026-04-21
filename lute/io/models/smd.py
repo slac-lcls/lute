@@ -640,15 +640,12 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             12, description="Size of median filter to apply to scattering profiles."
         )
         water_qs: Tuple[float, float] = Field(
-            (1.0, 1.93),
-            description="Q-range for water peak."
+            (1.0, 1.93), description="Q-range for water peak."
         )
         water_ratio: float = Field(
             1.25, description="Ratio of water peak intensity to use for analysis."
         )
-        water_sigma: float = Field(
-            2.0, description="Sigma for water peak."
-        )
+        water_sigma: float = Field(2.0, description="Sigma for water peak.")
         num_intensity_bins: int = Field(
             20, description="Number of bins for total intensity based subsampling."
         )
@@ -662,9 +659,8 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         None, description="Name of the detector with scattering data."
     )
     xss_event_codes: Optional[List[int]] = Field(
-        None,
-        description="List of event codes to use for XSS T-Jump analysis."
-    )   
+        None, description="List of event codes to use for XSS T-Jump analysis."
+    )
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
     )
@@ -676,8 +672,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         ),
     )
     analysis_parameters: AnalysisParameters = Field(
-        AnalysisParameters(),
-        description="Parameters for XSS analysis."
+        AnalysisParameters(), description="Parameters for XSS analysis."
     )
 
 
