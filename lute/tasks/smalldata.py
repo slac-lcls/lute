@@ -253,7 +253,6 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
         except ValueError:
             run = 0
         plot_display_name: str
-        exp_run: str
         plots: Optional[pn.Tabs]
         if (
             self._mpi_rank == 0
