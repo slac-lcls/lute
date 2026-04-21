@@ -84,7 +84,7 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
             self._task_parameters.analysis_parameters.median_filter_size,
             self._task_parameters.analysis_parameters.water_qs,
             self._task_parameters.analysis_parameters.water_ratio,
-            self._task_parameters.analysis_parameters.water_sigma
+            self._task_parameters.analysis_parameters.water_sigma,
         )
 
         if self._mpi_size > 1:
@@ -107,7 +107,9 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
             tjumps /= self._mpi_size
             processed_tjumps /= self._mpi_size
             name: str = self._scan_var_name if self._scan_var_name else "by_event"
-            plots = self.plot_all_xss(laser_on, bins, diff, name, tjumps, processed_tjumps)
+            plots = self.plot_all_xss(
+                laser_on, bins, diff, name, tjumps, processed_tjumps
+            )
             plot_display_name: str
             run: int
             try:
