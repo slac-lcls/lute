@@ -21,6 +21,7 @@ import numpy as np
 import numpy.typing as npt
 import panel as pn
 import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.colors import to_hex  # type: ignore
 from matplotlib.ticker import MaxNLocator  # type: ignore
 from mpi4py import MPI
 from scipy.signal import find_peaks  # type: ignore
@@ -186,6 +187,7 @@ class AnalyzeSmallData(Task):
                 self._scan_values = np.linspace(
                     self._start_idx, self._stop_idx, self._num_events
                 )
+                self._scan_var_name = "linear"
                 logger.debug(
                     "No scans found, using linearly spaced data for _scan_values."
                 )
@@ -329,6 +331,28 @@ class AnalyzeSmallData(Task):
         # )
         return np.nanmean(self._calc_norm_by_qrange((1.5, 3.5)), axis=-1)
 
+    def _apply_median_filter(self,
+        profiles: npt.NDArray[np.float64],
+        kernel_size: int = 13,
+    ) -> npt.NDArray[np.float64]:
+        """Apply a median filter to a set of profiles.
+
+        Args:
+            profiles (npt.NDArray[np.float64]): The input profiles to filter.
+
+            kernel_size (int): The size of the median filter kernel.
+
+        Returns:
+            filtered_profiles (npt.NDArray[np.float64]): The filtered profiles.
+        """
+        from scipy.signal import medfilt  # type: ignore
+    
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+
+        profiles = medfilt(profiles, (1, kernel_size))
+        return profiles
+
     def _aggregate_filters(
         self, filter_vars: str = ("xray on, laser on, total scattering, ipm")
     ) -> npt.NDArray[np.bool_]:
@@ -395,6 +419,38 @@ class AnalyzeSmallData(Task):
             )
             dark_mean = np.zeros([self._num_events])
         return dark_mean
+    
+    def _process_xss_water_signal(self, 
+        profiles: npt.NDArray[np.float64],
+        medfilt_size: int = 13,
+        qs: Tuple[float, float] = (1.0, 1.93),
+        ratio: float = 1.25,
+        sigma: float = 2.0
+    ) -> npt.NDArray[np.float64]:
+        """Filter outliers and select strong enough water shots.
+
+        Args:
+            profiles (npt.NDArray[np.float64]): The input profiles to filter.
+
+        Returns:
+            processed_profiles (npt.NDArray[np.float64]): The processed water profiles.
+        """
+        from scipy.stats import zscore  # type: ignore
+
+        profiles = self._apply_median_filter(profiles, medfilt_size)
+        low_q, high_q = qs
+        low_q_idx: int = np.argmin(np.abs(self._q_vals - low_q))
+        high_q_idx: int = np.argmin(np.abs(self._q_vals - high_q))
+        high_q_vals = np.abs(profiles[:, high_q_idx])
+        low_q_vals = np.abs(profiles[:, low_q_idx]) * ratio
+        filter = high_q_vals > low_q_vals
+
+        signal_peak = np.abs(zscore(profiles[:, high_q_idx]))
+        filter &= (signal_peak <= sigma)
+        if np.sum(filter) == 0:
+            logger.warning("No good water shots found. Try loosening the criteria. Defaulting to all shots.")
+            filter = np.ones_like(filter, dtype=bool)
+        return profiles[filter]
 
     def _find_solvent_argmax(self, corrected_profile: npt.NDArray) -> int:
         """Find the index of the solvent ring maximum.
@@ -409,7 +465,7 @@ class AnalyzeSmallData(Task):
             peak_idx (int): The index where the solvent maximum is located.
         """
         res: Tuple[npt.NDArray[np.int64], Dict[str, npt.NDArray[np.float64]]] = (
-            find_peaks(corrected_profile, 1)
+            find_peaks(corrected_profile, height=1)
         )
         try:
             peak_indices: npt.NDArray = res[0]
@@ -418,9 +474,14 @@ class AnalyzeSmallData(Task):
             logger.debug("No peaks found")
             return cast(int, np.argmax(corrected_profile))
 
-        peak_idx: int = peak_indices[
-            np.argmax(peak_heights)
-        ]  # peak_indices[0]  # peak_indices[peak_select - 1]
+        try:
+            peak_idx: int = peak_indices[
+                np.argmax(peak_heights)
+            ]  # peak_indices[0]  # peak_indices[peak_select - 1]
+        except ValueError:
+            logger.debug("No valid peaks found")
+            return cast(int, np.argmax(corrected_profile))
+
         self._solvent_peak_idx = peak_idx
         return peak_idx
 
@@ -572,7 +633,7 @@ class AnalyzeSmallData(Task):
         fwhm: float = self._fit_convolution_fwhm(trace, bins)
         return raw_curve, trace, center, fwhm
 
-    # XSS - Extraction and filter by event code
+    # XSS - Extraction and TR difference
     ############################################################################
     def _extract_xss(self, event_codes: Optional[List[int]]) -> None:
         """Extract XSS additional event codes other than laser on/off 
@@ -587,7 +648,8 @@ class AnalyzeSmallData(Task):
         assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
         self._xss_event_codes = []
         if event_codes:
-            for code in event_codes:
+            xss_codes = np.sort(event_codes)
+            for code in xss_codes:
                 try: # psana1
                     self._filter_dict[f"code {code}"] = (
                         self._smd_h5["evr"][f"code_{code}"][self._start_idx : self._stop_idx] == 1
@@ -601,6 +663,58 @@ class AnalyzeSmallData(Task):
                         self._xss_event_codes.append(code)
                     except Exception:
                         logger.error(f"No event code {code} found.")
+        
+    def _calc_tjump_xss(
+        self,
+        medfilt_size: int = 13,
+        water_qs: Tuple[float, float] = (1.0, 1.93),
+        water_ratio: float = 1.25,
+        water_signal_sigma: float = 2.0
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Calculate the temperature jump traces for each event code.
+
+        The temperature jump traces are calculated by summing the normalized azimuthal intensities
+        for each event code and then applying a water signal filter to obtain the processed trace.
+
+        Returns:
+            tjumps (npt.NDArray[np.float64]): A 2D array of shape (event_codes, q_bins)
+                containing the raw and processed temperature jump traces for each event code.
+            
+            processed_tjumps (npt.NDArray[np.float64]): A 2D array of shape (event_codes, q_bins)
+                containing the processed temperature jump traces for each event code.
+        """
+        tjumps = np.zeros((len(self._xss_event_codes), len(self._q_vals)))
+        processed_tjumps = np.zeros((len(self._xss_event_codes), len(self._q_vals)))
+
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+
+        las_off_profiles: npt.NDArray[np.float64] = np.nanmean(self._norm_az_int[filter_las_off], axis=1)
+        las_off: npt.NDArray[np.float64] = np.nanmean(las_off_profiles, axis=0)
+        processed_las_off_profiles: npt.NDArray[np.float64] = self._process_xss_water_signal(
+            las_off_profiles,
+            medfilt_size,
+            water_qs, 
+            water_ratio, 
+            water_signal_sigma,
+        )
+        processed_las_off: npt.NDArray[np.float64] = np.nanmean(processed_las_off_profiles, axis=0)
+    
+        for i, code in enumerate(self._xss_event_codes):
+            filter_code: npt.NDArray[np.bool_] = self._aggregate_filters(
+                filter_vars=f"xray on, code {code}, ipm, total scattering"
+            )
+            if np.sum(filter_code) == 0:
+                continue
+
+            profiles = np.nanmean(self._norm_az_int[filter_code], axis=1)
+            tjump = np.nanmean(profiles, axis=0) - las_off
+            processed_profiles = self._process_xss_water_signal(profiles, medfilt_size, water_qs, water_ratio, water_signal_sigma)
+            processed_tjump = np.nanmean(processed_profiles, axis=0) - processed_las_off
+            tjumps[i, :] = tjump
+            processed_tjumps[i, :] = processed_tjump
+        return tjumps, processed_tjumps
 
     # XAS - Extraction and TR difference
     ############################################################################
@@ -992,7 +1106,8 @@ class AnalyzeSmallData(Task):
         )
 
         bins: npt.NDArray[np.float64] = self._calc_scan_bins()
-        binned_xss_las_on: npt.NDArray[np.float64] = np.zeros((len(self._q_vals), len(bins)))    # [q_bins, scan_bins]
+        binned_xss_las_on: npt.NDArray[np.float64] = np.zeros((len(self._q_vals), len(bins)))
+        xss_las_on: npt.NDArray[np.float64] = np.nanmean(normed_xss_las_on, axis=(0, 1))       # [q_bins]
         xss_las_off: npt.NDArray[np.float64] = np.nanmean(normed_xss_las_off, axis=(0, 1))       # [q_bins]
         for idx, scan_bin in enumerate(bins):
             if lxt_fast_scan:
@@ -1006,7 +1121,8 @@ class AnalyzeSmallData(Task):
                 binned_xss_las_on[:, idx] = np.nanmean(normed_xss_las_on[mask], axis=(0, 1))
 
         diff: npt.NDArray[np.float64] = np.nan_to_num(binned_xss_las_on) - np.nan_to_num(xss_las_off[:, np.newaxis])
-        return bins, diff, normed_xss_las_on, normed_xss_las_off
+
+        return bins, diff, xss_las_on, xss_las_off
 
     def _calc_scan_binned_difference_xas(
         self,
@@ -1167,9 +1283,12 @@ class AnalyzeSmallData(Task):
     # XSS
     def plot_all_xss(
         self,
+        laser_on: npt.NDArray[np.float64],
         bins: npt.NDArray[np.float64],
         diff: npt.NDArray[np.float64],
         scan_var_name: str,
+        tjumps: npt.NDArray[np.float64],
+        processed_tjumps: npt.NDArray[np.float64],
     ) -> plt.Figure:
         """Plot the azimuthally integrated difference scattering.
 
@@ -1181,104 +1300,248 @@ class AnalyzeSmallData(Task):
             
             scan_var_name (str): Name of the scan variable.
 
+            tjumps (npt.NDArray[np.float64]): T-jump traces for each event code.
+
+            processed_tjumps (npt.NDArray[np.float64]): Processed T-jump traces for each event code.
+
         Returns:
             plot (plt.Figure): Plotted azimuthally integrated difference.
         """
-        if len(self._xss_event_codes) > 0:
-            fig, ax = plt.subplots(3, 2, figsize=(9, 9), dpi=200)
-        else:
-            fig, ax = plt.subplots(2, 2, figsize=(9, 6), dpi=200)
-
         exp: str = self._task_parameters.lute_config.experiment
         run: int = self._task_parameters.lute_config.run
-        fig.suptitle(f"{exp} r{run:04d} - XSS Analysis summary")
 
-        # Plot 2D mean azimuthal integration
-        cake: npt.NDArray[np.float64] = np.nanmean(self._norm_az_int, axis=0)
-        phis, qs = np.meshgrid(self._phi_vals, self._q_vals)
-        ax[0, 0].pcolormesh(phis, qs, cake.T, shading="nearest", cmap="viridis", vmin=np.nanpercentile(cake, 5), vmax=np.nanpercentile(cake, 95))
-        ax[0, 0].set_title(f"Run {run} - 2D Az Int")
-        ax[0, 0].set_xlabel("$\phi$ (deg)")
-        ax[0, 0].set_ylabel("Q ($\AA^{-1}$)")
-        ax2 = ax[0, 0].twinx()
-        phi_avgs = np.nanmean(cake, axis=1)
-        ax2.plot(self._phi_vals, phi_avgs, '-o', markerfacecolor='white', markeredgecolor='black', color='black')
-        ax2.set_ylim([0, np.nanmax(phi_avgs)])
-        ax2.set_ylabel("Avg $\phi$-Intensity")
+        scan_grid: pn.GridSpec = self.plot_xss_scan_hv(bins, diff, scan_var_name)
 
-        # Plot subsample of laser on
-        num_bins = self._task_parameters.analysis_parameters.num_intensity_bins
+        tabs = pn.Tabs(
+            ("XSS Scan", scan_grid),
+        )
+
+        overlap_grid = self.plot_xss_overlap_fit_hv(laser_on, bins, diff)
+        tabs.append(("XSS Overlap Fit", overlap_grid))
+
+        tjump_grid: pn.GridSpec = self.plot_xss_tjump_hv(tjumps, processed_tjumps)
+        tabs.append(("XSS T-Jump", tjump_grid))
+        return tabs
+
+    def plot_xss_scan_hv(
+        self,
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
+        scan_var_name: str,
+    ) -> pn.GridSpec:
+        """Plot the azimuthally integrated difference scattering by scan variable.
+
+        Args:
+            bins (npt.NDArray[np.float64]): 1D array of scan bins
+
+            diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
+                (q_bins, scan_bins)
+            
+            scan_var_name (str): Name of the scan variable.
+
+        Returns:
+            plot (pn.GridSpec): Plotted azimuthally integrated difference by scan variable.
+        """
+        scan_grid = pn.GridSpec(
+            sizing_mode="stretch_both", max_width=1000, max_height=1200,
+        )
+        
+        # Top left - 2D cake laser off
+        filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
+            filter_vars="xray on, laser off, ipm, total scattering"
+        )
+        cake_off: npt.NDArray[np.float64] = np.nanmean(self._norm_az_int[filter_las_off], axis=0)
+        phi_dim = hv.Dimension(("phi", "Phi (deg)"))
+        q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
+        cake_off_img = hv.Image((self._phi_vals, self._q_vals, cake_off.T), kdims=[phi_dim, q_dim], vdims=hv.Dimension(("intensity", "Intensity (a.u.)"))).opts(
+            cmap="viridis", colorbar=True, title="2D Az Int - dS laser off", shared_axes=False
+        )
+        scan_grid[0, 0] = cake_off_img
+
+        # Top right - 1D phi - average laser off
+        azav_avg = np.nanmean(cake_off, axis=0)
+        q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
+        azav_plot = hv.Curve((self._q_vals, azav_avg), kdims=[q_dim], vdims=hv.Dimension(("intensity", "Intensity (a.u.)"))).opts(
+            title="1D Az Int - phi-slices laser off normalized", color="dodgerblue", line_width=3
+        )
+        for i in range(cake_off.shape[0]):
+            phi_slice = cake_off[i, :]
+            phi_slice_plot = hv.Curve((self._q_vals, phi_slice), kdims=[q_dim], vdims=hv.Dimension(("intensity", "Intensity (a.u.)"))).opts(
+                color="gray", alpha=0.5, line_dash="dashed", line_width=0.8
+            )
+            azav_plot *= phi_slice_plot
+        scan_grid[0, 1] = azav_plot.opts(shared_axes=False)
+
+        # Mid left - 2D cake laser on
         filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser on, ipm, total scattering"
         )
+        cake_on: npt.NDArray[np.float64] = np.nanmean(self._norm_az_int[filter_las_on], axis=0)
+        cake_on_img = hv.Image((self._phi_vals, self._q_vals, cake_on.T), kdims=[phi_dim, q_dim], vdims=hv.Dimension(("intensity", "Intensity (a.u.)"))).opts(
+            cmap="viridis", colorbar=True, title="2D Az Int - laser on", shared_axes=False
+        )
+        scan_grid[1, 0] = cake_on_img
+
+        # Mid right - 1D subsample unnormalized laser on shots
+        num_bins = self._task_parameters.analysis_parameters.num_intensity_bins
         az_av_laser_on = self._az_int[filter_las_on]
         total_intensity = np.nansum(az_av_laser_on, axis=(1, 2))
         sorted_indices = np.argsort(total_intensity)
         n_events = az_av_laser_on.shape[0]
         percentages = np.arange(1, num_bins + 1) / num_bins
-        colors = plt.cm.viridis(percentages)
+        colors = [to_hex(c) for c in plt.cm.viridis(percentages)]
+        subsample_plots = []
         for i, pct in enumerate(percentages):
             idx = sorted_indices[int(np.ceil(pct * n_events)) - 1]
-            ax[0, 1].plot(self._q_vals, np.nanmean(az_av_laser_on[idx], axis=0), color=colors[i])
-        ax[0, 1].set_title("$S_{on}$ 1D Az Int")
-        ax[0, 1].set_xlabel("Q ($\AA^{-1}$)")
-        ax[0, 1].set_ylabel("Intensity (a.u.)")
+            laser_on_subsample_plot = hv.Curve((self._q_vals, np.nanmean(az_av_laser_on[idx], axis=0)), kdims=[q_dim], vdims=hv.Dimension(("intensity", "Intensity (a.u.)"))).opts(
+                color=colors[i], title="1D Az Int - laser on", shared_axes=False
+            )
+            subsample_plots.append(laser_on_subsample_plot)
+        if subsample_plots:
+            scan_grid[1, 1] = hv.Overlay(subsample_plots).opts(shared_axes=False)
 
-        # Plot difference Q vs Scan
-        xs, qs = np.meshgrid(bins, self._q_vals)
-        ax[1, 0].pcolormesh(xs, qs, diff, shading="nearest", cmap="viridis")
-        ax[1, 0].xaxis.set_major_locator(MaxNLocator(nbins=4))
-        ax[1, 0].set_title("$\Delta S$")
-        ax[1, 0].set_xlabel(scan_var_name)
-        ax[1, 0].set_ylabel("Q ($\AA^{-1}$)")
+        # Bottom left - 2D difference
+        xs_dim = hv.Dimension(("scan_bin", scan_var_name))
+        diff_dim = hv.Dimension(("diff", "dS"))
+        diff_img = hv.Image((bins, self._q_vals, diff), kdims=[xs_dim, q_dim], vdims=diff_dim).opts(
+            cmap="viridis", colorbar=True, title="dS", shared_axes=False
+        )
+        scan_grid[2, 0] = diff_img
 
-        # Plot difference slices
+        # Bottom right - difference slices
         nth = max(1, len(bins) // 8)
         every_nth = (np.arange(len(bins)) % nth) == 0
         diff_slices = diff[:, every_nth]
         spacing = np.nanmax(np.abs(diff_slices))
-        colors = plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
+        colors = [to_hex(c) for c in plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))]
+        diff_slice_plots = []
         for i in range(diff_slices.shape[1]):
-            ax[1, 1].axhline(i*spacing, color='gray', linestyle='--', linewidth=0.3)
-            ax[1, 1].plot(self._q_vals, diff_slices[:, i] + i*spacing, color=colors[i])
-        ax[1, 1].set_title("$\Delta S$ slices")
-        ax[1, 1].set_xlabel("Q ($\AA^{-1}$)")
-        ax[1, 1].set_yticks([])
+            diff_slice_plot = hv.Curve((self._q_vals, diff_slices[:, i] + i*spacing), kdims=[q_dim], vdims=hv.Dimension(("diff", "dS"))).opts(
+                color=colors[i], title="dS slices"
+            )
+            diff_slice_plots.append(diff_slice_plot)
+        scan_grid[2, 1] = hv.Overlay(diff_slice_plots).opts(shared_axes=False)
+
+        return scan_grid
+
+    def plot_xss_tjump_hv(
+        self,
+        tjumps: npt.NDArray[np.float64],
+        processed_tjumps: npt.NDArray[np.float64],
+    ) -> pn.Tabs:
+        """Plot the temperature jump analysis for XSS.
+
+        Args:
+            tjumps (npt.NDArray[np.float64]): Temperature jump azimuthal averages for each event code.
+
+            processed_tjumps (npt.NDArray[np.float64]): Processed temperature jump azimuthal averages for each event code.
+
+        Returns:
+            plot (pn.GridSpec): Plotted temperature jump analysis.
+        """
+
+        tjump_grid = pn.GridSpec(
+            sizing_mode="stretch_both", max_width=1000, max_height=800,
+        )
 
         if len(self._xss_event_codes) > 0:
-            diff_traces = []
+            valid_tjumps = []
+            valid_processed_tjumps = []
             valid_codes = []
-            filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
-                filter_vars="xray on, laser off, ipm, total scattering"
-            )
-            laser_off = np.nanmean(self._norm_az_int[filter_las_off], axis=(0, 1))
-            colors = plt.cm.jet(np.linspace(0, 1, len(self._xss_event_codes)))
+            tjump_curves = []
+            processed_tjump_curves = []
+            q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
+
+            colors = [to_hex(c) for c in plt.cm.coolwarm_r(np.linspace(0, 1, len(self._xss_event_codes)))]
             for i, code in enumerate(self._xss_event_codes):
-                filter_code: npt.NDArray[np.bool_] = self._aggregate_filters(
-                    filter_vars=f"xray on, code {code}, ipm, total scattering"
-                )
-                if np.sum(filter_code) == 0:
+                if np.all(tjumps[i] == 0):
                     continue
-                diff_trace = np.nanmean(self._norm_az_int[filter_code], axis=(0, 1)) - laser_off
-                diff_traces.append(diff_trace)
                 valid_codes.append(code)
-                ax[2, 0].plot(self._q_vals, diff_trace, color=colors[i], label=f"{code}")
-            ax[2, 0].set_title(f"$\Delta S$ relative to laser off")
-            ax[2, 0].set_xlabel("Q ($\AA^{-1}$)")
-            ax[2, 0].set_ylabel("Normalized intensity (a.u.)")
-            ax[2, 0].legend(fontsize='small')
+                valid_tjumps.append(tjumps[i])
+                tjump_plot = hv.Curve((self._q_vals, tjumps[i]), kdims=[q_dim], vdims=hv.Dimension(("diff", f"dS code")), label=f"{code}").opts(
+                    color=colors[i], title=f"dS to laser off"
+                )
+                tjump_curves.append(tjump_plot)
+                valid_processed_tjumps.append(processed_tjumps[i])
+                processed_tjump_plot = hv.Curve((self._q_vals, processed_tjumps[i]), kdims=[q_dim], vdims=hv.Dimension(("diff", f"dS code")), label=f"{code}").opts(
+                    color=colors[i], title=f"Processed dS to laser off"
+                )
+                processed_tjump_curves.append(processed_tjump_plot)
+
+            if tjump_curves:
+                tjump_grid[0, 0] = hv.Overlay(tjump_curves).opts(
+                    hv.opts.NdOverlay(legend_position="top_right", fontsize={"legend": 6})
+                ).opts(shared_axes=False)
+            if processed_tjump_curves:
+                tjump_grid[1, 0] = hv.Overlay(processed_tjump_curves).opts(
+                    hv.opts.NdOverlay(legend_position="top_right", fontsize={"legend": 6})
+                ).opts(shared_axes=False)
 
             labels = [f"{code}" for code in valid_codes]
-            ax[2, 1].imshow(diff_traces, aspect='auto', cmap='coolwarm_r')
-            ax[2, 1].set_title(f"$\Delta S$ cross-talk relative to laser off")
-            ax[2, 1].set_xlabel("Q ($\AA^{-1}$)")
-            ax[2, 1].set_xticks([])
-            ax[2, 1].set_yticks(ticks=np.arange(len(labels)), labels=labels)
+            tjump_heatmap_data = [(q, code, v) for i, code in enumerate(labels) for _, (q, v) in enumerate(zip(self._q_vals, valid_tjumps[i]))]
+            tjump_img = hv.HeatMap(tjump_heatmap_data, kdims=[q_dim, hv.Dimension(("code", "Event code"))], vdims=hv.Dimension(("diff", f"dS cross-talk to laser off"))).opts(
+                cmap='coolwarm_r', colorbar=True, title=f"dS cross-talk to laser off", shared_axes=False
+            )
+            tjump_grid[0, 1] = tjump_img
 
-        plt.tight_layout()
-        if self._task_parameters.output_dir:
-            fig.savefig(f"{self._task_parameters.output_dir}/{exp}_r{run:04d}_xss_summary.png")
-        return fig
+            processed_heatmap_data = [(q, code, v) for i, code in enumerate(labels) for _, (q, v) in enumerate(zip(self._q_vals, valid_processed_tjumps[i]))]
+            processed_tjump_img = hv.HeatMap(processed_heatmap_data, kdims=[q_dim, hv.Dimension(("code", "Event code"))], vdims=hv.Dimension(("diff", f"dS cross-talk to laser off"))).opts(
+                cmap='coolwarm_r', colorbar=True, title=f"Processed dS cross-talk to laser off", shared_axes=False
+            )
+            tjump_grid[1, 1] = processed_tjump_img
+
+        return tjump_grid
+
+    def plot_xss_overlap_fit_hv(
+        self,
+        laser_on: npt.NDArray[np.float64],
+        bins: npt.NDArray[np.float64],
+        diff: npt.NDArray[np.float64],
+    ) -> pn.GridSpec:
+        """Plot the overlap fit to a slice of the binned difference.
+
+        Args:
+            laser_on (npt.NDArray[np.float64]): 1D corrected average laser on
+                scattering profile.
+
+            bins (npt.NDArray[np.float64]): 1D set of bins used for difference
+                signal.
+
+            diff (npt.NDArray[np.float64]): 2D difference signal of shape
+                (q_bins, scan_bins).
+
+        Returns:
+            pn.GridSpec: Plotted overlap fit.
+        """
+        overlap_grid: pn.GridSpec = pn.GridSpec(sizing_mode="stretch_both", max_width=1000, max_height=400)
+        raw_curve: npt.NDArray[np.float64]
+        msg: str
+        if self._scan_var_name is not None and "lxt" in self._scan_var_name:
+            trace: npt.NDArray[np.float64]
+            center: int
+            fwhm: float
+            raw_curve, trace, center, fwhm = self._convolution_fit(laser_on, bins, diff)
+            msg = (
+                f"Scan Var: {self._scan_var_name}\n"
+                f"Overlap Position: {bins[center]}\n"
+                f"FWHM: {fwhm}"
+            )
+            logger.info(msg)
+            overlap_grid[0, 0] = hv.Curve((bins, raw_curve), kdims=[hv.Dimension((f"{self._scan_var_name}", "Scan Variable"))], vdims=hv.Dimension(("diff", "dS"))).opts(color="blue", title=msg, xlabel=f"Scan Variable ({self._scan_var_name})", ylabel="dS")
+            overlap_grid[0, 1] = hv.Curve((bins, trace), kdims=[hv.Dimension((f"{self._scan_var_name}", "Scan Variable"))], vdims=hv.Dimension(("diff", "dS"))).opts(color="orange", title="Convolution", xlabel=f"Scan Variable ({self._scan_var_name})", ylabel="dS")
+        else:
+            opt: npt.NDArray[np.float64]
+            raw_curve, opt, _ = self._fit_overlap(laser_on, bins, diff)
+            msg = (
+                f"Scan Var: {self._scan_var_name}\n"
+                f"Overlap Position: {opt[1]}\n"
+                f"FWHM: {sigma_to_fwhm(opt[2])}"
+            )
+            logger.info(msg)
+            overlap_grid[0, 0] = hv.Curve((bins, raw_curve), kdims=[hv.Dimension((f"{self._scan_var_name}", "Scan Variable"))], vdims=hv.Dimension(("diff", "dS"))).opts(color="blue", title=msg, xlabel=f"Scan Variable ({self._scan_var_name})", ylabel="dS")
+            overlap_grid[0, 1] = hv.Curve((bins, gaussian(bins, *opt)), kdims=[hv.Dimension((f"{self._scan_var_name}", "Scan Variable"))], vdims=hv.Dimension(("diff", "dS"))).opts(color="orange", title="Gaussian Fit", xlabel=f"Scan Variable ({self._scan_var_name})", ylabel="dS")
+
+        return overlap_grid
 
 
     # XAS

@@ -640,8 +640,18 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         median_filter_size: int = Field(
             12, description="Size of median filter to apply to scattering profiles."
         )
+        water_qs: Tuple[float, float] = Field(
+            (1.0, 1.93),
+            description="Q-range for water peak."
+        )
+        water_ratio: float = Field(
+            1.25, description="Ratio of water peak intensity to use for analysis."
+        )
+        water_sigma: float = Field(
+            2.0, description="Sigma for water peak."
+        )
         num_intensity_bins: int = Field(
-            100, description="Number of bins for total intensity based subsampling."
+            20, description="Number of bins for total intensity based subsampling."
         )
 
     _find_smd_path = validate_smd_path("smd_path")
@@ -654,7 +664,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     )
     xss_event_codes: Optional[List[int]] = Field(
         None,
-        description="List of event codes to use for XSS analysis other than laser on/off."
+        description="List of event codes to use for XSS T-Jump analysis."
     )   
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
@@ -666,13 +676,10 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    output_dir: Optional[str] = Field(
-        None, description=(
-            "Optional directory to save XSS analysis results. "
-            "If None, no results will be saved."
-        )
+    analysis_parameters: AnalysisParameters = Field(
+        AnalysisParameters(),
+        description="Parameters for XSS analysis."
     )
-    analysis_parameters: AnalysisParameters = Field(AnalysisParameters(min_Iscat=10.0, min_ipm=1000.0, q_range=(0.9, 3.5), q_norm=(0.9, 3.5)))
 
 
 class AnalyzeSmallDataXASParameters(TaskParameters):

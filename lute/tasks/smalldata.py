@@ -50,6 +50,13 @@ def laser_off_mean(
 ) -> npt.NDArray[np.float64]:
     return laser_off0.sum(axis=0) + laser_off1.sum(axis=0)
 
+
+def sum_tjump(
+    tjumps0: npt.NDArray[np.float64], tjumps1: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
+    return tjumps0 + tjumps1
+
+
 class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
@@ -73,22 +80,34 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
         laser_on: npt.NDArray[np.float64]
         laser_off: npt.NDArray[np.float64]
         bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xss()
+        tjumps, processed_tjumps = self._calc_tjump_xss(
+            self._task_parameters.analysis_parameters.median_filter_size,
+            self._task_parameters.analysis_parameters.water_qs,
+            self._task_parameters.analysis_parameters.water_ratio,
+            self._task_parameters.analysis_parameters.water_sigma
+        )
 
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=sum_diff)
             laser_on = self._mpi_comm.reduce(laser_on, op=laser_on_mean)
             laser_off = self._mpi_comm.reduce(laser_off, op=laser_off_mean)
+            tjumps = self._mpi_comm.reduce(tjumps, op=sum_tjump)
+            processed_tjumps = self._mpi_comm.reduce(processed_tjumps, op=sum_tjump)
         if (
             self._mpi_rank == 0
             and diff is not None
             and laser_on is not None
             and laser_off is not None
+            and tjumps is not None
+            and processed_tjumps is not None
         ):
             diff /= self._mpi_size
-            laser_on /= self._num_events
-            laser_off /= self._num_events
+            laser_on /= self._total_num_events
+            laser_off /= self._total_num_events
+            tjumps /= self._mpi_size
+            processed_tjumps /= self._mpi_size
             name: str = self._scan_var_name if self._scan_var_name else "by_event"
-            plots = self.plot_all_xss(bins, diff, name)
+            plots = self.plot_all_xss(laser_on, bins, diff, name, tjumps, processed_tjumps)
             plot_display_name: str
             run: int
             try:
