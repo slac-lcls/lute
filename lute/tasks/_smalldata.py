@@ -439,8 +439,8 @@ class AnalyzeSmallData(Task):
 
         profiles = self._apply_median_filter(profiles, medfilt_size)
         low_q, high_q = qs
-        low_q_idx: int = np.argmin(np.abs(self._q_vals - low_q))
-        high_q_idx: int = np.argmin(np.abs(self._q_vals - high_q))
+        low_q_idx = np.argmin(np.abs(self._q_vals - low_q))
+        high_q_idx = np.argmin(np.abs(self._q_vals - high_q))
         high_q_vals = np.abs(profiles[:, high_q_idx])
         low_q_vals = np.abs(profiles[:, low_q_idx]) * ratio
         filter = high_q_vals > low_q_vals
@@ -1325,9 +1325,6 @@ class AnalyzeSmallData(Task):
         Returns:
             plot (plt.Figure): Plotted azimuthally integrated difference.
         """
-        exp: str = self._task_parameters.lute_config.experiment
-        run: int = self._task_parameters.lute_config.run
-
         scan_grid: pn.GridSpec = self.plot_xss_scan_hv(bins, diff, scan_var_name)
 
         tabs = pn.Tabs(
@@ -1477,12 +1474,12 @@ class AnalyzeSmallData(Task):
                 valid_codes.append(code)
                 valid_tjumps.append(tjumps[i])
                 tjump_plot = hv.Curve((self._q_vals, tjumps[i]), kdims=[q_dim], vdims=hv.Dimension(("diff", f"dS code")), label=f"{code}").opts(
-                    color=colors[i], title=f"dS to laser off"
+                    color=colors[i], title="dS to laser off"
                 )
                 tjump_curves.append(tjump_plot)
                 valid_processed_tjumps.append(processed_tjumps[i])
                 processed_tjump_plot = hv.Curve((self._q_vals, processed_tjumps[i]), kdims=[q_dim], vdims=hv.Dimension(("diff", f"dS code")), label=f"{code}").opts(
-                    color=colors[i], title=f"Processed dS to laser off"
+                    color=colors[i], title="Processed dS to laser off"
                 )
                 processed_tjump_curves.append(processed_tjump_plot)
 
@@ -1498,13 +1495,13 @@ class AnalyzeSmallData(Task):
             labels = [f"{code}" for code in valid_codes]
             tjump_heatmap_data = [(q, code, v) for i, code in enumerate(labels) for _, (q, v) in enumerate(zip(self._q_vals, valid_tjumps[i]))]
             tjump_img = hv.HeatMap(tjump_heatmap_data, kdims=[q_dim, hv.Dimension(("code", "Event code"))], vdims=hv.Dimension(("diff", f"dS cross-talk to laser off"))).opts(
-                cmap='coolwarm_r', colorbar=True, title=f"dS cross-talk to laser off", shared_axes=False
+                cmap='coolwarm_r', colorbar=True, title="dS cross-talk to laser off", shared_axes=False
             )
             tjump_grid[0, 1] = tjump_img
 
             processed_heatmap_data = [(q, code, v) for i, code in enumerate(labels) for _, (q, v) in enumerate(zip(self._q_vals, valid_processed_tjumps[i]))]
             processed_tjump_img = hv.HeatMap(processed_heatmap_data, kdims=[q_dim, hv.Dimension(("code", "Event code"))], vdims=hv.Dimension(("diff", f"dS cross-talk to laser off"))).opts(
-                cmap='coolwarm_r', colorbar=True, title=f"Processed dS cross-talk to laser off", shared_axes=False
+                cmap='coolwarm_r', colorbar=True, title="Processed dS cross-talk to laser off", shared_axes=False
             )
             tjump_grid[1, 1] = processed_tjump_img
 
