@@ -13,7 +13,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import sys
 import logging
-from typing import List, Optional, Dict, Tuple, Union, cast, ClassVar
+from typing import Any, List, Optional, Dict, Tuple, Union, cast, ClassVar
 
 import h5py  # type: ignore
 import holoviews as hv  # type: ignore
@@ -23,8 +23,14 @@ import panel as pn
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.colors import to_hex  # type: ignore
 from mpi4py import MPI
-from scipy.signal import find_peaks  # type: ignore
+from scipy.signal import find_peaks, savgol_filter  # type: ignore
 from scipy.optimize import curve_fit  # type: ignore
+from scipy.interpolate import interp1d  # type: ignore
+from sklearn.decomposition import NMF  # type: ignore
+from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
+from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel  # type: ignore
+from sklearn.manifold import Isomap  # type: ignore
+from sklearn.preprocessing import StandardScaler  # type: ignore
 
 from lute.execution.logging import get_logger
 from lute.io.models.base import TaskParameters
@@ -454,6 +460,686 @@ class AnalyzeSmallData(Task):
             )
             filter = np.ones_like(filter, dtype=bool)
         return profiles[filter]
+
+    def _preprocess_profiles_thermometry(
+        self,
+        profiles: npt.NDArray[np.float64],
+        q_in: npt.NDArray[np.float64],
+        pulse_intensity: Optional[npt.NDArray[np.float64]] = None,
+        q_common: Optional[npt.NDArray[np.float64]] = None,
+        qmin: float = 1.0,
+        qmax: float = 5.0,
+        do_smooth: bool = True,
+        sg_window: int = 21,
+        sg_poly: int = 3,
+        clip_sigma: float = 6.0,
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Preprocess experimental profiles for thermometry.
+
+        Applies pulse normalization, Q-crop, MAD spike clipping,
+        Savitzky-Golay smoothing, area normalization, and resampling
+        onto a common Q grid.
+
+        Args:
+            profiles: (N, N_q_in) raw azimuthally averaged profiles.
+            q_in: (N_q_in,) Q axis of input profiles [Å⁻¹].
+            pulse_intensity: (N,) per-shot X-ray pulse intensity. If provided,
+                each profile is divided by its pulse energy.
+            q_common: (N_q_out,) target Q grid. Defaults to 250 points in
+                [qmin, qmax].
+            qmin: Lower Q bound for cropping [Å⁻¹].
+            qmax: Upper Q bound for cropping [Å⁻¹].
+            do_smooth: Whether to apply Savitzky-Golay smoothing.
+            sg_window: Window length for Savitzky-Golay filter (must be odd).
+            sg_poly: Polynomial order for Savitzky-Golay filter.
+            clip_sigma: MAD-based spike clipping threshold in sigma units.
+
+        Returns:
+            pp_profiles: (N, N_q_out) preprocessed profiles (NaN for failed
+                shots).
+            q_common: (N_q_out,) the common Q axis used.
+        """
+        if q_common is None:
+            q_common = np.linspace(qmin, qmax, 250)
+
+        q_mask = (q_in >= qmin) & (q_in <= qmax)
+        q_crop = q_in[q_mask]
+        prof_crop = profiles[:, q_mask]
+
+        n_events = prof_crop.shape[0]
+        pp = np.full((n_events, len(q_common)), np.nan)
+
+        for i in range(n_events):
+            p = prof_crop[i].copy().astype(float)
+            if np.all(np.isnan(p)):
+                continue
+
+            if pulse_intensity is not None and pulse_intensity[i] > 0:
+                p /= pulse_intensity[i]
+
+            med = np.nanmedian(p)
+            mad = np.nanmedian(np.abs(p - med))
+            if mad > 0:
+                p = np.where(np.abs(p - med) > clip_sigma * 1.4826 * mad, med, p)
+
+            if do_smooth and sg_window < len(p):
+                p = savgol_filter(p, window_length=sg_window, polyorder=sg_poly)
+
+            area = np.trapz(np.abs(p), q_crop)
+            if area > 0:
+                p /= area
+
+            try:
+                f = interp1d(
+                    q_crop, p, kind="linear", bounds_error=False, fill_value=np.nan
+                )
+                pp[i] = f(q_common)
+            except Exception:
+                continue
+
+        return pp, q_common
+
+    def _preprocess_sim_curves_thermometry(
+        self,
+        sim_curves: npt.NDArray[np.float64],
+        q_sim: npt.NDArray[np.float64],
+        q_common: npt.NDArray[np.float64],
+        qmin: float = 1.0,
+        qmax: float = 5.0,
+    ) -> npt.NDArray[np.float64]:
+        """Preprocess simulated I(Q,T) curves for thermometry.
+
+        Applies Q-crop, area normalization, and resampling onto the common Q
+        grid — same pipeline as experimental preprocessing but without
+        shot-to-shot noise corrections.
+
+        Args:
+            sim_curves: (N_temps, N_q_sim) simulated scattering profiles.
+            q_sim: (N_q_sim,) Q axis of simulated curves [Å⁻¹].
+            q_common: (N_q_out,) target Q grid.
+            qmin: Lower Q bound for cropping [Å⁻¹].
+            qmax: Upper Q bound for cropping [Å⁻¹].
+
+        Returns:
+            pp_sim: (N_temps, N_q_out) preprocessed simulated curves. Rows
+                with all-NaN indicate failed resampling.
+        """
+        q_mask = (q_sim >= qmin) & (q_sim <= qmax)
+        q_crop = q_sim[q_mask]
+        curves_crop = sim_curves[:, q_mask]
+
+        n_temps = curves_crop.shape[0]
+        pp_sim = np.full((n_temps, len(q_common)), np.nan)
+
+        for i in range(n_temps):
+            c = curves_crop[i].copy().astype(float)
+            if np.all(np.isnan(c)):
+                continue
+            area = np.trapz(np.abs(c), q_crop)
+            if area > 0:
+                c /= area
+            try:
+                f = interp1d(
+                    q_crop, c, kind="linear", bounds_error=False, fill_value=np.nan
+                )
+                pp_sim[i] = f(q_common)
+            except Exception:
+                continue
+
+        return pp_sim
+
+    def _extract_shot_event_codes(
+        self, n_events: int
+    ) -> Tuple[Optional[npt.NDArray], Optional[List[str]]]:
+        """Extract per-shot integer event code and sorted label list from HDF5.
+
+        Reads all ``evr/code_XXX`` datasets. Codes that are constant (all-True
+        or all-False across shots) are ignored. Each shot is assigned to the
+        first matching code in sorted order; unmatched shots get code -1.
+
+        Falls back to scan-variable binning if no evr codes vary.
+
+        Returns:
+            shot_codes: (N_events,) int array of per-shot code (-1 = none).
+            ordered_labels: list of code label strings in ascending order.
+        """
+        smd_path = getattr(self._task_parameters, "smd_path", None)
+        if smd_path:
+            try:
+                with h5py.File(smd_path, "r") as f:
+                    if "evr" in f:
+                        evr = f["evr"]
+                        code_data: Dict[int, npt.NDArray] = {}
+                        for key in evr.keys():
+                            if not key.startswith("code_"):
+                                continue
+                            try:
+                                code_num = int(key[5:])
+                                arr = evr[key][:n_events].astype(bool).ravel()
+                                if arr.any() and not arr.all():
+                                    code_data[code_num] = arr
+                            except Exception:
+                                continue
+                        if code_data:
+                            shot_codes: npt.NDArray = np.full(n_events, -1, dtype=int)
+                            for cn in sorted(code_data):
+                                mask = code_data[cn] & (shot_codes == -1)
+                                shot_codes[mask] = cn
+                            labels = [str(cn) for cn in sorted(code_data)]
+                            return shot_codes, labels
+            except Exception:
+                pass
+
+        # Fallback: group by scan variable (e.g. lxt_fast time delays)
+        if hasattr(self, "_scan_values"):
+            sv = np.asarray(self._scan_values).ravel()[:n_events]
+            unique_sv = np.unique(sv[~np.isnan(sv)])
+            if len(unique_sv) > 1:
+                shot_codes = np.full(n_events, -1, dtype=int)
+                for i, v in enumerate(unique_sv):
+                    shot_codes[np.isclose(sv, v)] = i
+                sv_name = getattr(self, "_scan_var_name", "scan") or "scan"
+                labels = [f"{sv_name}={v:.4g}" for v in unique_sv]
+                return shot_codes, labels
+
+        return None, None
+
+    def infer_temperature(
+        self,
+        sim_path: str,
+        q_common: Optional[npt.NDArray[np.float64]] = None,
+        qmin: float = 1.0,
+        qmax: float = 5.0,
+        nmf_components: int = 5,
+        iso_neighbors: int = 15,
+        t_ref_c: float = 22.0,
+        extra_filter: str = "xray on, ipm, total scattering",
+    ) -> Dict[str, Any]:
+        """Infer per-shot temperature via NMF → Isomap → GPR.
+
+        Loads simulated I(Q,T) curves, preprocesses both experimental and
+        simulated data, computes perturbation branches, decomposes with NMF,
+        embeds NMF residuals with Isomap, then trains a GPR to map embedding
+        coordinates to temperature.
+
+        Args:
+            sim_path: Path to a ``.npz`` file with keys:
+                ``q``      (N_q_sim,)        Q axis [Å⁻¹]
+                ``curves`` (N_temps, N_q_sim) simulated I(Q,T) profiles
+                ``temps``  (N_temps,)         temperatures in °C
+            q_common: (N_q_out,) common Q grid. Defaults to 250 points in
+                [qmin, qmax].
+            qmin: Lower Q bound [Å⁻¹].
+            qmax: Upper Q bound [Å⁻¹].
+            nmf_components: Number of NMF components (default 5).
+            iso_neighbors: Number of Isomap neighbors (default 15).
+            t_ref_c: Reference temperature in °C used for the sim difference
+                branch (default 22.0 = room temperature). The nearest sim
+                curve is selected automatically.
+            extra_filter: Filter string appended to the on/off masks passed to
+                ``_aggregate_filters`` (e.g. ``"ipm, total scattering"``).
+
+        Returns:
+            results (dict) with keys:
+                ``T_mean``       (N_events,) per-shot inferred temperature [°C]
+                ``T_std``        (N_events,) GPR posterior uncertainty [°C]
+                ``on_mask``      (N_events,) boolean laser-on mask
+                ``off_mask``     (N_events,) boolean laser-off mask
+                ``exp_embedding`` (N_events, 2) Isomap embedding coordinates
+                ``sim_embedding`` (N_temps, 2) sim anchor embedding coordinates
+                ``sim_temps``    (N_temps,) simulated temperatures [°C]
+                ``q_common``     (N_q_out,) Q axis used
+                ``perturbation`` (N_events, N_q_out) perturbation branch
+                ``plot``         pn.Tabs diagnostic panel (rank-0 only, else None)
+        """
+        from sklearn.neighbors import NearestNeighbors  # type: ignore
+
+        # ── 1. Phi-average az_int → (N, N_q) ───────────────────────────────
+        if self._az_int.ndim == 3:
+            az2d: npt.NDArray = np.nanmean(self._az_int, axis=1)
+        else:
+            az2d = self._az_int
+
+        # ── 2. Build laser-on / laser-off masks ─────────────────────────────
+        on_mask: npt.NDArray[np.bool_] = self._aggregate_filters(
+            f"xray on, laser on, {extra_filter}"
+        )
+        off_mask: npt.NDArray[np.bool_] = self._aggregate_filters(
+            f"xray on, laser off, {extra_filter}"
+        )
+
+        # ── 3. Preprocess experimental profiles ─────────────────────────────
+        if q_common is None:
+            q_common = np.linspace(qmin, qmax, 250)
+
+        pp_all, q_common = self._preprocess_profiles_thermometry(
+            az2d,
+            self._q_vals,
+            pulse_intensity=getattr(self, "_xray_intensity", None),
+            q_common=q_common,
+            qmin=qmin,
+            qmax=qmax,
+        )
+
+        col_med = np.nanmedian(pp_all, axis=0)
+        col_med = np.where(np.isnan(col_med), 0.0, col_med)  # all-NaN columns → 0
+        nan_locs = np.isnan(pp_all)
+        pp_all[nan_locs] = np.take(col_med, np.where(nan_locs)[1])
+
+        # ── 4. Perturbation branch: exp − mean(laser-off) ───────────────────
+        if off_mask.sum() == 0:
+            logger.warning(
+                "No laser-off shots found for thermometry baseline; "
+                "using global mean instead."
+            )
+            baseline: npt.NDArray = np.nanmean(pp_all, axis=0)
+            baseline = np.where(np.isnan(baseline), 0.0, baseline)
+        else:
+            baseline = np.nanmean(pp_all[off_mask], axis=0)
+            baseline = np.where(np.isnan(baseline), 0.0, baseline)
+        perturbation: npt.NDArray = pp_all - baseline[np.newaxis, :]
+
+        # ── 5. Simulated curves ─────────────────────────────────────────────
+        sim_data = np.load(sim_path)
+        sim_curves_raw: npt.NDArray = sim_data["curves"]
+        q_sim: npt.NDArray = sim_data["q"]
+        sim_temps: npt.NDArray = sim_data["temps"].astype(float)
+
+        pp_sim = self._preprocess_sim_curves_thermometry(
+            sim_curves_raw, q_sim, q_common, qmin=qmin, qmax=qmax
+        )
+        pp_sim = np.nan_to_num(pp_sim, nan=0.0)
+        t_ref_idx: int = int(np.argmin(np.abs(sim_temps - t_ref_c)))
+        logger.debug(
+            f"Thermometry reference: {sim_temps[t_ref_idx]:.1f} °C "
+            f"(requested {t_ref_c:.1f} °C, idx={t_ref_idx})"
+        )
+        sim_diff: npt.NDArray = pp_sim - pp_sim[t_ref_idx][np.newaxis, :]
+
+        # ── 6. NMF on perturbation branch ────────────────────────────────────
+        perturbation = np.nan_to_num(perturbation, nan=0.0)
+        shift = float(max(0.0, -perturbation.min()))
+        X_nmf = perturbation + shift
+        nmf_mdl = NMF(
+            n_components=nmf_components,
+            init="nndsvd",
+            max_iter=2000,
+            random_state=42,
+        )
+        W_exp = nmf_mdl.fit_transform(X_nmf)
+        residuals_exp: npt.NDArray = perturbation - (W_exp @ nmf_mdl.components_ - shift)
+
+        W_sim = nmf_mdl.transform(np.maximum(sim_diff + shift, 0.0))
+        residuals_sim: npt.NDArray = sim_diff - (W_sim @ nmf_mdl.components_ - shift)
+
+        # ── 7. Isomap embedding ──────────────────────────────────────────────
+        isomap = Isomap(n_components=2, n_neighbors=iso_neighbors)
+        exp_embedding: npt.NDArray = isomap.fit_transform(residuals_exp)
+        try:
+            sim_embedding: npt.NDArray = isomap.transform(residuals_sim)
+        except Exception:
+            nn = NearestNeighbors(n_neighbors=1).fit(residuals_exp)
+            idxs = nn.kneighbors(residuals_sim, return_distance=False)[:, 0]
+            sim_embedding = exp_embedding[idxs]
+
+        # ── 8. GPR temperature inference ─────────────────────────────────────
+        scaler = StandardScaler().fit(sim_embedding)
+        sim_emb_s: npt.NDArray = scaler.transform(sim_embedding)
+        exp_emb_s: npt.NDArray = scaler.transform(exp_embedding)
+
+        D2 = np.sum(
+            (sim_emb_s[:, None, :] - sim_emb_s[None, :, :]) ** 2, axis=-1
+        )
+        nonzero_D2 = D2[D2 > 0]
+        length_scale = (
+            float(np.sqrt(np.median(nonzero_D2) + 1e-8)) if len(nonzero_D2) else 1.0
+        )
+        kernel = (
+            ConstantKernel(1.0)
+            * Matern(length_scale=length_scale, nu=2.5)
+            + WhiteKernel(noise_level=0.1)
+        )
+        gpr = GaussianProcessRegressor(
+            kernel=kernel, n_restarts_optimizer=5, normalize_y=True, alpha=1e-6
+        )
+        gpr.fit(sim_emb_s, sim_temps)
+        T_mean, T_std = gpr.predict(exp_emb_s, return_std=True)
+
+        shot_codes, code_labels = self._extract_shot_event_codes(len(T_mean))
+
+        results: Dict[str, Any] = dict(
+            T_mean=T_mean,
+            T_std=T_std,
+            on_mask=on_mask,
+            off_mask=off_mask,
+            exp_embedding=exp_embedding,
+            sim_embedding=sim_embedding,
+            sim_temps=sim_temps,
+            q_common=q_common,
+            perturbation=perturbation,
+            shot_codes=shot_codes,
+            code_labels=code_labels,
+            plot=None,
+        )
+
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            results["plot"] = self.plot_thermometry_hv(results)
+
+        return results
+
+    def plot_thermometry_hv(
+        self,
+        results: Dict[str, Any],
+        event_codes: Optional[npt.NDArray] = None,
+    ) -> pn.Tabs:
+        """Build interactive thermometry diagnostic plots.
+
+        Produces a ``pn.Tabs`` panel with six tabs:
+
+        - **Temperature**: per-shot inferred T scatter + mean-T ± std per group.
+        - **Violin**: violin + jitter per group, colored by mean T (plasma).
+        - **Manifold**: Isomap embedding colored by T with sim anchors.
+        - **Scattering by T**: mean I(Q) and ΔI(Q) per group, colored by T.
+        - **Scattering**: mean laser-on vs laser-off profiles.
+        - **Distributions**: BoxWhisker + laser-off T histogram.
+
+        Args:
+            results: dict returned by ``infer_temperature``.
+            event_codes: (N_events,) integer code per shot to override the
+                grouping stored in ``results["shot_codes"]``. Rarely needed.
+
+        Returns:
+            tabs (pn.Tabs): Interactive Panel/HoloViews dashboard.
+        """
+        import io, base64
+        import matplotlib.colors as mcolors
+
+        T_mean: npt.NDArray = results["T_mean"]
+        T_std: npt.NDArray = results["T_std"]
+        on_mask: npt.NDArray = results["on_mask"]
+        off_mask: npt.NDArray = results["off_mask"]
+        exp_emb: npt.NDArray = results["exp_embedding"]
+        sim_emb: npt.NDArray = results["sim_embedding"]
+        sim_temps: npt.NDArray = results["sim_temps"]
+        q: npt.NDArray = results["q_common"]
+        perturbation: npt.NDArray = results["perturbation"]
+
+        n_events = len(T_mean)
+        shot_idx = np.arange(n_events)
+        rng = np.random.default_rng(42)
+
+        # ── Resolve per-shot group codes ────────────────────────────────────
+        # Priority: explicit event_codes arg > results["shot_codes"] > binary
+        shot_codes_raw: Optional[npt.NDArray] = results.get("shot_codes")
+        code_labels_raw: Optional[List[str]] = results.get("code_labels")
+
+        if event_codes is not None and len(event_codes) == n_events:
+            codes: npt.NDArray = np.asarray(event_codes)
+            unique_int = np.unique(codes[codes >= 0])
+            ordered_labels: List[str] = [str(c) for c in unique_int]
+        elif shot_codes_raw is not None:
+            codes = shot_codes_raw
+            unique_int = np.unique(codes[codes >= 0])
+            ordered_labels = code_labels_raw or [str(c) for c in unique_int]
+        else:
+            codes = np.where(on_mask, 0, -1).astype(int)
+            unique_int = np.array([0])
+            ordered_labels = ["laser on"]
+
+        # Build per-group dict: label → T values for laser-on shots in that group
+        group_T: Dict[str, npt.NDArray] = {}
+        group_T_mean: Dict[str, float] = {}
+        group_mask: Dict[str, npt.NDArray] = {}
+        for lbl, ci in zip(ordered_labels, unique_int):
+            m = (codes == ci) & on_mask
+            if m.sum() == 0:
+                continue
+            group_T[lbl] = T_mean[m]
+            group_T_mean[lbl] = float(np.nanmean(T_mean[m]))
+            group_mask[lbl] = m
+
+        labels: List[str] = list(group_T.keys())
+
+        # Color scale: plasma colormap, range = span of group mean Ts
+        all_means = list(group_T_mean.values())
+        T_cmin = min(all_means) if len(all_means) >= 2 else float(np.nanpercentile(T_mean, 2))
+        T_cmax = max(all_means) if len(all_means) >= 2 else float(np.nanpercentile(T_mean, 98))
+        if T_cmin == T_cmax:
+            T_cmax = T_cmin + 1.0
+        T_norm = mcolors.Normalize(vmin=T_cmin, vmax=T_cmax)
+        cmap_T = plt.get_cmap("plasma")
+
+        # Helper: convert a matplotlib figure to an embedded PNG pane
+        def _fig_to_pane(fig: plt.Figure) -> pn.pane.HTML:
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=130, bbox_inches="tight")
+            plt.close(fig)
+            buf.seek(0)
+            b64 = base64.b64encode(buf.read()).decode()
+            return pn.pane.HTML(
+                f'<img src="data:image/png;base64,{b64}" '
+                f'style="max-width:100%;height:auto;display:block;margin:auto;"/>'
+            )
+
+        x_lbl = "Event code" if shot_codes_raw is not None else "Group"
+
+        # ── Tab 1: Temperature ───────────────────────────────────────────────
+        on_pts = hv.Scatter(
+            (shot_idx[on_mask], T_mean[on_mask]),
+            kdims=["shot"], vdims=["T (°C)"],
+            label="laser on",
+        ).opts(color="tomato", size=3, alpha=0.6)
+        off_pts = hv.Scatter(
+            (shot_idx[off_mask], T_mean[off_mask]),
+            kdims=["shot"], vdims=["T (°C)"],
+            label="laser off",
+        ).opts(color="steelblue", size=3, alpha=0.4)
+        per_shot = (on_pts * off_pts).opts(
+            title="Per-shot inferred temperature",
+            xlabel="Shot index", ylabel="T (°C)",
+            legend_position="top_right", width=750, height=280,
+        )
+
+        if labels:
+            x_pos = np.arange(len(labels))
+            T_off_med = float(np.nanmedian(T_mean[off_mask])) if off_mask.sum() > 0 else np.nan
+            fig_traj, ax_traj = plt.subplots(figsize=(max(6, len(labels) * 0.65), 3.8))
+            if np.isfinite(T_off_med):
+                ax_traj.axhline(T_off_med, color="steelblue", lw=1.2, ls="--",
+                                label=f"off median {T_off_med:.1f} °C")
+            for xi, lbl in zip(x_pos, labels):
+                vals = group_T[lbl]
+                col = cmap_T(T_norm(group_T_mean[lbl]))
+                ax_traj.errorbar(xi, np.nanmean(vals), yerr=np.nanstd(vals),
+                                 fmt="o", color=col, ecolor=col,
+                                 capsize=4, markersize=7, lw=1.5)
+            ax_traj.set_xticks(x_pos)
+            ax_traj.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
+            ax_traj.set_xlabel(x_lbl)
+            ax_traj.set_ylabel("Inferred T (°C)")
+            ax_traj.set_title(f"Mean T ± std per {x_lbl.lower()}")
+            sm = plt.cm.ScalarMappable(cmap=cmap_T, norm=T_norm)
+            sm.set_array([])
+            fig_traj.colorbar(sm, ax=ax_traj, label="T (°C)", pad=0.01)
+            if np.isfinite(T_off_med):
+                ax_traj.legend(fontsize=8)
+            fig_traj.tight_layout()
+            temp_tab = pn.Column(per_shot, _fig_to_pane(fig_traj))
+        else:
+            temp_tab = pn.Column(per_shot)
+
+        # ── Tab 2: Violin ────────────────────────────────────────────────────
+        if labels:
+            x_pos = np.arange(len(labels))
+            fig_vln, ax_vln = plt.subplots(figsize=(max(8, len(labels) * 0.8 + 2), 5))
+
+            # laser-off violin at position -1
+            if off_mask.sum() > 1:
+                T_off_v = T_mean[off_mask][~np.isnan(T_mean[off_mask])]
+                if len(T_off_v) > 1:
+                    vp_off = ax_vln.violinplot(T_off_v, positions=[-1], widths=0.7,
+                                               showmedians=False, showextrema=False)
+                    for pc in vp_off["bodies"]:
+                        pc.set_facecolor("steelblue"); pc.set_edgecolor("k")
+                        pc.set_linewidth(0.6); pc.set_alpha(0.5)
+                    ax_vln.hlines(np.nanmedian(T_off_v), -1.32, -0.68, color="k", lw=1.4)
+                    n_j = min(len(T_off_v), 300)
+                    samp = rng.choice(T_off_v, n_j, replace=False)
+                    ax_vln.scatter(-1 + rng.uniform(-0.18, 0.18, n_j), samp,
+                                   s=3, alpha=0.25, color="steelblue")
+
+            for xi, lbl in zip(x_pos, labels):
+                vals = group_T[lbl]
+                if len(vals) < 2:
+                    continue
+                col = cmap_T(T_norm(group_T_mean[lbl]))
+                vp = ax_vln.violinplot(vals, positions=[xi], widths=0.7,
+                                       showmedians=False, showextrema=False)
+                for pc in vp["bodies"]:
+                    pc.set_facecolor(col); pc.set_edgecolor("k")
+                    pc.set_linewidth(0.6); pc.set_alpha(0.75)
+                ax_vln.hlines(np.nanmedian(vals), xi - 0.32, xi + 0.32, color="k", lw=1.4)
+                n_j = min(len(vals), 300)
+                samp = rng.choice(vals, n_j, replace=False)
+                ax_vln.scatter(xi + rng.uniform(-0.18, 0.18, n_j), samp,
+                               s=3, alpha=0.25, color=col)
+
+            all_x = np.concatenate([[-1], x_pos])
+            ax_vln.set_xticks(all_x)
+            ax_vln.set_xticklabels(["off"] + labels, rotation=45, ha="right", fontsize=8)
+            ax_vln.set_xlabel(x_lbl)
+            ax_vln.set_ylabel("Inferred T (°C)")
+            ax_vln.set_title(f"Temperature distribution per {x_lbl.lower()}")
+            sm = plt.cm.ScalarMappable(cmap=cmap_T, norm=T_norm)
+            sm.set_array([])
+            fig_vln.colorbar(sm, ax=ax_vln, label="Mean T (°C)", pad=0.01)
+            fig_vln.tight_layout()
+            violin_tab = _fig_to_pane(fig_vln)
+        else:
+            violin_tab = pn.pane.Markdown("*No laser-on shots found.*")
+
+        # ── Tab 3: Manifold ──────────────────────────────────────────────────
+        T_vmin = float(np.nanpercentile(T_mean, 2))
+        T_vmax = float(np.nanpercentile(T_mean, 98))
+        exp_pts = hv.Points(
+            {"x": exp_emb[:, 0], "y": exp_emb[:, 1], "T": T_mean},
+            kdims=["x", "y"], vdims=["T"],
+        ).opts(
+            color="T", cmap="coolwarm", clim=(T_vmin, T_vmax),
+            size=4, alpha=0.6, colorbar=True,
+            title="Isomap embedding — colored by inferred T",
+            xlabel="Isomap-1", ylabel="Isomap-2",
+            width=580, height=460,
+        )
+        sim_pts = hv.Points(
+            {"x": sim_emb[:, 0], "y": sim_emb[:, 1], "T": sim_temps},
+            kdims=["x", "y"], vdims=["T"],
+            label="sim anchors",
+        ).opts(
+            color="T", cmap="coolwarm",
+            clim=(float(sim_temps.min()), float(sim_temps.max())),
+            size=12, marker="star", line_color="black", line_width=0.8,
+        )
+        manifold_tab = pn.Column(exp_pts * sim_pts)
+
+        # ── Tab 4: Scattering by T ───────────────────────────────────────────
+        if labels:
+            baseline_curve = (
+                np.nanmean(perturbation[off_mask], axis=0)
+                if off_mask.sum() > 0 else np.zeros(len(q))
+            )
+            fig_sq, axes_sq = plt.subplots(1, 2, figsize=(14, 4.8))
+            ax_iq, ax_di = axes_sq
+
+            ax_iq.plot(q, baseline_curve, color="steelblue", lw=1.5,
+                       ls="--", label="laser off", alpha=0.8)
+            ax_di.axhline(0, color="steelblue", lw=1.0, ls="--", alpha=0.6)
+
+            for lbl in labels:
+                m = group_mask[lbl]
+                col = cmap_T(T_norm(group_T_mean[lbl]))
+                mean_c = np.nanmean(perturbation[m], axis=0) + baseline_curve
+                mean_d = np.nanmean(perturbation[m], axis=0)
+                ax_iq.plot(q, mean_c, color=col, lw=1.2, alpha=0.85, label=lbl)
+                ax_di.plot(q, mean_d, color=col, lw=1.2, alpha=0.85, label=lbl)
+
+            ax_iq.set_xlabel("Q (Å⁻¹)"); ax_iq.set_ylabel("Norm. I(Q)")
+            ax_iq.set_title(f"Mean I(Q) per {x_lbl.lower()}")
+            ax_di.set_xlabel("Q (Å⁻¹)"); ax_di.set_ylabel("ΔI(Q)")
+            ax_di.set_title(f"Mean ΔI(Q) per {x_lbl.lower()}")
+            sm = plt.cm.ScalarMappable(cmap=cmap_T, norm=T_norm)
+            sm.set_array([])
+            fig_sq.colorbar(sm, ax=axes_sq, label="Mean T (°C)", pad=0.01, aspect=30)
+            fig_sq.tight_layout()
+            scatt_T_tab = _fig_to_pane(fig_sq)
+        else:
+            scatt_T_tab = pn.pane.Markdown("*No laser-on shots found.*")
+
+        # ── Tab 5: Scattering overview ───────────────────────────────────────
+        baseline2 = (
+            np.nanmean(perturbation[off_mask], axis=0)
+            if off_mask.sum() > 0 else np.zeros(len(q))
+        )
+        mean_on_abs = (
+            np.nanmean(perturbation[on_mask], axis=0) + baseline2
+            if on_mask.sum() > 0 else np.full(len(q), np.nan)
+        )
+        mean_pert_all = (
+            np.nanmean(perturbation[on_mask], axis=0)
+            if on_mask.sum() > 0 else np.full(len(q), np.nan)
+        )
+        scatter_overlay = (
+            hv.Curve((q, mean_on_abs), kdims=["Q (Å⁻¹)"], vdims=["Norm. I"],
+                     label="laser on").opts(color="tomato", line_width=2)
+            * hv.Curve((q, baseline2), kdims=["Q (Å⁻¹)"], vdims=["Norm. I"],
+                       label="laser off").opts(color="steelblue", line_width=2)
+        ).opts(title="Mean scattering profiles", legend_position="top_right",
+               width=600, height=300)
+        pert_curve = hv.Curve((q, mean_pert_all), kdims=["Q (Å⁻¹)"], vdims=["ΔI"]).opts(
+            color="purple", line_width=2,
+            title="Mean perturbation (on − off baseline)",
+            xlabel="Q (Å⁻¹)", ylabel="ΔI", width=600, height=300,
+        )
+        scattering_tab = pn.Column(scatter_overlay, pert_curve)
+
+        # ── Tab 6: Distributions ─────────────────────────────────────────────
+        if labels:
+            box_pts: List[Tuple] = [
+                (lbl, float(T_mean[i]))
+                for lbl in labels
+                for i in np.where(group_mask[lbl])[0]
+            ]
+            box = hv.BoxWhisker(box_pts, kdims=[x_lbl], vdims=["T (°C)"]).opts(
+                title=f"T distribution per {x_lbl.lower()}",
+                box_fill_color="tomato", box_alpha=0.5, width=500, height=350,
+            )
+        else:
+            box = hv.BoxWhisker(
+                [("all", float(T_mean[i])) for i in range(n_events)],
+                kdims=["group"], vdims=["T (°C)"],
+            ).opts(title="T distribution", width=400, height=350)
+
+        if off_mask.sum() > 0:
+            T_off_h = T_mean[off_mask]
+            T_off_h = T_off_h[~np.isnan(T_off_h)]
+            freq, edges = np.histogram(T_off_h, bins=40)
+            hist_off = hv.Histogram((edges, freq)).opts(
+                color="steelblue", alpha=0.6,
+                title="Laser-off T histogram", xlabel="T (°C)",
+                width=450, height=300,
+            )
+            dist_tab = pn.Row(box, hist_off)
+        else:
+            dist_tab = pn.Column(box)
+
+        return pn.Tabs(
+            ("Temperature", temp_tab),
+            ("Violin", violin_tab),
+            ("Manifold", manifold_tab),
+            ("Scattering by T", scatt_T_tab),
+            ("Scattering", scattering_tab),
+            ("Distributions", dist_tab),
+        )
 
     def _find_solvent_argmax(self, corrected_profile: npt.NDArray) -> int:
         """Find the index of the solvent ring maximum.
@@ -1382,6 +2068,11 @@ class AnalyzeSmallData(Task):
             max_height=1200,
         )
 
+        # Sanitize phi values — some detectors store NaN (e.g. 1D-only azav)
+        phi_vals: npt.NDArray[np.float64] = self._phi_vals.copy()
+        if np.any(np.isnan(phi_vals)):
+            phi_vals = np.linspace(0.0, 360.0, len(phi_vals))
+
         # Top left - 2D cake laser off
         filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
@@ -1392,7 +2083,7 @@ class AnalyzeSmallData(Task):
         phi_dim = hv.Dimension(("phi", "Phi (deg)"))
         q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
         cake_off_img = hv.Image(
-            (self._phi_vals, self._q_vals, cake_off.T),
+            (phi_vals, self._q_vals, cake_off.T),
             kdims=[phi_dim, q_dim],
             vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
         ).opts(
@@ -1433,7 +2124,7 @@ class AnalyzeSmallData(Task):
             self._norm_az_int[filter_las_on], axis=0
         )
         cake_on_img = hv.Image(
-            (self._phi_vals, self._q_vals, cake_on.T),
+            (phi_vals, self._q_vals, cake_on.T),
             kdims=[phi_dim, q_dim],
             vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
         ).opts(
