@@ -80,12 +80,7 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
         laser_on: npt.NDArray[np.float64]
         laser_off: npt.NDArray[np.float64]
         bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xss()
-        tjumps, processed_tjumps = self._calc_tjump_xss(
-            self._task_parameters.analysis_parameters.median_filter_size,
-            self._task_parameters.analysis_parameters.water_qs,
-            self._task_parameters.analysis_parameters.water_ratio,
-            self._task_parameters.analysis_parameters.water_sigma,
-        )
+        tjumps, processed_tjumps = self._calc_tjump_xss()
 
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=sum_diff)
@@ -116,13 +111,10 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
                 run = int(self._task_parameters.lute_config.run)
             except ValueError:
                 run = 0
-
-            if "lens" in name:
-                plot_display_name = f"XSS/{run:04d}/lens_scans/{name}"
-            elif name == "by_event":
-                plot_display_name = f"XSS/{run:04d}/event_scans/by_event"
+            if name == "by_event":
+                plot_display_name = f"XSS/{run:04d}_by_event"
             else:
-                plot_display_name = f"XSS/{run:04d}/time_scans/{name}"
+                plot_display_name = f"XSS/{run:04d}_{name}"
 
             self._result.payload = ElogSummaryPlots(plot_display_name, plots)
 
@@ -201,14 +193,10 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
             plots = self.plot_xas_scan_hv(laser_on, laser_off, scan_bins, diff)
             if plots is not None:
                 name: str = self._scan_var_name if self._scan_var_name else "by_event"
-                if "lens" in name:
-                    plot_display_name = f"XAS/{run:04d}/lens_scans/{name}"
-                elif "lxe_opa" in name:
-                    plot_display_name = f"XAS/{run:04d}/power_scans/{name}"
-                elif name == "by_event":
-                    plot_display_name = f"XAS/{run:04d}/event_scans/by_event"
+                if name == "by_event":
+                    plot_display_name = f"XAS/{run:04d}_by_event"
                 else:
-                    plot_display_name = f"XAS/{run:04d}/time_scans/{name}"
+                    plot_display_name = f"XAS/{run:04d}_{name}"
 
                 all_plots.append(ElogSummaryPlots(plot_display_name, plots))
         self._result.payload = all_plots
@@ -284,14 +272,10 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
             plots = self.plot_xes_scan_hv(laser_on, laser_off, scan_bins, diff)
             if plots is not None:
                 name: str = self._scan_var_name if self._scan_var_name else "by_event"
-                if "lens" in name:
-                    plot_display_name = f"XES/{run:04d}/lens_scans/{name}"
-                elif "lxe_opa" in name:
-                    plot_display_name = f"XES/{run:04d}/power_scans/{name}"
-                elif "by_event" in name:
-                    plot_display_name = f"XES/{run:04d}/event_scans/{name}"
+                if name == "by_event":
+                    plot_display_name = f"XES/{run:04d}_by_event"
                 else:
-                    plot_display_name = f"XES/{run:04d}/time_scans/{name}"
+                    plot_display_name = f"XES/{run:04d}_{name}"
 
                 all_plots.append(ElogSummaryPlots(plot_display_name, plots))
         self._result.payload = all_plots
