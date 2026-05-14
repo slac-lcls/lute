@@ -243,3 +243,9 @@ BayFAIOptimizer2.update_environment(
         "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
     }
 )
+
+# Indexing 
+#######
+IndexerCPU : Executor = Executor("IndexerCPU")
+"""Runs CPU-based crystal lattice indexing using differential evolution."""
+
