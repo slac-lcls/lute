@@ -23,7 +23,6 @@ from lute.execution.ipc import Message
 from lute.io.models.indexer_cpu import IndexerCPUParameters
 from lute.tasks.task import Task
 
-
 # ==============================================================================
 # Quaternion Operations
 # ==============================================================================

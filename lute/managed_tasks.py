@@ -244,8 +244,7 @@ BayFAIOptimizer2.update_environment(
     }
 )
 
-# Indexing 
+# Indexing
 #######
-IndexerCPU : Executor = Executor("IndexerCPU")
+IndexerCPU: Executor = Executor("IndexerCPU")
 """Runs CPU-based crystal lattice indexing using differential evolution."""
-
