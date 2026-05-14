@@ -101,6 +101,7 @@ docs = [
 ]
 mpi = ["mpi4py"]
 test = ["pytest"]
+sfx = ["gemmi"]  # Serial Femtosecond Crystallography - gemmi required for IndexerCPU task (numba and scipy already in psconda2)
 
 [project.scripts]
 run_task = "run_task:main"
