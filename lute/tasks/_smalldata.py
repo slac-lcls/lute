@@ -435,6 +435,7 @@ class AnalyzeSmallData(Task):
         assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
 
         from scipy.stats import zscore  # type: ignore
+
         medfilt_size: int = (
             self._task_parameters.xss_processing_parameters.median_filter_size
         )
@@ -1480,7 +1481,8 @@ class AnalyzeSmallData(Task):
             diff_slices = diff[:, every_nth]
             spacing = np.nanmax(np.abs(diff_slices))
             colors = [
-                to_hex(c) for c in plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
+                to_hex(c)
+                for c in plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
             ]
             diff_slice_plots = []
             for i in range(diff_slices.shape[1]):
