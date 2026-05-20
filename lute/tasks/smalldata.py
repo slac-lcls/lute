@@ -72,13 +72,15 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
         # Currently scattering data is extracted as standard since its used
         # for all analysis types (XSS, XAS, XES,...)
         self._extract_standard_data()
-        self._extract_xss(self._task_parameters.xss_event_codes)
+        self._extract_xss()
 
     def _run(self) -> None:
         diff: Optional[npt.NDArray[np.float64]]
         bins: npt.NDArray[np.float64]
-        laser_on: npt.NDArray[np.float64]
-        laser_off: npt.NDArray[np.float64]
+        laser_on: Optional[npt.NDArray[np.float64]]
+        laser_off: Optional[npt.NDArray[np.float64]]
+        tjumps: Optional[npt.NDArray[np.float64]]
+        processed_tjumps: Optional[npt.NDArray[np.float64]]
         bins, diff, laser_on, laser_off = self._calc_scan_binned_difference_xss()
         tjumps, processed_tjumps = self._calc_tjump_xss()
 
