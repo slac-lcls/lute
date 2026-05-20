@@ -435,8 +435,12 @@ class AnalyzeSmallData(Task):
         assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
 
         from scipy.stats import zscore  # type: ignore
-        medfilt_size: int = self._task_parameters.xss_processing_parameters.median_filter_size
-        qs: Tuple[float, float] = self._task_parameters.xss_processing_parameters.water_qs
+        medfilt_size: int = (
+            self._task_parameters.xss_processing_parameters.median_filter_size
+        )
+        qs: Tuple[float, float] = (
+            self._task_parameters.xss_processing_parameters.water_qs
+        )
         ratio: float = self._task_parameters.xss_processing_parameters.water_ratio
         sigma: float = self._task_parameters.xss_processing_parameters.water_sigma
 

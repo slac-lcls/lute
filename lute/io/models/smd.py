@@ -632,7 +632,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         min_ipm: float = Field(
             1000.0, description="Minimum X-ray intensity to use for filtering."
         )
-    
+
     class XSSProcessingParameters(BaseModel):
         q_norm: Tuple[float, float] = Field(
             (0.9, 3.5),
@@ -645,7 +645,8 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             (1.0, 1.93), description="Q-range for water peak."
         )
         water_ratio: float = Field(
-            1.25, description="Ratio of water peak intensity between low and high Q to filter bad water shots."
+            1.25,
+            description="Ratio of water peak intensity between low and high Q to filter bad water shots.",
         )
         water_sigma: float = Field(
             2.0, description="Standard deviation for filtering bad water shots."
