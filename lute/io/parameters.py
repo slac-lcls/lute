@@ -17,6 +17,24 @@ from typing import Any, Dict, Optional, Set, Tuple, TypedDict, Union
 
 LUTE_PARAMETER_CONFIG_KEYS: Dict[str, Any] = {
     # All Tasks
+    "version_specifier": {
+        "title": "Version Specifier",
+        "description": (
+            "The integer for the VersionSpecifier enum, or bitwise OR of its enumerators "
+            "indicating how to interpret the version information for reproducing runs "
+            "of this Task."
+        ),
+        "anyOf": [{"type": "null"}, {"type": "integer"}],
+    },  # integer (Really, VersionSpecifier enumerator, or bitwise OR thereof) - Optional for backwards compat.
+    "task_version": {
+        "title": "Task Version",
+        "description": (
+            "The Task version information. Stored as string but interpretation is "
+            "determined by the version_specifier. Usually a JSON string with various "
+            "fields like commit hashes, and integers for version numbers."
+        ),
+        "anyOf": [{"type": "null"}, {"type": "string"}],
+    },  # Optional[str] - Optional for backwards compatibility
     "run_directory": {
         "title": "Run Directory",
         "description": "If set, the directory a `Task` will run from.",
@@ -76,6 +94,7 @@ def handle_field_attrs(self, *args, **kwargs):
 
 class RowIds(TypedDict):
     task_id: int
+    task_version_id: int
     parameter_type_id: int
     config_id: int
     parameter_ids: List[int]
@@ -120,6 +139,17 @@ class ParameterConfig(ContainerBase):
     configuration has also been placed here.
 
     Attributes:
+        version_specifier (Optional[int]): An indicator of how to interpret
+            the version information. An integer constructed from enumerators
+            of the VersionSpecifier enum (lute.tasks.dataclasses), or a bitwise
+            OR thereof. If None, no version information available.
+
+        task_version (Optional[str]): The version information. This field may
+            be filled dynamically. Interpretation of the information (if present)
+            is determined by the version_specifier. It may be, e.g. a JSON string
+            containing a git commit hash, a git diff, a straight version string
+            (v2, e.g.).
+
         run_directory (Optional[str]): None. If set, it should be a valid
             path. The `Task` will be run from this directory. This may be
             useful for some `Task`s which rely on searching the working
@@ -162,6 +192,8 @@ class ParameterConfig(ContainerBase):
                 setattr(self, k, v)
 
     # All Tasks
+    version_specifier: Optional[int] = None
+    task_version: Optional[str] = None
     run_directory: Optional[str] = None
     set_result: Optional[bool] = None
     result_from_params: Optional[str] = None

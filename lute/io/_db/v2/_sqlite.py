@@ -64,12 +64,14 @@ def _create_executions_table(con: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS executions (
         id integer PRIMARY KEY,
         task_id INTEGER,
+        task_version_id INTEGER,
         parameter_type_id INTEGER,
         executor_id INTEGER,
         config_id INTEGER,
         result_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks(id),
+        FOREIGN KEY (task_version_id) REFERENCES task_version (id),
         FOREIGN KEY (parameter_type_id) REFERENCES parameter_types (id)
         FOREIGN KEY (executor_id) REFERENCES executors(id),
         FOREIGN KEY (config_id) REFERENCES config(id),
@@ -89,8 +91,8 @@ def _create_config_table(con: sqlite3.Connection) -> None:
 
     This table contains constraints:
     - The combination of all columns
-      (title, experiment, run, date, lute_version, task_version, task_timeout) must
-      be unique. Multiple executions can reference the same row of this table.
+      (title, experiment, run, date, lute_version, task_timeout) must be unique.
+      Multiple executions can reference the same row of this table.
 
     Args:
         con (sqlite3.Connection): A connection to the database.
@@ -103,9 +105,8 @@ def _create_config_table(con: sqlite3.Connection) -> None:
         run TEXT,
         date TEXT,
         lute_version TEXT,
-        FOREIGN KEY (task_version) REFERENCES task_version (id),
         task_timeout real,
-        UNIQUE(title, experiment, run, date, lute_version, task_version, task_timeout)
+        UNIQUE(title, experiment, run, date, lute_version, task_timeout)
     );
     """
     with con:
@@ -964,6 +965,42 @@ def _add_schema(con: sqlite3.Connection, impl_schemas: Optional[str]) -> int:
     return schema_id
 
 
+def _add_version(
+    con: sqlite3.Connection,
+    version_specifier: Optional[int] = None,
+    task_version: Optional[str] = None,
+) -> int:
+    # Setup schema first
+    # For now we assume all version_specifiers were inserted during creation -
+    # see _create_version_specifiers_table
+    # We can still check that the version specifier matches possible values,
+    # it must be a bitwise OR of the possible individual specifier enumerators
+    # TODO: In the future, could support inserting new kinds of specifiers on the
+    #       fly, but probably want a way of attaching descriptive information to the
+    #       possibilities.
+    enum_val: int = int(list(VersionSpecifier.__members__.values())[-1])
+    enum_val_sum: int = 0
+    while enum_val:
+        enum_val_sum += enum_val
+        enum_val >>= 1
+    if version_specifier is not None and version_specifier > enum_val_sum:
+        # Want hard error? Or just warning?
+        logger.warn(
+            f"Combination version specifier value of {version_specifier} is invalid! "
+            f"The max expected value (combo of all known enumerators) is {enum_val_sum}. "
+            "We will continue. But the version information will be unusable upon retrieval!"
+        )
+
+    entries: Dict[str, Any] = {
+        "version_specifier": version_specifier if version_specifier else 0,
+        "version_info": task_version if task_version else "",
+    }
+    task_version_id: int = _insert_maybe_ignore_return_id(
+        con=con, table="task_version", entries=entries, ignore=True
+    )
+    return task_version_id
+
+
 def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     """Write an DescribedAnalysis object to the database.
 
@@ -995,6 +1032,15 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     config_id: int = _insert_maybe_ignore_return_id(
         con=con, table="config", entries=lute_config.dict(), ignore=True
     )
+
+    # Task Version information
+    version_specifier: Optional[int] = cfg.task_parameters.Config.version_specifier
+    version_info: Optional[str] = cfg.task_parameters.Config.task_version
+    task_version_id: int = _add_version(
+        con=con, version_specifier=version_specifier, task_version=version_info
+    )
+    del cfg.task_parameters.Config.task_version
+    del cfg.task_parameters.Config.version_specifier
 
     schema_id: int = _add_schema(con=con, impl_schemas=cfg.task_result.impl_schemas)
 
@@ -1031,6 +1077,7 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
 
     entries = {
         "task_id": task_id,
+        "task_version_id": task_version_id,
         "parameter_type_id": parameter_type_id,
         "executor_id": executor_id,
         "config_id": config_id,
@@ -1099,6 +1146,7 @@ def update_execution(
 
     entries = {
         "task_id": row_ids["task_id"],
+        "task_version_id": row_ids["task_version_id"],
         "parameter_type_id": row_ids["parameter_type_id"],
         "executor_id": executor_id,
         "config_id": row_ids["config_id"],
@@ -1155,6 +1203,13 @@ def add_placeholder_execution(
         con=con, table="config", entries=lute_config.dict(), ignore=True
     )
 
+    # Task Version information
+    version_specifier: Optional[int] = params.Config.version_specifier
+    version_info: Optional[str] = params.Config.task_version
+    task_version_id: int = _add_version(
+        con=con, version_specifier=version_specifier, task_version=version_info
+    )
+
     # Include the parameter type definition.
     ## Have sets in the schema so we will convert those with `default=list`
     entries = {
@@ -1174,6 +1229,7 @@ def add_placeholder_execution(
 
     row_ids: RowIds = {
         "task_id": task_id,
+        "task_version_id": task_version_id,
         "parameter_type_id": parameter_type_id,
         "config_id": config_id,
         "parameter_ids": parameter_ids,

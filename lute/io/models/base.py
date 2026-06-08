@@ -142,6 +142,17 @@ class TaskParameters(BaseSettings):
             allow_inf_nan (bool): Pydantic configuration. Whether to allow
                 infinity or NAN in float fields.
 
+            version_specifier (Optional[int]): An indicator of how to interpret
+                the version information. An integer constructed from enumerators
+                of the VersionSpecifier enum (lute.tasks.dataclasses), or a bitwise
+                OR thereof. If None, no version information available.
+
+            task_version (Optional[str]): The version information. This field may
+                be filled dynamically. Interpretation of the information (if present)
+                is determined by the version_specifier. It may be, e.g. a JSON string
+                containing a git commit hash, a git diff, a straight version string
+                (v2, e.g.).
+
             run_directory (Optional[str]): None. If set, it should be a valid
                 path. The `Task` will be run from this directory. This may be
                 useful for some `Task`s which rely on searching the working
@@ -174,6 +185,10 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
+        version_specifier: Optional[int] = None
+        """Indicator of how to determine version information from the field below."""
+        task_version: Optional[str] = None
+        """Task's version information. May be filled dynamically."""
         run_directory: Optional[str] = None
         """Set the directory that the Task is run from."""
         set_result: bool = False
