@@ -22,7 +22,13 @@ if TYPE_CHECKING:
 else:
     from lute.io.parameters import AnalysisHeader, TaskParameters
 from lute.io.parameters import LUTE_PARAMETER_FIELD_ATTRS, RowIds
-from lute.tasks.dataclasses import BaseSchema, DescribedAnalysis, TaskResult, TaskStatus
+from lute.tasks.dataclasses import (
+    BaseSchema,
+    DescribedAnalysis,
+    TaskResult,
+    TaskStatus,
+    VersionSpecifier,
+)
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -83,8 +89,8 @@ def _create_config_table(con: sqlite3.Connection) -> None:
 
     This table contains constraints:
     - The combination of all columns
-      (title, experiment, run, date, lute_version, task_timeout) must be unique.
-      Multiple executions can reference the same row of this table.
+      (title, experiment, run, date, lute_version, task_version, task_timeout) must
+      be unique. Multiple executions can reference the same row of this table.
 
     Args:
         con (sqlite3.Connection): A connection to the database.
@@ -97,8 +103,9 @@ def _create_config_table(con: sqlite3.Connection) -> None:
         run TEXT,
         date TEXT,
         lute_version TEXT,
+        FOREIGN KEY (task_version) REFERENCES task_version (id),
         task_timeout real,
-        UNIQUE(title, experiment, run, date, lute_version, task_timeout)
+        UNIQUE(title, experiment, run, date, lute_version, task_version, task_timeout)
     );
     """
     with con:
@@ -414,6 +421,77 @@ def _create_base_schema_table(con: sqlite3.Connection) -> None:
             con.execute(insert_query, (bs.value, bs.name))
 
 
+def _create_task_version_table(con: sqlite3.Connection) -> None:
+    """Setup the `task_version` table.
+
+    The `task_version` table holds information about the specific version of the
+    underlying `Task` code that was run for that specific `Task`.
+
+    This table contains constraints:
+    - The `version_specifier` entry must be a BITWISE OR of the ids in the
+      `version_specifiers` table. This constraint is setup by the separate
+      `_setup_triggers_and_indices` as TRIGGERs.
+    - The `version_info` is required to be NOT NULL. This field contains a JSON blob
+      representing the version data, as defined by the `version_specifiers` field.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS task_version (
+        id INTEGER PRIMARY KEY,
+        version_specifier INTEGER,
+        version_info TEXT NOT NULL UNIQUE
+    );
+    """
+    with con:
+        con.executescript(PRAGMAS)
+        con.execute(query)
+
+
+def _create_version_specifiers_table(con: sqlite3.Connection) -> None:
+    """Setup the `version_specifiers` table.
+
+    The `version_specifiers` table holds information about how to understand the
+    version information for an execution. The enumerators defined here define a
+    single concrete access mechanism that is used for interpretation. E.g.,
+    a combination of commit sha256 and a diff may be used for a versioning a
+    Task that is run from a cloned git repository.
+
+    This table contains constraints:
+    - The name (and id) must be unique.
+    - The `id` entry must be a power of 2 as the `schema` table uses a bitwise
+      OR to indicate implementation of multiple `base_schema`.
+
+    This function will also insert all the base_schema already defined in
+    `lute.tasks.dataclasses.BaseSchema`.
+
+    Note: Because the `id` must be a power of two, it must be inserted manually.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    create_query: str = """
+    CREATE TABLE IF NOT EXISTS version_specifiers (
+        id INTEGER PRIMARY KEY,
+        name TEXT UNIQUE,
+        CHECK (id == 0 OR (id > 0 AND (id & (id - 1)) = 0))
+    );
+    """
+
+    # In addition to creation, we will add version specifiers that we already know about
+    insert_query: str = (
+        "INSERT OR IGNORE INTO version_specifiers (id, name) VALUES (?, ?)"
+    )
+
+    with con:
+        con.executescript(PRAGMAS)
+        con.execute(create_query)
+
+        for vs in VersionSpecifier:
+            con.execute(insert_query, (vs.value, vs.name))
+
+
 def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
     """Setup the trigger constraints and unique indices.
 
@@ -449,6 +527,26 @@ def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
         CASE
             WHEN NEW.schema > (SELECT SUM(id) FROM base_schema)
             THEN RAISE(ABORT, 'schema value exceeds total base_schema sum')
+        END;
+    END;
+
+    CREATE TRIGGER check_version_update
+    BEFORE UPDATE ON task_version
+    BEGIN
+        SELECT
+        CASE
+            WHEN NEW.version_specifier > (SELECT SUM(id) FROM version_specifiers)
+            THEN RAISE(ABORT, 'version_specifier value exceeds total version_specifiers sum')
+        END;
+    END;
+
+    CREATE TRIGGER check_version_insert
+    BEFORE INSERT ON task_version
+    BEGIN
+        SELECT
+        CASE
+            WHEN NEW.version_specifier > (SELECT SUM(id) FROM version_specifiers)
+            THEN RAISE(ABORT, 'version_specifier value exceeds total version_specifiers sum')
         END;
     END;
 
@@ -490,6 +588,9 @@ def create_tables(con: sqlite3.Connection) -> None:
     else:
         _create_tasks_table(con)
         _create_parameter_types_table(con)
+
+        _create_version_specifiers_table(con)
+        _create_task_version_table(con)
 
         _create_communicators_table(con)
         _create_executors_table(con)
