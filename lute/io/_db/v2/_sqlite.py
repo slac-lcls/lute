@@ -1042,14 +1042,12 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     # since the Executor would not have run the tasklet yet
     if version_specifier is not None and version_specifier > 0:
         if version_info is None or version_info == "" or version_info == "{}":
-            import json
-
             from lute.io.version_utils import record_version
 
             location: Optional[str] = getattr(
                 cfg.task_parameters.Config, "version_location", None
             )
-            diff_args: Optional[str] = getattr(
+            diff_args: Optional[List[str]] = getattr(
                 cfg.task_parameters.Config, "version_diff_args", None
             )
 
@@ -1058,6 +1056,10 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
                 location=location,
                 diff_args=diff_args,
             )
+
+            # Store where version information was taken from
+            new_version_info["version-location"] = json.dumps(location)
+            new_version_info["version-diff-args"] = json.dumps(diff_args)
 
             if new_version_info:
                 version_info = json.dumps(new_version_info)
@@ -1179,14 +1181,12 @@ def update_execution(
 
     if version_specifier is not None and version_specifier > 0:
         if task_version is None or task_version == "" or task_version == "{}":
-            import json
-
             from lute.io.version_utils import record_version
 
             location: Optional[str] = getattr(
                 cfg.task_parameters.Config, "version_location", None
             )
-            diff_args: Optional[str] = getattr(
+            diff_args: Optional[List[str]] = getattr(
                 cfg.task_parameters.Config, "version_diff_args", None
             )
 
@@ -1195,6 +1195,10 @@ def update_execution(
                 location=location,
                 diff_args=diff_args,
             )
+
+            # Store where version information was taken from
+            new_version_info["version-location"] = json.dumps(location)
+            new_version_info["version-diff-args"] = json.dumps(diff_args)
 
             if new_version_info:
                 task_version_id = _add_version(

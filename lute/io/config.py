@@ -214,6 +214,11 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
         version_info: Dict[str, str] = record_version(
             version_specifier=version_specifier, location=location, diff_args=diff_args
         )
+
+        # Store where version information was taken from
+        version_info["version-location"] = json.dumps(location)
+        version_info["version-diff-args"] = json.dumps(diff_args)
+
         if version_info:
             parsed_parameters.Config.task_version = json.dumps(version_info)
 
