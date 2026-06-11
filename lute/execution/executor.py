@@ -586,8 +586,27 @@ class BaseExecutor(ABC):
         )
         logger.info(f"Sourcing file {self._shell_source_script}")
         subproc_env: Dict[str, str] = {}
+        lute_path: Optional[str] = os.getenv("LUTE_PATH")
         for key, val in os.environ.items():
             if "CONDA" not in key:
+                if key == "PYTHONPATH":
+                    # Strip out psana2 environment leakage
+                    curr_parts: List[str] = val.split(":")
+                    cleaned_parts: List[str] = []
+                    for part in curr_parts:
+                        part_lower: str = part.lower()
+                        is_lute: bool = "lute" in part_lower
+                        if lute_path:
+                            is_lute = (
+                                is_lute
+                                or (lute_path.lower() in part_lower)
+                                or (part_lower in lute_path.lower())
+                            )
+                        if is_lute:
+                            cleaned_parts.append(part)
+                    subproc_env[key] = ":".join(cleaned_parts)
+                else:
+                    subproc_env[key] = val
                 subproc_env[key] = val
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE, env=subproc_env
@@ -625,7 +644,6 @@ class BaseExecutor(ABC):
         # a new environment
         old_python_path: str = new_environment.get("PYTHONPATH", "")
         new_python_path: str = new_environment.get("LUTE_TENV_PYTHONPATH", "")
-        lute_path: Optional[str] = os.getenv("LUTE_PATH")
         new_lute_path: Optional[str] = lute_path
         if lute_path is None:
             logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
