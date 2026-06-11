@@ -168,6 +168,15 @@ class ParameterConfig(ContainerBase):
             containing a git commit hash, a git diff, a straight version string
             (v2, e.g.).
 
+        version_location (Optional[str]): None. Indicate where the version info
+            should be taken from. E.g. a repository. Can be filled by a
+            validator dynamically if necessary. This is used by the IO
+            infrastructure to determine how to record version.
+
+        version_diff_args (Optional[List[str]]): None. Provide arguments to git
+            diff if using a diff as part of the versioning strategy. This is
+            used by the IO infrastructure to determine how to record version.
+
         run_directory (Optional[str]): None. If set, it should be a valid
             path. The `Task` will be run from this directory. This may be
             useful for some `Task`s which rely on searching the working
@@ -212,6 +221,8 @@ class ParameterConfig(ContainerBase):
     # All Tasks
     version_specifier: Optional[int] = None
     task_version: Optional[str] = None
+    version_location: Optional[str] = None
+    version_diff_args: Optional[List[str]] = None
     run_directory: Optional[str] = None
     set_result: Optional[bool] = None
     result_from_params: Optional[str] = None

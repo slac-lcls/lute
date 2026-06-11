@@ -26,6 +26,7 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
+import copy
 import os
 from typing import Any, Dict, List, Optional, Union
 
@@ -237,9 +238,12 @@ class TaskParameters(BaseSettings):
             "type": "object",
             "properties": {},
         }
-        for key, val in vars(cls.Config).items():
-            if key in LUTE_PARAMETER_CONFIG_KEYS:
-                config_defn_entry: Dict[str, Any] = LUTE_PARAMETER_CONFIG_KEYS[key]
+        for key in LUTE_PARAMETER_CONFIG_KEYS:
+            if hasattr(cls.Config, key):
+                val: Any = getattr(cls.Config, key)
+                config_defn_entry: Dict[str, Any] = copy.deepcopy(
+                    LUTE_PARAMETER_CONFIG_KEYS[key]
+                )
                 # Add the actual value as a constant now
                 config_defn_entry["const"] = val
                 config_schema_definition["properties"][key] = config_defn_entry
@@ -247,6 +251,30 @@ class TaskParameters(BaseSettings):
         schema["definitions"]["Config"] = config_schema_definition
 
         return schema
+
+    def __getstate__(self) -> Dict[str, Any]:
+        state = (
+            super().__getstate__()
+            if hasattr(super(), "__getstate__")
+            else self.__dict__.copy()
+        )
+        # Package Config attributes that are part of LUTE_PARAMETER_CONFIG_KEYS
+        config_attrs = {}
+        for key in LUTE_PARAMETER_CONFIG_KEYS:
+            if hasattr(self.Config, key):
+                config_attrs[key] = getattr(self.Config, key)
+        state["_lute_config_attrs"] = config_attrs
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        config_attrs = state.pop("_lute_config_attrs", {})
+        if hasattr(super(), "__setstate__"):
+            super().__setstate__(state)
+        else:
+            self.__dict__.update(state)
+        # Restore Config attributes back to the Config class object
+        for key, val in config_attrs.items():
+            setattr(self.Config, key, val)
 
 
 @dataclass

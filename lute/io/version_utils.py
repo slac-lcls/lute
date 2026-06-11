@@ -140,7 +140,7 @@ def record_version(
         lute_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
     if location is None:
-        location = lute_dir
+        logger.warning("No version location provided! Cannot record version info!")
 
     # A complete version specification may contain multiple parts
     version_info: Dict[str, str] = {}
@@ -153,11 +153,11 @@ def record_version(
         version_info["lute-version"] = _record_git_commit_hash(location=lute_dir)
 
     # GIT_SHA is enumerator 2
-    if bool(version_specifier & 0b10):
+    if bool(version_specifier & 0b10) and location is not None:
         version_info["git-sha"] = _record_git_commit_hash(location=location)
 
     # GIT_DIFF is enumerator 4
-    if bool(version_specifier & 0b100):
+    if bool(version_specifier & 0b100) and location is not None:
         version_info["git-diff"] = _record_git_diff(
             location=location, diff_args=diff_args
         )

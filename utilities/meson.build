@@ -22,4 +22,5 @@ py3.install_sources(
 
 subdir('dbview')
 subdir('help')
+subdir('lute_cfg')
 subdir('setup')
