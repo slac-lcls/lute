@@ -1036,6 +1036,32 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     # Task Version information
     version_specifier: Optional[int] = cfg.task_parameters.Config.version_specifier
     version_info: Optional[str] = cfg.task_parameters.Config.task_version
+
+    # Some Tasks rely on tasklets to setup the code-base
+    # In those cases, the version recording at parameter validation would not work
+    # since the Executor would not have run the tasklet yet
+    if version_specifier is not None and version_specifier > 0:
+        if version_info is None or version_info == "" or version_info == "{}":
+            import json
+
+            from lute.io.version_utils import record_version
+
+            location: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_location", None
+            )
+            diff_args: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_diff_args", None
+            )
+
+            new_version_info: Dict[str, str] = record_version(
+                version_specifier=version_specifier,
+                location=location,
+                diff_args=diff_args,
+            )
+
+            if new_version_info:
+                version_info = json.dumps(new_version_info)
+
     task_version_id: int = _add_version(
         con=con, version_specifier=version_specifier, task_version=version_info
     )
@@ -1144,9 +1170,42 @@ def update_execution(
     )
     entries.clear()
 
+    # Some Tasks rely on tasklets to setup the code-base
+    # In those cases, the version recording at parameter validation would not work
+    # since the Executor would not have run the tasklet yet
+    version_specifier: Optional[int] = cfg.task_parameters.Config.version_specifier
+    task_version: Optional[str] = cfg.task_parameters.Config.task_version
+    task_version_id: int = row_ids["task_version_id"]
+
+    if version_specifier is not None and version_specifier > 0:
+        if task_version is None or task_version == "" or task_version == "{}":
+            import json
+
+            from lute.io.version_utils import record_version
+
+            location: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_location", None
+            )
+            diff_args: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_diff_args", None
+            )
+
+            new_version_info: Dict[str, str] = record_version(
+                version_specifier=version_specifier,
+                location=location,
+                diff_args=diff_args,
+            )
+
+            if new_version_info:
+                task_version_id = _add_version(
+                    con=con,
+                    version_specifier=version_specifier,
+                    task_version=json.dumps(new_version_info),
+                )
+
     entries = {
         "task_id": row_ids["task_id"],
-        "task_version_id": row_ids["task_version_id"],
+        "task_version_id": task_version_id,
         "parameter_type_id": row_ids["parameter_type_id"],
         "executor_id": executor_id,
         "config_id": row_ids["config_id"],

@@ -35,6 +35,24 @@ LUTE_PARAMETER_CONFIG_KEYS: Dict[str, Any] = {
         ),
         "anyOf": [{"type": "null"}, {"type": "string"}],
     },  # Optional[str] - Optional for backwards compatibility
+    "version_location": {
+        "title": "Location Version Taken From",
+        "description": (
+            "Indicate where the version info should be taken from. E.g. a repository. "
+            "Can be filled by a validator dynamically if necessary. This is used by "
+            "the IO infrastructure to determine how to record version."
+        ),
+        "anyOf": [{"type": "null"}, {"type": "string"}],
+    },  # Optional[str] - Optional for backwards compatibility
+    "version_diff_args": {
+        "title": "Git Diff Args for Versioning",
+        "description": (
+            "Provide arguments to git diff if using a diff as part of the versioning "
+            "strategy. This is used by the IO infrastructure to determine how to record "
+            "version."
+        ),
+        "anyOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}],
+    },  # Optional[List[str]] - Optional for backwards compatibility
     "run_directory": {
         "title": "Run Directory",
         "description": "If set, the directory a `Task` will run from.",

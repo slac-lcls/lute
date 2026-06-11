@@ -155,12 +155,12 @@ class TaskParameters(BaseSettings):
 
             version_location (Optional[str]): None. Indicate where the version info
                 should be taken from. E.g. a repository. Can be filled by a
-                validator dynamically if necessary. This is used only by the IO
-                infrastructure and will not be recorded.
+                validator dynamically if necessary. This is used by the IO
+                infrastructure to determine how to record version.
 
             version_diff_args (Optional[List[str]]): None. Provide arguments to git
                 diff if using a diff as part of the versioning strategy. This is
-                used only by the IO infrastructure and will not be recorded.
+                used by the IO infrastructure to determine how to record version.
 
             run_directory (Optional[str]): None. If set, it should be a valid
                 path. The `Task` will be run from this directory. This may be
