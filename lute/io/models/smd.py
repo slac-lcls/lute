@@ -55,10 +55,10 @@ class SubmitSMDParameters(ThirdPartyParameters):
         result_from_params: str = ""
         """Defines a result from the parameters. Use a validator to do so."""
 
-        version_specifier: Optional[int] = 6 # 2 (git hash) | 4 (git diff) = 6
+        version_specifier: Optional[int] = 6  # 2 (git hash) | 4 (git diff) = 6
         """Indicator of how to determine version information from the field below."""
 
-        task_version: Optional[str] = None # Filled by LUTE IO infrastructure for us
+        task_version: Optional[str] = None  # Filled by LUTE IO infrastructure for us
         """Task's version information. May be filled dynamically."""
 
     class ProducerParameters(BaseModel):

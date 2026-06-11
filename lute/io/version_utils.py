@@ -30,7 +30,6 @@ import yaml
 
 from lute.tasks.dataclasses import VersionSpecifier
 
-
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
