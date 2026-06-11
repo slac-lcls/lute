@@ -27,7 +27,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -153,6 +153,15 @@ class TaskParameters(BaseSettings):
                 containing a git commit hash, a git diff, a straight version string
                 (v2, e.g.).
 
+            version_location (Optional[str]): None. Indicate where the version info
+                should be taken from. E.g. a repository. Can be filled by a
+                validator dynamically if necessary. This is used only by the IO
+                infrastructure and will not be recorded.
+
+            version_diff_args (Optional[List[str]]): None. Provide arguments to git
+                diff if using a diff as part of the versioning strategy. This is
+                used only by the IO infrastructure and will not be recorded.
+
             run_directory (Optional[str]): None. If set, it should be a valid
                 path. The `Task` will be run from this directory. This may be
                 useful for some `Task`s which rely on searching the working
@@ -189,6 +198,10 @@ class TaskParameters(BaseSettings):
         """Indicator of how to determine version information from the field below."""
         task_version: Optional[str] = None
         """Task's version information. May be filled dynamically."""
+        version_location: Optional[str] = None
+        """Indicator for where to extract version information (e.g. Git Repo)."""
+        version_diff_args: Optional[List[str]] = None
+        """Optionally provide additional arguments if using a git diff for versioning."""
         run_directory: Optional[str] = None
         """Set the directory that the Task is run from."""
         set_result: bool = False

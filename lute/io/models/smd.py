@@ -55,6 +55,12 @@ class SubmitSMDParameters(ThirdPartyParameters):
         result_from_params: str = ""
         """Defines a result from the parameters. Use a validator to do so."""
 
+        version_specifier: Optional[int] = 6 # 2 (git hash) | 4 (git diff) = 6
+        """Indicator of how to determine version information from the field below."""
+
+        task_version: Optional[str] = None # Filled by LUTE IO infrastructure for us
+        """Task's version information. May be filled dynamically."""
+
     class ProducerParameters(BaseModel):
         class IntgParams(BaseModel):
             intg_main: str = Field(
@@ -614,6 +620,19 @@ class SubmitSMDParameters(ThirdPartyParameters):
         fname: str = f"{exp}_Run{run:04d}.h5"
 
         cls.Config.result_from_params = f"{directory}/{fname}"
+        return values
+
+    @root_validator(pre=False)
+    def define_version_specifier(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        producer_folder: Path = Path(values["producer"]).parent
+        smd_root: str = str(producer_folder.parent)
+
+        # Provide helpers so the infrastructure can record version info properly
+        # Set the repo location for commit hashes and diffs to be the root of repo
+        cls.Config.version_location = smd_root
+
+        # Only record the diff for the smalldata_tools folder
+        cls.Config.version_diff_args = ["smalldata_tools"]
         return values
 
 
