@@ -284,8 +284,8 @@ class BayFAIOpt:
 
     def __init__(
         self,
-        exp,
-        run,
+        exp: str,
+        run: int,
     ):
         self.exp = exp
         self.run = run

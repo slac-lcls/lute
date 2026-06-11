@@ -191,7 +191,7 @@ def main() -> None:
     con: sqlite3.Connection = sqlite3.connect(db_path)
     cur: sqlite3.Cursor = con.cursor()
     cur.execute(query, (run_str, run_str if run_int is None else run_int))
-    rows: List[int] = cur.fetchall()
+    rows: List[Any] = cur.fetchall()
 
     if not rows:
         print(
@@ -247,9 +247,9 @@ def main() -> None:
         # Store version metadata for repository restoration
         if task_name not in tasks_versions and version_info_str:
             try:
-                version_info: Dict[str, str] = json.loads(version_info_str)
+                version_info_dict: Dict[str, str] = json.loads(version_info_str)
             except Exception:
-                version_info = {}
+                version_info_dict = {}
 
             try:
                 schema_dict: Dict[str, Any] = json.loads(param_schema)
@@ -257,7 +257,7 @@ def main() -> None:
                 schema_dict = {}
 
             tasks_versions[task_name] = {
-                "version_info": version_info,
+                "version_info": version_info_dict,
                 "schema": schema_dict,
             }
 

@@ -11,24 +11,14 @@ Exceptions:
         Pydantic)
 """
 
-# flake8: noqa: F403,F405
-
-__all__ = ["parse_config"]
 __author__ = "Gabriel Dorlhiac"
 
 import base64
 import logging
 import os
-import re
 import subprocess
-import warnings
 import zlib
-from typing import Callable, List, Dict, Iterator, Any, Union, Optional
-
-import pprint
-import yaml
-
-from lute.tasks.dataclasses import VersionSpecifier
+from typing import List, Dict, Optional
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
