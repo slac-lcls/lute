@@ -81,6 +81,8 @@ nav:
                   - _sqlite: "source/io/_db/v1/_sqlite.md"
           - elog: "source/io/elog.md"
           - exceptions: "source/io/exceptions.md"
+          - parameters: "source/io/parameters.md"
+          - version_utils: "source/io/version_utils.md"
 
   - Design and Specifications:
       - Database:
