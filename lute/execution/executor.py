@@ -607,7 +607,7 @@ class BaseExecutor(ABC):
                     subproc_env[key] = ":".join(cleaned_parts)
                 else:
                     subproc_env[key] = val
-                subproc_env[key] = val
+
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE, env=subproc_env
         ).communicate()
