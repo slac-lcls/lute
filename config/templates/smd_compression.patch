@@ -1,0 +1,358 @@
+diff --git a/lcls1_producers/smd_producer.py b/lcls1_producers/smd_producer.py
+--- a/lcls1_producers/smd_producer.py
++++ b/lcls1_producers/smd_producer.py
+@@ -654,7 +654,7 @@ for evt_num, evt in enumerate(ds.events()):
+ 
+     #the ARP will pass run & exp via the enviroment, if I see that info, the post updates
+     if ( (evt_num<100 and evt_num%10==0) or (evt_num<1000 and evt_num%100==0) or (evt_num%1000==0)):
+-        if os.environ.get('ARP_JOB_ID', None) is not None:
++        if os.environ.get('ARP_JOB_ID', None) is not None and os.getenv("JID_UPDATE_COUNTERS") is not None:
+             if ds.size == 1:
+                 requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Current Event</b>", "value": evt_num+1}])
+             elif ds.rank == 0:
+@@ -703,7 +703,7 @@ if ds.rank==0:
+ 
+ #finishing up here....
+ logger.debug('rank {0} on {1} is finished'.format(ds.rank, hostname))
+-if os.environ.get('ARP_JOB_ID', None) is not None:
++if os.environ.get('ARP_JOB_ID', None) is not None and os.getenv("JID_UPDATE_COUNTERS") is not None:
+     if ds.size > 1:
+         if ds.rank == 0:
+             requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Last Event</b>", "value": "~ %d cores * %d evts"%(ds.size,evt_num)},{"key": "<b>Duration</b>", "value": "%f min"%(prod_time)}])
+diff --git a/lcls2_producers/smd_producer.py b/lcls2_producers/smd_producer.py
+--- a/lcls2_producers/smd_producer.py
++++ b/lcls2_producers/smd_producer.py
+@@ -115,8 +115,10 @@ def define_dets(run, det_list):
+ 
+         #             **** Compression MUST be the first operation ****             #
+         # It is "transparent" in that it just compresses then decompresses the data #
++        pressioCompressionFunc = None
+         if detname in pressio_compression_args:
+-            det.addFunc(pressioCompressDecompress(**pressio_compression_args[detname]))
++            pressioCompressionFunc = pressioCompressDecompress(**pressio_compression_args[detname])
++            # det.addFunc(pressioCompressDecompress(**pressio_compression_args[detname]))
+ 
+         # HSD need special treatment due to their data structure.
+         # TO REVIEW / REVISE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@@ -135,7 +137,10 @@ def define_dets(run, det_list):
+                         ROI=rois_args[detname][sdetname],
+                     )
+                     hsdsplit.addFunc(RF)
+-            det.addFunc(hsdsplit)
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(hsdsplit)
++            else:
++                det.addFunc(hsdsplit)
+             dets.append(det)
+             continue
+ 
+@@ -143,10 +148,18 @@ def define_dets(run, det_list):
+         ######## Standard detectors ########
+         ####################################
+         if detname in azav_args:
+-            det.addFunc(azimuthalBinning(**azav_args[detname]))
++            azavFunc = azimuthalBinning(**azav_args[detname])
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(azavFunc)
++            else:
++                det.addFunc(azavFunc)
+ 
+         if detname in azav_pyfai_args:
+-            det.addFunc(azav_pyfai(**azav_pyfai_args[detname]))
++            azavPyfaiFunc = azav_pyfai(**azav_pyfai_args[detname])
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(azavPyfaiFunc)
++            else:
++                det.addFunc(azavPyfaiFunc)
+ 
+         if detname in rois_args:
+             # ROI extraction
+@@ -156,7 +169,11 @@ def define_dets(run, det_list):
+                 thisROIFunc = ROIFunc(**ROI)
+                 if proj_ax is not None:
+                     thisROIFunc.addFunc(projectionFunc(axis=proj_ax))
+-                det.addFunc(thisROIFunc)
++
++                if pressioCompressionFunc is not None:
++                    pressioCompressionFunc.addFunc(thisROIFunc)
++                else:
++                    det.addFunc(thisROIFunc)
+ 
+         if detname in d2p_args:
+             if rank == 0:
+@@ -188,7 +205,10 @@ def define_dets(run, det_list):
+                 drop2phot_func.addFunc(unsparsify_func)
+             drop2phot_func.addFunc(sparsify)
+             dropfunc.addFunc(drop2phot_func)
+-            det.addFunc(dropfunc)
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(dropfunc)
++            else:
++                det.addFunc(dropfunc)
+ 
+         # if detname in dimgs_args:
+         #     # Detector image (det.raw.image())
+@@ -198,11 +218,18 @@ def define_dets(run, det_list):
+         if detname in wfs_int_args:
+             # Waveform integration
+             wfs_int_func = WfIntegration(**wfs_int_args[detname])
+-            det.addFunc(wfs_int_func)
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(wfs_int_func)
++            else:
++                det.addFunc(wfs_int_func)
+ 
+         if detname in wfs_hitfinder_args:
+             # Simple hit finder on waveform
+-            det.addFunc(SimpleHitFinder(**wfs_hitfinder_args[detname]))
++            simpleHitFunc = SimpleHitFinder(**wfs_hitfinder_args[detname])
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(simpleHitFunc)
++            else:
++                det.addFunc(simpleHitFunc)
+ 
+         if detname in wfs_svd_args:
+             if isinstance(
+@@ -216,9 +243,16 @@ def define_dets(run, det_list):
+                         )
+                         continue
+                     this_func = SvdFit(**ch)
+-                    det.addFunc(this_func)
++                    if pressioCompressionFunc is not None:
++                        pressioCompressionFunc.addFunc(this_func)
++                    else:
++                        det.addFunc(this_func)
+             else:
+-                det.addFunc(SvdFit(**wfs_svd_args[detname]))
++                svdFunc = SvdFit(**wfs_svd_args[detname])
++                if pressioCompressionFunc is not None:
++                    pressioCompressionFunc.addFunc(svdFunc)
++                else:
++                    det.addFunc(svdFunc)
+ 
+         if detname in droplet_args:
+             if "nData" in droplet_args[detname].keys():
+@@ -227,7 +261,10 @@ def define_dets(run, det_list):
+                 nData = None
+             dFunc = dropletFunc(**droplet_args[detname])
+             dFunc.addFunc(sparsifyFunc(nData=nData))
+-            det.addFunc(dFunc)
++            if pressioCompressionFunc is not None:
++                pressioCompressionFunc.addFunc(dFunc)
++            else:
++                det.addFunc(dFunc)
+ 
+         if detname in polynomial_args:
+             obj = det
+@@ -238,7 +275,10 @@ def define_dets(run, det_list):
+                 droplet_func = dropletFunc(**droplet_args)
+                 unsparsify = unsparsifyFunc()
+                 droplet_func.addFunc(unsparsify)
+-                det.addFunc(droplet_func)
++                if pressioCompressionFunc is not None:
++                    pressioCompressionFunc.addFunc(droplet_func)
++                else:
++                    det.addFunc(droplet_func)
+                 obj = unsparsify
+ 
+             if "projection" in polynomial_args[detname]:
+@@ -269,6 +309,10 @@ def define_dets(run, det_list):
+                     det.storeSum(sumAlgo=algo)
+ 
+         logger.debug(f"Rank {rank} Add det {detname}: {det}")
++
++        if pressioCompressionFunc is not None:
++            det.addFunc(pressioCompressionFunc)
++
+         dets.append(det)
+ 
+     return dets
+@@ -1058,7 +1102,7 @@ logger.debug("rank {0} on {1} is finished".format(rank, hostname))
+ #        cmd = ['timestamp_sort_h5', h5_f_name, h5_f_name]
+ 
+ if ds.unique_user_rank():
+-    if os.environ.get("ARP_JOB_ID", None) is not None:
++    if os.environ.get("ARP_JOB_ID", None) is not None and os.getenv("JID_UPDATE_COUNTERS") is not None:
+         requests.post(
+             os.environ["JID_UPDATE_COUNTERS"],
+             json=[
+diff --git a/smalldata_tools/ana_funcs/compression.py b/smalldata_tools/ana_funcs/compression.py
+--- a/smalldata_tools/ana_funcs/compression.py
++++ b/smalldata_tools/ana_funcs/compression.py
+@@ -1,3 +1,5 @@
++import time
++
+ import numpy as np
+ 
+ from smalldata_tools.common.detector_base import DetObjectFunc
+@@ -28,13 +30,54 @@ class pressioCompressDecompress(DetObjectFunc):
+ 
+         self._compressor = PressioCompressor.from_config(self._compressor_json)
+ 
++        # NOTE: This ends up using more memory!
++        # In addition to self.dat (which contains compressed/uncompressed data)
++        # The compression func will also store `dat_orig`
++        # This allows side-by-side comparison for data having gone through
++        # the compression/uncompression cycle and data that did not
++        self.dat_orig = np.zeros(0, dtype=np.float32)
++
+     def process(self, data):
+         decompressed_img = np.zeros_like(data)
++        # We'll provide some statistics (like how long it takes)
+ 
+         # First compress image - output is immediately decompressed
++        compression_start_time = time.time()
+         compressed_img = self._compressor.encode(data)
++        compression_end_time = time.time()
+ 
++        decompression_start_time = time.time()
+         decompressed_img = self._compressor.decode(compressed_img, decompressed_img)
++        decompression_end_time = time.time()
++
++        # Calculate the statistics and fill in the returned data
++        starting_size = data.size * data.itemsize
++        compressed_size = compressed_img.size * compressed_img.itemsize
++        compression_ratio = starting_size/compressed_size
++        compression_time = compression_end_time - compression_start_time
++        decompression_time = decompression_end_time - decompression_start_time
++
++        ret_data = {}
++        ret_data["pressio_stats"] = {
++            "compression_ratio": compression_ratio,
++            "compression_time": compression_time,
++            "decompression_time": decompression_time,
++        }
++
++        # The compressed/decompressed data will be in self.dat
++        # In case we want to see side-by-side the data that did not go through the cycle
++        # it will be in self.dat_orig
++        self.dat = decompressed_img
++        self.dat_orig = data
++
++        # Now we run the subFuncs
++        sub_func_results = self.processFuncs()
++        if not sub_func_results:
++            return ret_data
++
++        for key in sub_func_results:
++            for sub_key in sub_func_results[key]:
++                ret_data[f"{key}_{sub_key}"] = sub_func_results[key][sub_key]
++
++        return ret_data
+ 
+-        data = decompressed_img
+-        return {}
+diff --git a/smalldata_tools/ana_funcs/droplet.py b/smalldata_tools/ana_funcs/droplet.py
+--- a/smalldata_tools/ana_funcs/droplet.py
++++ b/smalldata_tools/ana_funcs/droplet.py
+@@ -1,7 +1,9 @@
+ import numpy as np
+ import time
+ import scipy.ndimage as ndi
+-import skimage.measure as measure
++# For the compression environments skimage is not available
++# import skimage.measure as measure
++measure = print
+ import scipy.ndimage.filters as filters
+ from scipy import sparse
+ from smalldata_tools.common.detector_base import DetObjectFunc
+@@ -273,3 +275,4 @@ class dropletFunc(DetObjectFunc):
+         self.dat = dat_dict
+ 
+         return ret_dict
++
+diff --git a/smalldata_tools/common/detector_base.py b/smalldata_tools/common/detector_base.py
+--- a/smalldata_tools/common/detector_base.py
++++ b/smalldata_tools/common/detector_base.py
+@@ -184,8 +184,23 @@ class DetObjectFunc(object):
+                 % self.name
+             )
+             return
+-        for tfunc in subFuncs:
+-            subFuncResults[tfunc._name] = tfunc.process(self.dat)
++        for sfunc in subFuncs:
++            try:
++                subFuncResults[sfunc._name] = sfunc.process(self.dat)
++            except Exception as err:
++                # print(
++                #     f"Sub func {sfunc._name} failed to process and will be skipped. ({err})"
++                # )
++                continue
++            if "dat_orig" in self.__dict__.keys():
++                # The compression func also stores an original version of the data
++                # (perhaps other funcs do) - this is to facilitate side-by-side
++                # comparisons
++                orig_name = f"{sfunc._name}_original"
++                try:
++                    subFuncResults[orig_name] = sfunc.process(self.dat_orig)
++                except:
++                    continue
+         return subFuncResults
+ 
+ 
+@@ -255,3 +270,4 @@ def getUserEnvData(det):
+     except:
+         pass
+     return env_dict
++
+diff --git a/smalldata_tools/lcls2/DetObject.py b/smalldata_tools/lcls2/DetObject.py
+--- a/smalldata_tools/lcls2/DetObject.py
++++ b/smalldata_tools/lcls2/DetObject.py
+@@ -315,8 +315,13 @@ class GenericContainerObject(DetObjectClass):
+             # is not available until after first event. We therefor will reprocess
+             # afterwards
+             super().addFunc(func)
+-        except:
+-            ...
++        except Exception as err:
++            print(
++                "*** GenericContainerObject encountered error when adding Func:",
++                str(err),
++            )
++        # Add anyway (reprocessFuncs will handle it)
++        self.__dict__[func._name] = func
+ 
+     def reprocessFuncs(self):
+         """Rerun setup for DetObjectFuncs.
+@@ -331,12 +336,34 @@ class GenericContainerObject(DetObjectClass):
+             for k in self.__dict__
+             if isinstance(self.__dict__[k], DetObjectFunc)
+         ]:
+-            func.setFromDet(self)
+             try:
+-                func.setFromFunc()
++                func.setFromDet(self)
+             except:
+                 print("Failed to pass parameters to children of ", func._name)
+ 
++            try:
++                func.setFromFunc()
++            except:
++                print("Failed to setFromFunc", func._name)
++
++            subFuncs = [
++                sFunc
++                for _, sFunc in func.__dict__.items()
++                if isinstance(sFunc, DetObjectFunc)
++            ]
++            # Need to also rerun it on the subFunc (if any)
++            for subFunc in subFuncs:
++                try:
++                    subFunc.setFromDet(self)
++                except:
++                    ...
++                try:
++                    subFunc.setFromFunc()
++                except Exception as err:
++                    print("SubFunc error on reprocess:", str(err))
++                    # Continue anyway so that not all funcs fail
++                    continue
++
+     def get_fields(self, top_field):
+         """
+         Parameters
+@@ -891,3 +918,4 @@ class ArchonObject(ImageObject):
+         if self.common_mode is None:
+             self.common_mode = 30
+         return
++
