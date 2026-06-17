@@ -83,7 +83,7 @@ AnalyzeSmallDataXSS:
     - "lens_h"
     - "lens_g"
   # Thresholds used for data filtering
-  thresholds:
+  intensity_thresholds:
     min_Iscat: 10           # Minimum integrated scattering intensity
     min_ipm: 500            # Minimum x-ray intensity at selected ipm
 ...

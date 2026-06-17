@@ -625,7 +625,7 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     scanned motors.
     """
 
-    class Thresholds(BaseModel):
+    class IntensityThresholds(BaseModel):
         min_Iscat: float = Field(
             10.0, description="Minimum scattering intensity to use for filtering."
         )
@@ -633,9 +633,27 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             1000.0, description="Minimum X-ray intensity to use for filtering."
         )
 
-    class AnalysisFlags(BaseModel):
-        use_pyfai: bool = True
-        use_asymls: bool = False
+    class XSSProcessingParameters(BaseModel):
+        q_norm: Tuple[float, float] = Field(
+            (0.9, 3.5),
+            description=("Q-range to use for normalization of scattering signal."),
+        )
+        median_filter_size: int = Field(
+            12, description="Size of median filter to apply to scattering profiles."
+        )
+        water_qs: Tuple[float, float] = Field(
+            (1.0, 1.93), description="Q-range for water peak."
+        )
+        water_ratio: float = Field(
+            1.25,
+            description="Ratio of water peak intensity between low and high Q to filter bad water shots.",
+        )
+        water_sigma: float = Field(
+            2.0, description="Standard deviation for filtering bad water shots."
+        )
+        num_intensity_bins: int = Field(
+            20, description="Number of bins for total intensity based subsampling."
+        )
 
     _find_smd_path = validate_smd_path("smd_path")
 
@@ -644,6 +662,9 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     )
     xss_detname: Optional[str] = Field(
         None, description="Name of the detector with scattering data."
+    )
+    xss_event_codes: Optional[List[int]] = Field(
+        None, description="List of event codes to use for XSS T-Jump analysis."
     )
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
@@ -655,8 +676,12 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
-    # analysis_flags: AnalysisFlags
+    intensity_thresholds: IntensityThresholds = Field(
+        IntensityThresholds(), description="Intensity thresholds for XSS analysis."
+    )
+    xss_processing_parameters: XSSProcessingParameters = Field(
+        XSSProcessingParameters(), description="Parameters for processing XSS data."
+    )
 
 
 class AnalyzeSmallDataXASParameters(TaskParameters):
@@ -667,7 +692,7 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     scanned motors.
     """
 
-    class Thresholds(BaseModel):
+    class IntensityThresholds(BaseModel):
         min_Iscat: float = Field(
             10.0, description="Minimum scattering intensity to use for filtering."
         )
@@ -699,7 +724,10 @@ class AnalyzeSmallDataXASParameters(TaskParameters):
     ccm_set: Optional[str] = Field(
         None, description="Name of the PV for the setpoint of the CCM."
     )
-    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
+    intensity_thresholds: IntensityThresholds = Field(
+        IntensityThresholds(min_Iscat=10.0, min_ipm=1000.0),
+        description="Intensity thresholds for XAS analysis.",
+    )
     element: Optional[str] = Field(
         None,
         description="Element under investigation. Currently unused. For future EXAFS.",
@@ -714,7 +742,7 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
     scanned motors.
     """
 
-    class Thresholds(BaseModel):
+    class IntensityThresholds(BaseModel):
         min_Iscat: float = Field(
             10.0, description="Minimum scattering intensity to use for filtering."
         )
@@ -742,7 +770,10 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
             "E.g. lxt, lens_h, etc."
         ),
     )
-    thresholds: Thresholds = Field(Thresholds(min_Iscat=10.0, min_ipm=1000.0))
+    intensity_thresholds: IntensityThresholds = Field(
+        IntensityThresholds(min_Iscat=10.0, min_ipm=1000.0),
+        description="Intensity thresholds for XES analysis.",
+    )
     invert_xes_axes: bool = Field(
         False,
         description=(
