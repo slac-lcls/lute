@@ -60,3 +60,40 @@ class ConvertXtc1to2Parameters(TaskParameters):
             "keys will be used as the detector names in the XTC2 data."
         ),
     )
+
+
+class ReadXtc1Parameters(TaskParameters):
+    """Parameters for the xtc conversion Task."""
+
+    eventfile: str = Field(
+        default="",
+        description="CSV file with event numbers. Otherwise will process all events.",
+    )
+    nevents: Optional[int] = Field(
+        default=None,
+        description=(
+            "Optionally specify the number of events to use. If providing eventfile "
+            "as well, that option will supercede this one."
+        ),
+    )
+    xtc1_access_pattern: Dict[str, List[ConversionSpecification]] = Field(
+        description=(
+            "Provides information for how to access the data in XTC1. The top level "
+            "keys will be used as the detector names in the XTC2 data."
+        ),
+    )
+
+
+class WriteXtc2Parameters(TaskParameters):
+    """Parameters for the xtc conversion Task."""
+
+    node_id: str = Field(default="1", description="Node ID for the detector")
+    output_file: str = Field(
+        description="Where to write the output XTC2 file.", is_result=True
+    )
+    xtc1_access_pattern: Dict[str, List[ConversionSpecification]] = Field(
+        description=(
+            "Provides information for how to access the data in XTC1. The top level "
+            "keys will be used as the detector names in the XTC2 data."
+        ),
+    )

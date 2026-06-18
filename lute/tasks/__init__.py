@@ -106,6 +106,16 @@ def import_task(task_name: str) -> Type[Task]:
 
         return ConvertXtc1to2
 
+    if task_name == "ReadXtc1":
+        from .xtc1 import ReadXtc1
+
+        return ReadXtc1
+
+    if task_name == "WriteXtc2":
+        from .xtc2 import WriteXtc2
+
+        return WriteXtc2
+
     if task_name == "TestRequest":
         from .test import TestRequest
 
