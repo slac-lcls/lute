@@ -124,6 +124,39 @@ Task List
 
 **NOTE:** Associated **managed** `Task`s are provided under each `Task` name. These will be the names passed to submission scripts.
 
+## Restoring a Configuration YAML from a Previous Run (`lute_cfg`)
+
+The LUTE database holds a record of all parameters used for all `Task`s that have been run. It also contains information about the version of the code that was used each time any of those `Task`s was run. E.g., this may be important in the case of `Task`s, like `smalldata_tools` (`SubmitSMD`) that are run on top of checked-out repositories containing Python code that can be modified between executions.
+
+LUTE provides a utility to extract the information from this database and, if relevant, restore various code bases to the state they were in when a specific experimental run was analyzed.
+
+To use the utility, first source your standard Python environment and setup the LUTE installation. For example, on S3DF this may look like:
+
+```bash
+> cd /sdf/<MY EXPERIMENT OF INTEREST>/results/lute
+> source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
+> source install/bin/activate_installation
+```
+
+Then you can run the `lute_cfg` utility to create a config YAML based on the datbase for a particular run.
+
+```bash
+> lute_cfg --help
+usage: lute_cfg [-h] -d DATABASE -r RUN -o OUTPUT
+
+Reconstruct LUTE config YAML and restore git repositories to their state during a specific run.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DATABASE, --database DATABASE
+                        Path to the LUTE database.
+  -r RUN, --run RUN     Run number to reconstruct config for.
+  -o OUTPUT, --output OUTPUT
+                        Location to output the new config YAML (directory or file path).
+```
+
+The YAML will be output to the location indicated by the `-o` flag. It does NOT overwrite any other YAML files unless you set this flag to the path of an existing file. The `-d` flag is used to point to the LUTE sqlite database. For example, on S3DF this is usually in `/sdf/<MY EXPERIMENT OF INTEREST/results/lute_output/lute.db`.
+
 ## Variable Substitution in YAML Files
 Using `validator`s, it is possible to define (generally, default) model parameters for a `Task` in terms of other parameters. It is also possible to use validated Pydantic model parameters to substitute values into a configuration file required to run a third party `Task` (e.g. some `Task`s may require their own JSON, TOML files, etc. to run properly). For more information on these types of substitutions, refer to the `Creating a new Task` documentation on `Task` creation (in the Developer Documentation).
 

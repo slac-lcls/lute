@@ -108,6 +108,17 @@ class BaseSchema(int, Enum):
     HDF5 = 1
 
 
+class VersionSpecifier(int, Enum):
+    NONE = 0
+    """Version information lacking or not relevant."""
+    LUTE_VERSION = 1
+    """For a first-party Task, indicates this tracks LUTE's version only."""
+    GIT_SHA = 2
+    """Specifies version as a specific commit hash."""
+    GIT_DIFF = 4
+    """Specifies version as a diff. Must be used combined with a GIT_SHA to diff."""
+
+
 @dataclass
 class ElogSummaryPlots:
     """Holds a graphical summary intended for display in the eLog.

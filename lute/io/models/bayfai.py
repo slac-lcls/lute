@@ -76,37 +76,37 @@ class BayFAIParameters(TaskParameters):
         """Bayesian optimization hyperparameters."""
 
         n_samples: int = Field(
-            20,
+            default=20,
             description="Number of samples to initialize the Gaussian Process.",
         )
 
         n_iterations: int = Field(
-            80,
+            default=80,
             description="Number of iterations of Bayesian Optimization",
         )
 
         max_rings: int = Field(
-            6,
+            default=6,
             description="Maximum number of rings to search for Bragg peaks.",
         )
 
         prior: bool = Field(
-            True,
+            default=True,
             description="Whether to sample initial points around the center of search space or randomly.",
         )
 
         beta: float = Field(
-            1.96,
+            default=1.96,
             description="Exploration-exploitation trade-off hyperparameter for Upper Confidence Bound acquisition function.",
         )
 
         step: int = Field(
-            5,
+            default=5,
             description="Size of the refinement space around best parameters.",
         )
 
         seed: Optional[int] = Field(
-            None,
+            default=None,
             description="Random seed for reproducibility.",
         )
 
