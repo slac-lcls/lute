@@ -147,7 +147,7 @@ class WriteXtc2(Task):
         par: WriteXtc2Parameters = self._task_parameters
         exp: str = par.lute_config.experiment
         run: Union[int, str] = par.lute_config.run
-        logger.debug("Starting [XTC2 Writer] with psana 2")
+        logger.debug(f"Starting [XTC2 Writer Rank {self._mpi_rank}] with psana 2")
         data_spec: Dict[str, Any] = {}
         detnames: List[str] = []
         for detname, specs in par.xtc1_access_pattern.items():
@@ -182,7 +182,9 @@ class WriteXtc2(Task):
             new_port: Optional[int] = zmq_recv.zmq_port
             if new_port is None:
                 # Failed to find a port to bind
-                logger.error("Marking Task as FAILED and exiting!")
+                logger.error(
+                    f"[XTC2 Writer Rank {self._mpi_rank}] Marking Task as FAILED and exiting!"
+                )
                 self._result.task_status = TaskStatus.FAILED
                 return
 
@@ -211,13 +213,24 @@ class WriteXtc2(Task):
                 "in the configuration YAML!\n"
                 f"Received: {par.output_file}"
             )
-        # To parallelize, each rank will write its own chunk
-        output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}.")
-        xtc_path: PosixPath = PosixPath(output_file)
+
+        # NOTE: To parallelize, each rank will write its own chunk
+        #       In principle, we should be able to read multiple chunk files with psana
+        #       However, I was not able to get them into a format that psana liked with
+        #       respect to how the transitions are distributed across them.
+        #       Instead, we will do:
+        #         1. Each rank writes a tmp chunk file.
+        #         2. At the end, each rank will contribute to a master single chunk file
+        #         3. Each rank cleans up the tmp.
+        #         4. Rank 0 writes a final smd for the combined master file.
+        tmp_chunk_file: str = par.output_file.replace(
+            "-c000.", f"-c{self._mpi_rank:03d}-tmp."
+        )
+        xtc_path: PosixPath = PosixPath(tmp_chunk_file)
         xtc_dir: PosixPath = xtc_path.parent.absolute()
         xtc_dir.mkdir(parents=True, exist_ok=True)
 
-        xtc2file: BinaryIO = open(output_file, "wb")
+        xtc2file: BinaryIO = open(tmp_chunk_file, "wb")
 
         # Create config, algorithm, and detector
         config: DgramEdit = DgramEdit(transition_id=TransitionId.Configure)
@@ -285,7 +298,7 @@ class WriteXtc2(Task):
         # detname: {field: (type, rank)}
         datadef: Optional[Dict[str, Dict[str, Tuple[Type, int]]]] = None
         # Start saving data
-        logger.info("[XTC2 Writer]: Starting receiving")
+        logger.info(f"[XTC2 Writer Rank {self._mpi_rank}]: Starting receiving")
         detector: config.Detector
         detectors: Dict[str, config.Detector] = {}
         namesId["epics"] = len(namesId)
@@ -377,7 +390,7 @@ class WriteXtc2(Task):
                     namesId=namesId["timing"],
                 )
             elif "start" in obj:
-                # NOTE: May need to only do this in the first rank (0)!
+                # NOTE: Only run the actual writes on rank 0!
                 config_timestamp = obj["config_timestamp"]
                 config.updatetimestamp(config_timestamp)
 
@@ -387,7 +400,9 @@ class WriteXtc2(Task):
                     epicsinfo.epicsinfo.keys = "epicsname"
                     config.adddata(epicsinfo.epicsinfo)
 
-                save_dgramedit(config, outbuf, xtc2file)
+                # Only rank 0 writes
+                if self._mpi_rank == 0:
+                    save_dgramedit(config, outbuf, xtc2file)
 
                 beginrun = DgramEdit(
                     transition_id=TransitionId.BeginRun,
@@ -397,21 +412,31 @@ class WriteXtc2(Task):
                 runinfo.runinfo.expt = exp
                 runinfo.runinfo.runnum = int(run)
                 beginrun.adddata(runinfo.runinfo)
-                save_dgramedit(beginrun, outbuf, xtc2file)
+
+                # Only rank 0 writes
+                if self._mpi_rank == 0:
+                    save_dgramedit(beginrun, outbuf, xtc2file)
 
                 beginstep = DgramEdit(
                     transition_id=TransitionId.BeginStep,
                     config_dgramedit=config,
                     ts=config_timestamp + 2,
                 )
-                save_dgramedit(beginstep, outbuf, xtc2file)
+
+                # Only rank 0 writes
+                if self._mpi_rank == 0:
+                    save_dgramedit(beginstep, outbuf, xtc2file)
 
                 enable = DgramEdit(
                     transition_id=TransitionId.Enable,
                     config_dgramedit=config,
                     ts=config_timestamp + 3,
                 )
-                save_dgramedit(enable, outbuf, xtc2file)
+
+                # Only rank 0 writes
+                if self._mpi_rank == 0:
+                    save_dgramedit(enable, outbuf, xtc2file)
+
                 current_timestamp = config_timestamp + 3
                 if "calib_const" in obj:
                     for detname, det_consts in obj["calib_const"].items():
@@ -419,26 +444,35 @@ class WriteXtc2(Task):
                             continue
                         for const_name, constants in det_consts.items():
                             prefixed_name = f"{detname}_{const_name}"
-                            detector = calib_detectors[prefixed_name]
                             slow_update: DgramEdit = DgramEdit(
                                 transition_id=TransitionId.SlowUpdate,
                                 config_dgramedit=config,
                                 ts=current_timestamp + 1,
                             )
+
+                            detector = calib_detectors[prefixed_name]
                             setattr(detector.raw, prefixed_name, constants)
                             slow_update.adddata(detector.raw)
-                            save_dgramedit(slow_update, outbuf, xtc2file)
+
+                            # Only rank 0 writes this data!!
+                            if self._mpi_rank == 0:
+                                save_dgramedit(slow_update, outbuf, xtc2file)
                             current_timestamp += 1
 
             elif "end" in obj:
-                # NOTE: May need to only do this in the last rank (size - 1)
+                # NOTE: Only the (size - 1) rank writes the final transitions
+                writing_rank: int = self._mpi_size - 1
                 current_timestamp += 1
                 disable = DgramEdit(
                     transition_id=TransitionId.Disable,
                     config_dgramedit=config,
                     ts=current_timestamp,
                 )
-                save_dgramedit(disable, outbuf, xtc2file)
+
+                # Only rank (size - 1) writes
+                if self._mpi_rank == writing_rank:
+                    save_dgramedit(disable, outbuf, xtc2file)
+
                 current_timestamp += 1
                 # current_timestamp = config_timestamp + 3
                 endstep = DgramEdit(
@@ -446,19 +480,31 @@ class WriteXtc2(Task):
                     config_dgramedit=config,
                     ts=current_timestamp,
                 )
-                save_dgramedit(endstep, outbuf, xtc2file)
+
+                # Only rank (size - 1) writes
+                if self._mpi_rank == writing_rank:
+                    save_dgramedit(endstep, outbuf, xtc2file)
+
                 current_timestamp += 1
                 endrun = DgramEdit(
                     transition_id=TransitionId.EndRun,
                     config_dgramedit=config,
                     ts=current_timestamp,
                 )
-                save_dgramedit(endrun, outbuf, xtc2file)
+
+                # Only rank (size - 1) writes
+                if self._mpi_rank == writing_rank:
+                    save_dgramedit(endrun, outbuf, xtc2file)
+
                 if self._mpi_rank != 0:
+                    logger.debug(f"Rank {self._mpi_rank} exiting.")
                     break
                 else:
                     # Rank 0 needs to keep looping unless all ranks done
                     if finished_ranks == self._mpi_size:
+                        logger.debug(
+                            "Rank 0 exiting as all other ranks have completed."
+                        )
                         break
             else:
                 # Create L1Accept
@@ -483,21 +529,72 @@ class WriteXtc2(Task):
                 save_dgramedit(d0, outbuf, xtc2file)
                 current_timestamp = real_timestamp
 
-        logger.info("[XTC2 Writer]: Complete")
+        logger.info(f"[XTC2 Writer Rank {self._mpi_rank}]: XTC2 Writing Complete")
         xtc2file.close()
 
         if self._mpi_rank == 0:
             zmq_recv.close()
 
-        # Write smalldata
-        smalldata_dir: PosixPath = xtc_dir / "smalldata"
-        smalldata_dir.mkdir(parents=True, exist_ok=True)
+        # Difficulty getting the chunk thing working, so will combine all files at end
+        MPI.COMM_WORLD.Barrier()
 
-        xtc_name: str = xtc_path.stem
-        smd_name: str = str(smalldata_dir / xtc_name) + ".smd.xtc2"
-        cur_dir: str = os.path.abspath(os.curdir)
-        # This writes the smalldata as smd.xtc2 in current dir - no option to set output file
-        os.chdir(xtc_dir)
-        os.system(f"smdwriter -f {output_file}")
-        shutil.move("smd.xtc2", smd_name)
-        os.chdir(cur_dir)
+        local_size: int = os.path.getsize(tmp_chunk_file)
+        all_sizes: List[int] = MPI.COMM_WORLD.allgather(local_size)
+
+        start_offset: int = sum(all_sizes[: self._mpi_rank])
+        total_size: int = sum(all_sizes)
+
+        final_output_file: str = par.output_file
+
+        if self._mpi_rank == 0:
+            logger.debug("[XTC2 Writer Rank 0]: Opening consolidated file.")
+            with open(final_output_file, "wb") as f:
+                f.truncate(total_size)
+
+        MPI.COMM_WORLD.Barrier()
+
+        if local_size > 0:
+            logger.debug(
+                f"[XTC2 Writer Rank {self._mpi_rank}]: Will write {local_size} bytes beginning at {start_offset}"
+            )
+            with open(final_output_file, "r+b") as f_out:
+                f_out.seek(start_offset)
+                with open(tmp_chunk_file, "rb") as f_in:
+                    while True:
+                        buf: bytes = f_in.read(16 * 1024 * 1024)
+                        if not buf:
+                            break
+                        f_out.write(buf)
+
+        MPI.COMM_WORLD.Barrier()
+
+        if os.path.exists(tmp_chunk_file):
+            logger.debug(
+                f"[XTC2 Writer Rank {self._mpi_rank}]: Removing temporary chunk file {tmp_chunk_file}."
+            )
+            os.remove(tmp_chunk_file)
+
+        if self._mpi_rank == 0:
+            # Write smalldata
+            logger.info("[XTC2 Writer Rank 0]: Beginning .smd File Writing.")
+            smalldata_dir: PosixPath = xtc_dir / "smalldata"
+            smalldata_dir.mkdir(parents=True, exist_ok=True)
+
+            xtc_name_final: str = PosixPath(final_output_file).stem
+            smd_name: str = str(smalldata_dir / xtc_name_final) + ".smd.xtc2"
+
+            cur_dir: str = os.path.abspath(os.curdir)
+            os.chdir(xtc_dir)
+            os.system(f"smdwriter -f {final_output_file}")
+            if os.path.exists("smd.xtc2"):
+                logger.debug(f"[XTC2 Writer Rank 0]: Moving smd.xtc2 to {smd_name}.")
+                shutil.move("smd.xtc2", smd_name)
+            else:
+                logger.warning(
+                    "[XTC2 Writer Rank 0]: Did not find an smd.xtc2 file after writing!"
+                )
+            os.chdir(cur_dir)
+
+        logger.info(
+            f"[XTC2 Writer Rank {self._mpi_rank}]: Writing and file consolidation completed."
+        )

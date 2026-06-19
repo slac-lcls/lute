@@ -57,8 +57,9 @@ class ZmqSender:
         self._zmq_context: zmq.Context = zmq.Context()
         self.zmq_socket: zmq.sugar.socket.Socket = self._zmq_context.socket(zmq.PUSH)
 
-        # Force closure when peer dies
-        self.zmq_socket.setsockopt(zmq.LINGER, 0)
+        # Force closure when peer dies, but give a bit of grace to allow final messages
+        # to go through
+        self.zmq_socket.setsockopt(zmq.LINGER, 2000)
 
         self.zmq_socket.connect(addr)
 
@@ -453,17 +454,22 @@ class ReadXtc1(Task):
                 # beginstep, and enable on the client.
                 start_dict: Dict[str, Any] = {
                     "start": True,
-                    "config_timestamp": timestamp.time() - 10,
+                    # "config_timestamp": timestamp.time() - 10,
+                    "config_timestamp": timestamps[0].time() - 10,
                     "rank": self._mpi_rank,
                 }
                 if calib_dict:
                     # If the requested detectors had calibration constants they will
                     # be attached to the BeginRun transition as part of the scan det
                     start_dict["calib_const"] = calib_dict
-                    logger.info("[XTC1 Sender]: Starting sending..")
+                    logger.info(
+                        f"[XTC1 Sender Rank {self._mpi_rank}]: Starting sending.."
+                    )
                 zmq_send.send_zipped_pickle(start_dict)
 
-            logger.debug(f"[XTC1 Sender]: event_num={event_num} ts={timestamp.time()}")
+            logger.debug(
+                f"[XTC1 Sender Rank {self._mpi_rank}]: event_num={event_num} ts={timestamp.time()}"
+            )
 
             # Send the dataset
             zmq_send.send_zipped_pickle(data)
@@ -471,8 +477,10 @@ class ReadXtc1(Task):
         # Send end message
         done_dict: Dict[str, Any] = {"end": True, "rank": self._mpi_rank}
         zmq_send.send_zipped_pickle(done_dict)
-        logger.info("[XTC1 Sender]: Sending complete!")
+        logger.info(f"[XTC1 Sender Rank {self._mpi_rank}]: Sending complete!")
 
+        # Add a little grace period to try and ensure messages get through
+        time.sleep(1)
         zmq_send.close()
 
         self._result.task_status = TaskStatus.COMPLETED
