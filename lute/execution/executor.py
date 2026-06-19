@@ -1380,7 +1380,11 @@ class Executor(BaseExecutor):
                     "Task Request improperly formatted. Received message of "
                     f"type: {type(msg)}"
                 )
-            return None
+            if __debug__:
+                # This means the request gets printed.
+                # We don't actually want that in general...
+                return False
+            return True
 
         self.add_hook("task_request", task_request)
 
