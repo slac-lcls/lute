@@ -2,8 +2,10 @@
 Task for converting xtc1 files to xtc2 format using zmq-based communication
 between psana1 and psana2 environments.
 
+This module includes the classes needed to read XTC1 files and process them.
+
 Classes:
-    - Xtc1Reader(Task): Read XTC1 files and transmit them to an Xtc2Writer Task
+    - ReadXtc1(Task): Read XTC1 files and transmit them to an WriteXtc2 Task
         for conversion.
 
 Based on Mona's converter:
@@ -28,12 +30,13 @@ from typing import (
     cast,
 )
 
-import psana  # type: ignore
+
 import numpy as np
 import numpy.typing as npt
+import psana  # type: ignore
 import zmq
-from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 from mpi4py import MPI
+from PSCalib.GeometryAccess import GeometryAccess  # type: ignore
 
 from lute.execution.logging import get_logger
 from lute.io.models.xtc import ReadXtc1Parameters
@@ -44,7 +47,6 @@ logger: logging.Logger = get_logger(__name__)
 
 
 class ZmqSender:
-
     def __init__(self, addr: str) -> None:
         """
         A helper for sending messages using pyzmq.
@@ -65,7 +67,7 @@ class ZmqSender:
             z: bytes = zlib.compress(p)
             self.zmq_socket.send(z, flags=flags)
         except (pickle.PickleError, TypeError, zlib.error, zmq.ZMQError) as e:
-            print(f"[XTC1 Sender]: Error during sending pickled object: {e}")
+            logger.error(f"[XTC1 Sender]: Error during sending pickled object: {e}")
 
     def send_array(
         self, data: np.ndarray, flags: int = 0, copy: bool = True, track: bool = False
@@ -96,7 +98,7 @@ class ZmqSender:
             self.zmq_socket.send(data, flags, copy=copy, track=track)
 
         except (AttributeError, zmq.ZMQError, TypeError, ValueError) as e:
-            print(f"[XTC1 Sender]: Error, failed to send array: {e}")
+            logger.error(f"[XTC1 Sender]: Error, failed to send array: {e}")
 
     def close(self) -> None:
         """Closes the zmq socket"""
@@ -218,9 +220,11 @@ class ReadXtc1(Task):
         params (ConvertXtc1to2Parameters): Configuration for the conversion task.
     """
 
-    def __init__(self, *, params: ReadXtc1Parameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: ReadXtc1Parameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
         self._task_parameters: ReadXtc1Parameters
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
         self._mpi_rank: int = MPI.COMM_WORLD.Get_rank()
         self._mpi_size: int = MPI.COMM_WORLD.Get_size()
@@ -235,7 +239,20 @@ class ReadXtc1(Task):
         for detname, specs in par.xtc1_access_pattern.items():
             det_specs: List[Any] = []
             for spec in specs:
-                det_specs.append(spec.dict())
+                spec_d: Dict[str, Any]
+                if isinstance(spec, dict):
+                    # Case when first-party different env bootstrap
+                    spec_d = spec
+                elif hasattr(spec, "dict"):
+                    # Case when first-party same env, no bootstrap
+                    spec_d = spec.dict()
+                else:
+                    logger.error(
+                        "Unable to interpret spec data! Will try to continue without it! Received: ",
+                        spec,
+                    )
+                    continue
+                det_specs.append(spec_d)
             data_spec[detname] = det_specs
             detnames.append(detname)
 
@@ -243,45 +260,48 @@ class ReadXtc1(Task):
         ##################################################################
         writer_port: Optional[int] = None
         writer_host: Optional[str] = None
-        logger.info(
-            f"Querying Maestro for Xtc1Reader (exp={exp}, run={run}) port for rank {self._mpi_rank}"
-        )
-        while True:
-            msg = self.get_running_tasks()
-            if msg and isinstance(msg.contents, dict):
-                running_tasks = msg.contents.get("managed_tasks", [])
-                for task_info in running_tasks:
-                    if (
-                        task_info.get("task") == "WriteXtc2"
-                        and task_info.get("xtc1_exp") == exp
-                        and task_info.get("xtc1_run") == run
-                    ):
-                        # port_key: str = f"zmq_port_rank_{self._mpi_rank}"
-                        # if "xtc1_zmq_port" in task_info:
-                        port_key: str = "xtc1_zmq_port"
-                        if port_key in task_info:
-                            # writer_port = task_info["xtc1_zmq_port"]
-                            writer_port = task_info[port_key]
-                            if (
-                                "task_hostnames" in task_info
-                                and task_info["task_hostnames"]
-                            ):
-                                # writer_host = task_info["task_hostnames"][0]
-                                hostnames: List[str] = task_info["task_hostnames"]
-                                writer_host = hostnames[0]
-                            break
-            if writer_port is not None:
-                if writer_port == -1:
-                    logger.info(
-                        f"Writer rank {self._mpi_rank} exiting early as Reader exited."
-                    )
-                    self._result.task_status = TaskStatus.COMPLETED
-                    return
-                if writer_host is not None:
-                    break
-            # if writer_port is not None and writer_host is not None:
-            #     break
-            time.sleep(1)
+        if self._mpi_rank == 0:
+            logger.info(
+                f"Querying Maestro for WriteXtc2 (exp={exp}, run={run}) port for rank {self._mpi_rank}"
+            )
+            while True:
+                msg = self.get_running_tasks()
+                if msg and isinstance(msg.contents, dict):
+                    running_tasks = msg.contents.get("managed_tasks", [])
+                    for task_info in running_tasks:
+                        if (
+                            task_info.get("task") == "WriteXtc2"
+                            and task_info.get("xtc1_exp") == exp
+                            and task_info.get("xtc1_run") == run
+                        ):
+                            port_key: str = "xtc1_zmq_port"
+                            if port_key in task_info:
+                                writer_port = task_info[port_key]
+                                if (
+                                    "task_hostnames" in task_info
+                                    and task_info["task_hostnames"]
+                                ):
+                                    hostnames: List[str] = task_info["task_hostnames"]
+                                    writer_host = hostnames[0]
+                                break
+                if writer_port is not None:
+                    if writer_port == -1:
+                        logger.info(
+                            f"Writer rank {self._mpi_rank} exiting early as Reader exited."
+                        )
+                        self._result.task_status = TaskStatus.COMPLETED
+                        break
+                    if writer_host is not None:
+                        break
+
+                time.sleep(1)
+
+        writer_port = MPI.COMM_WORLD.bcast(writer_port, root=0)
+        writer_host = MPI.COMM_WORLD.bcast(writer_host, root=0)
+        if writer_port == -1 or writer_port is None:
+            self._result.task_status = TaskStatus.COMPLETED
+            logger.info("Exiting without having sent data.")
+            return
 
         # Sender will bind a random port and expose it
         addr: str = f"tcp://{writer_host}:{writer_port}"
@@ -309,7 +329,9 @@ class ReadXtc1(Task):
                     for row in csvreader:
                         event_num_list += list(map(int, row))
             except FileNotFoundError:
-                print(f"Error: File not found: {par.eventfile}, using test numbers.")
+                logger.error(
+                    f"Error: File not found: {par.eventfile}, using test numbers."
+                )
                 event_num_list = [290, 291]
 
         total_events: int = len(event_num_list)
@@ -421,10 +443,10 @@ class ReadXtc1(Task):
                     # If the requested detectors had calibration constants they will
                     # be attached to the BeginRun transition as part of the scan det
                     start_dict["calib_const"] = calib_dict
-                print("[XTC1 Sender]: Starting sending..")
+                    logger.info("[XTC1 Sender]: Starting sending..")
                 zmq_send.send_zipped_pickle(start_dict)
 
-            print(f"[XTC1 Sender]: event_num={event_num} ts={timestamp.time()}")
+            logger.debug(f"[XTC1 Sender]: event_num={event_num} ts={timestamp.time()}")
 
             # Send the dataset
             zmq_send.send_zipped_pickle(data)
@@ -432,7 +454,7 @@ class ReadXtc1(Task):
         # Send end message
         done_dict: Dict[str, Any] = {"end": True, "rank": self._mpi_rank}
         zmq_send.send_zipped_pickle(done_dict)
-        print("[XTC1 Sender]: Sending complete!")
+        logger.info("[XTC1 Sender]: Sending complete!")
 
         zmq_send.close()
 

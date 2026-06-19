@@ -2,9 +2,11 @@
 Task for converting xtc1 files to xtc2 format using zmq-based communication
 between psana1 and psana2 environments.
 
+This module includes the classes needed to write XTC2 files and process them.
+
 Classes:
-    - Xtc1Reader(Task): Read XTC1 files and transmit them to an Xtc2Writer Task
-        for conversion.
+    - WriteXtc2(Task): Write a new converted XTC2 file with data received from
+        a ReadXtc1 Task running in parallel.
 
 Based on Mona's converter:
     https://github.com/monarin/xtc1to2
@@ -47,8 +49,6 @@ class ZmqReceiver:
         self._zmq_port: Optional[int] = self.zmq_socket.bind_to_random_port(addr)
         if self._zmq_port is None:
             logger.error("Could not find a port to bind!")
-
-        # self.zmq_socket.connect(socket)
 
     @property
     def zmq_port(self) -> Optional[int]:
@@ -134,9 +134,11 @@ class WriteXtc2(Task):
         params (ConvertXtc1to2Parameters): Configuration for the conversion task.
     """
 
-    def __init__(self, *, params: WriteXtc2Parameters, use_mpi: bool = True) -> None:
+    def __init__(
+        self, *, params: WriteXtc2Parameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
         self._task_parameters: WriteXtc2Parameters
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
         self._mpi_rank: int = MPI.COMM_WORLD.Get_rank()
         self._mpi_size: int = MPI.COMM_WORLD.Get_size()
@@ -145,13 +147,26 @@ class WriteXtc2(Task):
         par: WriteXtc2Parameters = self._task_parameters
         exp: str = par.lute_config.experiment
         run: Union[int, str] = par.lute_config.run
-        logger.debug("Starting [XTC1 Sender] in psana 1")
+        logger.debug("Starting [XTC2 Writer] with psana 2")
         data_spec: Dict[str, Any] = {}
         detnames: List[str] = []
         for detname, specs in par.xtc1_access_pattern.items():
             det_specs: List[Any] = []
             for spec in specs:
-                det_specs.append(spec.dict())
+                spec_d: Dict[str, Any]
+                if isinstance(spec, dict):
+                    # Case when first-party different env bootstrap
+                    spec_d = spec
+                elif hasattr(spec, "dict"):
+                    # Case when first-party same env, no bootstrap
+                    spec_d = spec.dict()
+                else:
+                    logger.error(
+                        "Unable to interpret spec data! Will try to continue without it! Received: ",
+                        spec,
+                    )
+                    continue
+                det_specs.append(spec_d)
             data_spec[detname] = det_specs
             detnames.append(detname)
 
@@ -193,7 +208,8 @@ class WriteXtc2(Task):
         if required_pattern not in par.output_file:
             raise RuntimeError(
                 f"Output directory must contain {required_pattern}. Check `output_file` "
-                "in the configuration YAML!"
+                "in the configuration YAML!\n"
+                f"Received: {par.output_file}"
             )
         # To parallelize, each rank will write its own chunk
         output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}")
@@ -269,7 +285,7 @@ class WriteXtc2(Task):
         # detname: {field: (type, rank)}
         datadef: Optional[Dict[str, Dict[str, Tuple[Type, int]]]] = None
         # Start saving data
-        print("[XTC2 Writer]: Starting receiving")
+        logger.info("[XTC2 Writer]: Starting receiving")
         detector: config.Detector
         detectors: Dict[str, config.Detector] = {}
         namesId["epics"] = len(namesId)
@@ -461,7 +477,8 @@ class WriteXtc2(Task):
                     d0.adddata(timing.raw)
                 save_dgramedit(d0, outbuf, xtc2file)
                 current_timestamp = real_timestamp
-        print("[XTC2 Writer]: Complete")
+
+        logger.info("[XTC2 Writer]: Complete")
         xtc2file.close()
 
         if self._mpi_rank == 0:
