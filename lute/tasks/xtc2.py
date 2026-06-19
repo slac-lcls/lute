@@ -212,7 +212,7 @@ class WriteXtc2(Task):
                 f"Received: {par.output_file}"
             )
         # To parallelize, each rank will write its own chunk
-        output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}")
+        output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}.")
         xtc_path: PosixPath = PosixPath(output_file)
         xtc_dir: PosixPath = xtc_path.parent.absolute()
         xtc_dir.mkdir(parents=True, exist_ok=True)
@@ -293,7 +293,12 @@ class WriteXtc2(Task):
         while True:
             if self._mpi_rank == 0:
                 obj = zmq_recv.recv_zipped_pickle()
-                dest_rank: int = obj.get("rank", 0)
+                dest_rank: int
+                if "rank" in obj:
+                    # Must pop, so it isn't treated inappropriately in loops below
+                    dest_rank = obj.pop("rank")
+                else:
+                    dest_rank = 0
                 if dest_rank != 0:
                     MPI.COMM_WORLD.send(obj, dest=dest_rank, tag=99)
                     if "end" in obj:
@@ -390,7 +395,7 @@ class WriteXtc2(Task):
                     ts=config_timestamp + 1,
                 )
                 runinfo.runinfo.expt = exp
-                runinfo.runinfo.runnum = run
+                runinfo.runinfo.runnum = int(run)
                 beginrun.adddata(runinfo.runinfo)
                 save_dgramedit(beginrun, outbuf, xtc2file)
 
