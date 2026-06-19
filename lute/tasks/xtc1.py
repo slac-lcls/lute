@@ -57,6 +57,9 @@ class ZmqSender:
         self._zmq_context: zmq.Context = zmq.Context()
         self.zmq_socket: zmq.sugar.socket.Socket = self._zmq_context.socket(zmq.PUSH)
 
+        # Force closure when peer dies
+        self.zmq_socket.setsockopt(zmq.LINGER, 0)
+
         self.zmq_socket.connect(addr)
 
     def send_zipped_pickle(self, obj: dict, flags: int = 0, protocol: int = -1) -> None:
@@ -103,6 +106,7 @@ class ZmqSender:
     def close(self) -> None:
         """Closes the zmq socket"""
         self.zmq_socket.close()
+        self._zmq_context.term()
 
 
 class DataSpec(TypedDict):
@@ -264,6 +268,8 @@ class ReadXtc1(Task):
             logger.info(
                 f"Querying Maestro for WriteXtc2 (exp={exp}, run={run}) port for rank {self._mpi_rank}"
             )
+            sleep_time: float = 1.0
+            req_iters: int = 0
             while True:
                 msg = self.get_running_tasks()
                 if msg and isinstance(msg.contents, dict):
@@ -277,13 +283,12 @@ class ReadXtc1(Task):
                             port_key: str = "xtc1_zmq_port"
                             if port_key in task_info:
                                 writer_port = task_info[port_key]
-                                if (
-                                    "task_hostnames" in task_info
-                                    and task_info["task_hostnames"]
-                                ):
-                                    hostnames: List[str] = task_info["task_hostnames"]
-                                    writer_host = hostnames[0]
+
+                            host_key: str = "xtc1_zmq_host"
+                            if host_key in task_info:
+                                writer_host = task_info[host_key]
                                 break
+
                 if writer_port is not None:
                     if writer_port == -1:
                         logger.info(
@@ -294,7 +299,18 @@ class ReadXtc1(Task):
                     if writer_host is not None:
                         break
 
-                time.sleep(1)
+                req_iters += 1
+
+                time.sleep(sleep_time)
+
+                # Eventually we want to give up. Start with a backoff
+                if (req_iters % 5) == 0:
+                    sleep_time *= 2.0
+
+                if sleep_time > 200.0:
+                    # Break now... Takes forever, apparently the Xtc2Writer needs a
+                    # VERY long time since whatever happens in the psana2 env takes forever
+                    break
 
         writer_port = MPI.COMM_WORLD.bcast(writer_port, root=0)
         writer_host = MPI.COMM_WORLD.bcast(writer_host, root=0)
@@ -303,8 +319,9 @@ class ReadXtc1(Task):
             logger.info("Exiting without having sent data.")
             return
 
-        # Sender will bind a random port and expose it
+        # Sender will connect to the Writer's bound port
         addr: str = f"tcp://{writer_host}:{writer_port}"
+        logger.info(f"Will try to connect to: {addr}")
         zmq_send: ZmqSender = ZmqSender(addr=addr)
 
         mode: str = "idx"
