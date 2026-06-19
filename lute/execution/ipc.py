@@ -234,6 +234,14 @@ class PipeCommunicator(Communicator):
         super().__init__(party=party, use_pickle=use_pickle)
         self.desc = "Communicates through stderr and stdout using pickle."
 
+    @property
+    def use_pickle(self) -> bool:
+        return self._use_pickle
+
+    @use_pickle.setter
+    def use_pickle(self, use_pickle: bool) -> None:
+        self._use_pickle = use_pickle
+
     def read(
         self, proc: Optional[subprocess.Popen] = None, wait: Optional[float] = None
     ) -> Message:
