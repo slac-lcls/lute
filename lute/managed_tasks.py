@@ -156,6 +156,14 @@ CrystFELIndexer.add_tasklet(
 StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
 """Concatenate output stream files."""
 
+CCTBXScaler: Executor = Executor("ScaleCCTBXXFEL")
+"""Runs crystallographic scaling using cctbx.xfel (scaling-only pipeline).
+
+Produces scaled .expt/.refl files and stores the output directory in the LUTE
+database so that a downstream CCTBXMerger task can auto-resolve input_path.
+"""
+CCTBXScaler.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")
+
 CCTBXMerger: Executor = Executor("MergeCCTBXXFEL")
 """Runs crystallographic merging using cctbx.xfel."""
 CCTBXMerger.shell_source("/sdf/group/lcls/ds/tools/cctbx/setup.sh")

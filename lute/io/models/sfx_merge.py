@@ -13,6 +13,7 @@ Classes:
 
 __all__ = [
     "MergePartialatorParameters",
+    "ScaleCCTBXXFELParameters",
     "MergeCCTBXXFELParameters",
     "CompareHKLParameters",
     "ManipulateHKLParameters",
@@ -20,7 +21,7 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-from typing import Union, Optional, Dict, Any
+from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, validator, BaseModel
 
@@ -223,114 +224,350 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         """Whether the Executor should mark a specified parameter as a result."""
 
     class PhilParameters(BaseModel):
-        """Template parameters for CCTBX phil file."""
+        """Template parameters for CCTBX xfel.merge phil file.
+
+        Covers the full cctbx.xfel.merge parameter space needed for both
+        scaling-then-merge and combined scaling+merge workflows. All parameters
+        use the underscore-flattened naming convention (dots replaced by
+        underscores) matching the phil hierarchy.
+        """
 
         class Config(BaseModel.Config):  # type: ignore
             extra: str = "allow"
 
-        # Generic input settings: input_
-        input_path: str = Field(
+        # dispatch: controls which pipeline steps run
+        dispatch_step_list: Optional[str] = Field(
+            None,
+            description=(
+                "Override the list of pipeline steps (space-separated). "
+                "Default (None) runs the full pipeline: "
+                "input balance model_scaling modify filter scale postrefine "
+                "statistics_unitcell statistics_beam model_statistics "
+                "statistics_resolution group errors_merge statistics_intensity "
+                "merge statistics_intensity_cxi. "
+                "For merging-only (after separate scaling) use: "
+                "input model_scaling statistics_unitcell statistics_beam "
+                "model_statistics statistics_resolution group errors_merge "
+                "statistics_intensity merge statistics_intensity_cxi"
+            ),
+        )
+
+        # input settings: input_
+        input_path: Union[str, List[str]] = Field(
             "",
-            description="Input file(s).",
+            description=(
+                "Path(s) to directory containing integrated/scaled data. "
+                "Accepts a single path string or a list of paths for "
+                "multi-run merging. When empty, auto-resolved from the "
+                "ScaleCCTBXXFEL output stored in the LUTE database."
+            ),
         )
         input_experiments_suffix: str = Field(
-            "_integrated.expt", description="Suffix appened to experiments."
+            "_integrated.expt",
+            description="Suffix used to find experiment files.",
         )
         input_reflections_suffix: str = Field(
-            "_integrated.refl", description="Suffix appened to experiments."
+            "_integrated.refl",
+            description="Suffix used to find reflection files.",
         )
         input_parallel_file_load_method: str = Field(
             "uniform",  # *uniform node_memory
-            description="Parallel file loading method.",
+            description=(
+                "How to distribute input files across MPI ranks. "
+                "'uniform' = equal files per rank; 'node_memory' = memory-aware."
+            ),
         )
 
         # Filtering settings: filter_
         filter_algorithm: str = Field(
-            "unit_cell",  # n_obs reindex resolution unit_cell report
-            description="",
+            "unit_cell",
+            description=(
+                "Filtering strategy to apply. Space-separated list of: "
+                "n_obs, resolution, unit_cell, energy. "
+                "E.g. 'n_obs resolution unit_cell' to apply multiple filters."
+            ),
         )
         filter_unit_cell_algorithm: str = Field(
-            "cluster", description=""  # range *value cluster
+            "value",
+            description=(
+                "Unit cell filtering method: 'range', 'value', or 'cluster'. "
+                "'value' uses explicit tolerances around a target cell. "
+                "'cluster' uses a Mahalanobis distance covariance model."
+            ),
         )
+        # filter.unit_cell.value parameters
+        filter_unit_cell_value_target_unit_cell: Optional[str] = Field(
+            None,
+            description=(
+                "Target unit cell for value-based filtering. "
+                "E.g. '78 78 39 90 90 90'. If None, taken from scaling model."
+            ),
+        )
+        filter_unit_cell_value_relative_length_tolerance: float = Field(
+            0.03,
+            description=(
+                "Fractional tolerance on unit cell lengths for value-based "
+                "filtering. E.g. 0.03 = 3% tolerance."
+            ),
+        )
+        filter_unit_cell_value_absolute_angle_tolerance: float = Field(
+            2.0,
+            description=(
+                "Absolute tolerance on cell angles in degrees for "
+                "value-based filtering."
+            ),
+        )
+        filter_unit_cell_value_target_space_group: Optional[str] = Field(
+            None,
+            description=(
+                "Target space group for value-based unit cell filtering. "
+                "If None, taken from scaling model."
+            ),
+        )
+        # filter.unit_cell.cluster parameters
         filter_unit_cell_cluster_covariance_file: str = Field(
-            "",  # $MODULES/$COV?
-            description="",
+            "",
+            description=(
+                "Path to unit cell covariance file for cluster filtering. "
+                "Must be generated by a prior CCTBX clustering run. "
+                "Leave empty to skip cluster filtering."
+            ),
         )
         filter_unit_cell_cluster_covariance_component: int = Field(
             0,
-            description="",
+            description="Which covariance component to use for cluster filtering.",
         )
         filter_unit_cell_cluster_covariance_mahalanobis: float = Field(
             5.0,
-            description="",
+            description="Mahalanobis distance cutoff for unit cell outlier rejection.",
         )
         filter_outlier_min_corr: float = Field(
             -1.0,
-            description="",
+            description=(
+                "Minimum per-image correlation with merged data. Images below "
+                "this threshold are rejected. -1.0 = no filtering (recommended "
+                "for first-pass; tighten to e.g. 0.1 after initial merge)."
+            ),
         )
 
         # Selection settings: select_
         select_algorithm: str = Field(
             "significance_filter",
-            description="",
+            description=(
+                "Per-reflection selection method. Space-separated list of: "
+                "panel, cspad_sensor, significance_filter, isolation_forest."
+            ),
         )
         select_significance_filter_sigma: float = Field(
             0.1,
-            description="",
+            description=(
+                "Remove high-resolution bins until all accepted bins have "
+                "<I/sigma> >= this value."
+            ),
         )
 
         # Scaling settings: scaling_
         scaling_model: str = Field(
-            "",  # $MODULES/$COV?
-            description="",
+            "",
+            description=(
+                "Path to a reference PDB or MTZ file for absolute scaling "
+                "(mark0 algorithm). Leave empty to use internal KB/Wilson "
+                "scaling without an external reference."
+            ),
+        )
+        scaling_algorithm: str = Field(
+            "mark0",
+            description=(
+                "Scaling algorithm: 'mark0' = per-image scaling against "
+                "a reference (requires scaling_model or internal model). "
+                "'mark1' = no scaling / Monte Carlo averaging "
+                "(requires scaling_unit_cell and scaling_space_group)."
+            ),
+        )
+        scaling_unit_cell: Optional[str] = Field(
+            None,
+            description=(
+                "Unit cell for mark1 scaling (no reference model). "
+                "E.g. '78 78 39 90 90 90'. Required when scaling_algorithm=mark1."
+            ),
+        )
+        scaling_space_group: Optional[str] = Field(
+            None,
+            description=(
+                "Space group for mark1 scaling (no reference model). "
+                "E.g. 'P43212'. Required when scaling_algorithm=mark1."
+            ),
         )
         scaling_resolution_scalar: float = Field(
             0.993420862158964,
-            description="",
+            description=(
+                "Scale merging.d_min by this factor to capture reflections "
+                "at the edge of the detector resolution."
+            ),
         )
 
         # Post-refinement: postrefinement_
         postrefinement_enable: bool = Field(
-            True, description="Enable post-refinement processing?"
+            True,
+            description="Enable per-image post-refinement (recommended).",
         )
-        postrefinement_algorithm: str = Field("rs", description="")
+        postrefinement_algorithm: str = Field(
+            "rs",
+            description=(
+                "Post-refinement algorithm: 'rs' (reciprocal space), "
+                "'rs2', 'rs_hybrid' (use analytical derivatives), or 'eta_deff'."
+            ),
+        )
+        postrefinement_target_weighting: str = Field(
+            "unit",
+            description=(
+                "Residual weighting in post-refinement: 'unit', 'variance', "
+                "'gentle' (|I|/sigma^2, often best), or 'extreme'."
+            ),
+        )
 
         # Merging: merging_
-        merging_d_min: int = Field(
-            3,  # What's a good default?
-            description="",
+        merging_d_min: float = Field(
+            3.0,
+            description=(
+                "High-resolution cutoff in Angstroms. "
+                "Always set this explicitly — the merge will produce empty "
+                "output without it."
+            ),
         )
-        merging_merge_anomalous: bool = Field(False, description="")
-        merging_set_average_unit_cell: bool = Field(True, description="")
+        merging_d_max: Optional[float] = Field(
+            None,
+            description=(
+                "Low-resolution cutoff in Angstroms. "
+                "Mainly affects CCiso statistics. None = no cutoff."
+            ),
+        )
+        merging_merge_anomalous: bool = Field(
+            False,
+            description=(
+                "If True, merge Bijvoet (Friedel) pairs. "
+                "Keep False for SAD/MAD experiments to preserve anomalous signal."
+            ),
+        )
+        merging_set_average_unit_cell: bool = Field(
+            True,
+            description=(
+                "Apply the data's average unit cell to all crystals before "
+                "merging. Recommended."
+            ),
+        )
+        merging_minimum_multiplicity: int = Field(
+            2,
+            description="Minimum redundancy required to output a merged reflection.",
+        )
+        merging_include_multiplicity_column: bool = Field(
+            False,
+            description="Write redundancy as a separate column in the output MTZ.",
+        )
         merging_error_model: str = Field(
-            "ev11", description=""  # ha14 *ev11 mm24 errors_from_sample_residuals
+            "ev11",
+            description=(
+                "Error model: 'ha14', 'ev11' (Evans 2011, default), "
+                "'mm24' (Mittan-Moreau 2024), or 'errors_from_sample_residuals'."
+            ),
+        )
+        merging_error_ev11_minimizer: str = Field(
+            "lbfgs",
+            description="Minimizer for ev11 error model: 'lbfgs' or 'LevMar'.",
         )
 
         # Statistics: statistics_
-        statistics_n_bins: int = Field(20, description="")
-        statistics_report_ML: bool = Field(True, description="")
-        statistics_cciso_mtz_file: str = Field(
-            "",  # $H5_SIM_PATH/ground_truth.mtz
-            description="",
+        statistics_n_bins: int = Field(
+            20,
+            description="Number of resolution shells for statistics output.",
         )
-        statistics_cciso_mtz_column_F: str = Field("F", description="")
+        statistics_report_ML: bool = Field(
+            True,
+            description="Report per-frame maximum-likelihood statistics.",
+        )
+        statistics_cciso_mtz_file: str = Field(
+            "",
+            description=(
+                "Reference MTZ file for CC-iso / R-iso calculation. "
+                "Recommended if a reference structure is available."
+            ),
+        )
+        statistics_cciso_mtz_column_F: str = Field(
+            "F",
+            description="Column name in the CCiso reference MTZ for structure factors.",
+        )
 
         # Output settings: output_
-        output_prefix: str = Field("", description="")
+        output_prefix: str = Field(
+            "",
+            description="Prefix for all output file names (e.g. 'myexp_r0042').",
+        )
         output_output_dir: str = Field(
             "",
-            description="",
+            description="Directory for output MTZ and log files.",
         )
         output_tmp_dir: str = Field(
             "",
-            description="",
+            description="Temporary file directory. Defaults to output_output_dir.",
         )
-        output_do_timing: bool = Field(True, description="")
-        output_log_level: int = Field(0, description="")
-        output_save_experiments_and_reflections: bool = Field(True, description="")
+        output_do_timing: bool = Field(
+            True,
+            description="Log elapsed time for each pipeline step.",
+        )
+        output_log_level: int = Field(
+            0,
+            description="Log verbosity: 0 = log everything; higher = less logging.",
+        )
+        output_save_experiments_and_reflections: bool = Field(
+            True,
+            description=(
+                "Save the filtered/selected experiment and reflection files "
+                "alongside MTZ output. Needed as input for a subsequent "
+                "merging-only run."
+            ),
+        )
 
-        # Parallel processing settings: parallel_
-        parallel_a2a: int = Field(1, description="")
+        # Multiprocessing: mp_
+        mp_method: str = Field(
+            "mpi",
+            description="Multiprocessing method. Only 'mpi' is currently supported.",
+        )
+        mp_psana2_mode: bool = Field(
+            False,
+            description=(
+                "Set True when using the integrate worker with psana2/XTC2 data."
+            ),
+        )
+
+        # Parallel (MPI memory): parallel_
+        parallel_a2a: int = Field(
+            1,
+            description=(
+                "MPI all-to-all communication stride. Set to number of cores "
+                "per node (e.g. 64) to reduce memory pressure on large jobs."
+            ),
+        )
+
+        @validator("input_path", always=True, pre=True)
+        def normalize_and_resolve_input_path(
+            cls, v: Union[str, List[str]]
+        ) -> List[str]:
+            """Normalize input_path to a list and auto-resolve from DB if empty."""
+            # Normalize to list first
+            if isinstance(v, str):
+                if v == "":
+                    # Try to auto-resolve from ScaleCCTBXXFEL output in LUTE DB
+                    work_dir: str = os.getenv("LUTE_WORK_DIR", "")
+                    if work_dir:
+                        scaled_dir: Optional[str] = read_latest_db_entry(
+                            work_dir, "ScaleCCTBXXFEL", "result.payload"
+                        )
+                        if scaled_dir:
+                            return [scaled_dir]
+                    return []
+                return [v]
+            # Already a list — filter out empty strings
+            return [p for p in v if p]
 
     _set_phil_template_parameters = template_parameter_validator("phil_parameters")
 
@@ -375,6 +612,306 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         if lute_template_cfg.output_path == "":
             lute_template_cfg.output_path = values["phil_file"]
         return lute_template_cfg
+
+
+class ScaleCCTBXXFELParameters(ThirdPartyParameters):
+    """Parameters for scaling with cctbx.xfel (scaling-only pipeline).
+
+    This task runs ``cctbx.xfel.merge`` with a scaling-only ``dispatch.step_list``
+    to produce scaled ``.expt``/``.refl`` files without performing the final
+    statistical merge.  The output is stored in the LUTE database so that a
+    subsequent :class:`MergeCCTBXXFELParameters` task can auto-resolve
+    ``input.path`` from it.
+
+    The default ``dispatch_step_list`` covers:
+    ``input balance model_scaling modify filter scale postrefine
+    statistics_unitcell statistics_beam model_statistics statistics_resolution``
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        set_result: bool = True
+        """Store the output directory in the LUTE DB for downstream auto-resolution."""
+
+    class ScalePhilParameters(BaseModel):
+        """Template parameters for the cctbx_scale.phil file."""
+
+        class Config(BaseModel.Config):  # type: ignore
+            extra: str = "allow"
+
+        # dispatch: controls which pipeline steps run
+        dispatch_step_list: str = Field(
+            (
+                "input balance model_scaling modify filter scale postrefine "
+                "statistics_unitcell statistics_beam model_statistics "
+                "statistics_resolution"
+            ),
+            description=(
+                "Pipeline steps for the scaling-only workflow. "
+                "Override to add or remove steps."
+            ),
+        )
+
+        # input settings: input_
+        input_path: Union[str, List[str]] = Field(
+            "",
+            description=(
+                "Path(s) to directory containing integrated data "
+                "(*_integrated.expt / *_integrated.refl). "
+                "Accepts a single path string or a list for multi-run scaling."
+            ),
+        )
+        input_experiments_suffix: str = Field(
+            "_integrated.expt",
+            description="Suffix used to find experiment files.",
+        )
+        input_reflections_suffix: str = Field(
+            "_integrated.refl",
+            description="Suffix used to find reflection files.",
+        )
+        input_parallel_file_load_method: str = Field(
+            "uniform",
+            description=(
+                "How to distribute input files across MPI ranks. "
+                "'uniform' = equal files per rank; 'node_memory' = memory-aware."
+            ),
+        )
+
+        # Filtering settings: filter_
+        filter_algorithm: str = Field(
+            "unit_cell",
+            description=(
+                "Filtering strategy. Space-separated list of: "
+                "n_obs, resolution, unit_cell, energy."
+            ),
+        )
+        filter_unit_cell_algorithm: str = Field(
+            "value",
+            description=(
+                "Unit cell filtering method: 'range', 'value', or 'cluster'. "
+                "'value' uses explicit tolerances around a target cell."
+            ),
+        )
+        filter_unit_cell_value_target_unit_cell: Optional[str] = Field(
+            None,
+            description=(
+                "Target unit cell for value-based filtering. E.g. '78 78 39 90 90 90'."
+            ),
+        )
+        filter_unit_cell_value_relative_length_tolerance: float = Field(
+            0.03,
+            description="Fractional tolerance on unit cell lengths (e.g. 0.03 = 3%).",
+        )
+        filter_unit_cell_value_absolute_angle_tolerance: float = Field(
+            2.0,
+            description="Absolute tolerance on cell angles in degrees.",
+        )
+        filter_unit_cell_value_target_space_group: Optional[str] = Field(
+            None,
+            description="Target space group for value-based unit cell filtering.",
+        )
+        filter_unit_cell_cluster_covariance_file: str = Field(
+            "",
+            description=(
+                "Path to unit cell covariance file for cluster filtering. "
+                "Leave empty to skip cluster filtering."
+            ),
+        )
+        filter_unit_cell_cluster_covariance_component: int = Field(
+            0,
+            description="Which covariance component to use.",
+        )
+        filter_unit_cell_cluster_covariance_mahalanobis: float = Field(
+            5.0,
+            description="Mahalanobis distance cutoff for unit cell outlier rejection.",
+        )
+        filter_outlier_min_corr: float = Field(
+            -1.0,
+            description=(
+                "Minimum per-image correlation with merged data. -1.0 = no filtering."
+            ),
+        )
+
+        # Selection settings: select_
+        select_algorithm: str = Field(
+            "significance_filter",
+            description=(
+                "Per-reflection selection. Space-separated list of: "
+                "panel, cspad_sensor, significance_filter, isolation_forest."
+            ),
+        )
+        select_significance_filter_sigma: float = Field(
+            0.1,
+            description="Minimum <I/sigma> for a reflection to be included.",
+        )
+
+        # Scaling settings: scaling_
+        scaling_model: str = Field(
+            "",
+            description=(
+                "Path to a reference PDB or MTZ file for mark0 scaling. "
+                "Leave empty for internal KB/Wilson scaling."
+            ),
+        )
+        scaling_algorithm: str = Field(
+            "mark0",
+            description=(
+                "'mark0' = per-image scaling against reference. "
+                "'mark1' = no scaling / Monte Carlo averaging "
+                "(requires scaling_unit_cell and scaling_space_group)."
+            ),
+        )
+        scaling_unit_cell: Optional[str] = Field(
+            None,
+            description=(
+                "Unit cell for mark1 scaling. "
+                "E.g. '78 78 39 90 90 90'. Required when algorithm=mark1."
+            ),
+        )
+        scaling_space_group: Optional[str] = Field(
+            None,
+            description=(
+                "Space group for mark1 scaling. "
+                "E.g. 'P43212'. Required when algorithm=mark1."
+            ),
+        )
+        scaling_resolution_scalar: float = Field(
+            0.993420862158964,
+            description="Scale merging.d_min by this factor to extend resolution reach.",
+        )
+
+        # Merging resolution: required by xfel.merge even in scaling-only mode
+        merging_d_min: float = Field(
+            3.0,
+            description=(
+                "High-resolution cutoff in Angstroms. "
+                "Required even in scaling-only mode."
+            ),
+        )
+        merging_merge_anomalous: bool = Field(
+            False,
+            description="If True, merge Bijvoet pairs.",
+        )
+
+        # Output settings: output_
+        output_prefix: str = Field(
+            "",
+            description="Prefix for output file names (e.g. 'scaling_r0036').",
+        )
+        output_output_dir: str = Field(
+            "",
+            description=(
+                "Directory for scaled output files. "
+                "This path is stored in the LUTE DB so CCTBXMerger can "
+                "auto-resolve input_path from it."
+            ),
+        )
+        output_save_experiments_and_reflections: bool = Field(
+            True,
+            description=(
+                "Save scaled experiment and reflection files. "
+                "Must be True for the output to be usable by CCTBXMerger."
+            ),
+        )
+        output_do_timing: bool = Field(True, description="Log elapsed time per step.")
+        output_log_level: int = Field(0, description="Log verbosity (0=verbose).")
+
+        # Statistics
+        statistics_n_bins: int = Field(
+            20,
+            description="Number of resolution shells for statistics.",
+        )
+
+        # Multiprocessing
+        mp_method: str = Field(
+            "mpi",
+            description="Multiprocessing method. Only 'mpi' is currently supported.",
+        )
+        mp_psana2_mode: bool = Field(
+            False,
+            description="Set True when using the integrate worker with psana2/XTC2 data.",
+        )
+
+        @validator("input_path", always=True, pre=True)
+        def normalize_input_path(cls, v: Union[str, List[str]]) -> List[str]:
+            """Normalize input_path to a list, filtering empty strings."""
+            if isinstance(v, str):
+                return [v] if v else []
+            return [p for p in v if p]
+
+        @validator("output_output_dir", always=True)
+        def set_output_dir(cls, output: str, values: Dict[str, Any]) -> str:
+            if output == "":
+                return os.getenv("LUTE_WORK_DIR", ".")
+            return output
+
+    _set_scale_phil_template_parameters = template_parameter_validator(
+        "phil_parameters"
+    )
+
+    executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        description="MPI executable.",
+        flag_type="",
+    )
+    cctbx_executable: str = Field(
+        "/sdf/group/lcls/ds/tools/cctbx/build/bin/cctbx.xfel.merge",
+        description="CCTBX merge/scale program.",
+        flag_type="",
+    )
+    phil_file: str = Field(
+        "",
+        description="Location of the input settings ('phil') file.",
+        flag_type="",
+    )
+    phil_parameters: Optional[ScalePhilParameters] = Field(
+        None,
+        description="Optional template parameters to fill in a CCTBX scale phil file.",
+        flag_type="",
+    )
+    lute_template_cfg: TemplateConfig = Field(
+        TemplateConfig(
+            template_name="cctbx_scale.phil",
+            output_path="",
+        ),
+        description="Template information for the cctbx_scale file.",
+    )
+    result_output_dir: str = Field(
+        "",
+        description=(
+            "Output directory for scaled files. Populated automatically from "
+            "phil_parameters.output_output_dir and stored in the LUTE database "
+            "so that a downstream CCTBXMerger task can auto-resolve input_path."
+        ),
+        flag_type="",
+        is_result=True,
+    )
+
+    @validator("phil_file", always=True)
+    def set_default_phil_path(cls, phil_file: str, values: Dict[str, Any]) -> str:
+        if phil_file == "":
+            return f"{values['lute_config'].work_dir}/cctbx_scale.phil"
+        return phil_file
+
+    @validator("lute_template_cfg", always=True)
+    def set_phil_template_path(
+        cls, lute_template_cfg: TemplateConfig, values: Dict[str, Any]
+    ) -> TemplateConfig:
+        if lute_template_cfg.output_path == "":
+            lute_template_cfg.output_path = values["phil_file"]
+        return lute_template_cfg
+
+    @validator("result_output_dir", always=True)
+    def sync_result_from_output_dir(cls, v: str, values: Dict[str, Any]) -> str:
+        """Copy output_output_dir (extracted from ScalePhilParameters) to result."""
+        if v == "" and "output_output_dir" in values:
+            raw = values["output_output_dir"]
+            # At this point it may be a raw str (before extra_fields_to_thirdparty)
+            # or a TemplateParameters (if ordering shifts) — handle both
+            if hasattr(raw, "params"):
+                return str(raw.params)
+            if isinstance(raw, str) and raw:
+                return raw
+        return v
 
 
 class CompareHKLParameters(ThirdPartyParameters):

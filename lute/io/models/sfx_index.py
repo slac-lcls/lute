@@ -589,6 +589,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         output_logging_dir: str = Field(
             "", description="Directory output log files will be placed"
         )
+        output_logging_option: str = Field(
+            "suppressed",
+            description=(
+                "Logging verbosity option. One of: normal, suppressed, disabled. "
+                "'suppressed' silences per-image log output (recommended for MPI jobs). "
+                "'normal' writes a log file per MPI rank. 'disabled' turns off logging."
+            ),
+        )
 
         # Dispatch settings: dispatch_
         dispatch_index: bool = Field(
@@ -604,8 +612,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         dispatch_integrate: bool = Field(
             True,
             description=(
-                "Integrate indexed images. Ignored if index=False or "
-                "find_spots=False"
+                "Integrate indexed images. Ignored if index=False or find_spots=False"
             ),
         )
 

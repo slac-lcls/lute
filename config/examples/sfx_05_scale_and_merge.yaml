@@ -1,0 +1,74 @@
+##############################################################################
+# SFX EXAMPLE 5 — COMBINED SCALING + MERGING in one step
+#
+# ManagedTask: CCTBXMerger  (Task class: MergeCCTBXXFEL)
+# Binary:  cctbx.xfel.merge  (via mpirun, full default pipeline)
+#
+# Runs the complete pipeline (scale + merge) in a single step.
+# Useful when you don't need to inspect scaling results before merging.
+# Leave dispatch_step_list unset (or comment it out) to use the full pipeline.
+##############################################################################
+title: "MFX Lysozyme — full scale+merge r0036"
+experiment: mfx101624926
+run: 36
+date: "2024/10/16"
+lute_version: 0.1
+task_timeout: 7200
+work_dir: /sdf/data/lcls/ds/mfx/mfx101624926/scratch
+---
+MergeCCTBXXFEL:
+  phil_parameters:
+    # dispatch_step_list: ~  ← leave unset to run the full default pipeline
+
+    # Input: indexed data (no prior scaling step needed)
+    input_path: /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0036/cctbx_indexed
+
+    # Filtering
+    filter_algorithm: "n_obs resolution unit_cell"
+    filter_unit_cell_algorithm: value
+    filter_unit_cell_value_target_unit_cell: "78 78 39 90 90 90"
+    filter_unit_cell_value_relative_length_tolerance: 0.03
+    filter_unit_cell_value_absolute_angle_tolerance: 2.0
+    filter_unit_cell_value_target_space_group: "P 43 21 2"
+    filter_outlier_min_corr: -1.0
+
+    # Reflection selection
+    select_algorithm: significance_filter
+    select_significance_filter_sigma: 0.1
+
+    # Scaling
+    scaling_model: /sdf/data/lcls/ds/mfx/mfx101624926/scratch/tutorial/pdb/8P1C.pdb
+    scaling_algorithm: mark0
+    scaling_resolution_scalar: 0.993420862158964
+
+    # Post-refinement
+    postrefinement_enable: True
+    postrefinement_algorithm: rs
+    postrefinement_target_weighting: unit   # unit | variance | gentle | extreme
+
+    # Merging
+    merging_d_min: 1.8
+    merging_d_max: ~                        # None = no low-res cutoff
+    merging_merge_anomalous: True
+    merging_set_average_unit_cell: True
+    merging_minimum_multiplicity: 2
+    merging_include_multiplicity_column: False
+    merging_error_model: ev11
+    merging_error_ev11_minimizer: lbfgs     # lbfgs | LevMar
+
+    # Output
+    output_prefix: Lysozyme_r0036_full
+    output_output_dir: /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0036/full_merge
+    output_save_experiments_and_reflections: True
+    output_do_timing: True
+    output_log_level: 0
+
+    # Statistics
+    statistics_n_bins: 20
+    statistics_cciso_mtz_file: ""           # set to reference MTZ if available
+    statistics_cciso_mtz_column_F: F
+
+    # MPI
+    mp_method: mpi
+    mp_psana2_mode: False
+    parallel_a2a: 64   # set to cores-per-node to reduce all-to-all memory pressure
