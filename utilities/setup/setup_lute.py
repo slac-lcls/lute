@@ -37,8 +37,21 @@ DEFAULT_CONFIG = {
 }
 
 
-def _run_subprocess_log(cmd: List[str], env: Optional[Dict[str, str]] = None) -> None:
-    """Run a subprocess with logging."""
+def _run_subprocess_log(
+    cmd: List[str],
+    env: Optional[Dict[str, str]] = None,
+    cwd: Optional[str] = None,
+) -> None:
+    """Run a subprocess with logging.
+
+    Args:
+        cmd (List[str]): The command to run.
+
+        env (Optional[Dict[str, str]]): Environment to run the command in.
+
+        cwd (Optional[str]): Working directory to run the command in. If not
+            provided, the current working directory is used.
+    """
     global logger
 
     out: str
@@ -49,6 +62,7 @@ def _run_subprocess_log(cmd: List[str], env: Optional[Dict[str, str]] = None) ->
         stderr=subprocess.PIPE,
         universal_newlines=True,
         env=env,
+        cwd=cwd,
     ).communicate()
     if out:
         logger.info(out)
@@ -104,15 +118,12 @@ def git_clone(repo: str, location: str, tag: str) -> None:
         "git",
         "clone",
         f"https://github.com/{repo}.git",
-        location,
+        location,   
     ]
     _run_subprocess_log(cmd)
 
-    cwd: str = os.getcwd()
-    os.chdir(location)
     cmd = ["git", "checkout", tag]
-    _run_subprocess_log(cmd)
-    os.chdir(cwd)
+    _run_subprocess_log(cmd, cwd=location)
 
 
 def run_build_script(lute_path: str) -> None:
@@ -122,12 +133,9 @@ def run_build_script(lute_path: str) -> None:
         lute_path (str): The path to the LUTE installation to build.
     """
 
-    cwd: str = os.getcwd()
-    os.chdir(lute_path)
     cmd: List[str] = ["./build.sh", "-e"]
     logger.info(f"Building LUTE at {lute_path}. This may take a few minutes...")
-    _run_subprocess_log(cmd)
-    os.chdir(cwd)
+    _run_subprocess_log(cmd, cwd=lute_path)
 
 
 def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
@@ -162,7 +170,7 @@ def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
         if not os.path.exists(install_dir):
             mkdir_cmd: List[str] = ["mkdir", "-p", install_dir]
             _run_subprocess_log(mkdir_cmd)
-    _run_subprocess_log(cmd, env)
+    _run_subprocess_log(cmd, env=env)
 
 
 def inplace_sed(in_file: str, pattern: str) -> None:
@@ -187,11 +195,11 @@ def modify_permissions(lute_path: str):
         for f in files:
             os.chmod(os.path.join(root, f), 0o765)
 
-def update_dag_params(dag_path: str, partition: str, account: str, nodes: int, ntasks_per_node: int) -> None:
+def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_params: str) -> None:
     """Update slurm_params in a DAG file in place.
 
     For tasks listed in DEFAULT_CONFIG, use the task-specific nodes/ntasks_per_node.
-    For all other tasks, use the user-provided values.
+    For all other tasks, forward the user-provided SLURM parameters verbatim.
 
     Args:
         dag_path (str): Path to the DAG file.
@@ -200,9 +208,7 @@ def update_dag_params(dag_path: str, partition: str, account: str, nodes: int, n
 
         account (str): SLURM account.
 
-        nodes (int): Number of nodes (used for tasks not in DEFAULT_CONFIG).
-
-        ntasks_per_node (int): Tasks per node (used for tasks not in DEFAULT_CONFIG).
+        extra_slurm_params (str): Additional SLURM parameters, forwarded as-is.
     """
     with open(dag_path, "r") as f:
         lines: List[str] = f.readlines()
@@ -229,13 +235,12 @@ def update_dag_params(dag_path: str, partition: str, account: str, nodes: int, n
                 params = (
                     f"--account={account} --partition={partition} "
                     f"--ntasks-per-node={cfg['ntasks_per_node']} "
-                    f"--nodes={cfg['nodes']} --exclusive"
+                    f"--nodes={cfg['nodes']}"
                 )
             else:
                 params = (
                     f"--account={account} --partition={partition} "
-                    f"--ntasks-per-node={ntasks_per_node} "
-                    f"--nodes={nodes}"
+                    f"{extra_slurm_params}"
                 )
             result.append(f"{indent}slurm_params: '{params}'\n")
         else:
@@ -365,67 +370,68 @@ def main() -> None:
 
     database_setup(f"{lute_output_dir}/lute.db")  # Setup permissions on database
     
-    extra_args_str: str = " ".join(extra_args)
-    # Check for partition, account and ntasks. ntasks has defaults by workflow
+    # Check for partition and account. If not provided, prompt the user to use defaults.
     partition: str = "milano"
-    if "partition" not in extra_args_str:
+    account: str = f"lcls:{args.experiment}"
+    has_partition: bool = False
+    has_account: bool = False
+    extra_slurm_args: List[str] = []
+    for arg in extra_args:
+        if arg.startswith("--partition="):
+            partition = arg.split("=", 1)[1]
+            has_partition = True
+        elif arg.startswith("--account="):
+            account = arg.split("=", 1)[1]
+            has_account = True
+        else:
+            extra_slurm_args.append(arg)
+
+    if not has_partition:
         logger.warning(
-            f"No queue/partition provided. Defaulting to {partition}. Any key to continue. "
-            "Ctrl-C to exit."
+            f"No queue/partition provided. Defaulting to {partition}. Any key to "
+            "continue. Ctrl-C to exit."
         )
         try:
             _: str = input()
-            extra_args_str = f"{extra_args_str} --partition={partition}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
 
-    account: str = f"lcls:{args.experiment}"
-    if "account" not in extra_args_str:
+    if not has_account:
         logger.warning(
             f"No account provided. Defaulting to {account}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
             _ = input()
-            extra_args_str = f"{extra_args_str} --account={account}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
 
+    extra_slurm_params: str = " ".join(extra_slurm_args)
+    # Check for at least nodes and ntasks, and if not provided, prompt the user to use defaults.
     nodes: int = 1
-    if "nodes" not in extra_args_str:
+    if "nodes" not in extra_slurm_params:
         logger.warning(
             f"No nodes provided. Defaulting to {nodes}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
             _ = input()
-            extra_args_str = f"{extra_args_str} --nodes={nodes}"
+            extra_slurm_params = f"{extra_slurm_params} --nodes={nodes}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
 
-    ntasks_per_node: int = 1
-    if "ntasks-per-node" not in extra_args_str:
+    ntasks: int = 1
+    if "ntasks" not in extra_slurm_params:
         logger.warning(
-            f"No ntasks-per-node provided. Defaulting to {ntasks_per_node}. Any key to continue. "
+            f"No ntasks provided. Defaulting to {ntasks}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
             _ = input()
-            extra_args_str = f"{extra_args_str} --ntasks-per-node={ntasks_per_node}"
-        except KeyboardInterrupt:
-            logger.info("Exiting.")
-            sys.exit(0)
-    
-    if "exclusive" not in extra_args_str:
-        logger.warning(
-            f"No exclusivity provided. Defaulting to no exclusive access. Any key to continue. "
-            "Ctrl-C to exit."
-        )
-        try:
-            _ = input()
+            extra_slurm_params = f"{extra_slurm_params} --ntasks={ntasks}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
@@ -450,7 +456,7 @@ def main() -> None:
             param_string = f"{param_string} --test"
 
         # Update the DAG file in place with collected SLURM params
-        update_dag_params(full_workflow_path, partition, account, nodes, ntasks_per_node)
+        update_dag_params(full_workflow_path, partition, account, extra_slurm_params)
 
         # Build workflow dict with appropriate trigger
         if wf_name in ("smd_summaries", "smd_xss", "smd_xes", "smd_xas"):
