@@ -15,7 +15,6 @@ Based on Mona's converter:
 import logging
 import os
 import pickle
-import shutil
 import socket
 import zlib
 from pathlib import PosixPath
@@ -176,6 +175,8 @@ class WriteXtc2(Task):
         for idx, detname in enumerate(all_detnames):
             namesId[detname] = idx
 
+        namesId["smdinfo"] = len(namesId)
+
         if self._mpi_rank == 0:
             zmq_recv: ZmqReceiver = ZmqReceiver()
 
@@ -215,22 +216,35 @@ class WriteXtc2(Task):
             )
 
         # NOTE: To parallelize, each rank will write its own chunk
-        #       In principle, we should be able to read multiple chunk files with psana
-        #       However, I was not able to get them into a format that psana liked with
-        #       respect to how the transitions are distributed across them.
-        #       Instead, we will do:
-        #         1. Each rank writes a tmp chunk file.
-        #         2. At the end, each rank will contribute to a master single chunk file
-        #         3. Each rank cleans up the tmp.
-        #         4. Rank 0 writes a final smd for the combined master file.
-        tmp_chunk_file: str = par.output_file.replace(
-            "-c000.", f"-c{self._mpi_rank:03d}-tmp."
-        )
-        xtc_path: PosixPath = PosixPath(tmp_chunk_file)
+        #       HOWEVER - While each "big data" .xtc2 can be written in separate -cXYZ
+        #       chunk files, the .smd.xtc2 "small data" file should be written as one
+        #       single file with `-c000` chunk number. (This is a hard requirement)
+        #       Therefore we do:
+        #         1. Rank 0 Opens its -c000.xtc2 and -c000.smd.xtc2 files and writes all
+        #            transitions through ENABLE.
+        #         2. Each rank then writes its -cXYZ.xtc2 in parallel filled with the
+        #            L1Accepts and chronologically ordered timestamps. They record the
+        #            size and local offset of each datagram.
+        #         3. Rank (size - 1) writes the final transitions (Disable -> EndRun) to
+        #            its -cXYZ.xtc2 file.
+        #         4. All ranks send their recorded datagram offsets and sizes to rank 0.
+        #            Rank 0 then writes the smalldata datagrams for these offsets and at
+        #            the end also adds in the Disable through EndRun transitions.
+
+        output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}.")
+        xtc_path: PosixPath = PosixPath(output_file)
         xtc_dir: PosixPath = xtc_path.parent.absolute()
         xtc_dir.mkdir(parents=True, exist_ok=True)
 
-        xtc2file: BinaryIO = open(tmp_chunk_file, "wb")
+        xtc2file: BinaryIO = open(output_file, "wb")
+
+        smalldata_dir: PosixPath = xtc_dir / "smalldata"
+        smalldata_dir.mkdir(parents=True, exist_ok=True)
+        xtc_name_smd: str = PosixPath(par.output_file).stem
+        final_smd_name: str = str(smalldata_dir / xtc_name_smd) + ".smd.xtc2"
+
+        if self._mpi_rank == 0:
+            smdfile: BinaryIO = open(final_smd_name, "wb")
 
         # Create config, algorithm, and detector
         config: DgramEdit = DgramEdit(transition_id=TransitionId.Configure)
@@ -249,11 +263,21 @@ class WriteXtc2(Task):
         runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
         runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
 
+        # Setup the algorithm/detector definitions for recording offsets in .smd.xtc2
+        smdinfo_alg: AlgDef = AlgDef("offsetAlg", 0, 0, 0)
+        smdinfo_det: DetectorDef = DetectorDef("smdinfo", "offsetAlg", "")
+
         # Define data formats
         ##############################
         runinfodef: Dict[str, Tuple[Type, int]] = {
             "expt": (str, 1),
             "runnum": (np.uint32, 0),
+        }
+
+        # Field definitions for the smalldata offsets in .smd.xtc2 file
+        smdinfodef: Dict[str, Tuple[Type, int]] = {
+            "intOffset": (np.uint64, 0),
+            "intDgramSize": (np.uint64, 0),
         }
 
         # Hold calibration information
@@ -303,6 +327,11 @@ class WriteXtc2(Task):
         detectors: Dict[str, config.Detector] = {}
         namesId["epics"] = len(namesId)
         finished_ranks: int = 0
+
+        # Each rank will record a tuple of (timestamp, offset, size) for each L1Accept
+        # datagram it writes. The offset is a local offset. At the end these get sent
+        # to rank 0 so it can finish writing out the .smd.xtc2 file
+        smd_events: List[Tuple[int, int, int]] = []
         while True:
             if self._mpi_rank == 0:
                 obj = zmq_recv.recv_zipped_pickle()
@@ -375,6 +404,13 @@ class WriteXtc2(Task):
                     nodeId=int(par.node_id),
                     namesId=namesId["runinfo"],
                 )
+                smdinfo = config.Detector(
+                    smdinfo_det,
+                    smdinfo_alg,
+                    smdinfodef,
+                    nodeId=int(par.node_id),
+                    namesId=namesId["smdinfo"],
+                )
                 epicsinfo = config.Detector(
                     epicsinfo_det,
                     epicsinfo_alg,
@@ -391,6 +427,7 @@ class WriteXtc2(Task):
                 )
             elif "start" in obj:
                 # NOTE: Only run the actual writes on rank 0!
+                #       We'll get started writing out the .smd.xtc2 through Enable too
                 config_timestamp = obj["config_timestamp"]
                 config.updatetimestamp(config_timestamp)
 
@@ -403,6 +440,7 @@ class WriteXtc2(Task):
                 # Only rank 0 writes
                 if self._mpi_rank == 0:
                     save_dgramedit(config, outbuf, xtc2file)
+                    save_dgramedit(config, outbuf, smdfile)
 
                 beginrun = DgramEdit(
                     transition_id=TransitionId.BeginRun,
@@ -416,6 +454,7 @@ class WriteXtc2(Task):
                 # Only rank 0 writes
                 if self._mpi_rank == 0:
                     save_dgramedit(beginrun, outbuf, xtc2file)
+                    save_dgramedit(beginrun, outbuf, smdfile)
 
                 beginstep = DgramEdit(
                     transition_id=TransitionId.BeginStep,
@@ -426,6 +465,7 @@ class WriteXtc2(Task):
                 # Only rank 0 writes
                 if self._mpi_rank == 0:
                     save_dgramedit(beginstep, outbuf, xtc2file)
+                    save_dgramedit(beginstep, outbuf, smdfile)
 
                 enable = DgramEdit(
                     transition_id=TransitionId.Enable,
@@ -436,6 +476,7 @@ class WriteXtc2(Task):
                 # Only rank 0 writes
                 if self._mpi_rank == 0:
                     save_dgramedit(enable, outbuf, xtc2file)
+                    save_dgramedit(enable, outbuf, smdfile)
 
                 current_timestamp = config_timestamp + 3
                 if "calib_const" in obj:
@@ -457,6 +498,7 @@ class WriteXtc2(Task):
                             # Only rank 0 writes this data!!
                             if self._mpi_rank == 0:
                                 save_dgramedit(slow_update, outbuf, xtc2file)
+                                save_dgramedit(slow_update, outbuf, smdfile)
                             current_timestamp += 1
 
             elif "end" in obj:
@@ -514,6 +556,7 @@ class WriteXtc2(Task):
                     config_dgramedit=config,
                     ts=real_timestamp,
                 )
+
                 for detname in obj:
                     if detname == "timestamp":
                         continue
@@ -526,7 +569,14 @@ class WriteXtc2(Task):
                     for attr in timing_data:
                         setattr(timing.raw, attr, timing_data[attr])  # type: ignore
                     d0.adddata(timing.raw)
+
+                # Before saving the file, get the offset to setup the smd file
+                event_offset: int = xtc2file.tell()
                 save_dgramedit(d0, outbuf, xtc2file)
+                event_size: int = d0.size  # Also need the size of the datagram
+
+                # Cache the tuple to later send to rank 0
+                smd_events.append((real_timestamp, event_offset, event_size))
                 current_timestamp = real_timestamp
 
         logger.info(f"[XTC2 Writer Rank {self._mpi_rank}]: XTC2 Writing Complete")
@@ -535,66 +585,46 @@ class WriteXtc2(Task):
         if self._mpi_rank == 0:
             zmq_recv.close()
 
-        # Difficulty getting the chunk thing working, so will combine all files at end
         MPI.COMM_WORLD.Barrier()
 
-        local_size: int = os.path.getsize(tmp_chunk_file)
-        all_sizes: List[int] = MPI.COMM_WORLD.allgather(local_size)
+        local_xtc2_size: int = os.path.getsize(output_file)
+        all_sizes: List[int] = MPI.COMM_WORLD.allgather(local_xtc2_size)
 
-        start_offset: int = sum(all_sizes[: self._mpi_rank])
-        total_size: int = sum(all_sizes)
-
-        final_output_file: str = par.output_file
-
-        if self._mpi_rank == 0:
-            logger.debug("[XTC2 Writer Rank 0]: Opening consolidated file.")
-            with open(final_output_file, "wb") as f:
-                f.truncate(total_size)
-
-        MPI.COMM_WORLD.Barrier()
-
-        if local_size > 0:
-            logger.debug(
-                f"[XTC2 Writer Rank {self._mpi_rank}]: Will write {local_size} bytes beginning at {start_offset}"
-            )
-            with open(final_output_file, "r+b") as f_out:
-                f_out.seek(start_offset)
-                with open(tmp_chunk_file, "rb") as f_in:
-                    while True:
-                        buf: bytes = f_in.read(16 * 1024 * 1024)
-                        if not buf:
-                            break
-                        f_out.write(buf)
-
-        MPI.COMM_WORLD.Barrier()
-
-        if os.path.exists(tmp_chunk_file):
-            logger.debug(
-                f"[XTC2 Writer Rank {self._mpi_rank}]: Removing temporary chunk file {tmp_chunk_file}."
-            )
-            os.remove(tmp_chunk_file)
-
-        if self._mpi_rank == 0:
-            # Write smalldata
-            logger.info("[XTC2 Writer Rank 0]: Beginning .smd File Writing.")
-            smalldata_dir: PosixPath = xtc_dir / "smalldata"
-            smalldata_dir.mkdir(parents=True, exist_ok=True)
-
-            xtc_name_final: str = PosixPath(final_output_file).stem
-            smd_name: str = str(smalldata_dir / xtc_name_final) + ".smd.xtc2"
-
-            cur_dir: str = os.path.abspath(os.curdir)
-            os.chdir(xtc_dir)
-            os.system(f"smdwriter -f {final_output_file}")
-            if os.path.exists("smd.xtc2"):
-                logger.debug(f"[XTC2 Writer Rank 0]: Moving smd.xtc2 to {smd_name}.")
-                shutil.move("smd.xtc2", smd_name)
-            else:
-                logger.warning(
-                    "[XTC2 Writer Rank 0]: Did not find an smd.xtc2 file after writing!"
-                )
-            os.chdir(cur_dir)
-
-        logger.info(
-            f"[XTC2 Writer Rank {self._mpi_rank}]: Writing and file consolidation completed."
+        # Gather the tuple of (timestamp, local_offset, dgram_size) to rank 0
+        all_events: Optional[List[List[Tuple[int, int, int]]]] = MPI.COMM_WORLD.gather(
+            smd_events, root=0
         )
+
+        if self._mpi_rank == 0:
+            assert all_events is not None
+
+            logger.info(
+                "[XTC2 Writer Rank 0]: Writing L1Accept data to smalldata file."
+            )
+
+            # The initial transitions and SlowUpdates were already written as we went
+            # Just write the event offsets
+            for r in range(self._mpi_size):
+                cummulative_offset: int = sum(all_sizes[:r])
+                for ts, local_offset, size in all_events[r]:
+                    smd_d0 = DgramEdit(
+                        transition_id=TransitionId.L1Accept,
+                        config_dgramedit=config,
+                        ts=ts,
+                    )
+                    global_offset: int = local_offset + cummulative_offset
+                    smdinfo.offsetAlg.intOffset = np.uint64(global_offset)
+                    smdinfo.offsetAlg.intDgramSize = np.uint64(size)
+                    smd_d0.adddata(smdinfo.offsetAlg)
+                    save_dgramedit(smd_d0, outbuf, smdfile)
+
+            # Finally, write out the disable and remaining transitions
+            save_dgramedit(disable, outbuf, smdfile)
+            save_dgramedit(endstep, outbuf, smdfile)
+            save_dgramedit(endrun, outbuf, smdfile)
+
+            logger.info(
+                f"[XTC2 Writer Rank 0]: Consolidated smalldata file written to: {final_smd_name}."
+            )
+
+        MPI.COMM_WORLD.Barrier()
