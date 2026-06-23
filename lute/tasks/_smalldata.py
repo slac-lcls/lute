@@ -25,7 +25,6 @@ from matplotlib.colors import to_hex  # type: ignore
 from mpi4py import MPI
 from scipy.signal import find_peaks, savgol_filter  # type: ignore
 from scipy.optimize import curve_fit  # type: ignore
-from scipy.interpolate import interp1d  # type: ignore
 from sklearn.decomposition import NMF  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel  # type: ignore
@@ -504,40 +503,56 @@ class AnalyzeSmallData(Task):
 
         q_mask = (q_in >= qmin) & (q_in <= qmax)
         q_crop = q_in[q_mask]
-        prof_crop = profiles[:, q_mask]
+        pp = profiles[:, q_mask].astype(float, copy=True)  # (N, N_q_crop)
 
-        n_events = prof_crop.shape[0]
-        pp = np.full((n_events, len(q_common)), np.nan)
+        # All-NaN rows are skipped; restored to NaN in the output.
+        valid = ~np.all(np.isnan(pp), axis=1)  # (N,)
 
-        for i in range(n_events):
-            p = prof_crop[i].copy().astype(float)
-            if np.all(np.isnan(p)):
-                continue
+        # Pulse normalization
+        if pulse_intensity is not None:
+            pos = valid & (pulse_intensity > 0)
+            if pos.any():
+                pp[pos] = pp[pos] / pulse_intensity[pos, np.newaxis]
 
-            if pulse_intensity is not None and pulse_intensity[i] > 0:
-                p /= pulse_intensity[i]
+        # MAD spike clipping
+        if valid.any():
+            vd = pp[valid]  # (N_valid, N_q) — copy via boolean indexing
+            med = np.nanmedian(vd, axis=1, keepdims=True)
+            mad = np.nanmedian(np.abs(vd - med), axis=1, keepdims=True)
+            pp[valid] = np.where(
+                np.abs(vd - med) > clip_sigma * 1.4826 * mad, med, vd
+            )
 
-            med = np.nanmedian(p)
-            mad = np.nanmedian(np.abs(p - med))
-            if mad > 0:
-                p = np.where(np.abs(p - med) > clip_sigma * 1.4826 * mad, med, p)
+        # Savitzky-Golay smoothing — scipy accepts 2D input with axis=1
+        if do_smooth and sg_window < pp.shape[1] and valid.any():
+            pp[valid] = savgol_filter(
+                pp[valid], window_length=sg_window, polyorder=sg_poly, axis=1
+            )
 
-            if do_smooth and sg_window < len(p):
-                p = savgol_filter(p, window_length=sg_window, polyorder=sg_poly)
+        # Area normalization
+        if valid.any():
+            vd = pp[valid]
+            areas = np.trapz(np.abs(vd), q_crop, axis=1)  # (N_valid,)
+            nonzero = areas > 0
+            if nonzero.any():
+                vd[nonzero] /= areas[nonzero, np.newaxis]
+                pp[valid] = vd
 
-            area = np.trapz(np.abs(p), q_crop)
-            if area > 0:
-                p /= area
+        # Linear resampling onto q_common — weights computed once, applied in bulk
+        idx = np.searchsorted(q_crop, q_common) - 1
+        idx = np.clip(idx, 0, len(q_crop) - 2)
+        dq = q_crop[idx + 1] - q_crop[idx]
+        dq = np.where(dq == 0, 1.0, dq)
+        t = np.clip((q_common - q_crop[idx]) / dq, 0.0, 1.0)  # (N_q_common,)
+        out = (1.0 - t) * pp[:, idx] + t * pp[:, idx + 1]     # (N, N_q_common)
 
-            try:
-                f = interp1d(
-                    q_crop, p, kind="linear", bounds_error=False, fill_value=np.nan
-                )
-                pp[i] = f(q_common)
-            except Exception:
-                continue
+        # Restore NaN for out-of-range Q and all-NaN input rows
+        oob = (q_common < q_crop[0]) | (q_common > q_crop[-1])
+        if oob.any():
+            out[:, oob] = np.nan
+        out[~valid] = np.nan
 
-        return pp, q_common
+        return out, q_common
 
     def _preprocess_sim_curves_thermometry(
         self,
@@ -566,47 +581,126 @@ class AnalyzeSmallData(Task):
         """
         q_mask = (q_sim >= qmin) & (q_sim <= qmax)
         q_crop = q_sim[q_mask]
-        curves_crop = sim_curves[:, q_mask]
+        pp = sim_curves[:, q_mask].astype(float, copy=True)  # (N_temps, N_q_crop)
 
-        n_temps = curves_crop.shape[0]
-        pp_sim = np.full((n_temps, len(q_common)), np.nan)
+        valid = ~np.all(np.isnan(pp), axis=1)
 
-        for i in range(n_temps):
-            c = curves_crop[i].copy().astype(float)
-            if np.all(np.isnan(c)):
-                continue
-            area = np.trapz(np.abs(c), q_crop)
-            if area > 0:
-                c /= area
-            try:
-                f = interp1d(
-                    q_crop, c, kind="linear", bounds_error=False, fill_value=np.nan
-                )
-                pp_sim[i] = f(q_common)
-            except Exception:
-                continue
+        # Area normalization
+        if valid.any():
+            vd = pp[valid]
+            areas = np.trapz(np.abs(vd), q_crop, axis=1)
+            nonzero = areas > 0
+            if nonzero.any():
+                vd[nonzero] /= areas[nonzero, np.newaxis]
+                pp[valid] = vd
 
-        return pp_sim
+        # Linear resampling onto q_common
+        idx = np.searchsorted(q_crop, q_common) - 1
+        idx = np.clip(idx, 0, len(q_crop) - 2)
+        dq = q_crop[idx + 1] - q_crop[idx]
+        dq = np.where(dq == 0, 1.0, dq)
+        t = np.clip((q_common - q_crop[idx]) / dq, 0.0, 1.0)
+        out = (1.0 - t) * pp[:, idx] + t * pp[:, idx + 1]
+
+        oob = (q_common < q_crop[0]) | (q_common > q_crop[-1])
+        if oob.any():
+            out[:, oob] = np.nan
+        out[~valid] = np.nan
+
+        return out
 
     def _extract_shot_event_codes(
-        self, n_events: int
+        self,
+        n_events: int,
+        ordered_codes: Optional[List[int]] = None,
     ) -> Tuple[Optional[npt.NDArray], Optional[List[str]]]:
-        """Extract per-shot integer event code and sorted label list from HDF5.
+        """Extract per-shot event code assignment from HDF5.
 
-        Reads all ``evr/code_XXX`` datasets. Codes that are constant (all-True
-        or all-False across shots) are ignored. Each shot is assigned to the
-        first matching code in sorted order; unmatched shots get code -1.
+        Tries two formats in order:
 
-        Falls back to scan-variable binning if no evr codes vary.
+        1. **2-D boolean mask** ``(N_events, N_codes)`` — the column index IS
+           the event code number (LCLS smalldata default). Searches for the
+           highest-scoring dataset matching event-code naming patterns.
+           ``ordered_codes`` selects which columns to read (default:
+           [201-212] used by MFX T-jump experiments). Each shot is assigned
+           exclusively to the first matching code.
+
+        2. **Per-code 1-D datasets** ``evr/code_XXX`` — one boolean array per
+           code. Codes that are constant across shots are ignored.
+
+        Falls back to scan-variable binning (e.g. ``lxt_fast``) if HDF5
+        reading fails or yields no variation.
+
+        Args:
+            n_events: Number of events to read.
+            ordered_codes: Ordered list of event code numbers to extract from
+                the 2-D mask. Defaults to [201,202,203,204,205,206,207,209,
+                210,211,212] (MFX T-jump standard).
 
         Returns:
-            shot_codes: (N_events,) int array of per-shot code (-1 = none).
-            ordered_labels: list of code label strings in ascending order.
+            shot_codes: (N_events,) int array of per-shot code (-1 = unmatched).
+            ordered_labels: list of code label strings in the same order.
         """
+        if ordered_codes is None:
+            ordered_codes = [201, 202, 203, 204, 205, 206, 207, 209, 210, 211, 212]
+
         smd_path = getattr(self._task_parameters, "smd_path", None)
         if smd_path:
             try:
                 with h5py.File(smd_path, "r") as f:
+                    # ── Strategy 1: 2-D boolean mask ──────────────────────────
+                    # Search for a 2-D dataset whose name matches timing patterns
+                    import re as _re
+                    _patterns = [r"event", r"evr", r"code", r"mask", r"fid", r"pulseid"]
+                    _rx = _re.compile("|".join(_patterns), _re.IGNORECASE)
+                    _candidates: List[Tuple[str, tuple, Any]] = []
+
+                    def _visit(name: str, obj: Any) -> None:
+                        import h5py as _h5
+                        if isinstance(obj, _h5.Dataset) and _rx.search(name):
+                            _candidates.append((name, obj.shape, obj.dtype))
+
+                    f.visititems(_visit)
+
+                    # Score and pick best candidate
+                    def _score(item: Tuple[str, tuple, Any]) -> int:
+                        nm, sh, dt = item
+                        n = nm.lower()
+                        s = 0
+                        if "evr" in n: s += 5
+                        if "eventcode" in n or "event_code" in n: s += 8
+                        if "code" in n: s += 3
+                        if "mask" in n: s += 2
+                        if len(sh) == 2: s += 4   # 2-D preferred
+                        if np.issubdtype(dt, np.integer) or np.issubdtype(dt, np.bool_): s += 2
+                        return s
+
+                    _candidates.sort(key=_score, reverse=True)
+                    for path, shape, dtype in _candidates:
+                        if len(shape) != 2:
+                            continue
+                        n_rows, n_cols = shape
+                        # Verify codes fit in the column dimension
+                        valid = [c for c in ordered_codes if c < n_cols]
+                        if not valid:
+                            continue
+                        ev2d = f[path][:n_events, :].astype(bool)
+                        shot_codes: npt.NDArray = np.full(n_events, -1, dtype=int)
+                        active: List[int] = []
+                        for cn in valid:
+                            col = ev2d[:, cn]
+                            if col.any() and not col.all():
+                                active.append(cn)
+                                unset = shot_codes == -1
+                                shot_codes[col & unset] = cn
+                        if active:
+                            labels = [str(cn) for cn in active]
+                            logger.debug(
+                                f"Event codes from 2-D mask '{path}': {active}"
+                            )
+                            return shot_codes, labels
+
+                    # ── Strategy 2: per-code 1-D datasets evr/code_XXX ────────
                     if "evr" in f:
                         evr = f["evr"]
                         code_data: Dict[int, npt.NDArray] = {}
@@ -614,23 +708,23 @@ class AnalyzeSmallData(Task):
                             if not key.startswith("code_"):
                                 continue
                             try:
-                                code_num = int(key[5:])
+                                cn = int(key[5:])
                                 arr = evr[key][:n_events].astype(bool).ravel()
                                 if arr.any() and not arr.all():
-                                    code_data[code_num] = arr
+                                    code_data[cn] = arr
                             except Exception:
                                 continue
                         if code_data:
-                            shot_codes: npt.NDArray = np.full(n_events, -1, dtype=int)
+                            shot_codes = np.full(n_events, -1, dtype=int)
                             for cn in sorted(code_data):
-                                mask = code_data[cn] & (shot_codes == -1)
-                                shot_codes[mask] = cn
+                                shot_codes[code_data[cn] & (shot_codes == -1)] = cn
                             labels = [str(cn) for cn in sorted(code_data)]
+                            logger.debug(f"Event codes from evr/code_XXX: {sorted(code_data)}")
                             return shot_codes, labels
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"Event code extraction failed: {exc}")
 
-        # Fallback: group by scan variable (e.g. lxt_fast time delays)
+        # ── Fallback: scan-variable binning ──────────────────────────────────
         if hasattr(self, "_scan_values"):
             sv = np.asarray(self._scan_values).ravel()[:n_events]
             unique_sv = np.unique(sv[~np.isnan(sv)])
@@ -640,6 +734,7 @@ class AnalyzeSmallData(Task):
                     shot_codes[np.isclose(sv, v)] = i
                 sv_name = getattr(self, "_scan_var_name", "scan") or "scan"
                 labels = [f"{sv_name}={v:.4g}" for v in unique_sv]
+                logger.debug(f"Event codes from scan variable '{sv_name}': {len(unique_sv)} bins")
                 return shot_codes, labels
 
         return None, None
@@ -694,25 +789,23 @@ class AnalyzeSmallData(Task):
         """
         from sklearn.neighbors import NearestNeighbors  # type: ignore
 
-        # ── 1. Phi-average az_int → (N, N_q) ───────────────────────────────
+        # ── 1–3. All ranks: phi-average, build masks, preprocess local chunk ─
         if self._az_int.ndim == 3:
             az2d: npt.NDArray = np.nanmean(self._az_int, axis=1)
         else:
             az2d = self._az_int
 
-        # ── 2. Build laser-on / laser-off masks ─────────────────────────────
-        on_mask: npt.NDArray[np.bool_] = self._aggregate_filters(
+        on_mask_local: npt.NDArray[np.bool_] = self._aggregate_filters(
             f"xray on, laser on, {extra_filter}"
         )
-        off_mask: npt.NDArray[np.bool_] = self._aggregate_filters(
+        off_mask_local: npt.NDArray[np.bool_] = self._aggregate_filters(
             f"xray on, laser off, {extra_filter}"
         )
 
-        # ── 3. Preprocess experimental profiles ─────────────────────────────
         if q_common is None:
             q_common = np.linspace(qmin, qmax, 250)
 
-        pp_all, q_common = self._preprocess_profiles_thermometry(
+        pp_local, q_common = self._preprocess_profiles_thermometry(
             az2d,
             self._q_vals,
             pulse_intensity=getattr(self, "_xray_intensity", None),
@@ -721,8 +814,28 @@ class AnalyzeSmallData(Task):
             qmax=qmax,
         )
 
+        # ── Gather preprocessed chunks to rank 0 ────────────────────────────
+        all_pp = self._mpi_comm.gather(pp_local, root=0)
+        all_on = self._mpi_comm.gather(on_mask_local, root=0)
+        all_off = self._mpi_comm.gather(off_mask_local, root=0)
+
+        if self._mpi_rank != 0:
+            return {
+                "T_mean": None, "T_std": None,
+                "on_mask": on_mask_local, "off_mask": off_mask_local,
+                "exp_embedding": None, "sim_embedding": None,
+                "sim_temps": None, "q_common": q_common,
+                "perturbation": pp_local, "shot_codes": None,
+                "code_labels": None, "plot": None,
+            }
+
+        # ── Rank 0 only: assemble full dataset then run ML pipeline ──────────
+        pp_all: npt.NDArray = np.vstack(all_pp)       # (N_total, N_q_common)
+        on_mask: npt.NDArray[np.bool_] = np.concatenate(all_on)
+        off_mask: npt.NDArray[np.bool_] = np.concatenate(all_off)
+
         col_med = np.nanmedian(pp_all, axis=0)
-        col_med = np.where(np.isnan(col_med), 0.0, col_med)  # all-NaN columns → 0
+        col_med = np.where(np.isnan(col_med), 0.0, col_med)
         nan_locs = np.isnan(pp_all)
         pp_all[nan_locs] = np.take(col_med, np.where(nan_locs)[1])
 
@@ -821,10 +934,7 @@ class AnalyzeSmallData(Task):
             code_labels=code_labels,
             plot=None,
         )
-
-        if MPI.COMM_WORLD.Get_rank() == 0:
-            results["plot"] = self.plot_thermometry_hv(results)
-
+        results["plot"] = self.plot_thermometry_hv(results)
         return results
 
     def plot_thermometry_hv(
@@ -886,12 +996,15 @@ class AnalyzeSmallData(Task):
             unique_int = np.array([0])
             ordered_labels = ["laser on"]
 
-        # Build per-group dict: label → T values for laser-on shots in that group
+        # Build per-group dict: label → T values for each event-code group.
+        # We group by code directly (not filtered by on_mask) so that every
+        # active code (201, 202, 203, …) appears as its own group.  The
+        # laser-off reference is kept separately via off_mask.
         group_T: Dict[str, npt.NDArray] = {}
         group_T_mean: Dict[str, float] = {}
         group_mask: Dict[str, npt.NDArray] = {}
         for lbl, ci in zip(ordered_labels, unique_int):
-            m = (codes == ci) & on_mask
+            m = codes == ci
             if m.sum() == 0:
                 continue
             group_T[lbl] = T_mean[m]
@@ -900,14 +1013,14 @@ class AnalyzeSmallData(Task):
 
         labels: List[str] = list(group_T.keys())
 
-        # Color scale: plasma colormap, range = span of group mean Ts
+        # Color scale: coolwarm (blue=cold, red=hot), range = span of group mean Ts
         all_means = list(group_T_mean.values())
         T_cmin = min(all_means) if len(all_means) >= 2 else float(np.nanpercentile(T_mean, 2))
         T_cmax = max(all_means) if len(all_means) >= 2 else float(np.nanpercentile(T_mean, 98))
         if T_cmin == T_cmax:
             T_cmax = T_cmin + 1.0
         T_norm = mcolors.Normalize(vmin=T_cmin, vmax=T_cmax)
-        cmap_T = plt.get_cmap("plasma")
+        cmap_T = plt.get_cmap("coolwarm")
 
         # Helper: convert a matplotlib figure to an embedded PNG pane
         def _fig_to_pane(fig: plt.Figure) -> pn.pane.HTML:
@@ -924,21 +1037,39 @@ class AnalyzeSmallData(Task):
         x_lbl = "Event code" if shot_codes_raw is not None else "Group"
 
         # ── Tab 1: Temperature ───────────────────────────────────────────────
-        on_pts = hv.Scatter(
-            (shot_idx[on_mask], T_mean[on_mask]),
-            kdims=["shot"], vdims=["T (°C)"],
-            label="laser on",
-        ).opts(color="tomato", size=3, alpha=0.6)
-        off_pts = hv.Scatter(
-            (shot_idx[off_mask], T_mean[off_mask]),
-            kdims=["shot"], vdims=["T (°C)"],
-            label="laser off",
-        ).opts(color="steelblue", size=3, alpha=0.4)
-        per_shot = (on_pts * off_pts).opts(
-            title="Per-shot inferred temperature",
-            xlabel="Shot index", ylabel="T (°C)",
-            legend_position="top_right", width=750, height=280,
-        )
+        # Per-shot scatter: one layer per event-code group.  When codes are
+        # available the off group is already covered by the individual code
+        # layers (off = all non-203 codes), so no separate off layer is added.
+        if labels:
+            code_scatter_layers = [
+                hv.Scatter(
+                    (shot_idx[group_mask[lbl]], T_mean[group_mask[lbl]]),
+                    kdims=["shot"], vdims=["T (°C)"],
+                    label=lbl,
+                ).opts(color=to_hex(cmap_T(T_norm(group_T_mean[lbl]))), size=3, alpha=0.6)
+                for lbl in labels
+            ]
+            per_shot = hv.Overlay(code_scatter_layers).opts(
+                title="Per-shot inferred temperature",
+                xlabel="Shot index", ylabel="T (°C)",
+                legend_position="top_right", width=750, height=280,
+            )
+        else:
+            on_pts = hv.Scatter(
+                (shot_idx[on_mask], T_mean[on_mask]),
+                kdims=["shot"], vdims=["T (°C)"],
+                label="laser on",
+            ).opts(color="tomato", size=3, alpha=0.6)
+            off_pts = hv.Scatter(
+                (shot_idx[off_mask], T_mean[off_mask]),
+                kdims=["shot"], vdims=["T (°C)"],
+                label="laser off",
+            ).opts(color="steelblue", size=3, alpha=0.4)
+            per_shot = (on_pts * off_pts).opts(
+                title="Per-shot inferred temperature",
+                xlabel="Shot index", ylabel="T (°C)",
+                legend_position="top_right", width=750, height=280,
+            )
 
         if labels:
             x_pos = np.arange(len(labels))
@@ -947,12 +1078,15 @@ class AnalyzeSmallData(Task):
             if np.isfinite(T_off_med):
                 ax_traj.axhline(T_off_med, color="steelblue", lw=1.2, ls="--",
                                 label=f"off median {T_off_med:.1f} °C")
+            means = []
             for xi, lbl in zip(x_pos, labels):
                 vals = group_T[lbl]
+                means.append(np.nanmean(vals))
                 col = cmap_T(T_norm(group_T_mean[lbl]))
                 ax_traj.errorbar(xi, np.nanmean(vals), yerr=np.nanstd(vals),
                                  fmt="o", color=col, ecolor=col,
-                                 capsize=4, markersize=7, lw=1.5)
+                                 capsize=4, markersize=7, lw=1.5, zorder=3)
+            ax_traj.plot(x_pos, means, color="gray", lw=1.0, ls="-", zorder=2, alpha=0.6)
             ax_traj.set_xticks(x_pos)
             ax_traj.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
             ax_traj.set_xlabel(x_lbl)
@@ -973,7 +1107,7 @@ class AnalyzeSmallData(Task):
             x_pos = np.arange(len(labels))
             fig_vln, ax_vln = plt.subplots(figsize=(max(8, len(labels) * 0.8 + 2), 5))
 
-            # laser-off violin at position -1
+            # Combined OFF violin at position -1 (all non-203 codes)
             if off_mask.sum() > 1:
                 T_off_v = T_mean[off_mask][~np.isnan(T_mean[off_mask])]
                 if len(T_off_v) > 1:
@@ -1030,6 +1164,7 @@ class AnalyzeSmallData(Task):
             title="Isomap embedding — colored by inferred T",
             xlabel="Isomap-1", ylabel="Isomap-2",
             width=580, height=460,
+            xlim=(-1, 1), ylim=(-0.3, 0.2),
         )
         sim_pts = hv.Points(
             {"x": sim_emb[:, 0], "y": sim_emb[:, 1], "T": sim_temps},
@@ -1040,67 +1175,63 @@ class AnalyzeSmallData(Task):
             clim=(float(sim_temps.min()), float(sim_temps.max())),
             size=12, marker="star", line_color="black", line_width=0.8,
         )
-        manifold_tab = pn.Column(exp_pts * sim_pts)
+        _x_edges = np.linspace(-1, 1, 41)
+        _y_edges = np.linspace(-0.3, 0.2, 41)
+        _H, _xe, _ye = np.histogram2d(
+            np.clip(exp_emb[:, 0], -1, 1),
+            np.clip(exp_emb[:, 1], -0.3, 0.2),
+            bins=[_x_edges, _y_edges],
+        )
+        _H[_H == 0] = np.nan  # hide empty cells
+        _xc = 0.5 * (_xe[:-1] + _xe[1:])
+        _yc = 0.5 * (_ye[:-1] + _ye[1:])
+        hex_density = hv.QuadMesh(
+            (_xc, _yc, _H.T),  # (nx,), (ny,), (ny, nx)
+            kdims=["x", "y"], vdims=["count"],
+        ).opts(
+            cmap="Blues", colorbar=True,
+            title="Shot density",
+            xlabel="Isomap-1", ylabel="Isomap-2",
+            width=480, height=460,
+            shared_axes=False,
+        )
+        manifold_tab = pn.Row(
+            (exp_pts * sim_pts).opts(
+                xlim=(-1, 1), ylim=(-0.3, 0.2),
+                apply_ranges=False,
+                shared_axes=False,
+            ),
+            hex_density,
+        )
 
-        # ── Tab 4: Scattering by T ───────────────────────────────────────────
+        # ── Tab 4: Scattering by T (HoloViews — crisp, interactive) ────────────
+        q_dim = hv.Dimension(("Q", "Q (Å⁻¹)"))
+        di_dim = hv.Dimension(("dI", "ΔI(Q)"))
         if labels:
-            baseline_curve = (
-                np.nanmean(perturbation[off_mask], axis=0)
-                if off_mask.sum() > 0 else np.zeros(len(q))
+            off_ref = hv.Curve(
+                (q, np.zeros(len(q))), kdims=[q_dim], vdims=[di_dim],
+                label="laser off",
+            ).opts(color="steelblue", line_width=1.5, line_dash="dashed", alpha=0.7)
+            code_curves = [
+                hv.Curve(
+                    (q, np.nanmean(perturbation[group_mask[lbl]], axis=0)),
+                    kdims=[q_dim], vdims=[di_dim],
+                    label=f"{lbl} – {group_T_mean[lbl]:.1f} °C",
+                ).opts(
+                    color=to_hex(cmap_T(T_norm(group_T_mean[lbl]))),
+                    line_width=1.8, alpha=0.9,
+                )
+                for lbl in labels
+            ]
+            scatt_T_tab = pn.Column(
+                hv.Overlay([off_ref] + code_curves).opts(
+                    title="Mean ΔI(Q) per event code",
+                    legend_position="right",
+                    width=750, height=380,
+                )
             )
-            fig_sq, axes_sq = plt.subplots(1, 2, figsize=(14, 4.8))
-            ax_iq, ax_di = axes_sq
-
-            ax_iq.plot(q, baseline_curve, color="steelblue", lw=1.5,
-                       ls="--", label="laser off", alpha=0.8)
-            ax_di.axhline(0, color="steelblue", lw=1.0, ls="--", alpha=0.6)
-
-            for lbl in labels:
-                m = group_mask[lbl]
-                col = cmap_T(T_norm(group_T_mean[lbl]))
-                mean_c = np.nanmean(perturbation[m], axis=0) + baseline_curve
-                mean_d = np.nanmean(perturbation[m], axis=0)
-                ax_iq.plot(q, mean_c, color=col, lw=1.2, alpha=0.85, label=lbl)
-                ax_di.plot(q, mean_d, color=col, lw=1.2, alpha=0.85, label=lbl)
-
-            ax_iq.set_xlabel("Q (Å⁻¹)"); ax_iq.set_ylabel("Norm. I(Q)")
-            ax_iq.set_title(f"Mean I(Q) per {x_lbl.lower()}")
-            ax_di.set_xlabel("Q (Å⁻¹)"); ax_di.set_ylabel("ΔI(Q)")
-            ax_di.set_title(f"Mean ΔI(Q) per {x_lbl.lower()}")
-            sm = plt.cm.ScalarMappable(cmap=cmap_T, norm=T_norm)
-            sm.set_array([])
-            fig_sq.colorbar(sm, ax=axes_sq, label="Mean T (°C)", pad=0.01, aspect=30)
-            fig_sq.tight_layout()
-            scatt_T_tab = _fig_to_pane(fig_sq)
         else:
             scatt_T_tab = pn.pane.Markdown("*No laser-on shots found.*")
-
-        # ── Tab 5: Scattering overview ───────────────────────────────────────
-        baseline2 = (
-            np.nanmean(perturbation[off_mask], axis=0)
-            if off_mask.sum() > 0 else np.zeros(len(q))
-        )
-        mean_on_abs = (
-            np.nanmean(perturbation[on_mask], axis=0) + baseline2
-            if on_mask.sum() > 0 else np.full(len(q), np.nan)
-        )
-        mean_pert_all = (
-            np.nanmean(perturbation[on_mask], axis=0)
-            if on_mask.sum() > 0 else np.full(len(q), np.nan)
-        )
-        scatter_overlay = (
-            hv.Curve((q, mean_on_abs), kdims=["Q (Å⁻¹)"], vdims=["Norm. I"],
-                     label="laser on").opts(color="tomato", line_width=2)
-            * hv.Curve((q, baseline2), kdims=["Q (Å⁻¹)"], vdims=["Norm. I"],
-                       label="laser off").opts(color="steelblue", line_width=2)
-        ).opts(title="Mean scattering profiles", legend_position="top_right",
-               width=600, height=300)
-        pert_curve = hv.Curve((q, mean_pert_all), kdims=["Q (Å⁻¹)"], vdims=["ΔI"]).opts(
-            color="purple", line_width=2,
-            title="Mean perturbation (on − off baseline)",
-            xlabel="Q (Å⁻¹)", ylabel="ΔI", width=600, height=300,
-        )
-        scattering_tab = pn.Column(scatter_overlay, pert_curve)
 
         # ── Tab 6: Distributions ─────────────────────────────────────────────
         if labels:
@@ -1119,16 +1250,33 @@ class AnalyzeSmallData(Task):
                 kdims=["group"], vdims=["T (°C)"],
             ).opts(title="T distribution", width=400, height=350)
 
-        if off_mask.sum() > 0:
-            T_off_h = T_mean[off_mask]
-            T_off_h = T_off_h[~np.isnan(T_off_h)]
-            freq, edges = np.histogram(T_off_h, bins=40)
-            hist_off = hv.Histogram((edges, freq)).opts(
-                color="steelblue", alpha=0.6,
-                title="Laser-off T histogram", xlabel="T (°C)",
-                width=450, height=300,
+        if off_mask.sum() > 0 or on_mask.sum() > 0:
+            all_vals = T_mean[~np.isnan(T_mean)]
+            bins = np.linspace(float(all_vals.min()), float(all_vals.max()), 41)
+            hist_layers = []
+            if off_mask.sum() > 0:
+                T_off_h = T_mean[off_mask]
+                T_off_h = T_off_h[~np.isnan(T_off_h)]
+                freq_off, edges = np.histogram(T_off_h, bins=bins)
+                hist_layers.append(
+                    hv.Histogram((edges, freq_off), label="laser off").opts(
+                        color="steelblue", alpha=0.5, line_color="steelblue",
+                    )
+                )
+            if on_mask.sum() > 0:
+                T_on_h = T_mean[on_mask]
+                T_on_h = T_on_h[~np.isnan(T_on_h)]
+                freq_on, edges = np.histogram(T_on_h, bins=bins)
+                hist_layers.append(
+                    hv.Histogram((edges, freq_on), label="laser on (203)").opts(
+                        color="tomato", alpha=0.6, line_color="tomato",
+                    )
+                )
+            hist_combined = hv.Overlay(hist_layers).opts(
+                title="ON / OFF T histogram", xlabel="T (°C)", ylabel="Frequency",
+                legend_position="top_right", width=450, height=300,
             )
-            dist_tab = pn.Row(box, hist_off)
+            dist_tab = pn.Row(box, hist_combined)
         else:
             dist_tab = pn.Column(box)
 
@@ -1137,7 +1285,6 @@ class AnalyzeSmallData(Task):
             ("Violin", violin_tab),
             ("Manifold", manifold_tab),
             ("Scattering by T", scatt_T_tab),
-            ("Scattering", scattering_tab),
             ("Distributions", dist_tab),
         )
 
@@ -2068,12 +2215,16 @@ class AnalyzeSmallData(Task):
             max_height=1200,
         )
 
-        # Sanitize phi values — some detectors store NaN (e.g. 1D-only azav)
-        phi_vals: npt.NDArray[np.float64] = self._phi_vals.copy()
-        if np.any(np.isnan(phi_vals)):
-            phi_vals = np.linspace(0.0, 360.0, len(phi_vals))
+        # Align phi_vals to the actual phi dimension of the data.
+        # Some detectors store [phi_min, phi_max] as a 2-element range vector
+        # even when only 1 phi bin was integrated — clip to match.
+        n_phi: int = self._norm_az_int.shape[1]
+        phi_vals: npt.NDArray[np.float64] = self._phi_vals[:n_phi].copy()
+        if len(phi_vals) < 2 or np.any(np.isnan(phi_vals)) or phi_vals.ptp() == 0:
+            phi_vals = np.linspace(0.0, 360.0, max(n_phi, 2))
+        has_phi_2d: bool = n_phi >= 2
 
-        # Top left - 2D cake laser off
+        # Top left - 2D cake laser off (or 1D fallback for single-phi detectors)
         filter_las_off: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser off, ipm, total scattering"
         )
@@ -2082,19 +2233,26 @@ class AnalyzeSmallData(Task):
         )
         phi_dim = hv.Dimension(("phi", "Phi (deg)"))
         q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
-        cake_off_img = hv.Image(
-            (phi_vals, self._q_vals, cake_off.T),
-            kdims=[phi_dim, q_dim],
-            vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
-        ).opts(
-            cmap="viridis",
-            colorbar=True,
-            title="2D Az Int - dS laser off",
-            shared_axes=False,
-        )
-        scan_grid[0, 0] = cake_off_img
+        if has_phi_2d:
+            scan_grid[0, 0] = hv.Image(
+                (phi_vals, self._q_vals, cake_off.T),
+                kdims=[phi_dim, q_dim],
+                vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
+            ).opts(
+                cmap="viridis",
+                colorbar=True,
+                title="2D Az Int - laser off",
+                shared_axes=False,
+            )
+        else:
+            scan_grid[0, 0] = hv.Curve(
+                (self._q_vals, cake_off.squeeze()),
+                kdims=[q_dim],
+                vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
+            ).opts(title="Az Int - laser off", color="steelblue", line_width=2,
+                   shared_axes=False)
 
-        # Top right - 1D phi - average laser off
+        # Top right - 1D phi-average laser off with per-phi-slice overlay
         azav_avg = np.nanmean(cake_off, axis=0)
         q_dim = hv.Dimension(("q", "Q (Å⁻¹)"))
         azav_plot = hv.Curve(
@@ -2116,24 +2274,31 @@ class AnalyzeSmallData(Task):
             azav_plot *= phi_slice_plot
         scan_grid[0, 1] = azav_plot.opts(shared_axes=False)
 
-        # Mid left - 2D cake laser on
+        # Mid left - 2D cake laser on (or 1D fallback)
         filter_las_on: npt.NDArray[np.bool_] = self._aggregate_filters(
             filter_vars="xray on, laser on, ipm, total scattering"
         )
         cake_on: npt.NDArray[np.float64] = np.nanmean(
             self._norm_az_int[filter_las_on], axis=0
         )
-        cake_on_img = hv.Image(
-            (phi_vals, self._q_vals, cake_on.T),
-            kdims=[phi_dim, q_dim],
-            vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
-        ).opts(
-            cmap="viridis",
-            colorbar=True,
-            title="2D Az Int - laser on",
-            shared_axes=False,
-        )
-        scan_grid[1, 0] = cake_on_img
+        if has_phi_2d:
+            scan_grid[1, 0] = hv.Image(
+                (phi_vals, self._q_vals, cake_on.T),
+                kdims=[phi_dim, q_dim],
+                vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
+            ).opts(
+                cmap="viridis",
+                colorbar=True,
+                title="2D Az Int - laser on",
+                shared_axes=False,
+            )
+        else:
+            scan_grid[1, 0] = hv.Curve(
+                (self._q_vals, cake_on.squeeze()),
+                kdims=[q_dim],
+                vdims=hv.Dimension(("intensity", "Intensity (a.u.)")),
+            ).opts(title="Az Int - laser on", color="tomato", line_width=2,
+                   shared_axes=False)
 
         # Mid right - 1D subsample unnormalized laser on shots
         num_bins = self._task_parameters.analysis_parameters.num_intensity_bins
@@ -2199,10 +2364,15 @@ class AnalyzeSmallData(Task):
             plot (pn.GridSpec): Plotted temperature jump analysis.
         """
 
-        tjump_grid = pn.GridSpec(
+        avg_grid = pn.GridSpec(
             sizing_mode="stretch_both",
             max_width=1000,
-            max_height=800,
+            max_height=400,
+        )
+        filtered_grid = pn.GridSpec(
+            sizing_mode="stretch_both",
+            max_width=1000,
+            max_height=400,
         )
 
         if len(self._xss_event_codes) > 0:
@@ -2240,8 +2410,10 @@ class AnalyzeSmallData(Task):
                 ).opts(color=colors[i], title="Processed dS to laser off")
                 processed_tjump_curves.append(processed_tjump_plot)
 
+            labels = [f"{code}" for code in valid_codes]
+
             if tjump_curves:
-                tjump_grid[0, 0] = (
+                avg_grid[0, 0] = (
                     hv.Overlay(tjump_curves)
                     .opts(
                         hv.opts.NdOverlay(
@@ -2251,7 +2423,7 @@ class AnalyzeSmallData(Task):
                     .opts(shared_axes=False)
                 )
             if processed_tjump_curves:
-                tjump_grid[1, 0] = (
+                filtered_grid[0, 0] = (
                     hv.Overlay(processed_tjump_curves)
                     .opts(
                         hv.opts.NdOverlay(
@@ -2261,13 +2433,12 @@ class AnalyzeSmallData(Task):
                     .opts(shared_axes=False)
                 )
 
-            labels = [f"{code}" for code in valid_codes]
             tjump_heatmap_data = [
                 (q, code, v)
                 for i, code in enumerate(labels)
                 for _, (q, v) in enumerate(zip(self._q_vals, valid_tjumps[i]))
             ]
-            tjump_img = hv.HeatMap(
+            avg_grid[0, 1] = hv.HeatMap(
                 tjump_heatmap_data,
                 kdims=[q_dim, hv.Dimension(("code", "Event code"))],
                 vdims=hv.Dimension(("diff", "dS cross-talk to laser off")),
@@ -2277,14 +2448,13 @@ class AnalyzeSmallData(Task):
                 title="dS cross-talk to laser off",
                 shared_axes=False,
             )
-            tjump_grid[0, 1] = tjump_img
 
             processed_heatmap_data = [
                 (q, code, v)
                 for i, code in enumerate(labels)
                 for _, (q, v) in enumerate(zip(self._q_vals, valid_processed_tjumps[i]))
             ]
-            processed_tjump_img = hv.HeatMap(
+            filtered_grid[0, 1] = hv.HeatMap(
                 processed_heatmap_data,
                 kdims=[q_dim, hv.Dimension(("code", "Event code"))],
                 vdims=hv.Dimension(("diff", "dS cross-talk to laser off")),
@@ -2294,9 +2464,11 @@ class AnalyzeSmallData(Task):
                 title="Processed dS cross-talk to laser off",
                 shared_axes=False,
             )
-            tjump_grid[1, 1] = processed_tjump_img
 
-        return tjump_grid
+        return pn.Tabs(
+            ("averages_by_event_code", avg_grid),
+            ("filtered_averages_by_event_code", filtered_grid),
+        )
 
     def plot_xss_overlap_fit_hv(
         self,
