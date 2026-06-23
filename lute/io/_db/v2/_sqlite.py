@@ -22,7 +22,13 @@ if TYPE_CHECKING:
 else:
     from lute.io.parameters import AnalysisHeader, TaskParameters
 from lute.io.parameters import LUTE_PARAMETER_FIELD_ATTRS, RowIds
-from lute.tasks.dataclasses import BaseSchema, DescribedAnalysis, TaskResult, TaskStatus
+from lute.tasks.dataclasses import (
+    BaseSchema,
+    DescribedAnalysis,
+    TaskResult,
+    TaskStatus,
+    VersionSpecifier,
+)
 
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
@@ -58,12 +64,14 @@ def _create_executions_table(con: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS executions (
         id integer PRIMARY KEY,
         task_id INTEGER,
+        task_version_id INTEGER,
         parameter_type_id INTEGER,
         executor_id INTEGER,
         config_id INTEGER,
         result_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks(id),
+        FOREIGN KEY (task_version_id) REFERENCES task_version (id),
         FOREIGN KEY (parameter_type_id) REFERENCES parameter_types (id)
         FOREIGN KEY (executor_id) REFERENCES executors(id),
         FOREIGN KEY (config_id) REFERENCES config(id),
@@ -414,6 +422,77 @@ def _create_base_schema_table(con: sqlite3.Connection) -> None:
             con.execute(insert_query, (bs.value, bs.name))
 
 
+def _create_task_version_table(con: sqlite3.Connection) -> None:
+    """Setup the `task_version` table.
+
+    The `task_version` table holds information about the specific version of the
+    underlying `Task` code that was run for that specific `Task`.
+
+    This table contains constraints:
+    - The `version_specifier` entry must be a BITWISE OR of the ids in the
+      `version_specifiers` table. This constraint is setup by the separate
+      `_setup_triggers_and_indices` as TRIGGERs.
+    - The `version_info` is required to be NOT NULL. This field contains a JSON blob
+      representing the version data, as defined by the `version_specifiers` field.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS task_version (
+        id INTEGER PRIMARY KEY,
+        version_specifier INTEGER,
+        version_info TEXT NOT NULL UNIQUE
+    );
+    """
+    with con:
+        con.executescript(PRAGMAS)
+        con.execute(query)
+
+
+def _create_version_specifiers_table(con: sqlite3.Connection) -> None:
+    """Setup the `version_specifiers` table.
+
+    The `version_specifiers` table holds information about how to understand the
+    version information for an execution. The enumerators defined here define a
+    single concrete access mechanism that is used for interpretation. E.g.,
+    a combination of commit sha256 and a diff may be used for a versioning a
+    Task that is run from a cloned git repository.
+
+    This table contains constraints:
+    - The name (and id) must be unique.
+    - The `id` entry must be a power of 2 as the `schema` table uses a bitwise
+      OR to indicate implementation of multiple `base_schema`.
+
+    This function will also insert all the base_schema already defined in
+    `lute.tasks.dataclasses.BaseSchema`.
+
+    Note: Because the `id` must be a power of two, it must be inserted manually.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    create_query: str = """
+    CREATE TABLE IF NOT EXISTS version_specifiers (
+        id INTEGER PRIMARY KEY,
+        name TEXT UNIQUE,
+        CHECK (id == 0 OR (id > 0 AND (id & (id - 1)) = 0))
+    );
+    """
+
+    # In addition to creation, we will add version specifiers that we already know about
+    insert_query: str = (
+        "INSERT OR IGNORE INTO version_specifiers (id, name) VALUES (?, ?)"
+    )
+
+    with con:
+        con.executescript(PRAGMAS)
+        con.execute(create_query)
+
+        for vs in VersionSpecifier:
+            con.execute(insert_query, (vs.value, vs.name))
+
+
 def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
     """Setup the trigger constraints and unique indices.
 
@@ -449,6 +528,26 @@ def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
         CASE
             WHEN NEW.schema > (SELECT SUM(id) FROM base_schema)
             THEN RAISE(ABORT, 'schema value exceeds total base_schema sum')
+        END;
+    END;
+
+    CREATE TRIGGER check_version_update
+    BEFORE UPDATE ON task_version
+    BEGIN
+        SELECT
+        CASE
+            WHEN NEW.version_specifier > (SELECT SUM(id) FROM version_specifiers)
+            THEN RAISE(ABORT, 'version_specifier value exceeds total version_specifiers sum')
+        END;
+    END;
+
+    CREATE TRIGGER check_version_insert
+    BEFORE INSERT ON task_version
+    BEGIN
+        SELECT
+        CASE
+            WHEN NEW.version_specifier > (SELECT SUM(id) FROM version_specifiers)
+            THEN RAISE(ABORT, 'version_specifier value exceeds total version_specifiers sum')
         END;
     END;
 
@@ -490,6 +589,9 @@ def create_tables(con: sqlite3.Connection) -> None:
     else:
         _create_tasks_table(con)
         _create_parameter_types_table(con)
+
+        _create_version_specifiers_table(con)
+        _create_task_version_table(con)
 
         _create_communicators_table(con)
         _create_executors_table(con)
@@ -863,6 +965,42 @@ def _add_schema(con: sqlite3.Connection, impl_schemas: Optional[str]) -> int:
     return schema_id
 
 
+def _add_version(
+    con: sqlite3.Connection,
+    version_specifier: Optional[int] = None,
+    task_version: Optional[str] = None,
+) -> int:
+    # Setup schema first
+    # For now we assume all version_specifiers were inserted during creation -
+    # see _create_version_specifiers_table
+    # We can still check that the version specifier matches possible values,
+    # it must be a bitwise OR of the possible individual specifier enumerators
+    # TODO: In the future, could support inserting new kinds of specifiers on the
+    #       fly, but probably want a way of attaching descriptive information to the
+    #       possibilities.
+    enum_val: int = int(list(VersionSpecifier.__members__.values())[-1])
+    enum_val_sum: int = 0
+    while enum_val:
+        enum_val_sum += enum_val
+        enum_val >>= 1
+    if version_specifier is not None and version_specifier > enum_val_sum:
+        # Want hard error? Or just warning?
+        logger.warn(
+            f"Combination version specifier value of {version_specifier} is invalid! "
+            f"The max expected value (combo of all known enumerators) is {enum_val_sum}. "
+            "We will continue. But the version information will be unusable upon retrieval!"
+        )
+
+    entries: Dict[str, Any] = {
+        "version_specifier": version_specifier if version_specifier else 0,
+        "version_info": task_version if task_version else "",
+    }
+    task_version_id: int = _insert_maybe_ignore_return_id(
+        con=con, table="task_version", entries=entries, ignore=True
+    )
+    return task_version_id
+
+
 def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     """Write an DescribedAnalysis object to the database.
 
@@ -894,6 +1032,43 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     config_id: int = _insert_maybe_ignore_return_id(
         con=con, table="config", entries=lute_config.dict(), ignore=True
     )
+
+    # Task Version information
+    version_specifier: Optional[int] = cfg.task_parameters.Config.version_specifier
+    version_info: Optional[str] = cfg.task_parameters.Config.task_version
+
+    # Some Tasks rely on tasklets to setup the code-base
+    # In those cases, the version recording at parameter validation would not work
+    # since the Executor would not have run the tasklet yet
+    if version_specifier is not None and version_specifier > 0:
+        if version_info is None or version_info == "" or version_info == "{}":
+            from lute.io.version_utils import record_version
+
+            location: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_location", None
+            )
+            diff_args: Optional[List[str]] = getattr(
+                cfg.task_parameters.Config, "version_diff_args", None
+            )
+
+            new_version_info: Dict[str, str] = record_version(
+                version_specifier=version_specifier,
+                location=location,
+                diff_args=diff_args,
+            )
+
+            # Store where version information was taken from
+            new_version_info["version-location"] = json.dumps(location)
+            new_version_info["version-diff-args"] = json.dumps(diff_args)
+
+            if new_version_info:
+                version_info = json.dumps(new_version_info)
+
+    task_version_id: int = _add_version(
+        con=con, version_specifier=version_specifier, task_version=version_info
+    )
+    del cfg.task_parameters.Config.task_version
+    del cfg.task_parameters.Config.version_specifier
 
     schema_id: int = _add_schema(con=con, impl_schemas=cfg.task_result.impl_schemas)
 
@@ -930,6 +1105,7 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
 
     entries = {
         "task_id": task_id,
+        "task_version_id": task_version_id,
         "parameter_type_id": parameter_type_id,
         "executor_id": executor_id,
         "config_id": config_id,
@@ -996,8 +1172,44 @@ def update_execution(
     )
     entries.clear()
 
+    # Some Tasks rely on tasklets to setup the code-base
+    # In those cases, the version recording at parameter validation would not work
+    # since the Executor would not have run the tasklet yet
+    version_specifier: Optional[int] = cfg.task_parameters.Config.version_specifier
+    task_version: Optional[str] = cfg.task_parameters.Config.task_version
+    task_version_id: int = row_ids["task_version_id"]
+
+    if version_specifier is not None and version_specifier > 0:
+        if task_version is None or task_version == "" or task_version == "{}":
+            from lute.io.version_utils import record_version
+
+            location: Optional[str] = getattr(
+                cfg.task_parameters.Config, "version_location", None
+            )
+            diff_args: Optional[List[str]] = getattr(
+                cfg.task_parameters.Config, "version_diff_args", None
+            )
+
+            new_version_info: Dict[str, str] = record_version(
+                version_specifier=version_specifier,
+                location=location,
+                diff_args=diff_args,
+            )
+
+            # Store where version information was taken from
+            new_version_info["version-location"] = json.dumps(location)
+            new_version_info["version-diff-args"] = json.dumps(diff_args)
+
+            if new_version_info:
+                task_version_id = _add_version(
+                    con=con,
+                    version_specifier=version_specifier,
+                    task_version=json.dumps(new_version_info),
+                )
+
     entries = {
         "task_id": row_ids["task_id"],
+        "task_version_id": task_version_id,
         "parameter_type_id": row_ids["parameter_type_id"],
         "executor_id": executor_id,
         "config_id": row_ids["config_id"],
@@ -1054,6 +1266,13 @@ def add_placeholder_execution(
         con=con, table="config", entries=lute_config.dict(), ignore=True
     )
 
+    # Task Version information
+    version_specifier: Optional[int] = params.Config.version_specifier
+    version_info: Optional[str] = params.Config.task_version
+    task_version_id: int = _add_version(
+        con=con, version_specifier=version_specifier, task_version=version_info
+    )
+
     # Include the parameter type definition.
     ## Have sets in the schema so we will convert those with `default=list`
     entries = {
@@ -1073,6 +1292,7 @@ def add_placeholder_execution(
 
     row_ids: RowIds = {
         "task_id": task_id,
+        "task_version_id": task_version_id,
         "parameter_type_id": parameter_type_id,
         "config_id": config_id,
         "parameter_ids": parameter_ids,

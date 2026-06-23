@@ -195,4 +195,31 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
             )
         )
     parsed_parameters: TaskParameters = globals()[task_config_name](**lute_config)
+
+    # Determine and record Task version information dynamically
+    version_specifier: Optional[int] = getattr(
+        parsed_parameters.Config, "version_specifier", None
+    )
+    if version_specifier is not None and version_specifier > 0:
+        import json
+
+        from lute.io.version_utils import record_version
+
+        location: Optional[str] = getattr(
+            parsed_parameters.Config, "version_location", None
+        )
+        diff_args: Optional[List[str]] = getattr(
+            parsed_parameters.Config, "version_diff_args", None
+        )
+        version_info: Dict[str, str] = record_version(
+            version_specifier=version_specifier, location=location, diff_args=diff_args
+        )
+
+        # Store where version information was taken from
+        version_info["version-location"] = json.dumps(location)
+        version_info["version-diff-args"] = json.dumps(diff_args)
+
+        if version_info:
+            parsed_parameters.Config.task_version = json.dumps(version_info)
+
     return parsed_parameters
