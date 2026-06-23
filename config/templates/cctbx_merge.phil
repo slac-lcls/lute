@@ -27,6 +27,7 @@ filter {
       absolute_angle_tolerance = {{ filter_unit_cell_value_absolute_angle_tolerance }}
       target_space_group = {{ filter_unit_cell_value_target_space_group if filter_unit_cell_value_target_space_group else "Auto" }}
     }
+    {%- if filter_unit_cell_algorithm == "cluster" and filter_unit_cell_cluster_covariance_file %}
     cluster {
       covariance {
         file = {{ filter_unit_cell_cluster_covariance_file }}
@@ -34,6 +35,7 @@ filter {
         mahalanobis = {{ filter_unit_cell_cluster_covariance_mahalanobis }}
       }
     }
+    {%- endif %}
   }
   outlier {
     min_corr = {{ filter_outlier_min_corr }}
@@ -81,7 +83,7 @@ statistics {
   n_bins = {{ statistics_n_bins }}
   report_ML = {{ statistics_report_ML }}
   cciso {
-    mtz_file = {{ statistics_cciso_mtz_file }}
+    mtz_file = {{ statistics_cciso_mtz_file if statistics_cciso_mtz_file else "None" }}
     mtz_column_F = {{ statistics_cciso_mtz_column_F }}
   }
 }

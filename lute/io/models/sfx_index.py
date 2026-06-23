@@ -752,12 +752,12 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     _set_phil_template_parameters = template_parameter_validator("phil_parameters")
 
     executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        "/sdf/group/lcls/ds/tools/cctbx/psana2/conda_base_psana2/bin/mpirun",
         description="MPI executable.",
         flag_type="",
     )
     cctbx_executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
+        "/sdf/group/lcls/ds/tools/cctbx/psana2/build/bin/dials.stills_process",
         description="CCTBX indexing program (DIALS).",
         flag_type="",
     )
