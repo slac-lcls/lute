@@ -118,7 +118,7 @@ def git_clone(repo: str, location: str, tag: str) -> None:
         "git",
         "clone",
         f"https://github.com/{repo}.git",
-        location,   
+        location,
     ]
     _run_subprocess_log(cmd)
 
