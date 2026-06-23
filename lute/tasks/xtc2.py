@@ -13,8 +13,8 @@ Based on Mona's converter:
 """
 
 import logging
-import os
 import pickle
+import re
 import socket
 import zlib
 from pathlib import PosixPath
@@ -175,6 +175,7 @@ class WriteXtc2(Task):
         for idx, detname in enumerate(all_detnames):
             namesId[detname] = idx
 
+        namesId["chunkinfo"] = len(namesId)
         namesId["smdinfo"] = len(namesId)
 
         if self._mpi_rank == 0:
@@ -225,11 +226,18 @@ class WriteXtc2(Task):
         #         2. Each rank then writes its -cXYZ.xtc2 in parallel filled with the
         #            L1Accepts and chronologically ordered timestamps. They record the
         #            size and local offset of each datagram.
-        #         3. Rank (size - 1) writes the final transitions (Disable -> EndRun) to
+        #         3. Ranks < (size - 1) write a series of Disable, EndStep, BeginStep and
+        #            then Enable again. This "intermediate Enable" has a chunkinfo object
+        #            that points to the next chunk file.
+        #
+        #            Rank (size - 1) writes the final transitions (Disable -> EndRun) to
         #            its -cXYZ.xtc2 file.
+        #
         #         4. All ranks send their recorded datagram offsets and sizes to rank 0.
-        #            Rank 0 then writes the smalldata datagrams for these offsets and at
-        #            the end also adds in the Disable through EndRun transitions.
+        #            Rank 0 then writes the smalldata datagrams for these offsets. The
+        #            transitions are indicated by the negative of the TransitionId enum
+        #            cast as an int. These must also be included in the .smd.xtc2. The
+        #            rank 0 process will track them, and also add the chunkinfo as needed.
 
         output_file: str = par.output_file.replace("-c000.", f"-c{self._mpi_rank:03d}.")
         xtc_path: PosixPath = PosixPath(output_file)
@@ -263,6 +271,10 @@ class WriteXtc2(Task):
         runinfo_alg: AlgDef = AlgDef("runinfo", 0, 0, 1)
         runinfo_det: DetectorDef = DetectorDef("runinfo", "runinfo", "")
 
+        # Need to include the chunkinfo detector
+        chunkinfo_alg: AlgDef = AlgDef("chunkinfo", 0, 0, 1)
+        chunkinfo_det: DetectorDef = DetectorDef("chunkinfo", "chunkinfo", "")
+
         # Setup the algorithm/detector definitions for recording offsets in .smd.xtc2
         smdinfo_alg: AlgDef = AlgDef("offsetAlg", 0, 0, 0)
         smdinfo_det: DetectorDef = DetectorDef("smdinfo", "offsetAlg", "")
@@ -272,6 +284,12 @@ class WriteXtc2(Task):
         runinfodef: Dict[str, Tuple[Type, int]] = {
             "expt": (str, 1),
             "runnum": (np.uint32, 0),
+        }
+
+        # Need to include the chunkinfo fields
+        chunkinfodef: Dict[str, Tuple[Type, int]] = {
+            "filename": (str, 1),
+            "chunkid": (np.uint32, 0),
         }
 
         # Field definitions for the smalldata offsets in .smd.xtc2 file
@@ -316,11 +334,12 @@ class WriteXtc2(Task):
         }
         namesId["timing"] = len(namesId)
         timing: Optional[config.Detector] = None
-        # num_events = int(zmq_recv.zmq_socket.recv_string())
+
         # This will be sent before anything else - contains rank and type
         # of all the information to be stored for the detector
         # detname: {field: (type, rank)}
         datadef: Optional[Dict[str, Dict[str, Tuple[Type, int]]]] = None
+
         # Start saving data
         logger.info(f"[XTC2 Writer Rank {self._mpi_rank}]: Starting receiving")
         detector: config.Detector
@@ -332,6 +351,11 @@ class WriteXtc2(Task):
         # datagram it writes. The offset is a local offset. At the end these get sent
         # to rank 0 so it can finish writing out the .smd.xtc2 file
         smd_events: List[Tuple[int, int, int]] = []
+
+        # Each chunk also writes out a Disable, EndStep, BeginStep, Enable at the end
+        # these each have timestamps, of course, so we need a modifier to the L1Accept
+        # timestamps to leave space for them
+        chunk_l1_ts_modifier: int = 4 * self._mpi_rank  # 1 for each transition
         while True:
             if self._mpi_rank == 0:
                 obj = zmq_recv.recv_zipped_pickle()
@@ -404,6 +428,13 @@ class WriteXtc2(Task):
                     nodeId=int(par.node_id),
                     namesId=namesId["runinfo"],
                 )
+                chunkinfo = config.Detector(
+                    chunkinfo_det,
+                    chunkinfo_alg,
+                    chunkinfodef,
+                    nodeId=int(par.node_id),
+                    namesId=namesId["chunkinfo"],
+                )
                 smdinfo = config.Detector(
                     smdinfo_det,
                     smdinfo_alg,
@@ -475,6 +506,8 @@ class WriteXtc2(Task):
 
                 # Only rank 0 writes
                 if self._mpi_rank == 0:
+                    # NOTE: UNLIKE subsequent Enable transitions, the chunkid doesn't
+                    #       get added to this first one
                     save_dgramedit(enable, outbuf, xtc2file)
                     save_dgramedit(enable, outbuf, smdfile)
 
@@ -502,8 +535,9 @@ class WriteXtc2(Task):
                             current_timestamp += 1
 
             elif "end" in obj:
-                # NOTE: Only the (size - 1) rank writes the final transitions
-                writing_rank: int = self._mpi_size - 1
+                # NOTE: All chunks write Disable, EndStep. The final chunk will then
+                #       have EndRun, the others will then have BeginStep, Enable.
+                last_rank: int = self._mpi_size - 1
                 current_timestamp += 1
                 disable = DgramEdit(
                     transition_id=TransitionId.Disable,
@@ -511,32 +545,58 @@ class WriteXtc2(Task):
                     ts=current_timestamp,
                 )
 
-                # Only rank (size - 1) writes
-                if self._mpi_rank == writing_rank:
-                    save_dgramedit(disable, outbuf, xtc2file)
+                save_dgramedit(disable, outbuf, xtc2file)
+                smd_events.append((current_timestamp, -9, 0))
 
                 current_timestamp += 1
-                # current_timestamp = config_timestamp + 3
                 endstep = DgramEdit(
                     transition_id=TransitionId.EndStep,
                     config_dgramedit=config,
                     ts=current_timestamp,
                 )
 
-                # Only rank (size - 1) writes
-                if self._mpi_rank == writing_rank:
-                    save_dgramedit(endstep, outbuf, xtc2file)
+                save_dgramedit(endstep, outbuf, xtc2file)
+                smd_events.append((current_timestamp, -7, 0))
 
                 current_timestamp += 1
-                endrun = DgramEdit(
-                    transition_id=TransitionId.EndRun,
-                    config_dgramedit=config,
-                    ts=current_timestamp,
-                )
+                if self._mpi_rank == last_rank:
+                    endrun = DgramEdit(
+                        transition_id=TransitionId.EndRun,
+                        config_dgramedit=config,
+                        ts=current_timestamp,
+                    )
 
-                # Only rank (size - 1) writes
-                if self._mpi_rank == writing_rank:
                     save_dgramedit(endrun, outbuf, xtc2file)
+                    smd_events.append((current_timestamp, -5, 0))
+                else:
+                    beginstep = DgramEdit(
+                        transition_id=TransitionId.BeginStep,
+                        config_dgramedit=config,
+                        ts=current_timestamp,
+                    )
+                    save_dgramedit(beginstep, outbuf, xtc2file)
+                    smd_events.append((current_timestamp, -6, 0))
+
+                    # NOTE: For this "intermediate Enable" there must be a
+                    #       `chunkinfo` which has an id and filename pointing to
+                    #       the next chunk to read from.
+                    current_timestamp += 1
+                    enable = DgramEdit(
+                        transition_id=TransitionId.Enable,
+                        config_dgramedit=config,
+                        ts=current_timestamp,
+                    )
+                    smd_events.append((current_timestamp, -8, 0))
+
+                    chunkinfo.chunkinfo.chunkid = np.uint32(self._mpi_rank + 1)
+                    next_filename: str = xtc_name_smd.replace(
+                        re.findall("-c\d\d\d", xtc_name_smd)[0],
+                        f"-c{(self._mpi_rank + 1):03d}",
+                    )
+                    chunkinfo.chunkinfo.filename = next_filename + ".xtc2"
+
+                    enable.adddata(chunkinfo.chunkinfo)
+                    save_dgramedit(enable, outbuf, xtc2file)
 
                 if self._mpi_rank != 0:
                     logger.debug(f"Rank {self._mpi_rank} exiting.")
@@ -551,10 +611,11 @@ class WriteXtc2(Task):
             else:
                 # Create L1Accept
                 real_timestamp: int = obj["timestamp"]
+                adjusted_timestamp: int = real_timestamp + chunk_l1_ts_modifier
                 d0 = DgramEdit(
                     transition_id=TransitionId.L1Accept,
                     config_dgramedit=config,
-                    ts=real_timestamp,
+                    ts=adjusted_timestamp,
                 )
 
                 for detname in obj:
@@ -565,7 +626,7 @@ class WriteXtc2(Task):
                         setattr(detector.xtc1dump, attr, obj[detname][attr])
                     d0.adddata(detector.xtc1dump)
                 if timing is not None:
-                    timing_data = write_timing(real_timestamp)
+                    timing_data = write_timing(adjusted_timestamp)
                     for attr in timing_data:
                         setattr(timing.raw, attr, timing_data[attr])  # type: ignore
                     d0.adddata(timing.raw)
@@ -576,8 +637,8 @@ class WriteXtc2(Task):
                 event_size: int = d0.size  # Also need the size of the datagram
 
                 # Cache the tuple to later send to rank 0
-                smd_events.append((real_timestamp, event_offset, event_size))
-                current_timestamp = real_timestamp
+                smd_events.append((adjusted_timestamp, event_offset, event_size))
+                current_timestamp = adjusted_timestamp
 
         logger.info(f"[XTC2 Writer Rank {self._mpi_rank}]: XTC2 Writing Complete")
         xtc2file.close()
@@ -586,9 +647,6 @@ class WriteXtc2(Task):
             zmq_recv.close()
 
         MPI.COMM_WORLD.Barrier()
-
-        local_xtc2_size: int = os.path.getsize(output_file)
-        all_sizes: List[int] = MPI.COMM_WORLD.allgather(local_xtc2_size)
 
         # Gather the tuple of (timestamp, local_offset, dgram_size) to rank 0
         all_events: Optional[List[List[Tuple[int, int, int]]]] = MPI.COMM_WORLD.gather(
@@ -603,25 +661,72 @@ class WriteXtc2(Task):
             )
 
             # The initial transitions and SlowUpdates were already written as we went
-            # Just write the event offsets
+            # Just write the event offsets and intermediate transitions
             for r in range(self._mpi_size):
-                cummulative_offset: int = sum(all_sizes[:r])
+                next_rank: int = r + 1
+                next_chunk_filename: str = xtc_name_smd.replace(
+                    re.findall("-c\d\d\d", xtc_name_smd)[0],
+                    f"-c{next_rank:03d}",
+                )
+                next_chunk_filename += ".xtc2"
                 for ts, local_offset, size in all_events[r]:
-                    smd_d0 = DgramEdit(
-                        transition_id=TransitionId.L1Accept,
-                        config_dgramedit=config,
-                        ts=ts,
-                    )
-                    global_offset: int = local_offset + cummulative_offset
-                    smdinfo.offsetAlg.intOffset = np.uint64(global_offset)
-                    smdinfo.offsetAlg.intDgramSize = np.uint64(size)
-                    smd_d0.adddata(smdinfo.offsetAlg)
-                    save_dgramedit(smd_d0, outbuf, smdfile)
+                    if local_offset == -9:
+                        # Indicator of a Disable
+                        disable = DgramEdit(
+                            transition_id=TransitionId.Disable,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
+                        save_dgramedit(disable, outbuf, smdfile)
+                    elif local_offset == -7:
+                        # Indicator of EndStep
+                        endstep = DgramEdit(
+                            transition_id=TransitionId.EndStep,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
+                        save_dgramedit(endstep, outbuf, smdfile)
+                    elif local_offset == -5:
+                        # Indicator of the EndRun (Should only come rank (size - 1))
+                        endrun = DgramEdit(
+                            transition_id=TransitionId.EndRun,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
 
-            # Finally, write out the disable and remaining transitions
-            save_dgramedit(disable, outbuf, smdfile)
-            save_dgramedit(endstep, outbuf, smdfile)
-            save_dgramedit(endrun, outbuf, smdfile)
+                        save_dgramedit(endrun, outbuf, smdfile)
+                    elif local_offset == -6:
+                        # Indicator of the BeginStep
+                        beginstep = DgramEdit(
+                            transition_id=TransitionId.BeginStep,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
+                        save_dgramedit(beginstep, outbuf, smdfile)
+                    elif local_offset == -8:
+                        # Indicator of the Enable
+                        # NOTE: Must also add the NEXT chunk's info here
+                        enable = DgramEdit(
+                            transition_id=TransitionId.Enable,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
+                        chunkinfo.chunkinfo.chunkid = next_rank
+                        chunkinfo.chunkinfo.filename = next_chunk_filename
+                        enable.adddata(chunkinfo.chunkinfo)
+                        save_dgramedit(enable, outbuf, smdfile)
+                    else:
+                        # L1Accept -- Record offset and Dgram size
+                        # NOTE: Offset is local to the chunk's file
+                        smd_d0 = DgramEdit(
+                            transition_id=TransitionId.L1Accept,
+                            config_dgramedit=config,
+                            ts=ts,
+                        )
+                        smdinfo.offsetAlg.intOffset = np.uint64(local_offset)
+                        smdinfo.offsetAlg.intDgramSize = np.uint64(size)
+                        smd_d0.adddata(smdinfo.offsetAlg)
+                        save_dgramedit(smd_d0, outbuf, smdfile)
 
             logger.info(
                 f"[XTC2 Writer Rank 0]: Consolidated smalldata file written to: {final_smd_name}."
