@@ -757,6 +757,7 @@ def global_optimize_via_de_prepared(
         callback=de_callback,
         recombination=0.7,
         mutation=(0.5, 1),
+        rng=np.random.default_rng(),
     )
 
     q_best_de = np.array(result.x, dtype=np.float64)
