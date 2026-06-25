@@ -1,10 +1,11 @@
 """Functions containing more complex logic for Task environment configuration.
 
 Functions:
+    setup_smd1_env(): Sets up psana1 environment variables.
     setup_smd2_env(): Sets up psana2 environment variables.
 """
 
-__all__ = ["setup_smd2_env"]
+__all__ = ["setup_smd1_env", "setup_smd2_env"]
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -15,6 +16,36 @@ from typing import List, Dict, Optional
 
 import requests
 
+def setup_smd1_env() -> Dict[str, str]:
+    """Setup environment variables smalldata_tools uses with psana1.
+
+    Tries to setup psana1 environment variables for setting up live mode.
+
+    Returns:
+        psana_vars (Dict[str,str]): Dictionary of relevant psana environment variables.
+    """
+    psana_vars: Dict[str, str] = {}
+    exp: Optional[str] = os.getenv("EXPERIMENT")
+    run: Optional[str] = os.getenv("RUN_NUM")
+    if exp and run:
+        base_url: str = "https://pswww.slac.stanford.edu/ws/lgbk/lgbk"
+        endpoint: str = f"{exp}/ws/{run}/files_for_live_mode_at_location"
+        full_url: str = f"{base_url}/{endpoint}"
+        try:
+            resp: requests.models.Response = requests.get(
+                full_url, params={"location": "S3DF"}
+            )
+            resp.raise_for_status()
+            data_dir = resp.json()["value"]["all_present"]
+
+            if data_dir:
+                psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/ds"
+            else:
+                psana_vars["SIT_PSDM_DATA"] = "/sdf/data/lcls/drpsrcf/ffb"
+        except Exception as e:
+            print(e)
+
+    return psana_vars
 
 def setup_smd2_env() -> Dict[str, str]:
     """Setup environment variables smalldata_tools uses with psana2.

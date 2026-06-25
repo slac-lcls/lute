@@ -15,6 +15,10 @@ Classes:
     AnalyzeSmallDataXESParameters(TaskParameters): Parameter model for the
         AnalyzeSmallDataXES Task. Used to determine spatial/temporal overlap
         based on XES difference signal and provide basic XES feedback.
+
+    RunBeamlineSummaryParameters(ThirdPartyParameters): Parameters for running
+        Small Data beamline summary scripts. Used to provide basic feedback on
+        beamline performance and data quality.
 """
 
 __all__ = [
@@ -22,6 +26,7 @@ __all__ = [
     "AnalyzeSmallDataXSSParameters",
     "AnalyzeSmallDataXASParameters",
     "AnalyzeSmallDataXESParameters",
+    "SummarizeBeamlineParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -41,6 +46,7 @@ from pydantic import (
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
 from lute.io.models.validators import validate_smd_path, template_parameter_validator
+from lute.io.db import read_latest_db_entry
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
@@ -808,3 +814,64 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
         0,
         description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
     )
+
+
+class SummarizeBeamlineParameters(ThirdPartyParameters):
+    """Parameters for running Small Data beamline summary scripts.
+
+    This task runs the beamline summary scripts that generate summary plots for each run based on the Small Data HDF5 file.
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field("python", description="Python executable.", flag_type="")
+    python_script: str = Field(
+        "",
+        description="Path to the beamline summary Python script",
+        flag_type="",
+    )
+
+    experiment: str = Field(
+        os.environ.get("EXPERIMENT", ""),
+        description="Experiment Tag.",
+        flag_type="--",
+    )
+
+    run: str = Field(
+        os.environ.get("RUN_NUM", ""),
+        description="Run Number.",
+        flag_type="--",
+    )
+
+    postElog: bool = Field(
+        True,
+        description="Whether to post summary plots to the eLog. Requires url and credentials in environment variables.",
+        flag_type="--",
+    )
+
+    @validator("python_script", always=True)
+    def validate_summary_scripts(cls, python_script: str, values: Dict[str, Any]) -> str:
+        if python_script == "":
+            exp: str = values["lute_config"].experiment
+            hutch: str = exp[:3]
+            # Try from producer path
+            producer: Optional[str] = read_latest_db_entry(
+                f"{values['lute_config'].work_dir}", "SubmitSMD", "producer"
+            )
+            if producer:
+                smd_root: str = str(Path(producer).parent)
+            else:
+                # Try from default path
+                smd_root: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
+                if not os.path.exists(smd_root):
+                    raise ValueError(
+                        "Could not find smalldata_tools."
+                        "Please provide a valid path to the beamline summary script."
+                    )
+            path = f"{smd_root}/summaries/BeamlineSummaryPlots_{hutch}.py"
+            return path
+        return python_script

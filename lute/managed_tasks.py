@@ -7,7 +7,7 @@ here.
 import os
 
 from lute.execution.executor import Executor, MPIExecutor
-from lute.tasks.util.environment import setup_smd2_env
+from lute.tasks.util.environment import setup_smd1_env, setup_smd2_env
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
@@ -52,6 +52,7 @@ SmallDataProducer.add_tasklet(
     set_result=False,
     set_summary=False,
 )
+SmallDataProducer.update_environment(setup_smd1_env)
 
 SmallDataProducer2: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file."""
@@ -117,6 +118,9 @@ SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
+
+BeamlineSummarizer: Executor = Executor("SummarizeBeamline")
+"""Runs Small Data beamline summary scripts."""
 
 # Geometry
 ##########
