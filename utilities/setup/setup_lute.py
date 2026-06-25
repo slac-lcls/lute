@@ -459,16 +459,10 @@ def main() -> None:
         update_dag_params(full_workflow_path, partition, account, extra_slurm_params)
 
         # Build workflow dict with appropriate trigger
-        if wf_name in ("smd_summaries", "smd_xss", "smd_xes", "smd_xas"):
-            trigger: Dict[str, str] = {
-                "trigger": "RUN_PARAM_IS_VALUE",
-                "run_param_name": "SmallData",
-                "run_param_value": "done",
-            }
+        if wf_name in ("smd", "smd_summaries", "smd_xss", "smd_xes", "smd_xas"):
+            trigger = {"trigger": "START_OF_RUN"}
         elif wf_name == "bayfai":
             trigger = {"trigger": "MANUAL"}
-        elif 0:
-            trigger = {"trigger": "START_OF_RUN"}
         else:
             trigger = {"trigger": "END_OF_RUN"}
 
