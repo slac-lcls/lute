@@ -26,8 +26,9 @@ __all__ = [
 ]
 __author__ = "Gabriel Dorlhiac"
 
+import copy
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -142,6 +143,26 @@ class TaskParameters(BaseSettings):
             allow_inf_nan (bool): Pydantic configuration. Whether to allow
                 infinity or NAN in float fields.
 
+            version_specifier (Optional[int]): An indicator of how to interpret
+                the version information. An integer constructed from enumerators
+                of the VersionSpecifier enum (lute.tasks.dataclasses), or a bitwise
+                OR thereof. If None, no version information available.
+
+            task_version (Optional[str]): The version information. This field may
+                be filled dynamically. Interpretation of the information (if present)
+                is determined by the version_specifier. It may be, e.g. a JSON string
+                containing a git commit hash, a git diff, a straight version string
+                (v2, e.g.).
+
+            version_location (Optional[str]): None. Indicate where the version info
+                should be taken from. E.g. a repository. Can be filled by a
+                validator dynamically if necessary. This is used by the IO
+                infrastructure to determine how to record version.
+
+            version_diff_args (Optional[List[str]]): None. Provide arguments to git
+                diff if using a diff as part of the versioning strategy. This is
+                used by the IO infrastructure to determine how to record version.
+
             run_directory (Optional[str]): None. If set, it should be a valid
                 path. The `Task` will be run from this directory. This may be
                 useful for some `Task`s which rely on searching the working
@@ -174,6 +195,14 @@ class TaskParameters(BaseSettings):
         copy_on_model_validation: str = "deep"
         allow_inf_nan: bool = False
 
+        version_specifier: Optional[int] = None
+        """Indicator of how to determine version information from the field below."""
+        task_version: Optional[str] = None
+        """Task's version information. May be filled dynamically."""
+        version_location: Optional[str] = None
+        """Indicator for where to extract version information (e.g. Git Repo)."""
+        version_diff_args: Optional[List[str]] = None
+        """Optionally provide additional arguments if using a git diff for versioning."""
         run_directory: Optional[str] = None
         """Set the directory that the Task is run from."""
         set_result: bool = False
@@ -209,9 +238,12 @@ class TaskParameters(BaseSettings):
             "type": "object",
             "properties": {},
         }
-        for key, val in vars(cls.Config).items():
-            if key in LUTE_PARAMETER_CONFIG_KEYS:
-                config_defn_entry: Dict[str, Any] = LUTE_PARAMETER_CONFIG_KEYS[key]
+        for key in LUTE_PARAMETER_CONFIG_KEYS:
+            if hasattr(cls.Config, key):
+                val: Any = getattr(cls.Config, key)
+                config_defn_entry: Dict[str, Any] = copy.deepcopy(
+                    LUTE_PARAMETER_CONFIG_KEYS[key]
+                )
                 # Add the actual value as a constant now
                 config_defn_entry["const"] = val
                 config_schema_definition["properties"][key] = config_defn_entry
@@ -219,6 +251,30 @@ class TaskParameters(BaseSettings):
         schema["definitions"]["Config"] = config_schema_definition
 
         return schema
+
+    def __getstate__(self) -> Dict[str, Any]:
+        state = (
+            super().__getstate__()
+            if hasattr(super(), "__getstate__")
+            else self.__dict__.copy()
+        )
+        # Package Config attributes that are part of LUTE_PARAMETER_CONFIG_KEYS
+        config_attrs = {}
+        for key in LUTE_PARAMETER_CONFIG_KEYS:
+            if hasattr(self.Config, key):
+                config_attrs[key] = getattr(self.Config, key)
+        state["_lute_config_attrs"] = config_attrs
+        return state
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        config_attrs = state.pop("_lute_config_attrs", {})
+        if hasattr(super(), "__setstate__"):
+            super().__setstate__(state)
+        else:
+            self.__dict__.update(state)
+        # Restore Config attributes back to the Config class object
+        for key, val in config_attrs.items():
+            setattr(self.Config, key, val)
 
 
 @dataclass

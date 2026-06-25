@@ -113,6 +113,7 @@ submit_slurm = "launch_scripts.submit_slurm:main"
 ## *** NOTE: The following are in different packages in installed directories vs repo
 ## I.e. utilties -> lute_utilities
 setup_lute = "lute_utilities.setup.setup_lute:main"
+lute_cfg = "lute_utilities.lute_cfg.lute_cfg:main"
 lute_help = "lute_utilities.help.task_parameters:main"
 dbview = "lute_utilities.dbview.dbview:main"
 

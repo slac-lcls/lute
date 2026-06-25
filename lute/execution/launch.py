@@ -203,6 +203,27 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
     }
 
 
+def clean_python_path(is_daq2: Optional[bool]) -> None:
+    """Cleanup PYTHONPATH environment leakage.
+
+    Args:
+        is_daq2 (Optional[bool]): Whether running a job for a psana2 experiment. If not,
+            we can make sure to remove the PYTHONPATH modifications from the
+            environment.
+    """
+    curr_pythonpath: str = os.environ.get("PYTHONPATH", "")
+    if curr_pythonpath:
+        if is_daq2 is not None and not is_daq2:
+            logger.info("Cleaning PYTHONPATH of LCLS2 environment modifications.")
+            os.environ["PYTHONPATH"] = ":".join(
+                [
+                    pp
+                    for pp in curr_pythonpath.split(":")
+                    if "conda2" not in pp and "lcls2" not in pp
+                ]
+            )
+
+
 def retrieve_run_info(
     experiment: str, run_num: str, authorization: str, override_type: str = ""
 ) -> Tuple[str, Optional[bool]]:
@@ -256,6 +277,8 @@ def retrieve_run_info(
                 is_daq2 = False
     except Exception as e:
         logger.error(f"Error retrieving run info: {e}")
+
+    clean_python_path(is_daq2=is_daq2)
 
     return run_type, is_daq2
 

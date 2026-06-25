@@ -4,7 +4,7 @@ title: "Multi-node T-Jump Analysis Configuration"
 experiment: "mfx101262725"
 run: 96
 date: "2026/02/03"
-lute_version: 0.1
+lute_version: 0.2.0
 task_timeout: 6000
 work_dir: "/tmp"
 ...
@@ -83,7 +83,7 @@ AnalyzeSmallDataXSS:
     - "lens_h"
     - "lens_g"
   # Thresholds used for data filtering
-  thresholds:
+  intensity_thresholds:
     min_Iscat: 10           # Minimum integrated scattering intensity
     min_ipm: 500            # Minimum x-ray intensity at selected ipm
 ...
