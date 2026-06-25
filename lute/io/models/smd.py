@@ -854,7 +854,9 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
     )
 
     @validator("python_script", always=True)
-    def validate_summary_scripts(cls, python_script: str, values: Dict[str, Any]) -> str:
+    def validate_summary_scripts(
+        cls, python_script: str, values: Dict[str, Any]
+    ) -> str:
         if python_script == "":
             exp: str = values["lute_config"].experiment
             hutch: str = exp[:3]
@@ -866,7 +868,9 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
                 smd_root: str = str(Path(producer).parent)
             else:
                 # Try from default path
-                smd_root: str = f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
+                smd_root: str = (
+                    f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
+                )
                 if not os.path.exists(smd_root):
                     raise ValueError(
                         "Could not find smalldata_tools."

@@ -16,6 +16,7 @@ from typing import List, Dict, Optional
 
 import requests
 
+
 def setup_smd1_env() -> Dict[str, str]:
     """Setup environment variables smalldata_tools uses with psana1.
 
@@ -46,6 +47,7 @@ def setup_smd1_env() -> Dict[str, str]:
             print(e)
 
     return psana_vars
+
 
 def setup_smd2_env() -> Dict[str, str]:
     """Setup environment variables smalldata_tools uses with psana2.
