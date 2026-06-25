@@ -12,7 +12,7 @@ __author__ = "Marc Nasser"
 
 import math
 from functools import partial
-from typing import cast, Dict, Any, Tuple, List, Optional
+from typing import cast, Dict, Any
 
 import numpy as np
 import gemmi
@@ -380,8 +380,8 @@ def polish_R_smallN_tsn(
     """Polish rotation matrix using target-space neighbor search (TSN)."""
     Q = np.asarray(Q, np.float64)
     N = Q.shape[1]
-    I = np.arange(N, dtype=int) if indices is None else np.asarray(indices, dtype=int)
-    h = int(np.ceil(kappa * len(I)))
+    idx = np.arange(N, dtype=int) if indices is None else np.asarray(indices, dtype=int)
+    h = int(np.ceil(kappa * len(idx)))
 
     R_B = consts["R_B"]
     S_ops = consts["S_ops_stack"]
@@ -395,7 +395,7 @@ def polish_R_smallN_tsn(
 
     for _ in range(max(1, int(steps))):
         A = R.T @ Q
-        A_I = A[:, I]
+        A_I = A[:, idx]
         A_sym_I = np.einsum("sij,jn->sin", S_ops, A_I, optimize=True)
         H_babai_I = babai_nearest_batched(R_B, A_sym_I)
         Y0_I = np.einsum("sij,sjn->sin", PB_ops, H_babai_I, optimize=True)
@@ -432,7 +432,7 @@ def polish_R_smallN_tsn(
         S_, M = r2_s_I.shape
         assert S_ == S
 
-        h = int(np.ceil(kappa * len(I)))
+        h = int(np.ceil(kappa * len(idx)))
         part = np.partition(r2_s_I, h - 1, axis=1)[:, :h]
 
         if winsor_q is not None and 0.0 < winsor_q < 1.0 and h >= 3:
@@ -446,13 +446,8 @@ def polish_R_smallN_tsn(
 
         r2_best = r2_s_I[s_best]
         idx_h_sub = np.argpartition(r2_best, h - 1)[:h]
-        sel = r2_best[idx_h_sub]
-        if winsor_q is not None and 0.0 < winsor_q < 1.0 and h >= 3:
-            t2 = float(np.quantile(sel, winsor_q))
-            sel = np.minimum(sel, t2)
-        best_loss = float(np.mean(sel))
 
-        idx_h = I[idx_h_sub]
+        idx_h = idx[idx_h_sub]
 
         A_sym_all = S_ops[s_best] @ A
         H_all = babai_nearest_batched(R_B, A_sym_all[None, ...])[0]
@@ -465,7 +460,7 @@ def polish_R_smallN_tsn(
                 .T
             )
             ks = k_star_I[s_best]
-            H_all[:, I] = (H_all[:, I] + D[:, ks]).astype(int)
+            H_all[:, idx] = (H_all[:, idx] + D[:, ks]).astype(int)
 
         Y_all = PB_ops[s_best] @ H_all
 
@@ -579,9 +574,8 @@ def global_optimize_via_de_prepared(
 ):
     """Global optimization of crystal orientation using differential evolution."""
     Q = np.ascontiguousarray(Q, dtype=np.float64)
-    B_red, U, Q_B_T, R_B = consts["B_red"], consts["U"], consts["Q_B_T"], consts["R_B"]
+    B_red, _, Q_B_T, R_B = consts["B_red"], consts["U"], consts["Q_B_T"], consts["R_B"]
     S_ops_stack, PB_ops_stack = consts["S_ops_stack"], consts["PB_ops_stack"]
-    rot_mats = consts["rot_mats"]
     N = Q.shape[1]
     use_smallN = smallN_tsn_polish and (N <= smallN_threshold)
     use_midN = (N > smallN_threshold) and (N <= midN_threshold)
