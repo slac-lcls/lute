@@ -133,7 +133,7 @@ def run_build_script(lute_path: str) -> None:
         lute_path (str): The path to the LUTE installation to build.
     """
 
-    cmd: List[str] = ["./build.sh", "-e"]
+    cmd: List[str] = ["./build.sh", "-e", "-r"]
     logger.info(f"Building LUTE at {lute_path}. This may take a few minutes...")
     _run_subprocess_log(cmd, cwd=lute_path)
 
@@ -187,13 +187,13 @@ def inplace_sed(in_file: str, pattern: str) -> None:
 
 def modify_permissions(lute_path: str):
     """Recursively set permissions for a LUTE installation."""
-    os.chmod(lute_path, 0o765)
+    os.chmod(lute_path, 0o775)
     for root, dirs, files in os.walk(lute_path):
         for d in dirs:
-            os.chmod(os.path.join(root, d), 0o765)
+            os.chmod(os.path.join(root, d), 0o775)
 
         for f in files:
-            os.chmod(os.path.join(root, f), 0o765)
+            os.chmod(os.path.join(root, f), 0o775)
 
 def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_params: str) -> None:
     """Update slurm_params in a DAG file in place.
