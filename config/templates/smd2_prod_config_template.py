@@ -203,6 +203,11 @@ epicsOncePV = {{ epicsOncePV }}
 {% else %}
 epicsOncePV = []
 {% endif %}
+{%- if epicsArchFilePV is defined %}
+epicsArchFilePV = {{ epicsArchFilePV }}
+{% else %}
+epicsArchFilePV = []
+{% endif %}
 
 ##########################################################
 # psplot config
