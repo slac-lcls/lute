@@ -181,6 +181,13 @@ class IndexCrystFELParameters(ThirdPartyParameters):
         description="Comma-separated list of supported indexing algorithms to use. Default is to automatically detect.",
         flag_type="--",
     )
+    fromfile_input_file: Optional[str] = Field(
+        None,
+        description="If replaying, the filename to use for indexing results.",
+        flag_type="--",
+        rename_param="fromfile-input-file",
+    )
+
     cell_file: Optional[str] = Field(
         description="Path to a file containing unit cell information (PDB or CrystFEL format).",
         flag_type="-",

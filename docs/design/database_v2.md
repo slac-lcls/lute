@@ -10,6 +10,8 @@
 - Each database has the following tables:
     - 1 table for `executions`: Each time any **Managed** Task is run a new entry is made in this table.
     - 1 table for `tasks`: Contains the listing of **Managed** Tasks, the `executions` table links here.
+    - 1 table for `task_version`: Contains the version information (if provided) for the various Task's for each corresponding execution.
+    - 1 table for `version_specifiers`: Contains the base enumerators to describe how to extract and interpret the version information in the `task_version` table.
     - 1 table for `executors`: Contains the listing of `Executors`, the `executions` table links here.
     - 1 table for `config`: Contains sets of parameters used for the `AnalysisHeader`, the `executions` table links here.
     - 1 table for `results`: Contains the result fields for each execution. The `executions` table links here.
@@ -30,25 +32,26 @@
 
 The `executions` table contains an entry for each time any **Managed** Task is run. It links all necessary information together.
 
-| id | task_id | parameter_type_id | executor_id | config_id | result_id | timestamp             |
-|:--:|:-------:|:-----------------:|:-----------:|:---------:|:---------:|:---------------------:|
-| 1  | 1       | 1                 | 1           | 1         | 1         | "YYYY-MM-DD HH:MM:SS" |
-|    |         |                   |             |           |           |                       |
+| id | task_id | task_version_id | parameter_type_id | executor_id | config_id | result_id | timestamp             |
+|:--:|:-------:|:---------------:|:-----------------:|:-----------:|:---------:|:---------:|-----------------------|
+| 1  | 1       | 1               | 1                 | 1           | 1         | 1         | "YYYY-MM-DD HH:MM:SS" |
+|    |         |                 |                   |             |           |           |                       |
 
 Each of the `xyz_id` columns follow the `id`s in the respective tables to allow a complete reconstruction of the `Task`, `TaskParameters`, `Executor`, and results data.
 
 #### Column descriptions
 
-| **Column**          | **Description**                                                                                  |
-|:-------------------:|:------------------------------------------------------------------------------------------------:|
-| `id`                | ID of the execution in this table.                                                               |
-| `task_id`           | Pointer to the entry in the `tasks` table holding the information about the `Task` run.          |
-| `parameter_type_id` | Pointer to the entry in the `parameter_types` table that describes the `TaskParameters` model.   |
-| `executor_id`       | Pointer to the entry in the `executors` table holding the information about the `Executor` used. |
-| `config_id`         | Pointer to the entry in the `config` table holding the `AnalysisHeader` for this execution.      |
-| `result_id`         | Pointer to the entry in the `results` table holding the results for this execution.              |
-| `timestamp`         | Timestamp for the execution.                                                                     |
-|                     |                                                                                                  |
+| **Column**          | **Description**                                                                                               |
+|:-------------------:|:-------------------------------------------------------------------------------------------------------------:|
+| `id`                | ID of the execution in this table.                                                                            |
+| `task_id`           | Pointer to the entry in the `tasks` table holding the information about the `Task` run.                       |
+| `task_version_id`   | Pointer to the entry in the `task_version` table holding the information about the version of the `Task` run. |
+| `parameter_type_id` | Pointer to the entry in the `parameter_types` table that describes the `TaskParameters` model.                |
+| `executor_id`       | Pointer to the entry in the `executors` table holding the information about the `Executor` used.              |
+| `config_id`         | Pointer to the entry in the `config` table holding the `AnalysisHeader` for this execution.                   |
+| `result_id`         | Pointer to the entry in the `results` table holding the results for this execution.                           |
+| `timestamp`         | Timestamp for the execution.                                                                                  |
+|                     |                                                                                                               |
 
 #### Constraints
 
@@ -75,6 +78,70 @@ The `tasks` table holds `Task` names.
 | `id`                | ID of the entry in this table.             |
 | `name`              | Name of the `Task`.                        |
 |                     |                                            |
+
+### `task_version` table
+
+The `task_version` table holds information about the version of the `Task` run for a given execution. As the `Task` code, for certain `Task`s, may change between executions, this allows better reproduction of the total state of the code at the time of the execution.
+
+| id | version_specifier | version_info                                                                    |
+|:--:|:-----------------:|:-------------------------------------------------------------------------------:|
+| 1  | 3                 | "{'version-location': 'path/to/repo', 'git-sha': 'abcd', 'git-diff': 'abcd=='}" |
+|    |                   |                                                                                 |
+
+#### Column descriptions
+
+| **Column**          | **Description**                                                                                                                                 |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------:|
+| `id`                | ID of the entry in this table.                                                                                                                  |
+| `version_specifier` | This is a bitwise OR of all the ids in the `version_specifiers` table which contribute to interpreting the version information.                 |
+| `version_info`      | A JSON string of serialized version information. Interpretation will depend on the `version_specifier` but may contain some of the items below. |
+|                     |                                                                                                                                                 |
+
+Examples of the `version_info` contents may be (once deserialized):
+
+```py
+version_info = {
+    "version-location": "/path",        # A path to a repository where the version information was extracted
+    "version-diff-args": ["subfolder"], # A list of arguments used to specialize what was included in the git diff
+    "git-diff": "abcdjksa==",           # A compressed and base 64 encoded string for the diff of the repository
+    "git-sha": "abcd",                  # The commit hash that the was checked out (before application of any diff, etc.)
+}
+```
+
+All the ids in the `version_specifiers` table are powers of two, or the value 0.
+
+The `version_specifier` column of the `task_version` table is constrained to be `version_specifier <= SELECT SUM(id) FROM version_specifiers`.
+
+#### Constraints
+- The `version_specifier` entry must be a BITWISE OR of the ids in the `version_specifiers` table. This constraint is setup by separate triggers rather than on table creation.
+
+### `version_specifiers` table
+
+The `version_specifiers` table holds the currently supported `VersionSpecifier` enumerators that can be used to store version information for a `Task`. Each enumerator is atomic, but a `Task` may use a combination of these to fully represent a single "version".
+
+| id | name           |
+|:--:|:--------------:|
+| 0  | "NONE"         |
+| 1  | "LUTE_VERSION" |
+| 2  | "GIT_SHA"      |
+| 4  | "GIT_DIFF"     |
+|    |                |
+
+#### Column descriptions
+
+| **Column** | **Description**                                   |
+|:----------:|:-------------------------------------------------:|
+| `id`       | ID of the entry in this table.                    |
+| `name`     | A string representation for this base schema type |
+|            |                                                   |
+
+The `id` column of this table is constrained to be the value 0 or a power of two: `CHECK (id = 0 OR (id > 0 AND (id & (id - 1)) = 0))`.
+
+#### Constraints
+
+- The name (and id) must be unique.
+- The `id` entry must be a power of 2 as the `task_version` table uses a bitwise OR to indicate implementation of multiple `version_specifiers`.
+
 
 ### `executors` table
 

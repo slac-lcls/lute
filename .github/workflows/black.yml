@@ -5,8 +5,8 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: psf/black@stable
-        with:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: psf/black@87928e6d6761a4a6d22250e1fee5601b3998086e        # v26.5.1
+        with:                                                           # (stable on 2026/06/30)
           options: "--verbose --check"
           src: "./lute"

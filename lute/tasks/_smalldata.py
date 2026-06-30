@@ -286,8 +286,8 @@ class AnalyzeSmallData(Task):
             ],
             self._task_parameters,
         )
-        scattering_thresh: float = self._task_parameters.analysis_parameters.min_Iscat
-        ipm_thresh: float = self._task_parameters.analysis_parameters.min_ipm
+        scattering_thresh: float = self._task_parameters.intensity_thresholds.min_Iscat
+        ipm_thresh: float = self._task_parameters.intensity_thresholds.min_ipm
         self._filter_dict["total scattering"] = (
             self._integrated_intensity > scattering_thresh
         )
@@ -428,10 +428,6 @@ class AnalyzeSmallData(Task):
     def _process_xss_water_signal(
         self,
         profiles: npt.NDArray[np.float64],
-        medfilt_size: int = 13,
-        qs: Tuple[float, float] = (1.0, 1.93),
-        ratio: float = 1.25,
-        sigma: float = 2.0,
     ) -> npt.NDArray[np.float64]:
         """Filter outliers and select strong enough water shots.
 
@@ -441,7 +437,18 @@ class AnalyzeSmallData(Task):
         Returns:
             processed_profiles (npt.NDArray[np.float64]): The processed water profiles.
         """
+        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+
         from scipy.stats import zscore  # type: ignore
+
+        medfilt_size: int = (
+            self._task_parameters.xss_processing_parameters.median_filter_size
+        )
+        qs: Tuple[float, float] = (
+            self._task_parameters.xss_processing_parameters.water_qs
+        )
+        ratio: float = self._task_parameters.xss_processing_parameters.water_ratio
+        sigma: float = self._task_parameters.xss_processing_parameters.water_sigma
 
         profiles = self._apply_median_filter(profiles, medfilt_size)
         low_q, high_q = qs
@@ -1471,20 +1478,18 @@ class AnalyzeSmallData(Task):
 
     # XSS - Extraction and TR difference
     ############################################################################
-    def _extract_xss(self, event_codes: Optional[List[int]]) -> None:
+    def _extract_xss(self) -> None:
         """Extract XSS additional event codes other than laser on/off
         and setup event code filters.
 
         Sets up filters for each event code provided in the input list.
         Will search for both psana1 and psana2 formats of event code storage.
-
-        Args:
-            event_codes (Optional[List[int]]): A list of event codes to extract.
         """
         assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+
         self._xss_event_codes = []
-        if event_codes:
-            xss_codes = np.sort(event_codes)
+        if self._task_parameters.xss_event_codes:
+            xss_codes = np.sort(self._task_parameters.xss_event_codes)
             for code in xss_codes:
                 try:  # psana1
                     self._filter_dict[f"code {code}"] = (
@@ -1508,10 +1513,6 @@ class AnalyzeSmallData(Task):
 
     def _calc_tjump_xss(
         self,
-        medfilt_size: int = 13,
-        water_qs: Tuple[float, float] = (1.0, 1.93),
-        water_ratio: float = 1.25,
-        water_signal_sigma: float = 2.0,
     ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Calculate the temperature jump traces for each event code.
 
@@ -1539,10 +1540,6 @@ class AnalyzeSmallData(Task):
         processed_las_off_profiles: npt.NDArray[np.float64] = (
             self._process_xss_water_signal(
                 las_off_profiles,
-                medfilt_size,
-                water_qs,
-                water_ratio,
-                water_signal_sigma,
             )
         )
         processed_las_off: npt.NDArray[np.float64] = np.nanmean(
@@ -1559,7 +1556,7 @@ class AnalyzeSmallData(Task):
             profiles = np.nanmean(self._norm_az_int[filter_code], axis=1)
             tjump = np.nanmean(profiles, axis=0) - las_off
             processed_profiles = self._process_xss_water_signal(
-                profiles, medfilt_size, water_qs, water_ratio, water_signal_sigma
+                profiles,
             )
             processed_tjump = np.nanmean(processed_profiles, axis=0) - processed_las_off
             tjumps[i, :] = tjump
@@ -1679,7 +1676,7 @@ class AnalyzeSmallData(Task):
     # XES - Extraction and TR difference
     ############################################################################
     def _extract_xes(self, detname: str) -> None:
-        """Extract XAS specific data.
+        """Extract XES specific data.
 
         Extracts individual ROIs and applys projections to extract the XES
         spectra. Depending on input TaskParameters, it will optionally rotate
@@ -1930,11 +1927,13 @@ class AnalyzeSmallData(Task):
             laser_off (npt.NDArray[np.float64]): 2D laser off scattering profiles
                 of shape (n_events_laser_off, q_bins)
         """
+        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+
         dark_mean: npt.NDArray[np.float64] = self._calc_xss_dark_mean()
         if len(np.unique(dark_mean)) > 1:
             # Can be len == 1 if all nan
             self._az_int -= dark_mean
-        q_limits = self._task_parameters.analysis_parameters.q_norm
+        q_limits = self._task_parameters.xss_processing_parameters.q_norm
         norm: npt.NDArray[np.float64] = self._calc_norm_by_qrange(q_limits)
         self._norm_az_int = (
             self._az_int / norm[:, :, np.newaxis]
@@ -2183,8 +2182,9 @@ class AnalyzeSmallData(Task):
             ("XSS Scan", scan_grid),
         )
 
-        overlap_grid = self.plot_xss_overlap_fit_hv(laser_on, bins, diff)
-        tabs.append(("XSS Overlap Fit", overlap_grid))
+        if len(bins) > 4:
+            overlap_grid = self.plot_xss_overlap_fit_hv(laser_on, bins, diff)
+            tabs.append(("XSS Overlap Fit", overlap_grid))
 
         tjump_grid: pn.GridSpec = self.plot_xss_tjump_hv(tjumps, processed_tjumps)
         tabs.append(("XSS T-Jump", tjump_grid))
@@ -2209,6 +2209,8 @@ class AnalyzeSmallData(Task):
         Returns:
             plot (pn.GridSpec): Plotted azimuthally integrated difference by scan variable.
         """
+        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+
         scan_grid = pn.GridSpec(
             sizing_mode="stretch_both",
             max_width=1000,
@@ -2301,7 +2303,7 @@ class AnalyzeSmallData(Task):
                    shared_axes=False)
 
         # Mid right - 1D subsample unnormalized laser on shots
-        num_bins = self._task_parameters.analysis_parameters.num_intensity_bins
+        num_bins = self._task_parameters.xss_processing_parameters.num_intensity_bins
         az_av_laser_on = self._az_int[filter_las_on]
         total_intensity = np.nansum(az_av_laser_on, axis=(1, 2))
         sorted_indices = np.argsort(total_intensity)
@@ -2321,30 +2323,44 @@ class AnalyzeSmallData(Task):
             scan_grid[1, 1] = hv.Overlay(subsample_plots).opts(shared_axes=False)
 
         # Bottom left - 2D difference
-        xs_dim = hv.Dimension(("scan_bin", scan_var_name))
-        diff_dim = hv.Dimension(("diff", "dS"))
-        diff_img = hv.Image(
-            (bins, self._q_vals, diff), kdims=[xs_dim, q_dim], vdims=diff_dim
-        ).opts(cmap="viridis", colorbar=True, title="dS", shared_axes=False)
-        scan_grid[2, 0] = diff_img
+        if len(bins) > 1:
+            xs_dim = hv.Dimension(("scan_bin", scan_var_name))
+            diff_dim = hv.Dimension(("diff", "dS"))
+            diff_img = hv.Image(
+                (bins, self._q_vals, diff), kdims=[xs_dim, q_dim], vdims=diff_dim
+            ).opts(cmap="viridis", colorbar=True, title="dS", shared_axes=False)
+            scan_grid[2, 0] = diff_img
 
-        # Bottom right - difference slices
-        nth = max(1, len(bins) // 8)
-        every_nth = (np.arange(len(bins)) % nth) == 0
-        diff_slices = diff[:, every_nth]
-        spacing = np.nanmax(np.abs(diff_slices))
-        colors = [
-            to_hex(c) for c in plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
-        ]
-        diff_slice_plots = []
-        for i in range(diff_slices.shape[1]):
-            diff_slice_plot = hv.Curve(
-                (self._q_vals, diff_slices[:, i] + i * spacing),
+            # Bottom right - difference slices
+            nth = max(1, len(bins) // 8)
+            every_nth = (np.arange(len(bins)) % nth) == 0
+            diff_slices = diff[:, every_nth]
+            spacing = np.nanmax(np.abs(diff_slices))
+            colors = [
+                to_hex(c)
+                for c in plt.cm.viridis(np.linspace(0, 1, diff_slices.shape[1]))
+            ]
+            diff_slice_plots = []
+            for i in range(diff_slices.shape[1]):
+                diff_slice_plot = hv.Curve(
+                    (self._q_vals, diff_slices[:, i] + i * spacing),
+                    kdims=[q_dim],
+                    vdims=hv.Dimension(("diff", "dS")),
+                ).opts(color=colors[i], title="dS slices")
+                diff_slice_plots.append(diff_slice_plot)
+            scan_grid[2, 1] = hv.Overlay(diff_slice_plots).opts(shared_axes=False)
+        else:
+            diff_curve = hv.Curve(
+                (self._q_vals, diff[:, 0]),
                 kdims=[q_dim],
                 vdims=hv.Dimension(("diff", "dS")),
-            ).opts(color=colors[i], title="dS slices")
-            diff_slice_plots.append(diff_slice_plot)
-        scan_grid[2, 1] = hv.Overlay(diff_slice_plots).opts(shared_axes=False)
+            ).opts(
+                color="dodgerblue",
+                line_width=2,
+                title=f"dS — {scan_var_name} = {bins[0]:.3g}",
+                shared_axes=False,
+            )
+            scan_grid[2, 0:2] = diff_curve.opts(shared_axes=False)
 
         return scan_grid
 

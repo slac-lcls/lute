@@ -19,6 +19,8 @@ Each test sub-directory may also contain:
 
 ### Running Tests
 
+**NOTE:** Currently, the full test suite requires making a dual-Python version installation as one of the tests requires Python 3.11. Refer to the installation instructions regarding how this is done. The rest of the tests can be run with a normal single-Python (3.9) installation. This will be needed until the standard psana environment is advanced to Python 3.11.
+
 There are two main scripts for test submission:
 
 - `run_functional.py`: This does the bulk of the work.

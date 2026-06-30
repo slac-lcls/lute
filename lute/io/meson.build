@@ -6,6 +6,7 @@ py_sources = [
     'exceptions.py',
     '__init__.py',
     'parameters.py',
+    'version_utils.py',
 ]
 
 py3.install_sources(

@@ -4,7 +4,7 @@ title: "Parameter Generation"
 experiment: "xpptut15"
 run: 670
 date: "2026/01/28"
-lute_version: 0.1
+lute_version: 0.2.0
 task_timeout: 600
 work_dir: "/tmp"
 ...
