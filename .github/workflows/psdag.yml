@@ -5,14 +5,15 @@ on:
     branches: [ dev ]
   pull_request:
     branches: [ main ]
-
+# NOTE: cpina/github-action-push-to-another-repository is no longer maintained!!
+# TODO: Find an alternative, or rewrite this action!!
 jobs:
   deploy-dags:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                               # v7
       - name: Pushes to another repository
-        uses: cpina/github-action-push-to-another-repository@main
+        uses: cpina/github-action-push-to-another-repository@55306faa4ed53b815ae49e564af8cfb359d32ae2 # v1.7.3
         env:
           SSH_DEPLOY_KEY: ${{ secrets.SSH_PSDAG_PUSH_KEY }}
         with:
