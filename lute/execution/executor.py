@@ -696,7 +696,9 @@ class BaseExecutor(ABC):
                 elif new_lute_path:
                     new_environment["LUTE_TENV_PYTHONPATH"] = new_lute_path
                 else:
-                    logger.warning("Could not determine a new Python version LUTE_PATH!")
+                    logger.warning(
+                        "Could not determine a new Python version LUTE_PATH!"
+                    )
 
         self._analysis_desc.task_env = new_environment
 

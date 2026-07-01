@@ -48,9 +48,7 @@ RequestTester: Executor = Executor("TestRequest")
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS1 smalldata HDF5 file."""
-SmallDataProducer.shell_source(
-    "/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
-)
+SmallDataProducer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 SmallDataProducer.add_tasklet(
     clone_smalldata,
     ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
