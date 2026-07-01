@@ -110,6 +110,101 @@ def run_build_script(lute_path: str) -> None:
     os.chdir(cwd)
 
 
+def create_venv_install(
+    venv_path: str,
+    version: str,
+    extras: Optional[List[str]] = None,
+) -> str:
+    """Create an isolated virtual environment and install LUTE via pip.
+
+    Sources the psana1 environment to obtain a base Python3, creates a virtual
+    environment at `venv_path`, then installs lute-lcls and its dependencies.
+
+    Args:
+        venv_path (str): Path where the virtual environment will be created.
+
+        version (str): Version/tag to install. Use 'dev' for the latest main
+            branch from GitHub, otherwise a PyPI release version or tag.
+
+        extras (Optional[List[str]]): Optional pip extras to install, e.g.
+            ['mpi'] for mpi4py support.
+
+    Returns:
+        venv_path (str): The path to the created virtual environment.
+    """
+    global logger
+
+    if os.path.exists(venv_path):
+        logger.info(f"Virtual environment already exists at {venv_path}. Reusing.")
+        return venv_path
+
+    # Determine the package specifier
+    extras_str: str = ""
+    if extras:
+        extras_str = f"[{','.join(extras)}]"
+
+    pkg_spec: str
+    if version == "dev":
+        # Prefer installing directly from the local source tree so that any
+        # local branch changes (including uncommitted ones) are picked up.
+        # This script lives at <repo_root>/utilities/setup/setup_lute.py, so
+        # the repo root is two directories up.  If pyproject.toml is found
+        # there we know we're running from inside the repo (or an editable
+        # install pointing back to it).  Otherwise fall back to GitHub main.
+        _candidate: str = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
+        if os.path.exists(os.path.join(_candidate, "pyproject.toml")):
+            logger.info(f"Dev install: using local source tree at {_candidate}")
+            pkg_spec = f"{_candidate}{extras_str}"
+        else:
+            logger.warning(
+                "Dev install: could not locate local source tree via __file__. "
+                "Falling back to GitHub main branch. Local changes will NOT be included."
+            )
+            pkg_spec = f"lute-lcls{extras_str} @ git+https://github.com/slac-lcls/lute.git@main"
+    else:
+        pkg_spec = f"lute-lcls{extras_str}=={version}"
+
+    # Build the full setup script:
+    # 1. Source psana1 to get a base Python3
+    # 2. Create the venv
+    # 3. Activate the venv
+    # 4. Upgrade pip and install packages
+    script: str = (
+        f'source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh\n'
+        f'python3 -m venv "{venv_path}"\n'
+        f'source "{venv_path}/bin/activate"\n'
+        f"pip install --upgrade pip\n"
+        f'pip install "{pkg_spec}"\n'
+    )
+
+    logger.info(f"Creating isolated virtual environment at {venv_path}...")
+    logger.info(f"Sourcing the Psana1 environment (for Python3)")
+    logger.info(f"Installing: {pkg_spec}")
+
+    out: str
+    err: str
+    out, err = subprocess.Popen(
+        ["bash", "-c", script],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    ).communicate()
+    if out:
+        logger.info(out)
+    if err:
+        logger.info(err)
+
+    if not os.path.exists(f"{venv_path}/bin/python"):
+        logger.error(
+            f"Virtual environment creation failed! No python found at {venv_path}/bin/python"
+        )
+        sys.exit(-1)
+
+    return venv_path
+
+
 def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
     """Install from a source directory to an optionally specified directory.
 
@@ -195,6 +290,8 @@ def main() -> None:
         action="store_true",
     )
     parser.add_argument(
+        "-"
+    parser.add_argument(
         "--directory",
         type=str,
         help=(
@@ -242,19 +339,17 @@ def main() -> None:
     std_hutch_config: str
     std_test_config: str
     if args.fresh_install:
-        lute_path = f"{results_dir}/lute"
-        git_clone("slac-lcls/lute", lute_path, args.version)
-        run_build_script(lute_path)
+        lute_path = f"{results_dir}/lute_venv"
+        create_venv_install(lute_path, args.version)
         modify_permissions(lute_path)
-        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
-        launch_executable = f"{lute_path}/install/bin/launch_slurm"
+        venv_bin: str = f"{lute_path}/bin"
+        arp_executable = f"{venv_bin}/submit_launch_slurm.sh"
+        launch_executable = f"{venv_bin}/launch_slurm"
+        # In a pip-installed venv, config lives inside site-packages
         py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
-        std_hutch_config = (
-            f"{lute_path}/install/lib/{py_ver}/site-packages/config/{hutch}.yaml"
-        )
-        std_test_config = (
-            f"{lute_path}/install/lib/{py_ver}/site-packages/config/test.yaml"
-        )
+        site_packages: str = f"{lute_path}/lib/{py_ver}/site-packages"
+        std_hutch_config = f"{site_packages}/config/{hutch}.yaml"
+        std_test_config = f"{site_packages}/config/test.yaml"
     else:
         lute_path = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
         arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"

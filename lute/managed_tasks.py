@@ -37,6 +37,9 @@ ReadTester: Executor = Executor("TestReadOutput")
 
 MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunication")
 """Runs a test to confirm communication works between multiple nodes."""
+MultiNodeCommunicationTester.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
 
 RequestTester: Executor = Executor("TestRequest")
 """Runs a test whether requests go from Task to Executor to Workflow manager."""
@@ -45,6 +48,9 @@ RequestTester: Executor = Executor("TestRequest")
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS1 smalldata HDF5 file."""
+SmallDataProducer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
+)
 SmallDataProducer.add_tasklet(
     clone_smalldata,
     ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
@@ -111,17 +117,29 @@ SmallDataProducerXpp.update_environment(setup_smd2_env)
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
+SmallDataXSSAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
 
 SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 """Process XAS results from a Small Data HDF5 file."""
+SmallDataXASAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
+SmallDataXESAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
 
 # Geometry
 ##########
 AgBhGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizeAgBhGeometryExhaustive")
 """Run an exhaustive grid search for center/distance based on Ag Bh run."""
+AgBhGeometryOptimizer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
+)
 
 # SFX
 #####
@@ -189,6 +207,7 @@ DimpleSolver.add_tasklet(
 
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
+PeakFinderSFX.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 PeakFinderSFXXpp: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
@@ -208,6 +227,7 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
+PeakFinderPsocake.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 
 # XTC
 #####
@@ -224,6 +244,7 @@ CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/setup-om.sh")
 #######
 BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
 """Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 BayFAIOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
@@ -234,6 +255,7 @@ BayFAIOptimizer.update_environment(
 
 BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
 """Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer2.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 BayFAIOptimizer2.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",

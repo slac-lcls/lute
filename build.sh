@@ -135,9 +135,9 @@ if [[ $SOURCE_PYENV ]]; then
     print_banner "${LINES[@]}"
     source "${SOURCE_PYENV}"
 elif [[ $HOSTNAME =~ "sdf" ]]; then
-    LINES=("Sourcing the Psana1 environment (for Python3)")
+    LINES=("Sourcing the Psana2 environment (for Python3)")
     print_banner "${LINES[@]}"
-    source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
+    source /sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh
 fi
 
 # We will append Python Version info to the build directories for side-by-side builds

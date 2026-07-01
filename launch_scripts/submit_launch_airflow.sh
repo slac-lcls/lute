@@ -31,7 +31,18 @@ echo $?
 export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
 LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
-source "${LUTE_BIN_PATH}/activate_installation"
+
+# Detect install type
+if [[ -f "${LUTE_BIN_PATH}/activate" ]]; then
+    # Virtual environment install
+    source "${LUTE_BIN_PATH}/activate"
+    if [[ -n "${VIRTUAL_ENV}" ]]; then
+        export LUTE_VIRTUAL_ENV="${VIRTUAL_ENV}"
+    fi
+else
+    # Standard (meson/prefix) installation
+    source "${LUTE_BIN_PATH}/activate_installation"
+fi
 
 CMD="${@}"
 CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"
