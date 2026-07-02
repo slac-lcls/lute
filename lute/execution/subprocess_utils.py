@@ -1,9 +1,27 @@
 USE_PYDANTIC_MODELS: bool = True
 
 exec_script_template: str = """
+import os
 import pickle
 import sys
+import importlib
 from typing import Any, Dict, Optional, Type
+
+# Need to point to lute before importing
+lute_path: Optional[str] = os.getenv("LUTE_PATH")
+if lute_path is None:
+    raise Exception("LUTE_PATH not defined! Task will fail to find LUTE!")
+
+lute_spec: Optional[importlib.machinery.ModuleSpec] = importlib.util.spec_from_file_location(
+    "lute",
+    f"{{lute_path}}/lute/__init__.py",
+    submodule_search_locations=[f"{{lute_path}}/lute"],
+)
+
+lute_module: Any = importlib.util.module_from_spec(lute_spec)
+# NOW, make lute importable
+sys.modules["lute"] = lute_module
+lute_spec.loader.exec_module(lute_module)
 
 # Need to set this before importing anything else
 import lute.execution.subprocess_utils
@@ -34,6 +52,11 @@ param_values: Dict[str, Any]
 definition, param_values = get_task_parameters_defn_and_params(db_dir="{work_dir}", row_ids=row_ids)
 new_params: TaskParameters = construct_task_parameters(schema=definition, values=param_values)
 new_params.lute_config.work_dir = "{work_dir}"
+for key, value in os.environ.items():
+    print("Task Env:", key, "=", value, flush=True)
+print(sys.executable, flush=True)
+import numpy as np
+print(f"Numpy version: {{np.__version__}}", flush=True)
 task: Task = TaskType(params=new_params, row_ids=row_ids)
 task.run()
 """

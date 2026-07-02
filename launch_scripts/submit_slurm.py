@@ -262,7 +262,14 @@ def fill_in_batch_script(
         # Note that in this case, the LUTE_PATH included the /install/ dir
         os.environ["LUTE_PATH"] = f"{lute_location}/lib/python{py_ver}/site-packages"
 
-        batch_script += f"source {full_bindir}/activate_installation\n\n"
+        if os.path.exists(f"{full_bindir}/activate"):
+            batch_script += f"source {full_bindir}/activate\n\n"
+        elif os.path.exists(f"{full_bindir}/activate_installation"):
+            batch_script += f"source {full_bindir}/activate_installation\n\n"
+        else:
+            raise RuntimeError(
+                f"Could not find a valid LUTE environment in {full_bindir}!"
+            )
 
     cmd: str
     if args.debug:

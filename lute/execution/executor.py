@@ -587,7 +587,6 @@ class BaseExecutor(ABC):
         logger.info(f"Sourcing file {self._shell_source_script}")
         subproc_env: Dict[str, str] = {}
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
-        lute_virtual_env: Optional[str] = os.getenv("LUTE_VIRTUAL_ENV")
         for key, val in os.environ.items():
             if "CONDA" not in key and "PYTHONPATH" not in key:
                 subproc_env[key] = val
@@ -632,7 +631,6 @@ class BaseExecutor(ABC):
         # for first-party Tasks, regardless of the directory they run in if using
         # a new environment
         old_python_path: str = new_environment.get("PYTHONPATH", "")
-        new_python_path: str = new_environment.get("LUTE_TENV_PYTHONPATH", "")
         new_lute_path: Optional[str] = lute_path
         if lute_path is None:
             logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
