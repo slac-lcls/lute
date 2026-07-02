@@ -12,10 +12,11 @@ dependencies = [
     "pydantic>1.10.0,<2",
     "numpy",
     "requests",
-    "pyzmq",
+    "zmq",
     "jinja2",
     "kerberos",
     "lcls-krtc",
+    "mpi4py",
 ]
 authors = [
     { name = "psrel", email = "psrel@slac.stanford.edu" },

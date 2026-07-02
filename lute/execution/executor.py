@@ -589,32 +589,8 @@ class BaseExecutor(ABC):
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
         lute_virtual_env: Optional[str] = os.getenv("LUTE_VIRTUAL_ENV")
         for key, val in os.environ.items():
-            if lute_virtual_env is not None:
-                # If we are running in a virtual environment, don't pass the
-                # virtual environment's PYTHONPATH to the subprocess. The
-                # subprocess will find LUTE via its own site-packages.
-                if "CONDA" not in key and "PYTHONPATH" not in key:
-                    subproc_env[key] = val
-            else:
-                if "CONDA" not in key:
-                    if key == "PYTHONPATH":
-                        # Strip out psana2 environment leakage
-                        curr_parts: List[str] = val.split(":")
-                        cleaned_parts: List[str] = []
-                        for part in curr_parts:
-                            part_lower: str = part.lower()
-                            is_lute: bool = "lute" in part_lower
-                            if lute_path:
-                                is_lute = (
-                                    is_lute
-                                    or (lute_path.lower() in part_lower)
-                                    or (part_lower in lute_path.lower())
-                                )
-                            if is_lute:
-                                cleaned_parts.append(part)
-                        subproc_env[key] = ":".join(cleaned_parts)
-                    else:
-                        subproc_env[key] = val
+            if "CONDA" not in key and "PYTHONPATH" not in key:
+                subproc_env[key] = val
 
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE, env=subproc_env
@@ -636,27 +612,21 @@ class BaseExecutor(ABC):
                     # Add identical items first
                     new_environment[key] = value
                 elif key in ("PYTHONPATH", "PATH"):
-                    if key == "PYTHONPATH" and lute_virtual_env is not None:
-                        # Running in a virtual environment: never merge the venv's
-                        # PYTHONPATH into the subprocess environment. The venv Python
-                        # finds LUTE via its own site-packages
-                        pass
-                    else:
-                        curr: Optional[str] = os.getenv(key)
-                        if curr is not None:
-                            if curr in value:
-                                new_environment[key] = f"{curr}:{value}"
+                    curr: Optional[str] = os.getenv(key)
+                    if curr is not None:
+                        if curr in value:
+                            new_environment[key] = f"{curr}:{value}"
+                        else:
+                            # Make sure to keep our env first, for dependencies
+                            # e.g. pydantic
+                            new_environment[key] = f"{curr}:{value}"
+                            # For the TENV, make sure they get the environment requested
+                            if key == "PATH":
+                                new_environment[f"LUTE_TENV_{key}"] = (
+                                    f"{value}:{curr}"
+                                )
                             else:
-                                # Make sure to keep our env first, for dependencies
-                                # e.g. pydantic
-                                new_environment[key] = f"{curr}:{value}"
-                                # For the TENV, make sure they get the environment requested
-                                if key == "PATH":
-                                    new_environment[f"LUTE_TENV_{key}"] = (
-                                        f"{value}:{curr}"
-                                    )
-                                else:
-                                    new_environment[f"LUTE_TENV_{key}"] = value
+                                new_environment[f"LUTE_TENV_{key}"] = value
 
         # Until we make LUTE installable... Need to make sure this is available
         # for first-party Tasks, regardless of the directory they run in if using
@@ -685,19 +655,6 @@ class BaseExecutor(ABC):
                     "for that version exists! Things may fail if depending on C "
                     "extensions!"
                 )
-
-            if lute_virtual_env is None:
-                # We are not running in a virtual environment, so we can set the LUTE_TENV_PYTHONPATH
-                if new_python_path:
-                    new_environment["LUTE_TENV_PYTHONPATH"] = (
-                        f"{new_lute_path}:{new_python_path}"
-                    )
-                elif new_lute_path:
-                    new_environment["LUTE_TENV_PYTHONPATH"] = new_lute_path
-                else:
-                    logger.warning(
-                        "Could not determine a new Python version LUTE_PATH!"
-                    )
 
         self._analysis_desc.task_env = new_environment
 
