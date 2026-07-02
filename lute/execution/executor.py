@@ -622,9 +622,7 @@ class BaseExecutor(ABC):
                             new_environment[key] = f"{curr}:{value}"
                             # For the TENV, make sure they get the environment requested
                             if key == "PATH":
-                                new_environment[f"LUTE_TENV_{key}"] = (
-                                    f"{value}:{curr}"
-                                )
+                                new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
                             else:
                                 new_environment[f"LUTE_TENV_{key}"] = value
 
