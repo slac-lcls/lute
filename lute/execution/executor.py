@@ -639,8 +639,7 @@ class BaseExecutor(ABC):
                     if key == "PYTHONPATH" and lute_virtual_env is not None:
                         # Running in a virtual environment: never merge the venv's
                         # PYTHONPATH into the subprocess environment. The venv Python
-                        # finds LUTE via its own site-packages, and LUTE_TENV_PYTHONPATH
-                        # already holds only the clean conda-env value set above.
+                        # finds LUTE via its own site-packages
                         pass
                     else:
                         curr: Optional[str] = os.getenv(key)
@@ -1644,19 +1643,10 @@ class MPIExecutor(Executor):
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
         )
         mpi_cmd: str = f"mpirun -np {nprocs} --map-by core"
-
-        # If using virtual environment, use the python executable from target environment
-        python_exec: str = "python"
-        lute_virtual_env: Optional[str] = os.getenv("LUTE_VIRTUAL_ENV")
-        if lute_virtual_env is not None:
-            conda_prefix = self._analysis_desc.task_env.get("LUTE_TENV_CONDA_PREFIX")
-            if conda_prefix:
-                python_exec = f"{conda_prefix}/bin/python"
-
         if __debug__:
-            py_cmd = f"{python_exec} -B -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
         else:
-            py_cmd = f"{python_exec} -OB -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = f"python -OB -u -m mpi4py.run {executable_path} {params}"
 
         cmd: str = f"{mpi_cmd} {py_cmd}"
         return cmd
