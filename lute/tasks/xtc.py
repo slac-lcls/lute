@@ -43,7 +43,9 @@ class ConvertXtc1to2(Task):
         row_ids (Optional[List[int]]): Specific row IDs to process.
     """
 
-    def __init__(self, *, params: ConvertXtc1to2Parameters, use_mpi: bool = False, row_ids=None) -> None:
+    def __init__(
+        self, *, params: ConvertXtc1to2Parameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
         self._task_parameters: ConvertXtc1to2Parameters
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 

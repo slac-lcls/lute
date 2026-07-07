@@ -36,7 +36,11 @@ class TestMultiNodeCommunication(Task):
     """
 
     def __init__(
-        self, *, params: TestMultiNodeCommunicationParameters, use_mpi: bool = True, row_ids=None
+        self,
+        *,
+        params: TestMultiNodeCommunicationParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._comm: MPI.Intracomm = MPI.COMM_WORLD
