@@ -163,8 +163,10 @@ class LuteEnvBuilder:
         self._created: Dict[str, str] = {}
 
     def venv_path(self, python_version: str) -> str:
-        """Standard venv directory path for a given Python version."""
-        return os.path.join(self.env_dir, f"lute_venv_py{python_version}")
+        """Standard venv directory path for a given Python version.
+        """
+        ver_nodot = python_version.replace(".", "")
+        return os.path.join(self.env_dir, f"lute_env_py{ver_nodot}")
 
     def bin_path(self, python_version: str) -> str:
         """Path to the venv's bin directory."""
