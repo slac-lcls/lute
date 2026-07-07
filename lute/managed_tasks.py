@@ -243,3 +243,4 @@ BayFAIOptimizer2.update_environment(
         "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
     }
 )
+GLINTIndexer: Executor = Executor("IndexGLINT")
