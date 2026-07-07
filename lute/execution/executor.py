@@ -193,6 +193,7 @@ class BaseExecutor(ABC):
         )
         task_parameters: Optional[TaskParameters] = None
         task_env: Dict[str, str] = os.environ.copy()
+        self._py_executable: str = sys.executable
         self._communicators: List[Communicator] = communicators
 
         self._analysis_desc: DescribedAnalysis = DescribedAnalysis(
@@ -622,6 +623,7 @@ class BaseExecutor(ABC):
         # For picking up LUTE, the new environment may be a different python version
         # So we need to make sure to pick it up appropriately for C-extension usage
         new_pyver: str = tmp_environment.get("LUTE_NEW_PYVER", "python3.9")
+        old_pyver: str = f"python{sys.version_info[0]}.{sys.version_info[1]}"
         for key, value in tmp_environment.items():
             # Make sure LUTE vars are available
             if "LUTE_" in key or "SLURM_" in key or key in ("RUN", "EXPERIMENT"):
@@ -663,7 +665,6 @@ class BaseExecutor(ABC):
 
             if new_pyver not in lute_path:
                 # We have a new lute_path to use for a different Python version
-                old_pyver: str = f"python{sys.version_info[0]}.{sys.version_info[1]}"
                 new_lute_path = lute_path.replace(old_pyver, new_pyver)
                 logger.debug(f"Task will use LUTE from: {new_lute_path}")
 
@@ -673,6 +674,20 @@ class BaseExecutor(ABC):
                     "for that version exists! Things may fail if depending on C "
                     "extensions!"
                 )
+
+        # Update python executable to the new environment's version
+        if new_pyver != old_pyver:
+            # Strip new_pyver version
+            version: str = new_pyver.replace("python", "").replace(".", "")
+            new_py_executable = os.getenv(f"LUTE_VIRTUAL_ENV_PY{version}")
+            if new_py_executable is not None:
+                self._py_executable = new_py_executable
+            else:
+                logger.warning(
+                    f"Task needs to run in {new_pyver}, but no {version} "
+                    "installation is available! Task may fail." 
+                )
+            
 
         self._analysis_desc.task_env = new_environment
 
@@ -781,9 +796,9 @@ class BaseExecutor(ABC):
         """
         cmd: str = ""
         if __debug__:
-            cmd = f"{sys.executable} -B {executable_path} {params}"
+            cmd = f"{self._py_executable} -B {executable_path} {params}"
         else:
-            cmd = f"{sys.executable} -OB {executable_path} {params}"
+            cmd = f"{self._py_executable} -OB {executable_path} {params}"
 
         return cmd
 

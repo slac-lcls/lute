@@ -37,6 +37,11 @@ DEFAULT_CONFIG = {
     },
 }
 
+# Available Python interpreters for multiversioning.
+PYTHON_INTERPRETERS: Dict[str, str] = {
+    "3.9": "/sdf/group/lcls/ds/ana/sw/conda2/inst/bin/python3.9",
+    "3.11": "/sdf/group/lcls/ds/ana/sw/conda2-v3/inst/bin/python3.11",
+}
 
 def _run_subprocess_log(
         cmd: List[str], 
@@ -138,58 +143,94 @@ def run_build_script(lute_path: str) -> None:
     _run_subprocess_log(cmd, cwd=lute_path)
 
 
-def create_venv_install(
-    venv_path: str,
-    version: str,
-) -> str:
-    """Create an isolated virtual environment and install LUTE via pip.
+class LuteEnvBuilder:
+    """Manages creation of LUTE virtual environments.
 
-    Sources the psana1 environment to obtain a base Python3, creates a virtual
-    environment at `venv_path`, then installs lute-lcls and its dependencies.
+    Encapsulates the standard directory naming scheme, package installation,
+    and environment variable setup for LUTE venvs. Supports multiversioning
+    by creating venvs for different Python interpreters.
 
     Args:
-        venv_path (str): Path where the virtual environment will be created.
+        lute_version (str): The version of LUTE to install in the venvs.
 
-        version (str): Version/tag to install. Use 'dev' for the latest main
-            branch from GitHub, otherwise a PyPI release version or tag.
-
-    Returns:
-        venv_path (str): The path to the created virtual environment.
+        env_dir (str): The base directory to create venvs in. Each venv will be
+            created in a subdirectory named according to the Python version.
     """
-    global logger
 
-    if os.path.exists(venv_path):
-        logger.info(f"Virtual environment already exists at {venv_path}. Reusing.")
-        return venv_path
+    def __init__(self, lute_version: str, env_dir: str) -> None:
+        self.lute_version = lute_version
+        self.env_dir = os.path.abspath(env_dir)
+        self._created: Dict[str, str] = {}
 
-    pkg_spec: str = f"lute-lcls=={version}"
+    def venv_path(self, python_version: str) -> str:
+        """Standard venv directory path for a given Python version."""
+        return os.path.join(self.env_dir, f"lute_venv_py{python_version}")
 
-    # Build the full setup script:
-    # 1. Source psana1 to get a base Python3
-    # 2. Create the venv
-    # 3. Activate the venv
-    # 4. Upgrade pip and install packages
-    script: str = (
-        f'source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh\n'
-        f'python3 -m venv "{venv_path}"\n'
-        f'source "{venv_path}/bin/activate"\n'
-        f"pip install --upgrade pip\n"
-        f'pip install "{pkg_spec}"\n'
-    )
+    def bin_path(self, python_version: str) -> str:
+        """Path to the venv's bin directory."""
+        return os.path.join(self.venv_path(python_version), "bin")
 
-    logger.info(f"Creating isolated virtual environment at {venv_path}...")
-    logger.info(f"Sourcing the Psana1 environment (for Python3)")
-    logger.info(f"Installing: {pkg_spec}")
-
-    _run_subprocess_log(["bash", "-c", script])
-
-    if not os.path.exists(f"{venv_path}/bin/python"):
-        logger.error(
-            f"Virtual environment creation failed! No python found at {venv_path}/bin/python"
+    def site_packages_path(self, python_version: str) -> str:
+        """Path to the venv's site-packages directory."""
+        return os.path.join(
+            self.venv_path(python_version),
+            "lib", f"python{python_version}", "site-packages",
         )
-        sys.exit(-1)
 
-    return venv_path
+    def create(self, python_version: str) -> str:
+        """Create a LUTE venv for the given Python version.
+
+        Looks up the interpreter from PYTHON_INTERPRETERS, creates the venv
+        using the standard naming scheme, installs lute-lcls, and writes
+        an activation script that sets LUTE_ environment variables.
+
+        Args:
+            python_version: Version string (e.g. "3.9", "3.11").
+
+        Returns:
+            The absolute path to the created venv directory.
+        """
+        python_path = PYTHON_INTERPRETERS.get(python_version)
+        if python_path is None:
+            logger.warning(
+                f"No interpreter configured for Python {python_version}. "
+                f"Available: {list(PYTHON_INTERPRETERS.keys())}"
+            )
+            sys.exit(-1)
+
+        env_dir = self.venv_path(python_version)
+        venv_python = os.path.join(env_dir, "bin", "python")
+
+        if os.path.exists(env_dir):
+            logger.info(f"Virtual environment already exists at {env_dir}. Reusing.")
+        else:
+            logger.info(f"Creating venv with {python_path} at {env_dir}...")
+            cmd: List[str] = [python_path, "-m", "venv", env_dir]
+            _run_subprocess_log(cmd)
+
+        # Upgrade pip, then install lute-lcls
+        pkg_spec = f"lute-lcls=={self.lute_version}"
+        logger.info(f"Installing {pkg_spec} into {env_dir}...")
+        _run_subprocess_log([venv_python, "-m", "pip", "install", "--upgrade", "pip"])
+        _run_subprocess_log([venv_python, "-m", "pip", "install", pkg_spec])
+
+        # Write LUTE environment variables into the activation script
+        self._write_env_vars(env_dir, python_version)
+        modify_permissions(env_dir)
+
+        self._created[python_version] = env_dir
+        return env_dir
+
+    def _write_env_vars(self, env_dir: str, python_version: str) -> None:
+        """Append LUTE_ environment variables to the venv activate script."""
+        activate_path = os.path.join(env_dir, "bin", "activate")
+        env_vars = (
+            f'\n# LUTE environment variables\n'
+            f'export LUTE_VIRTUAL_ENV_PY{python_version.replace(".", "")}="{env_dir}"\n'
+            f'export LUTE_NEW_PYVER="python{python_version}"\n'
+        )
+        with open(activate_path, "a") as f:
+            f.write(env_vars)
 
 
 def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
@@ -377,6 +418,17 @@ def main() -> None:
         action="extend",
         help="Which analysis workflow(s) to run. E.g. -W smd bayfai.",
     )
+    parser.add_argument(
+        "-P",
+        "--python-versions",
+        type=str,
+        nargs="+",
+        help=(
+            "Python versions to create virtual environments for when using "
+            "--fresh_install.  E.g. -P 3.9 3.11. "
+        ),
+        default=list(PYTHON_INTERPRETERS.keys()),
+    )
     args: argparse.Namespace
     extra_args: List[str]  # May have additional SLURM arguments
     args, extra_args = parser.parse_known_args()
@@ -397,18 +449,23 @@ def main() -> None:
     std_hutch_config: str
     std_test_config: str
     if args.fresh_install:
-        lute_path = f"{results_dir}/lute_venv"
         version: str = args.version
         if args.version == "dev":
-            version="0.2.0"
-        create_venv_install(lute_path, version)
-        modify_permissions(lute_path)
-        venv_bin: str = f"{lute_path}/bin"
+            version = "0.2.0"
+
+        # Create a venv for each requested Python version
+        builder = LuteEnvBuilder(lute_version=version, env_dir=results_dir)
+        for pv in args.python_versions:
+            builder.create(pv)
+
+        # Use the first requested version as the primary for workflow setup
+        primary_version: str = args.python_versions[0]
+        lute_path = builder.venv_path(primary_version)
+        venv_bin: str = builder.bin_path(primary_version)
         arp_executable = f"{venv_bin}/submit_launch_slurm.sh"
         launch_executable = f"{venv_bin}/launch_slurm"
         # In a pip-installed venv, config lives inside site-packages
-        py_ver: str = f"python{sys.version_info.major}.{sys.version_info.minor}"
-        site_packages: str = f"{lute_path}/lib/{py_ver}/site-packages"
+        site_packages: str = builder.site_packages_path(primary_version)
         std_hutch_config = f"{site_packages}/config/{hutch}.yaml"
         std_test_config = f"{site_packages}/config/test.yaml"
     elif args.fresh_build:
@@ -537,7 +594,7 @@ def main() -> None:
         update_dag_params(full_workflow_path, partition, account, extra_slurm_params)
 
         # Build workflow dict with appropriate trigger
-        if wf_name in ("smd", "smd_summaries", "smd_xss", "smd_xes", "smd_xas"):
+        if "smd" in wf_name:
             trigger = {"trigger": "START_OF_RUN"}
         elif wf_name == "bayfai":
             trigger = {"trigger": "MANUAL"}
