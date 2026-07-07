@@ -45,7 +45,9 @@ class AnalyzeSmallData(Task):
     _LARGE_DETNAMES: ClassVar[List[str]] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
     _SMALL_DETNAMES: ClassVar[List[str]] = ["epix_1", "epix_2"]
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True, row_ids=None) -> None:
+    def __init__(
+        self, *, params: TaskParameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._task_parameters = cast(
             Union[

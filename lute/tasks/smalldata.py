@@ -61,7 +61,11 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXSSParameters, use_mpi: bool = True, row_ids=None
+        self,
+        *,
+        params: AnalyzeSmallDataXSSParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._task_parameters = cast(
@@ -125,7 +129,11 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
     """Task to analyze XAS data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXASParameters, use_mpi: bool = True, row_ids=None
+        self,
+        *,
+        params: AnalyzeSmallDataXASParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
@@ -210,7 +218,11 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
     """Task to analyze XES data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXESParameters, use_mpi: bool = True, row_ids=None
+        self,
+        *,
+        params: AnalyzeSmallDataXESParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
