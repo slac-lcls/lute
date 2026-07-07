@@ -156,11 +156,21 @@ SCRIPT_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
 export LUTE_PATH="$( echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g )"
 EXECUTABLE="run_task.py"
 
+LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
+
 if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
     EXECUTABLE="${LUTE_PATH}run_task.py"
 else
-    # Running from installation
-    source "${SCRIPT_DIR}/activate_installation"
+    if [[ -f "${LUTE_BIN_PATH}/activate" ]]; then
+        # Virtual environment install
+        source "${LUTE_BIN_PATH}/activate"
+        if [[ -n "${VIRTUAL_ENV}" ]]; then
+            export LUTE_VIRTUAL_ENV="${VIRTUAL_ENV}"
+        fi
+    else
+        # Standard (meson/prefix) installation
+        source "${LUTE_BIN_PATH}/activate_installation"
+    fi
     EXECUTABLE="$(which run_task)"
     export LUTE_PATH="${LUTE_PATH}/lib/python3.9/site-packages"
 fi

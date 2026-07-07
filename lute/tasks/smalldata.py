@@ -61,9 +61,9 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXSSParameters, use_mpi: bool = True
+        self, *, params: AnalyzeSmallDataXSSParameters, use_mpi: bool = True, row_ids=None
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._task_parameters = cast(
             AnalyzeSmallDataXSSParameters, self._task_parameters
         )
@@ -125,9 +125,9 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
     """Task to analyze XAS data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXASParameters, use_mpi: bool = True
+        self, *, params: AnalyzeSmallDataXASParameters, use_mpi: bool = True, row_ids=None
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _pre_run(self) -> None:
         # Currently scattering data is extracted as standard since its used
@@ -210,9 +210,9 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
     """Task to analyze XES data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXESParameters, use_mpi: bool = True
+        self, *, params: AnalyzeSmallDataXESParameters, use_mpi: bool = True, row_ids=None
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _pre_run(self) -> None:
         # Currently scattering data is extracted as standard since its used

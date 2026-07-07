@@ -38,8 +38,8 @@ logger: logging.Logger = get_logger(__name__)
 class BayFAI(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
-    def __init__(self, *, params: BayFAIParameters, use_mpi: bool = True) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+    def __init__(self, *, params: BayFAIParameters, use_mpi: bool = True, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         start_time = time.time()

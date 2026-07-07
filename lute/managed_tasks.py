@@ -19,21 +19,27 @@ from lute.tasks.tasklets import (
 #######
 Tester: Executor = Executor("Test")
 """Runs a basic test of a first-party Task."""
+Tester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 BinaryTester: Executor = Executor("TestBinary")
 """Runs a basic test of a multi-threaded third-party Task."""
+BinaryTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 BinaryErrTester = Executor("TestBinaryErr")
 """Runs a test of a third-party task that fails."""
+BinaryErrTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 SocketTester: Executor = Executor("TestSocket")
 """Runs a test of socket-based communication."""
+SocketTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 WriteTester: Executor = Executor("TestWriteOutput")
 """Runs a test to confirm database writing."""
+WriteTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 ReadTester: Executor = Executor("TestReadOutput")
 """Runs a test to confirm database reading."""
+ReadTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunication")
 """Runs a test to confirm communication works between multiple nodes."""
@@ -43,6 +49,7 @@ MultiNodeCommunicationTester.shell_source(
 
 RequestTester: Executor = Executor("TestRequest")
 """Runs a test whether requests go from Task to Executor to Workflow manager."""
+RequestTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 # SmallData-related
 ###################
@@ -231,6 +238,7 @@ PeakFinderPsocake.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psco
 #####
 Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
 """Converts Xtc1 files to Xtc2 to use in psana2"""
+Xtc1to2Converter.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 # Cheetah
 #########

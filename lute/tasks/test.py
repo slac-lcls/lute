@@ -34,8 +34,8 @@ from lute.execution.ipc import Message
 class Test(Task):
     """Simple test Task to ensure subprocess and pipe-based IPC work."""
 
-    def __init__(self, *, params: TestParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TestParameters, use_mpi: bool = False, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestParameters, self._task_parameters)
@@ -55,8 +55,8 @@ class Test(Task):
 class TestSocket(Task):
     """Simple test Task to ensure basic IPC over Unix sockets works."""
 
-    def __init__(self, *, params: TestSocketParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TestSocketParameters, use_mpi: bool = False, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestSocketParameters, self._task_parameters)
@@ -78,8 +78,8 @@ class TestSocket(Task):
 class TestWriteOutput(Task):
     """Simple test Task to write output other Tasks depend on."""
 
-    def __init__(self, *, params: TestWriteOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TestWriteOutputParameters, use_mpi: bool = False, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestWriteOutputParameters, self._task_parameters)
@@ -108,8 +108,8 @@ class TestReadOutput(Task):
     Its pydantic model relies on a database access to retrieve the output file.
     """
 
-    def __init__(self, *, params: TestReadOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TestReadOutputParameters, use_mpi: bool = False, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestReadOutputParameters, self._task_parameters)
@@ -128,8 +128,8 @@ class TestReadOutput(Task):
 class TestRequest(Task):
     """Simple test Task to try to send requests to and from via workflow manager."""
 
-    def __init__(self, *, params: TestReadOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(self, *, params: TestReadOutputParameters, use_mpi: bool = False, row_ids=None) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _parse_response(self, resp: Message) -> None:
         running_managed_tasks: List[str] = []

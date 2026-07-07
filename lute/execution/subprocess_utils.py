@@ -52,11 +52,6 @@ param_values: Dict[str, Any]
 definition, param_values = get_task_parameters_defn_and_params(db_dir="{work_dir}", row_ids=row_ids)
 new_params: TaskParameters = construct_task_parameters(schema=definition, values=param_values)
 new_params.lute_config.work_dir = "{work_dir}"
-for key, value in os.environ.items():
-    print("Task Env:", key, "=", value, flush=True)
-print(sys.executable, flush=True)
-import numpy as np
-print(f"Numpy version: {{np.__version__}}", flush=True)
 task: Task = TaskType(params=new_params, row_ids=row_ids)
 task.run()
 """

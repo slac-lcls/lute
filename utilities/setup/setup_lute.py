@@ -18,8 +18,40 @@ logging.basicConfig(level=logging.INFO)
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def _run_subprocess_log(cmd: List[str], env: Optional[Dict[str, str]] = None) -> None:
-    """Run a subprocess with logging."""
+DEFAULT_CONFIG = {
+    "SmallDataProducer": {
+        "nodes": 4,
+        "ntasks_per_node": 50,
+    },
+    "SmallDataProducer2": {
+        "nodes": 4,
+        "ntasks_per_node": 50,
+    },
+    "BayFAIOptimizer": {
+        "nodes": 1,
+        "ntasks_per_node": 120,
+    },
+    "BayFAIOptimizer2": {
+        "nodes": 1,
+        "ntasks_per_node": 120,
+    },
+}
+
+
+def _run_subprocess_log(
+        cmd: List[str], 
+        env: Optional[Dict[str, str]] = None,
+        cwd: Optional[str] = None
+        ) -> None:
+    """Run a subprocess with logging.
+    
+    Args:
+        cmd (List[str]): Command to run as a list of strings.
+        
+        env (Optional[Dict[str, str]]): Environment to run the command in.
+        
+        cwd (Optional[str]):  Working directory to run the command in.
+    """
     global logger
 
     out: str
@@ -30,6 +62,7 @@ def _run_subprocess_log(cmd: List[str], env: Optional[Dict[str, str]] = None) ->
         stderr=subprocess.PIPE,
         universal_newlines=True,
         env=env,
+        cwd=cwd
     ).communicate()
     if out:
         logger.info(out)
@@ -89,11 +122,8 @@ def git_clone(repo: str, location: str, tag: str) -> None:
     ]
     _run_subprocess_log(cmd)
 
-    cwd: str = os.getcwd()
-    os.chdir(location)
     cmd = ["git", "checkout", tag]
-    _run_subprocess_log(cmd)
-    os.chdir(cwd)
+    _run_subprocess_log(cmd, cwd=location)
 
 
 def run_build_script(lute_path: str) -> None:
@@ -103,17 +133,14 @@ def run_build_script(lute_path: str) -> None:
         lute_path (str): The path to the LUTE installation to build.
     """
 
-    cwd: str = os.getcwd()
-    os.chdir(lute_path)
-    cmd: List[str] = ["./build.sh"]
-    _run_subprocess_log(cmd)
-    os.chdir(cwd)
+    cmd: List[str] = ["./build.sh", "-e", "-r"]
+    logger.info(f"Building LUTE at {lute_path}. This may take a few minutes...")
+    _run_subprocess_log(cmd, cwd=lute_path)
 
 
 def create_venv_install(
     venv_path: str,
     version: str,
-    extras: Optional[List[str]] = None,
 ) -> str:
     """Create an isolated virtual environment and install LUTE via pip.
 
@@ -126,9 +153,6 @@ def create_venv_install(
         version (str): Version/tag to install. Use 'dev' for the latest main
             branch from GitHub, otherwise a PyPI release version or tag.
 
-        extras (Optional[List[str]]): Optional pip extras to install, e.g.
-            ['mpi'] for mpi4py support.
-
     Returns:
         venv_path (str): The path to the created virtual environment.
     """
@@ -138,33 +162,7 @@ def create_venv_install(
         logger.info(f"Virtual environment already exists at {venv_path}. Reusing.")
         return venv_path
 
-    # Determine the package specifier
-    extras_str: str = ""
-    if extras:
-        extras_str = f"[{','.join(extras)}]"
-
-    pkg_spec: str
-    if version == "dev":
-        # Prefer installing directly from the local source tree so that any
-        # local branch changes (including uncommitted ones) are picked up.
-        # This script lives at <repo_root>/utilities/setup/setup_lute.py, so
-        # the repo root is two directories up.  If pyproject.toml is found
-        # there we know we're running from inside the repo (or an editable
-        # install pointing back to it).  Otherwise fall back to GitHub main.
-        _candidate: str = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..")
-        )
-        if os.path.exists(os.path.join(_candidate, "pyproject.toml")):
-            logger.info(f"Dev install: using local source tree at {_candidate}")
-            pkg_spec = f"{_candidate}{extras_str}"
-        else:
-            logger.warning(
-                "Dev install: could not locate local source tree via __file__. "
-                "Falling back to GitHub main branch. Local changes will NOT be included."
-            )
-            pkg_spec = f"lute-lcls{extras_str} @ git+https://github.com/slac-lcls/lute.git@main"
-    else:
-        pkg_spec = f"lute-lcls{extras_str}=={version}"
+    pkg_spec: str = f"lute-lcls=={version}"
 
     # Build the full setup script:
     # 1. Source psana1 to get a base Python3
@@ -183,18 +181,7 @@ def create_venv_install(
     logger.info(f"Sourcing the Psana1 environment (for Python3)")
     logger.info(f"Installing: {pkg_spec}")
 
-    out: str
-    err: str
-    out, err = subprocess.Popen(
-        ["bash", "-c", script],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    ).communicate()
-    if out:
-        logger.info(out)
-    if err:
-        logger.info(err)
+    _run_subprocess_log(["bash", "-c", script])
 
     if not os.path.exists(f"{venv_path}/bin/python"):
         logger.error(
@@ -227,7 +214,7 @@ def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
         src_dir,
         f'--prefix="{install_dir}"',
     ]
-    logging.info(f"Attempting to install from: {src_dir} to: {install_dir}")
+    logger.info(f"Attempting to install from: {src_dir} to: {install_dir}")
     env: Dict[str, str] = os.environ.copy()
     env["PATH"] = (
         f"/sdf/group/lcls/ds/ana/sw/conda1/inst/envs/ana-4.0.63-py3/bin:{env['PATH']}"
@@ -237,7 +224,7 @@ def pip_install(src_dir: str, install_dir: Optional[str] = None) -> None:
         if not os.path.exists(install_dir):
             mkdir_cmd: List[str] = ["mkdir", "-p", install_dir]
             _run_subprocess_log(mkdir_cmd)
-    _run_subprocess_log(cmd, env)
+    _run_subprocess_log(cmd, env=env)
 
 
 def inplace_sed(in_file: str, pattern: str) -> None:
@@ -254,13 +241,70 @@ def inplace_sed(in_file: str, pattern: str) -> None:
 
 def modify_permissions(lute_path: str):
     """Recursively set permissions for a LUTE installation."""
-    os.chmod(lute_path, 0o765)
+    os.chmod(lute_path, 0o775)
     for root, dirs, files in os.walk(lute_path):
         for d in dirs:
-            os.chmod(os.path.join(root, d), 0o765)
+            os.chmod(os.path.join(root, d), 0o775)
 
         for f in files:
-            os.chmod(os.path.join(root, f), 0o765)
+            os.chmod(os.path.join(root, f), 0o775)
+
+
+def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_params: str) -> None:
+    """Update slurm_params in a DAG file in place.
+
+    For tasks listed in DEFAULT_CONFIG, use the task-specific nodes/ntasks_per_node.
+    For all other tasks, forward the user-provided SLURM parameters verbatim.
+
+    Args:
+        dag_path (str): Path to the DAG file.
+
+        partition (str): SLURM partition.
+
+        account (str): SLURM account.
+
+        extra_slurm_params (str): Additional SLURM parameters, forwarded as-is.
+    """
+    with open(dag_path, "r") as f:
+        lines: List[str] = f.readlines()
+
+    result: List[str] = []
+    current_task: Optional[str] = None
+
+    for line in lines:
+        stripped = line.lstrip()
+        task_name = None
+        if stripped.startswith("task_name:"):
+            task_name = stripped
+        elif stripped.startswith("- task_name:"):
+            task_name = stripped[2:]  # Strip the "- " prefix
+        if task_name is not None:
+            # Extract task name (handles both quoted and unquoted)
+            task_value = task_name.split(":", 1)[1].strip().strip("\"'")
+            current_task = task_value
+
+        if stripped.startswith("slurm_params:"):
+            indent = line[: len(line) - len(stripped)]
+            if current_task and current_task in DEFAULT_CONFIG:
+                cfg = DEFAULT_CONFIG[current_task]
+                params = (
+                    f"--account={account} --partition={partition} "
+                    f"--ntasks-per-node={cfg['ntasks_per_node']} "
+                    f"--nodes={cfg['nodes']}"
+                )
+            else:
+                params = (
+                    f"--account={account} --partition={partition} "
+                    f"{extra_slurm_params}"
+                )
+            result.append(f"{indent}slurm_params: '{params}'\n")
+        else:
+            result.append(line)
+
+    with open(dag_path, "w") as f:
+        f.writelines(result)
+
+    logger.info(f"Updated slurm_params in DAG file: {dag_path}")
 
 
 def main() -> None:
@@ -280,18 +324,29 @@ def main() -> None:
         required=True,
     )
     parser.add_argument(
-        "-f",
-        "--fresh_install",
+        "-fd",
+        "--fresh_build",
         help=(
-            "Install a new version of LUTE in the experiment folder. This allows "
-            "for local modifications of code. Otherwise, the central installation "
-            "will be used which cannot be modified."
+            "Install a new install of LUTE in the experiment folder via cloning "
+            "fresh repository and building. This allows for local modifications "
+            "of code. Otherwise, the central installation will be used which "
+            "cannot be modified."
         ),
         action="store_true",
     )
     parser.add_argument(
-        "-"
+        "-fi",
+        "--fresh_install",
+        help=(
+            "Install a new version of LUTE in the experiment folder via isolate "
+            "virtual environment. This allows for local modifications of code. "
+            "Otherwise, the central installation will be used which cannot be "
+            "modified."
+        ),
+        action="store_true",
+    )
     parser.add_argument(
+        "-D",
         "--directory",
         type=str,
         help=(
@@ -310,7 +365,7 @@ def main() -> None:
         type=str,
         help=(
             "Version of LUTE to use. Corresponds to release tag or `dev`. "
-            "Defaults to `dev`."
+            "Defaults to `dev`. If `dev`, only works with `--fresh_build`."
         ),
         default="dev",
     )
@@ -318,14 +373,17 @@ def main() -> None:
         "-W",
         "--workflow",
         type=str,
-        help=("Which analysis workflow to run. Defaults to smd_summaries."),
-        default="smd",
+        nargs="+",
+        action="extend",
+        help="Which analysis workflow(s) to run. E.g. -W smd bayfai.",
     )
     args: argparse.Namespace
     extra_args: List[str]  # May have additional SLURM arguments
     args, extra_args = parser.parse_known_args()
 
     hutch: str = args.experiment[:3]
+
+    workflow_names: List[str] = args.workflow if args.workflow else ["smd"]
 
     results_dir: str = f"/sdf/data/lcls/ds/{hutch}/{args.experiment}/results"
     if args.directory != "":
@@ -340,7 +398,10 @@ def main() -> None:
     std_test_config: str
     if args.fresh_install:
         lute_path = f"{results_dir}/lute_venv"
-        create_venv_install(lute_path, args.version)
+        version: str = args.version
+        if args.version == "dev":
+            version="0.2.0"
+        create_venv_install(lute_path, version)
         modify_permissions(lute_path)
         venv_bin: str = f"{lute_path}/bin"
         arp_executable = f"{venv_bin}/submit_launch_slurm.sh"
@@ -350,6 +411,15 @@ def main() -> None:
         site_packages: str = f"{lute_path}/lib/{py_ver}/site-packages"
         std_hutch_config = f"{site_packages}/config/{hutch}.yaml"
         std_test_config = f"{site_packages}/config/test.yaml"
+    elif args.fresh_build:
+        lute_path = f"{results_dir}/lute_build"
+        git_clone("slac-lcls/lute", lute_path, args.version)
+        run_build_script(lute_path)
+        modify_permissions(lute_path)
+        arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
+        launch_executable = f"{lute_path}/install/bin/launch_slurm"
+        std_hutch_config = f"{lute_path}/config/{hutch}.yaml"
+        std_test_config = f"{lute_path}/config/test.yaml"
     else:
         lute_path = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
         arp_executable = f"{lute_path}/install/bin/submit_launch_slurm.sh"
@@ -377,110 +447,114 @@ def main() -> None:
     inplace_sed(config_path, sed_pattern)
 
     database_setup(f"{lute_output_dir}/lute.db")  # Setup permissions on database
-    full_workflow_path: str = f"{lute_output_dir}/{args.workflow}.dag"
-    if not os.path.exists(full_workflow_path):
-        included_wf_defn: str = f"{lute_path}/workflows/common/{args.workflow}.dag"
-        shutil.copy(included_wf_defn, full_workflow_path)
-    os.chmod(full_workflow_path, 0o666)
+    
+    # Check for partition and account. If not provided, prompt the user to use defaults.
+    partition: str = "milano"
+    account: str = f"lcls:{args.experiment}"
+    has_partition: bool = False
+    has_account: bool = False
+    extra_slurm_args: List[str] = []
+    for arg in extra_args:
+        if arg.startswith("--partition="):
+            partition = arg.split("=", 1)[1]
+            has_partition = True
+        elif arg.startswith("--account="):
+            account = arg.split("=", 1)[1]
+            has_account = True
+        else:
+            extra_slurm_args.append(arg)
 
-    param_string: str = f"{launch_executable} -c {config_path} -W {full_workflow_path}"
-
-    if args.debug:
-        param_string = f"{param_string} --debug"
-    if args.test:
-        param_string = f"{param_string} --test"
-
-    extra_args_str: str = " ".join(extra_args)
-    # Check for partition, account and ntasks. ntasks has defaults by workflow
-    if "partition" not in extra_args_str:
+    if not has_partition:
         logger.warning(
-            "No queue/partition provided. Defaulting to milano. Any key to continue. "
-            "Ctrl-C to exit."
+            f"No queue/partition provided. Defaulting to {partition}. Any key to "
+            "continue. Ctrl-C to exit."
         )
         try:
             _: str = input()
-            extra_args_str = f"{extra_args_str} --partition=milano"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
-    if "account" not in extra_args_str:
-        account: str = f"lcls:{args.experiment}"
+
+    if not has_account:
         logger.warning(
             f"No account provided. Defaulting to {account}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
-            _ = input()
-            extra_args_str = f"{extra_args_str} --account={account}"
+            _: str = input()
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
-    if "ntasks" not in extra_args_str:
-        ncores: int = 120
-        # if args.workflow in ("smd_xas", "smd_xss", "test"):
-        #     ncores = 2
-        # elif args.workflow in ("smd_summaries", "smd_xes"):
-        #     ncores = 5
-        # else:
-        #     ncores = 120
+
+    extra_slurm_params: str = " ".join(extra_slurm_args)
+    # Check for at least nodes and ntasks, and if not provided, prompt the user to use defaults.
+    nodes: int = 1
+    if "nodes" in extra_slurm_params:
         logger.warning(
-            f"No tasks/cores provided. Defaulting to {ncores}. Any key to continue. "
+            f"No nodes provided. Defaulting to {nodes}. Any key to continue. " 
+            "Ctrl-C to exit."
+        )
+        try:
+            _: str = input()
+            extra_slurm_params += f"{extra_slurm_params} --nodes={nodes}"
+        except KeyboardInterrupt:
+            logger.info("Exiting.")
+            sys.exit(0)
+
+    ntasks: int = 1
+    if "ntasks" not in extra_slurm_params:
+        logger.warning(
+            f"No ntasks provided. Defaulting to {ntasks}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
             _ = input()
-            extra_args_str = f"{extra_args_str} --ntasks={ncores}"
+            extra_slurm_params = f"{extra_slurm_params} --ntasks={ntasks}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
 
-    param_string = f"{param_string} {extra_args_str}"
-
-    main_workflow: Dict[str, str]
-    # if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
-    if args.workflow in ("smd_summaries", "smd_xss", "smd_xes", "smd_xss"):
-        main_workflow = {
-            "name": "lute_smd_summaries",
-            "executable": arp_executable,
-            "trigger": "RUN_PARAM_IS_VALUE",
-            "run_param_name": "SmallData",
-            "run_param_value": "done",
-            "location": "S3DF",
-            "parameters": param_string,
-        }
-    elif args.workflow == "bayfai":
-        main_workflow = {
-            "name": "lute_bayfai",
-            "executable": arp_executable,
-            "trigger": "MANUAL",
-            "location": "S3DF",
-            "parameters": param_string,
-        }
-    elif 0:
-        # Replace eventually with workflows which use START_OF_RUN
-        main_workflow = {
-            "name": f"lute_{args.workflow}",
-            "executable": arp_executable,
-            "trigger": "START_OF_RUN",
-            "location": "S3DF",
-            "parameters": param_string,
-        }
-    else:
-        main_workflow = {
-            "name": f"lute_{args.workflow}",
-            "executable": arp_executable,
-            "trigger": "END_OF_RUN",
-            "location": "S3DF",
-            "parameters": param_string,
-        }
-
     workflows: List[Dict[str, str]] = []
-    workflows.append(main_workflow)
-    # Will want to append additional auxiliary workflows eventually
+    for wf_name in workflow_names:
+        full_workflow_path: str = f"{lute_output_dir}/{wf_name}.dag"
+        if not os.path.exists(full_workflow_path):
+            included_wf_defn: str = f"{lute_path}/workflows/common/{wf_name}.dag"
+            if not os.path.exists(included_wf_defn):
+                logger.error(
+                    f"Workflow definition not found for workflow: {wf_name}. Skipping workflow."
+                )
+                continue
+            shutil.copy(included_wf_defn, full_workflow_path)
+        os.chmod(full_workflow_path, 0o666)
+
+        param_string: str = f"{launch_executable} -c {config_path} -W {full_workflow_path} --partition={partition} --account={account}"
+        if args.debug:
+            param_string = f"{param_string} --debug"
+        if args.test:
+            param_string = f"{param_string} --test"
+
+        # Update the DAG file in place with collected SLURM params
+        update_dag_params(full_workflow_path, partition, account, extra_slurm_params)
+
+        # Build workflow dict with appropriate trigger
+        if wf_name in ("smd", "smd_summaries", "smd_xss", "smd_xes", "smd_xas"):
+            trigger = {"trigger": "START_OF_RUN"}
+        elif wf_name == "bayfai":
+            trigger = {"trigger": "MANUAL"}
+        else:
+            trigger = {"trigger": "END_OF_RUN"}
+
+        workflows.append({
+            "name": f"lute_{wf_name}",
+            "executable": arp_executable,
+            "location": "S3DF",
+            "parameters": param_string,
+            **trigger
+        })  
 
     for workflow in workflows:
         logger.info(
-            f"Creating eLog workflow named {workflow['name']} with parameters: {workflow['parameters']}"
+            f"Creating eLog workflow for {workflow['name']}"
         )
         krbticket: Any = KerberosTicket("HTTP@pswww.slac.stanford.edu")
         krbheaders: dict = krbticket.getAuthHeaders()
