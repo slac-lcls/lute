@@ -685,9 +685,8 @@ class BaseExecutor(ABC):
             else:
                 logger.warning(
                     f"Task needs to run in {new_pyver}, but no {version} "
-                    "installation is available! Task may fail." 
+                    "installation is available! Task may fail."
                 )
-            
 
         self._analysis_desc.task_env = new_environment
 
