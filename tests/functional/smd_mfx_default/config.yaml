@@ -56,7 +56,7 @@ SubmitSMD:
         - calib_max
     getROIs:
       epix10k2M:   # Change to detector name
-        - ROI: [[0, 1], [30, 180], [270, 350]]
+        - ROI: [[[0, 1], [30, 180], [270, 350]]]
           writeArea: True   # Whether to save ROI, if False, save sum but not img.
           thresADU: 3.5
           calcPars: True    # Save ROI sum, mean, max along with ROI

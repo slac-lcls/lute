@@ -6,7 +6,7 @@ run: 90
 date: "2023/10/25"
 lute_version: 0.2.0      # Do not be change unless need to force older version
 task_timeout: 30000
-work_dir: "/tmp"
+work_dir: "/sdf/home/l/lconreux/exp/prjlute22/results/benchmarks/geom_opt/lute_output"
 ...
 ---
 ###########
@@ -81,7 +81,7 @@ SubmitSMD:
         - "calib_max"
     getROIs:
       epix100_0:   # Change to detector name
-        - ROI: [[530, 680], [270, 350]]
+        - ROI: [[[530, 680], [270, 350]]]
           writeArea: True   # Whether to save ROI, if False, save sum but not img.
           thresADU: 3.5
           calcPars: True    # Save ROI sum, mean, max along with ROI

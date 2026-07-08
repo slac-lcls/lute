@@ -1,7 +1,7 @@
 # Smalldata producer configuration macro
-{%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
+{%- macro step_parameters(dict_name, detector, data, add_to_ret=True, skip_keys=[]) %}
 {%- if data is mapping %}
-{%- for param_name, param_value in data.items() %}
+{%- for param_name, param_value in data.items() if param_name not in skip_keys %}
         {% if param_value is none -%}
         {{ dict_name }}["{{ param_name }}"] = None
         {% else -%}

@@ -120,9 +120,9 @@ def get_azav(run):
     if run>0:
 {% for detector, params in getAzIntParams.items() %}
         az_dict = {}
-        {%- if 'userMask' in params %}
+        {%- if 'userMask' in params and params['userMask'] %}
         az_dict['userMask'] = np.load("{{ params['userMask'] }}")
-        {{- step_parameters("az_dict", detector, params|rejectattr("userMask")) }}
+        {{- step_parameters("az_dict", detector, params, skip_keys=["userMask"]) }}
         {% else %}
         {{- step_parameters("az_dict", detector, params) }}
         {% endif %}
@@ -194,17 +194,17 @@ def get_pressio_compression(run):
 # epicsOncePV = ['m0c0_vset', ('TMO:PRO2:MPOD:01:M2:C3:VoltageMeasure', 'MyAlias'),
 #               'IM4K4:PPM:SPM:VOLT_RBV', "FOO:BAR:BAZ", ("X:Y:Z", "MCBTest"), "A:B:C"]
 # epicsArchFilePV = [('ABCD', 'BCDEF'), ('JFDLKSFJ', 'SJKLFS')]
-{%- if epicsPV is defined %}
+{%- if epicsPV is defined and epicsPV %}
 epicsPV = {{ epicsPV }}
 {% else %}
 epicsPV = []
 {% endif %}
-{%- if epicsOncePV is defined %}
+{%- if epicsOncePV is defined and epicsOncePV %}
 epicsOncePV = {{ epicsOncePV }}
 {% else %}
 epicsOncePV = []
 {% endif %}
-{%- if epicsArchFilePV is defined %}
+{%- if epicsArchFilePV is defined and epicsArchFilePV %}
 epicsArchFilePV = {{ epicsArchFilePV }}
 {% else %}
 epicsArchFilePV = []
