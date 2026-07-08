@@ -73,7 +73,7 @@ def get_intg(run):
 {% endif %}
 
 {%- if getDetParams is defined and getDetParams %}
-def getDetParams(run):
+def get_det_params(run):
     ret_dict = {}
 
     if run > 0:
