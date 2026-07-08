@@ -24,7 +24,7 @@
 {%- endfor %}
 
         # Add list of dicts for {{ detector }} to total dictionary
-        ret_dict["{{ detector }}"] = {{ dict_name }}s
+        ret_dict["{{ detector }}"] = {{ dict_name }}
 {%- endif %}
 {%- endmacro -%}
 import numpy as np
@@ -77,9 +77,8 @@ def get_det_params(run):
     ret_dict = {}
 
     if run > 0:
-        det_params_dict = {}
 {% for detector, params in getDetParams.items() %}
-{{- step_parameters("det_params_dict", detector, params) }}
+        ret_dict['{{ detector }}'] = {{ params }}
 {% endfor %}
     return ret_dict
 {% endif %}
