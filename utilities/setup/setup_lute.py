@@ -533,7 +533,7 @@ def main() -> None:
             "continue. Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            input()
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
@@ -544,7 +544,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            input()
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
@@ -558,7 +558,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            input()
             extra_slurm_params = f"{extra_slurm_params} --nodes={nodes}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
@@ -571,7 +571,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _: str = input()
+            input()
             extra_slurm_params = f"{extra_slurm_params} --ntasks={ntasks}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
