@@ -27,14 +27,14 @@ index bb6c679..985132b 100755
 @@ -54,6 +54,7 @@ def define_dets(run, det_list):
      # Assumes that the config file with function parameters definition
      # has been imported under "config"
-
+ 
 +    user_det_params = {}
      rois_args = []  # special implementation as a list to support multiple ROIs.
      dimgs_args = {}
      wfs_int_args = {}
 @@ -68,6 +69,8 @@ def define_dets(run, det_list):
      pressio_compression_args = {}
-
+ 
      # Get the functions arguments from the production config
 +    if "get_det_params" in dir(config):
 +        user_det_params = config.get_det_params(run)
@@ -42,20 +42,54 @@ index bb6c679..985132b 100755
          rois_args = config.getROIs(run)
      if "getDetImages" in dir(config):
 @@ -100,6 +103,8 @@ def define_dets(run, det_list):
-
+ 
          # Common mode (default: None)
          common_mode = None
 +        if detname in user_det_params and "cmpars" in user_det_params[detname]:
 +            common_mode = user_det_params["cmpars"]
-
+ 
          if not havedet:
              continue
 @@ -1057,7 +1062,7 @@ logger.debug("rank {0} on {1} is finished".format(rank, hostname))
  #        cmd = ['timestamp_sort_h5', h5_f_name, h5_f_name]
-
+ 
  if ds.unique_user_rank():
 -    if os.environ.get("ARP_JOB_ID", None) is not None:
 +    if os.environ.get("ARP_JOB_ID", None) is not None and os.getenv("JID_UPDATE_COUNTERS") is not None:
          requests.post(
              os.environ["JID_UPDATE_COUNTERS"],
              json=[
+diff --git a/smalldata_tools/lcls2/DetObject.py b/smalldata_tools/lcls2/DetObject.py
+index 6a8a79b..b93b241 100644
+--- a/smalldata_tools/lcls2/DetObject.py
++++ b/smalldata_tools/lcls2/DetObject.py
+@@ -489,6 +489,14 @@ class Epix100Object(TiledCameraObject):
+             30,
+         ]  # Jacob (norm), Jacob, def, def(ami-like), mine, mine (norm), mine (norm-bank), none, raw, calib
+         self.common_mode = kwargs.get("common_mode", self._common_mode_list[0])
++        if isinstance(self.common_mode, tuple) or isinstance(self.common_mode, list):
++            self.common_mode = tuple(self.common_mode)
++            if len(self.common_mode) > 4:
++                print("Too many common mode parameters, taking only first 4!", self.common_mode)
++                self.common_mode = self.common_mode[:4]
++            elif len(self.common_mode) == 3:
++                print("Too few common mode parameters, but alg (cmpars[0]) is ignored. Extending!", self.common_mode)
++                self.common_mode = (0,) + self.common_mode
+         if self.common_mode is None:
+             self.common_mode = self._common_mode_list[0]
+         if self.common_mode not in self._common_mode_list:
+@@ -527,9 +535,13 @@ class Epix100Object(TiledCameraObject):
+         mbits = 0  # do not apply mask (would set pixels to zero)
+         # mbits=1 #set bad pixels to 0
+ 
++        if isinstance(self.common_mode, tuple):
++            self.evt.dat = self.det.raw.calib(
++                evt, cmpars=self.common_mode, rms=self.rms, normAll=True
++            )
+         # Common Mode currently NOT working for ePix100
+         # Skip all options that pass cmpars
+-        if self.common_mode % 100 == 6:
++        elif self.common_mode % 100 == 6:
+             # Was using cmpars=[6] -> This doesn't work for psana2
+             # Some of these other kwargs may not do anything
+             # self.evt.dat = self.det.raw.calib(
