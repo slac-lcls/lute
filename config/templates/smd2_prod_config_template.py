@@ -24,7 +24,9 @@
 {%- endfor %}
 
         # Add list of dicts for {{ detector }} to total dictionary
-        ret_dict["{{ detector }}"] = {{ dict_name }}
+        ret_dict["{{ detector }}"] = {{ dict_name }}s
+{%- else %}
+        # ERROR: expected mapping or list, got {{ data.__class__.__name__ }}
 {%- endif %}
 {%- endmacro -%}
 import numpy as np
