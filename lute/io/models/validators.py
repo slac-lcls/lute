@@ -37,7 +37,8 @@ def template_parameter_validator(template_params_name: str):
     ) -> None:
         if template_params is not None:
             for param, value in template_params:
-                values[param] = value
+                if value is not None:
+                    values[param] = value
         return None
 
     return validator(template_params_name, always=True, allow_reuse=True)(
