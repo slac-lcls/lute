@@ -95,7 +95,7 @@ A 4-tuple describing if and how common-mode correction should be applied.
             )
 
         class ROIParams(BaseModel):
-            ROI: Optional[List[List[List[int]]]] = Field(
+            ROI: Optional[List[List[int]]] = Field(
                 description="Definition of ROIs, can define multiple."
             )
 
