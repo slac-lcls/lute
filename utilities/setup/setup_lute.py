@@ -287,10 +287,14 @@ def modify_permissions(lute_path: str):
     os.chmod(lute_path, 0o775)
     for root, dirs, files in os.walk(lute_path):
         for d in dirs:
-            os.chmod(os.path.join(root, d), 0o775)
+            dir_path = os.path.join(root, d)
+            if not os.path.islink(dir_path):
+                os.chmod(dir_path, 0o775)
 
         for f in files:
-            os.chmod(os.path.join(root, f), 0o775)
+            file_path = os.path.join(root, f)
+            if not os.path.islink(file_path):
+                os.chmod(file_path, 0o775)
 
 
 def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_params: str) -> None:
@@ -548,14 +552,14 @@ def main() -> None:
     extra_slurm_params: str = " ".join(extra_slurm_args)
     # Check for at least nodes and ntasks, and if not provided, prompt the user to use defaults.
     nodes: int = 1
-    if "nodes" in extra_slurm_params:
+    if "nodes" not in extra_slurm_params:
         logger.warning(
             f"No nodes provided. Defaulting to {nodes}. Any key to continue. " 
             "Ctrl-C to exit."
         )
         try:
             _: str = input()
-            extra_slurm_params += f"{extra_slurm_params} --nodes={nodes}"
+            extra_slurm_params = f"{extra_slurm_params} --nodes={nodes}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
             sys.exit(0)
@@ -567,7 +571,7 @@ def main() -> None:
             "Ctrl-C to exit."
         )
         try:
-            _ = input()
+            _: str = input()
             extra_slurm_params = f"{extra_slurm_params} --ntasks={ntasks}"
         except KeyboardInterrupt:
             logger.info("Exiting.")
