@@ -1,4 +1,10 @@
 {%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
+{%- if data.dict is defined %}
+  {% set data = data.dict() %}
+{% endif %}
+{%- if data.model_dump is defined %}
+  {% set data = data.model_dump() %}
+{% endif %}
 {%- if data is mapping %}
 {%- for param_name, param_value in data.items() %}
         {% if param_value is none -%}
@@ -10,7 +16,7 @@
         {% if add_to_ret -%}
         ret_dict["{{ detector }}"] = {{ dict_name }}
         {% endif %}
-{%- else %}
+{%- elif data is sequence and data is not string %}
         # Create list of dicts for {{ detector }}
         {{ dict_name }}s = []
 
