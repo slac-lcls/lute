@@ -72,6 +72,18 @@ def get_intg(run):
     return intg_main, intg_addl
 {% endif %}
 
+{%- if getDetParams is defined and getDetParams %}
+def getDetParams(run):
+    ret_dict = {}
+
+    if run > 0:
+        det_params_dict = {}
+{% for detector, params in getDetParams.items() %}
+{{- step_parameters("det_params_dict", detector, params) }}
+{% endfor %}
+    return ret_dict
+{% endif %}
+
 {%- if getROIs is defined and getROIs %}
 def getROIs(run):
     ret_dict = {}
