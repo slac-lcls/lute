@@ -46,7 +46,7 @@ index bb6c679..985132b 100755
          # Common mode (default: None)
          common_mode = None
 +        if detname in user_det_params and "cmpars" in user_det_params[detname]:
-+            common_mode = user_det_params["cmpars"]
++            common_mode = user_det_params[detname]["cmpars"]
  
          if not havedet:
              continue
@@ -60,13 +60,14 @@ index bb6c679..985132b 100755
              os.environ["JID_UPDATE_COUNTERS"],
              json=[
 diff --git a/smalldata_tools/lcls2/DetObject.py b/smalldata_tools/lcls2/DetObject.py
-index 6a8a79b..b93b241 100644
+index 6a8a79b..ae5bbbc 100644
 --- a/smalldata_tools/lcls2/DetObject.py
 +++ b/smalldata_tools/lcls2/DetObject.py
-@@ -489,6 +489,14 @@ class Epix100Object(TiledCameraObject):
+@@ -489,9 +489,17 @@ class Epix100Object(TiledCameraObject):
              30,
          ]  # Jacob (norm), Jacob, def, def(ami-like), mine, mine (norm), mine (norm-bank), none, raw, calib
          self.common_mode = kwargs.get("common_mode", self._common_mode_list[0])
+-        if self.common_mode is None:
 +        if isinstance(self.common_mode, tuple) or isinstance(self.common_mode, list):
 +            self.common_mode = tuple(self.common_mode)
 +            if len(self.common_mode) > 4:
@@ -75,9 +76,13 @@ index 6a8a79b..b93b241 100644
 +            elif len(self.common_mode) == 3:
 +                print("Too few common mode parameters, but alg (cmpars[0]) is ignored. Extending!", self.common_mode)
 +                self.common_mode = (0,) + self.common_mode
-         if self.common_mode is None:
++        elif self.common_mode is None:
              self.common_mode = self._common_mode_list[0]
-         if self.common_mode not in self._common_mode_list:
+-        if self.common_mode not in self._common_mode_list:
++        elif self.common_mode not in self._common_mode_list:
+             print(
+                 "Common mode %d is not an option for as Epix detector, please choose from: "
+                 % self.common_mode,
 @@ -527,9 +535,13 @@ class Epix100Object(TiledCameraObject):
          mbits = 0  # do not apply mask (would set pixels to zero)
          # mbits=1 #set bad pixels to 0

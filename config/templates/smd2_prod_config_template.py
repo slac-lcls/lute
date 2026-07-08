@@ -85,8 +85,9 @@ def get_det_params(run):
     ret_dict = {}
 
     if run > 0:
+        det_params_dict = {}
 {% for detector, params in getDetParams.items() %}
-        ret_dict['{{ detector }}'] = {{ params }}
+{{- step_parameters("det_params_dict", detector, params) }}
 {% endfor %}
     return ret_dict
 {% endif %}
