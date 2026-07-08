@@ -193,6 +193,7 @@ def get_pressio_compression(run):
 # epicsPV = ['las_fs14_controller_time']
 # epicsOncePV = ['m0c0_vset', ('TMO:PRO2:MPOD:01:M2:C3:VoltageMeasure', 'MyAlias'),
 #               'IM4K4:PPM:SPM:VOLT_RBV', "FOO:BAR:BAZ", ("X:Y:Z", "MCBTest"), "A:B:C"]
+# epicsArchFilePV = [('ABCD', 'BCDEF'), ('JFDLKSFJ', 'SJKLFS')]
 {%- if epicsPV is defined %}
 epicsPV = {{ epicsPV }}
 {% else %}

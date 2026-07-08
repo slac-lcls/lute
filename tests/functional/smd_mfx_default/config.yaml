@@ -30,6 +30,9 @@ SubmitSMD:
   #wait: False
   #xtcav: False
   #noarch: False
+  lute_template_cfg:
+    template_name: "smd1_prod_config_template.py" # Or the smd2 version
+    output_path: "{{ work_dir }}/smalldata_tools/lcls1_producers/prod_config_mfx.py"
   # Producer variables. These are substituted into the producer to run specific
   # data reduction algorithms. Uncomment and modify as needed.
   # If you prefer to modify the producer file directly, leave commented.
@@ -37,5 +40,42 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames: ["epix10k2M"]
+  producer_parameters:
+    detnames: ["epix10k2M"]
+    #epicsPV: []
+    #epicsOncePV: []
+    #ttCalib: []
+    # Provide detector image sum algorithms.
+    # If detSumAlgos is not defined, it will default to calib, calib_dropped and
+    # calib_dropped_square for every detector. You can add processing algorithms for
+    # single detectors (e.g. epix10k2M or Rayonix) as below, or add algorithms which
+    # will apply to every detector defined in detnames by placing them under "all"
+    detSumAlgos:
+      epix10k2M:
+        - calib
+        - calib_max
+    getROIs:
+      epix10k2M:   # Change to detector name
+        - ROI: [[0, 1], [30, 180], [270, 350]]
+          writeArea: True   # Whether to save ROI, if False, save sum but not img.
+          thresADU: 3.5
+          calcPars: True    # Save ROI sum, mean, max along with ROI
+    getAzIntParams:
+      epix10k2M:
+        eBeam: 7.1
+        center: [0, 0]
+        dis_to_sam: 150
+        phiBins: 11
+        qbin: 0.02
+        tx: 0
+        ty: 0
+        #userMask: "/path/to/mask.npy"
+    getDropletParams:
+      epix10k2M:
+        threshold: 3.4375
+    #    thresholdLow: 5
+        thresADU: 3.5
+        useRms: False
+    #    nData: 1e5
+        name: 'droplet'
 ...

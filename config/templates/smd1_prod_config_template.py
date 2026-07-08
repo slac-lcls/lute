@@ -170,8 +170,10 @@ def getDetSums(run):
 ##########################################################
 # run independent parameters
 ##########################################################
-#aliases for experiment specific PVs go here
-#epicsPV = ['slit_s1_hw']
+# These lists are either PV names, aliases, or tuples with both.
+# epicsPV = ['las_fs14_controller_time']
+# epicsOncePV = ['m0c0_vset', ('TMO:PRO2:MPOD:01:M2:C3:VoltageMeasure', 'MyAlias'),
+#               'IM4K4:PPM:SPM:VOLT_RBV', "FOO:BAR:BAZ", ("X:Y:Z", "MCBTest"), "A:B:C"]
 {% if epicsPV is defined %}
 epicsPV = {{ epicsPV }} #[]
 {% else %}
@@ -182,16 +184,14 @@ epicsOncePV = {{ epicsOncePV }}
 {% else %}
 epicsOncePV = []
 {% endif %}
-#fix timetool calibration if necessary
-#ttCalib=[0.,2.,0.]
+# This is a list of float to fix the Timetool calibration if necessary. 
 {% if ttCalib is defined %}
 ttCalib = {{ ttCalib }} #[]
 {% else %}
 ttCalib = []
 {% endif %}
-#ttCalib=[1.860828, -0.002950]
-#decide which analog input to save & give them nice names
-#aioParams=[[1],['laser']]
+# This is a list of analog inputs to save and give them a name.
+# aioParams = [[1], ['laser']]
 {% if aioParams is defined %}
 aioParams = {{ aioParams }} # []
 {% else %}
