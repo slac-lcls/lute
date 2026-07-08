@@ -37,7 +37,7 @@ class DagParseError(Exception): ...
 
 RULES_STR_MAP: Dict[str, TriggerRule] = {
     "ALL_SUCCESS": TriggerRule.ALL_SUCCESS,
-    "ANY_SUCESS": TriggerRule.ANY_SUCCESS,
+    "ANY_SUCCESS": TriggerRule.ANY_SUCCESS,
     "ALL_COMPLETED": TriggerRule.ALL_COMPLETED,
     "ALL_FAILED": TriggerRule.ALL_FAILED,
     "ANY_FAILED": TriggerRule.ANY_FAILED,
@@ -70,58 +70,140 @@ def get_branch(
     node: yaml.nodes.MappingNode,
     branch_conditions: Dict[str, bool],
 ) -> yaml.nodes.MappingNode:
-    if "!branch" in node.tag:
-        branch_key: str = node.tag[8:]
-        if branch_key in branch_conditions.keys():
-            sub_node: Tuple[yaml.nodes.ScalarNode, yaml.nodes.MappingNode]
-            if len(node.value) > 2:
-                # The current branching mechanism only supports a single conditional
-                # branch. For each (key, condition) in `branch_conditions`:
-                #    - Take `key` path if `condition` is True
-                #    - Take other path if `condition` is False
-                # If we have more than 1 key remaining it means there were more
-                # branches provided (or potentially the parsing logic is wrong)
-                # Warn in this case, but we'll still select one of the other branches
-                warnings.warn(
-                    message=(
-                        "Only binary branching is currently supported but "
-                        f"{len(node.value)} branches were encountered.\n"
-                        "The DAG definition should be checked."
-                    ),
-                    category=RuntimeWarning,
-                )
-            # Keep track of which branch corresponds to the True condition.
-            # E.g. if the tag is !branch_daq2, look for the daq2 branch.
-            key_true_sub_node_idx: int = -1
-            # This is the index of the chosen branch. The current node will
-            # be replaced with the one at this index.
-            chosen_sub_node_idx: int = -1
-            for idx, sub_node in enumerate(node.value):
-                name: str = cast(str, loader.construct_scalar(sub_node[0]))
-                if name == branch_key:
-                    key_true_sub_node_idx = idx
-                    if branch_conditions[branch_key]:
-                        chosen_sub_node_idx = idx
-                else:
-                    if not branch_conditions[branch_key]:
-                        chosen_sub_node_idx = idx
-            if key_true_sub_node_idx < 0:
-                warnings.warn(
-                    f"For {node.tag} branching, we never encountered a {branch_key} "
-                    "branch. Selected branch may be incorrect. Check the DAG definition.",
-                    category=RuntimeWarning,
-                )
-            if chosen_sub_node_idx < 0:
-                warnings.warn(
-                    "Unable to correctly determine the branch to take. Selecting the "
-                    "first one. The DAG definition should be checked. This may also "
-                    "be a bug.",
-                    category=RuntimeWarning,
-                )
-                node.value = node.value[0][1].value
-            else:
-                node.value = node.value[chosen_sub_node_idx][1].value
+    """Select the correct sub-tree for a binary ``!branch_<key>`` tag.
+
+    Modifies ``node.value`` in-place to contain only the chosen branch's
+    key/value pairs, then returns the node so the caller can continue
+    processing it as a normal mapping.
+
+    Args:
+        loader: The active YAML loader instance.
+        node: The mapping node carrying a ``!branch_<key>`` tag.
+        branch_conditions: A mapping of branch keys to their evaluated
+            boolean conditions. E.g. ``{"daq2": False}`` means the *other*
+            (non-daq2) branch will be taken.
+
+    Returns:
+        The same node, with ``node.value`` replaced by the chosen branch's
+        key/value pairs.
+    """
+    if "!branch" not in node.tag:
+        return node
+
+    branch_key: str = node.tag[8:]
+    sub_node: Tuple[yaml.nodes.ScalarNode, yaml.nodes.MappingNode]
+    if len(node.value) > 2:
+        # The current branching mechanism only supports a single conditional
+        # branch. For each (key, condition) in `branch_conditions`:
+        #    - Take `key` path if `condition` is True
+        #    - Take other path if `condition` is False
+        # If we have more than 1 key remaining it means there were more
+        # branches provided (or potentially the parsing logic is wrong)
+        # Warn in this case, but we'll still select one of the other branches
+        warnings.warn(
+            message=(
+                "Only binary branching is currently supported but "
+                f"{len(node.value)} branches were encountered.\n"
+                "The DAG definition should be checked."
+            ),
+            category=RuntimeWarning,
+        )
+    # Keep track of which branch corresponds to the True condition.
+    # E.g. if the tag is !branch_daq2, look for the daq2 branch.
+    key_true_sub_node_idx: int = -1
+    # This is the index of the chosen branch. The current node will
+    # be replaced with the one at this index.
+    chosen_sub_node_idx: int = -1
+    for idx, sub_node in enumerate(node.value):
+        name: str = cast(str, loader.construct_scalar(sub_node[0]))
+        if name == branch_key:
+            key_true_sub_node_idx = idx
+            if branch_conditions[branch_key]:
+                chosen_sub_node_idx = idx
+        else:
+            if not branch_conditions[branch_key]:
+                chosen_sub_node_idx = idx
+    if key_true_sub_node_idx < 0:
+        warnings.warn(
+            f"For {node.tag} branching, we never encountered a {branch_key} "
+            "branch. Selected branch may be incorrect. Check the DAG definition.",
+            category=RuntimeWarning,
+        )
+    if chosen_sub_node_idx < 0:
+        warnings.warn(
+            "Unable to correctly determine the branch to take. Selecting the "
+            "first one. The DAG definition should be checked. This may also "
+            "be a bug.",
+            category=RuntimeWarning,
+        )
+        node.value = node.value[0][1].value
+    else:
+        node.value = node.value[chosen_sub_node_idx][1].value
     return node
+
+
+def get_run_type_nodes(
+    loader: yaml.SafeLoader,
+    node: yaml.nodes.MappingNode,
+    run_type: Optional[str],
+) -> List[yaml.nodes.MappingNode]:
+    """Return every branch node from a ``!run_type`` mapping that matches
+    the current run type.
+
+    Evaluation is **additive**: all matching branches are returned so that
+    maestro can launch them in parallel.  Two kinds of keys are supported:
+
+    * **Exact match** – key equals ``run_type`` exactly, e.g. ``GEOM``
+      matches only when the run type is ``GEOM``.
+    * **Negative match** – key starts with ``NOT_``, e.g. ``NOT_DARK``
+      matches whenever the run type is *not* ``DARK``.
+
+    Args:
+        loader: The active YAML loader instance.
+        node: The mapping node carrying the ``!run_type`` tag.  Each
+            key/value pair represents one candidate branch.
+        run_type: The run type string retrieved from the eLog at launch
+            time (e.g. ``"GEOM"``, ``"DARK"``, ``"DATA"``).  If ``None``
+            the run type could not be determined; a warning is emitted and
+            an empty list is returned so that no downstream tasks are
+            scheduled unexpectedly.
+
+    Returns:
+        A (possibly empty) list of inner ``MappingNode`` objects – one per
+        matching branch – each containing the ``task_name``, ``slurm_params``
+        and ``next`` keys for that branch.
+    """
+    if run_type is None:
+        warnings.warn(
+            "run_type is None: the run type could not be determined from the "
+            "eLog. No !run_type branches will be taken. Check that the run is "
+            "registered in the eLog and that the authorization token is valid.",
+            category=RuntimeWarning,
+        )
+        return []
+
+    matched: List[yaml.nodes.MappingNode] = []
+    for key_node, val_node in node.value:
+        key: str = cast(str, loader.construct_scalar(key_node))
+        if key.startswith("NOT_"):
+            # Negative match: include this branch when run_type is NOT the
+            # excluded type.  E.g. NOT_DARK fires on GEOM, DATA, CALIB, etc.
+            excluded_type: str = key[4:]
+            if run_type != excluded_type:
+                matched.append(val_node)
+        else:
+            # Exact match: include only when run_type equals this key.
+            if run_type == key:
+                matched.append(val_node)
+
+    if not matched:
+        warnings.warn(
+            f"run_type '{run_type}' did not match any branch in the !run_type "
+            "block. No downstream tasks will be scheduled for this branch. "
+            "Check the DAG definition if this is unexpected.",
+            category=RuntimeWarning,
+        )
+    return matched
 
 
 def get_lute_dag_loader(
@@ -129,6 +211,7 @@ def get_lute_dag_loader(
     default_trigger_rule: TriggerRule = TriggerRule.ALL_SUCCESS,
     default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
+    run_type: Optional[str] = None,
 ) -> Type[yaml.SafeLoader]:
     """Create a loader that handles the special tags used by LUTE's YAML files.
 
@@ -149,6 +232,11 @@ def get_lute_dag_loader(
             E.g. if it is determined that this is not an LCLS2 experiment, the
             dictionary should look like {"daq2": False} by the time it reaches this
             function.
+
+        run_type (Optional[str]): The run type string retrieved from the eLog
+            (e.g. ``"GEOM"``, ``"DARK"``, ``"DATA"``).  Used to evaluate
+            ``!run_type`` branching nodes.  If ``None`` a warning is emitted
+            and all ``!run_type`` branches are skipped (empty list).
 
     Returns:
         loader (Type[yaml.SafeLoader]): A loader class type that has had the extra
@@ -196,27 +284,41 @@ def get_lute_dag_loader(
                     for step in returned_job_steps:
                         job_step_dicts.append((step, step.trigger_rule))
         elif isinstance(node, yaml.nodes.MappingNode):
-            node = get_branch(
-                loader=loader, node=node, branch_conditions=branch_conditions
-            )
-            rule: Optional[TriggerRule] = None
-            node, rule = get_trigger_rule(node)
-            sub_node_desc: Tuple[
-                yaml.nodes.ScalarNode,
-                Union[yaml.nodes.ScalarNode, yaml.nodes.SequenceNode],
-            ]
-            for sub_node_desc in node.value:
-                key_name: str = cast(str, loader.construct_scalar(sub_node_desc[0]))
-                val_node: Union[yaml.nodes.ScalarNode, yaml.nodes.SequenceNode] = (
-                    sub_node_desc[1]
+            if "!run_type" in node.tag:
+                # Additive run_type branching: collect ALL matching branches and
+                # return a JobStep for each one so maestro can launch them in
+                # parallel. get_run_type_nodes handles NOT_ prefix logic and the
+                # run_type=None guard/warning.
+                job_step_dicts = []
+                matched_nodes: List[yaml.nodes.MappingNode] = get_run_type_nodes(
+                    loader=loader, node=node, run_type=run_type
                 )
-                val: Union[str, List[JobStep]]
-                if isinstance(val_node, yaml.nodes.ScalarNode):
-                    val = cast(str, loader.construct_scalar(val_node))
-                else:
-                    val = dag_constructor(loader, val_node)
-                job_step_dict[key_name] = val
-            job_step_dicts = [(job_step_dict, rule)]
+                for matched_node in matched_nodes:
+                    returned_job_steps = dag_constructor(loader, matched_node)
+                    for step in returned_job_steps:
+                        job_step_dicts.append((step, step.trigger_rule))
+            else:
+                node = get_branch(
+                    loader=loader, node=node, branch_conditions=branch_conditions
+                )
+                rule: Optional[TriggerRule] = None
+                node, rule = get_trigger_rule(node)
+                sub_node_desc: Tuple[
+                    yaml.nodes.ScalarNode,
+                    Union[yaml.nodes.ScalarNode, yaml.nodes.SequenceNode],
+                ]
+                for sub_node_desc in node.value:
+                    key_name: str = cast(str, loader.construct_scalar(sub_node_desc[0]))
+                    val_node: Union[yaml.nodes.ScalarNode, yaml.nodes.SequenceNode] = (
+                        sub_node_desc[1]
+                    )
+                    val: Union[str, List[JobStep]]
+                    if isinstance(val_node, yaml.nodes.ScalarNode):
+                        val = cast(str, loader.construct_scalar(val_node))
+                    else:
+                        val = dag_constructor(loader, val_node)
+                    job_step_dict[key_name] = val
+                job_step_dicts = [(job_step_dict, rule)]
         else:
             raise RuntimeError(f"Unsupported node type for LUTE DAG: {type(node)}")
 
@@ -383,6 +485,7 @@ def load_lute_dag(
     debug: bool,
     default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
+    run_type: Optional[str] = None,
 ) -> List[JobStep]:
     """Load a LUTE DAG from a YAML file with support for LUTE's custom tags.
 
@@ -408,6 +511,11 @@ def load_lute_dag(
             dictionary should look like {"daq2": False} by the time it reaches this
             function.
 
+        run_type (Optional[str]): The run type string retrieved from the eLog
+            (e.g. ``"GEOM"``, ``"DARK"``, ``"DATA"``).  Used to evaluate
+            ``!run_type`` branching nodes.  If ``None`` a warning is emitted
+            and all ``!run_type`` branches produce empty task lists.
+
     Returns:
         wf_defn (List[JobStep]): The parsed workflow to be passed to the workflow
             manager.
@@ -428,6 +536,7 @@ def load_lute_dag(
         default_trigger_rule=TriggerRule.ALL_SUCCESS,
         default_slurm_params=default_slurm_params,
         branch_conditions=branch_conditions,
+        run_type=run_type,
     )
 
     # The workflow passed may not contain the special keys, so we will check
@@ -457,8 +566,9 @@ def load_lute_dag_str(
     debug: bool,
     default_slurm_params: str = "",
     branch_conditions: Dict[str, bool] = {"daq2": True},
+    run_type: Optional[str] = None,
 ) -> List[JobStep]:
-    """As `lute_lute_dag` but takes a string for the workflow instead of a path."""
+    """As `load_lute_dag` but takes a string for the workflow instead of a path."""
     gen_params: JobParameters = JobParameters(
         lute_location, executable_subdir, config_file, debug
     )
@@ -468,6 +578,7 @@ def load_lute_dag_str(
         default_trigger_rule=TriggerRule.ALL_SUCCESS,
         default_slurm_params=default_slurm_params,
         branch_conditions=branch_conditions,
+        run_type=run_type,
     )
 
     # The workflow passed may not contain the special keys, so we will check
