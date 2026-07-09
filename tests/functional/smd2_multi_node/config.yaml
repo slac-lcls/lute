@@ -76,19 +76,19 @@ SubmitSMD:
         tx: 0
         ty: 0
 
-  AnalyzeSmallDataXSS:
-    # smd_path: ""             # Include to analyze ONE specified smalldata file
-    # Detector selection
-    xss_detname: "jungfrau"  # Name of detector with scattering signal
-    ipm_var: "MfxDg2BmMon/totalIntensityJoules"       # ipm PV to use for x-ray intensity filtering
-    # Motor scans to search for
-    scan_var:
-      - "lxt"
-      - "lens_v"
-      - "lens_h"
-      - "lens_g"
-    # Thresholds used for data filtering
-    intensity_thresholds:
-      min_Iscat: 10           # Minimum integrated scattering intensity
-      min_ipm: 500            # Minimum x-ray intensity at selected ipm
+AnalyzeSmallDataXSS:
+  # smd_path: ""             # Include to analyze ONE specified smalldata file
+  # Detector selection
+  xss_detname: "jungfrau"  # Name of detector with scattering signal
+  ipm_var: "MfxDg2BmMon/totalIntensityJoules"       # ipm PV to use for x-ray intensity filtering
+  # Motor scans to search for
+  scan_var:
+    - "lxt"
+    - "lens_v"
+    - "lens_h"
+    - "lens_g"
+  # Thresholds used for data filtering
+  intensity_thresholds:
+    min_Iscat: 10           # Minimum integrated scattering intensity
+    min_ipm: 500            # Minimum x-ray intensity at selected ipm
 ...
