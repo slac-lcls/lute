@@ -1,0 +1,49 @@
+# Smalldata producer configuration macro
+{%- macro step_parameters(dict_name, detector, data, add_to_ret=True, skip_keys=[]) %}
+{%- if data is mapping %}
+{%- for param_name, param_value in data.items() if param_name not in skip_keys %}
+        {% if param_value is none -%}
+        {{ dict_name }}["{{ param_name }}"] = None
+        {% else -%}
+        {{ dict_name }}["{{ param_name }}"] = {{ param_value | pprint }}
+        {% endif %}
+{%- endfor %}
+        {% if add_to_ret -%}
+        ret_dict["{{ detector }}"] = {{ dict_name }}
+        {% endif %}
+{%- else %}
+        # Create list of dicts for {{ detector }}
+        {{ dict_name }}s = []
+
+{%- for data_dict in data %}
+        # Create a dict for this set
+        {{ dict_name }} = {}
+
+{{- step_parameters(dict_name, detector, data_dict, False) }}
+        {{ dict_name }}s.append({{ dict_name }})
+
+{%- endfor %}
+
+        # Add list of dicts for {{ detector }} to total dictionary
+        ret_dict["{{ detector }}"] = {{ dict_name }}s
+{%- endif %}
+{%- endmacro -%}
+
+# Direct-assignment macro: stores a value (list, scalar or whole dict) as-is.
+# Use for passthrough cases where the per-key unpacking of `step_parameters`
+# is not wanted (e.g. lists of algorithm names, projection configs).
+{%- macro step_value(detector, data) %}
+        ret_dict["{{ detector }}"] = {{ data | pprint }}
+{%- endmacro -%}
+
+# Cheetah configuration macro
+{%- macro step_pydantic_model(data) %}
+{%- for field, sub_fields in data.items() %}
+{%- if sub_fields is mapping %}
+{{ field }}:
+{{- step_pydantic_model(sub_fields)|indent(loop.depth*2, True) }}
+{%- else %}
+{{ field }}: {{ sub_fields | tojson }}
+{%- endif %}
+{%- endfor %}
+{%- endmacro -%}
