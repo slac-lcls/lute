@@ -95,7 +95,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
         try:
             os.chmod(db_path, 0o664)
         except Exception:
-            logger.warn("Cannot setup permissions on database!")
+            logger.warning("Cannot setup permissions on database!")
 
 
 def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
