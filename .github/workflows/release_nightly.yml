@@ -1,0 +1,153 @@
+name: Build Nightly Wheels and Add to Simple Index
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Build binaries
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    if: github.repository_owner == "slac-lcls"
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # Add back Mac and Windows builds when maestro supports them
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
+
+      # Cache pip (for speedup)
+      - name: Cache pip
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9                        # v6
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Cache ccache (for speedup)
+      - name: Cache ccache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9                        # v6
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+      - name: Update Version name for Nightly Build
+        shell: bash
+        run: |
+          python -c "import re; p = 'meson.build'; c = open(p).read(); open(p, 'w').write(re.sub(r\"version:\s*'([0-9]+\.[0-9]+\.[0-9]+)'\", r\"version: '\1+dev'\", c))"
+
+      - name: Build wheels
+        # Check pyproject.toml for supported versions and additional config
+        uses: pypa/cibuildwheel@294735312765b09d24a2fbec22660ce817587d55                    # v4.1.0
+        env:
+          CIBW_TEST_REQUIRES: "pytest"
+          # Include the C++ test suite binaries
+          CIBW_TEST_COMMAND: "test_http && test_server && test_maestro_api && pytest {project}/tests/unit"
+          CIBW_AFTER_BUILD: "ccache -s"
+          # Could not do tests, but then I can't run them above
+          # CIBW_CONFIG_SETTINGS: "setup-args=\"-Dinstall_tests=false\" setup-args=\"-Dinstall_utilities=false\""
+
+      # Instead of disabling, will just remove them from the wheels afterwards
+      # Not sure this will work on platforms other than Linux? Not building for those though..
+      - name: Prune tests from wheels
+        run: |
+          for whl in wheelhouse/*.whl; do
+            echo "Pruning $whl..."
+            # Find all files inside the wheel that match our test names
+            # and delete them regardless of which .data/scripts folder they are in
+            zip -d "$whl" "*test_http" "*test_server" "*test_maestro_api" "*activate_installation"
+          done
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a              # v7.0.1
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+
+  # Build source distribution
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    if: github.repository_owner == "slac-lcls"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1                 # v6
+        with:
+          python-version: "3.11" # Shouldn't matter
+
+      # Meson setup runs, so we still need these unfortunately (for subprojects)
+      # The code will not actually be compiled for the sdist
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build
+
+      - name: Update Version name for Nightly Build
+        shell: bash
+        run: |
+          python -c "import re; p = 'meson.build'; c = open(p).read(); open(p, 'w').write(re.sub(r\"version:\s*'([0-9]+\.[0-9]+\.[0-9]+)'\", r\"version: '\1+dev'\", c))"
+
+      - name: Build sdist
+        run: |
+          python -m pip install build
+          python -m build --sdist
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a              # v7.0.1
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  # Create release, publish
+  create_and_publish_nighly:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write
+    if: github.repository_owner == "slac-lcls"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
+        with:
+          ref: dev
+
+      - name: Prep Nightly Tag
+        id: prep
+        run: |
+          VERSION=$(python3 -c "import re; f = open('meson.build'); m = re.search(r\"version\s*:\s*'([^']+)'\", f.read()); print(m.group(1) if m else ''); f.close()")
+          echo "tag_name=v${VERSION}+dev" >> $GITHUB_OUTPUT
+
+      - name: Gather build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c            # v8
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+
+      - name: Clean Existing Nightly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "${{ steps.prep.outputs.tag_name }}" --yes || true
+          git push --delete origin "${{ steps.prep.outputs.tag_name }}" || true
+          git tag -d "${{ steps.prep.outputs.tag_name }}" || true
+
+      - name: Create Nightly Release
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b          # v3.0.1
+        with:
+          tag_name: ${{ steps.prep.outputs.tag_name }}
+          target_commitish: dev
+          files: dist/*
+          prerelease: true
+          generate_release_notes: true
