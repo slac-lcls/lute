@@ -667,15 +667,15 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
         )
 
     class XSSProcessingParameters(BaseModel):
-        q_norm: Tuple[float, float] = Field(
-            (0.9, 3.5),
+        q_norm: List[float] = Field(
+            [0.9, 3.5],
             description=("Q-range to use for normalization of scattering signal."),
         )
         median_filter_size: int = Field(
             12, description="Size of median filter to apply to scattering profiles."
         )
-        water_qs: Tuple[float, float] = Field(
-            (1.0, 1.93), description="Q-range for water peak."
+        water_qs: List[float] = Field(
+            [1.0, 1.93], description="Q-range for water peak."
         )
         water_ratio: float = Field(
             1.25,
