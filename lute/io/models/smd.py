@@ -62,6 +62,24 @@ class SubmitSMDParameters(ThirdPartyParameters):
         """Task's version information. May be filled dynamically."""
 
     class ProducerParameters(BaseModel):
+        class UserDetectorParams(BaseModel):
+            cmpars: Optional[Tuple[int, int, int, int]] = Field(
+                default=None,
+                description="""
+A 4-tuple describing if and how common-mode correction should be applied.
+  cmpars[0] - Algorithm number. Currently this is ignored.
+  cmpars[1] - Mode. A bitwise OR of directions to apply common-mode:
+    - 1 = Row-wise per bank
+    - 2 = Column-wise per bank
+    - 4 = Bank-wise
+    These can be ORd together. E.g. `2 | 4` = 6 = Column and bankwise,
+    Or `1 | 2 | 4 = 7` is row, column, and bankwise.
+  cmpars[2] - The maximum allowable correction (in keV). Correction applied for
+    that pixel if this value is exceeeded.
+  cmpars[3] - The minimum number of unmasked pixels required to use the correction.
+""",
+            )
+
         class IntgParams(BaseModel):
             intg_main: str = Field(
                 description=(
@@ -77,7 +95,7 @@ class SubmitSMDParameters(ThirdPartyParameters):
             )
 
         class ROIParams(BaseModel):
-            ROI: Optional[List[List[List[int]]]] = Field(
+            ROI: Optional[List[List[int]]] = Field(
                 description="Definition of ROIs, can define multiple."
             )
 
@@ -358,6 +376,11 @@ class SubmitSMDParameters(ThirdPartyParameters):
 
         get_intg: Optional[IntgParams] = Field(
             None, description="Integrating detector configuration. LCLS2 only."
+        )
+
+        getDetParams: Optional[Dict[str, UserDetectorParams]] = Field(
+            None,
+            description="Dictionary of parameters for per-detector config like common-mode.",
         )
 
         getROIs: Optional[Dict[str, List[ROIParams]]] = Field(
@@ -646,32 +669,35 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
 
     class IntensityThresholds(BaseModel):
         min_Iscat: float = Field(
-            10.0, description="Minimum scattering intensity to use for filtering."
+            default=10.0,
+            description="Minimum scattering intensity to use for filtering.",
         )
         min_ipm: float = Field(
-            1000.0, description="Minimum X-ray intensity to use for filtering."
+            default=1000.0, description="Minimum X-ray intensity to use for filtering."
         )
 
     class XSSProcessingParameters(BaseModel):
         q_norm: Tuple[float, float] = Field(
-            (0.9, 3.5),
+            default=(0.9, 3.5),
             description=("Q-range to use for normalization of scattering signal."),
         )
         median_filter_size: int = Field(
-            12, description="Size of median filter to apply to scattering profiles."
+            default=12,
+            description="Size of median filter to apply to scattering profiles.",
         )
         water_qs: Tuple[float, float] = Field(
-            (1.0, 1.93), description="Q-range for water peak."
+            default=(1.0, 1.93), description="Q-range for water peak."
         )
         water_ratio: float = Field(
-            1.25,
+            default=1.25,
             description="Ratio of water peak intensity between low and high Q to filter bad water shots.",
         )
         water_sigma: float = Field(
-            2.0, description="Standard deviation for filtering bad water shots."
+            default=2.0, description="Standard deviation for filtering bad water shots."
         )
         num_intensity_bins: int = Field(
-            20, description="Number of bins for total intensity based subsampling."
+            default=20,
+            description="Number of bins for total intensity based subsampling.",
         )
 
     _find_smd_path = validate_smd_path("smd_path")
