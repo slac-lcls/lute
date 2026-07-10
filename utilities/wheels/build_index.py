@@ -1,6 +1,6 @@
 """A script to construct a PEP503 compatible simple package index."""
 
-__all__ = []
+__all__: "List[str]" = []
 __author__ = "Gabriel Dorlhiac"
 
 import os
@@ -92,7 +92,7 @@ def fetch_repo_releases(org: str, repo_name: str) -> List[Dict[str, Any]]:
     return releases
 
 
-def main():
+def main() -> None:
     # Structure: index_data[normalized_package_name] = list of (filename, url)
     index_data: Dict[str, List[Tuple[str, str]]] = {}
 
@@ -152,9 +152,9 @@ def main():
     root_index_path: str = os.path.join(OUTPUT_DIR, "index.html")
     with open(root_index_path, "w", encoding="utf-8") as f:
         f.write("<!DOCTYPE html>\n<html>\n<head>\n")
-        f.write(f"  <title>LUTE Simple Index</title>\n")
+        f.write("  <title>LUTE Simple Index</title>\n")
         f.write("</head>\n<body>\n")
-        f.write(f"  <h1>LUTE Simple Index</h1>\n")
+        f.write("  <h1>LUTE Simple Index</h1>\n")
         for pkg in sorted(index_data.keys()):
             # Sub-directory link must match the normalized name
             f.write(f'  <a href="{pkg}/">{pkg}</a><br/>\n')
