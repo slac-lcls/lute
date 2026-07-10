@@ -166,11 +166,7 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
 
     if jid_authorization is None or experiment is None or run_num is None:
         if cache_file is None:
-<<<<<<< HEAD
-            logger.warn(
-=======
             logger.warning(
->>>>>>> 8a1a5ee (MNT Turn errors to warnings and dont exit for the kerberos cache.)
                 "No Kerberos cache - may find issues. Try running `kinit` and resubmitting."
             )
 
