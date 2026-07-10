@@ -38,6 +38,9 @@ SubmitSMD:
   #wait: False
   #xtcav: False
   #noarch: False
+  lute_template_cfg:
+    template_name: "smd2_prod_config_template.py" # Or the smd2 version
+    output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_mfx.py"
   # **************************************************************************/
   # * Below this point you will be configuring the prod_config_mfx file ******/
   # * This will overwrite any manual changes you make to that file      ******/
@@ -50,26 +53,28 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames: ["jungfrau","epix100_0", "qadc"]
-  #epicsPV: []
-  epicsArchFilePV:
-    - ["SP1L0:DCCM:MMS:TH1.RBV", 'dccm_th1']
-    - ["SP1L0:DCCM:MMS:TH2.RBV", 'dccm_th2']
-    - ["SP1L0:DCCM:MMS:TH1", 'dccm_th1_setpoint']
-    - ["SP1L0:DCCM:MMS:TH2", 'dccm_th2_setpoint']
-    - ["SP1L0:DCCM:energy:OphydReadback",'dccm_E']
-    - ["SP1L0:DCCM:energy:OphydSetpoint",'dccm_E_setpoint']
-    - ["MFX:LAS:MMN:11.RBV",'lens_h']
-    - ["MFX:LAS:MMN:12.RBV",'lens_v']
-  getAzIntParams:
-    jungfrau:
-      eBeam: 12.965
-      center: [-1107, 918]
-      dis_to_sam: 155.5
-      phiBins: 11
-      qbin: 0.02
-      tx: 0
-      ty: 0
+  producer_parameters:
+    detnames: ["jungfrau","epix100_0", "qadc"]
+    #epicsPV: []
+    #epicsOncePV: []
+    epicsArchFilePV:
+      - ["SP1L0:DCCM:MMS:TH1.RBV", 'dccm_th1']
+      - ["SP1L0:DCCM:MMS:TH2.RBV", 'dccm_th2']
+      - ["SP1L0:DCCM:MMS:TH1", 'dccm_th1_setpoint']
+      - ["SP1L0:DCCM:MMS:TH2", 'dccm_th2_setpoint']
+      - ["SP1L0:DCCM:energy:OphydReadback",'dccm_E']
+      - ["SP1L0:DCCM:energy:OphydSetpoint",'dccm_E_setpoint']
+      - ["MFX:LAS:MMN:11.RBV",'lens_h']
+      - ["MFX:LAS:MMN:12.RBV",'lens_v']
+    getAzIntParams:
+      jungfrau:
+        eBeam: 12.965
+        center: [-1107, 918]
+        dis_to_sam: 155.5
+        phiBins: 11
+        qbin: 0.02
+        tx: 0
+        ty: 0
 
 AnalyzeSmallDataXSS:
   # smd_path: ""             # Include to analyze ONE specified smalldata file

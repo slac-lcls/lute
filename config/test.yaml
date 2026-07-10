@@ -39,6 +39,7 @@ SubmitSMD:
   # add them with their own set of parameters.
   #detnames: []
   #epicsPV: []
+  #epicsOncePV: []
   #ttCalib: []
   # Provide detector image sum algorithms.
   # If detSumAlgos is not defined, it will default to calib, calib_dropped and
