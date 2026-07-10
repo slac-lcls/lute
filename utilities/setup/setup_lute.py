@@ -371,7 +371,7 @@ def main() -> None:
         required=True,
     )
     parser.add_argument(
-        "-fd",
+        "-fb",
         "--fresh_build",
         help=(
             "Install a new install of LUTE in the experiment folder via cloning "
@@ -424,17 +424,6 @@ def main() -> None:
         action="extend",
         help="Which analysis workflow(s) to run. E.g. -W smd bayfai.",
     )
-    parser.add_argument(
-        "-P",
-        "--python-versions",
-        type=str,
-        nargs="+",
-        help=(
-            "Python versions to create virtual environments for when using "
-            "--fresh_install.  E.g. -P 3.9 3.11. "
-        ),
-        default=list(PYTHON_INTERPRETERS.keys()),
-    )
     args: argparse.Namespace
     extra_args: List[str]  # May have additional SLURM arguments
     args, extra_args = parser.parse_known_args()
@@ -461,11 +450,11 @@ def main() -> None:
 
         # Create a venv for each requested Python version
         builder = LuteEnvBuilder(lute_version=version, env_dir=results_dir)
-        for pv in args.python_versions:
+        for pv in PYTHON_INTERPRETERS.keys():
             builder.create(pv)
 
         # Use the first requested version as the primary for workflow setup
-        primary_version: str = args.python_versions[0]
+        primary_version: str = list(PYTHON_INTERPRETERS.keys())[0]
         lute_path = builder.venv_path(primary_version)
         venv_bin: str = builder.bin_path(primary_version)
         arp_executable = f"{venv_bin}/submit_launch_slurm.sh"

@@ -369,8 +369,15 @@ def construct_task_parameters(schema: Dict[str, Any], values: Dict[str, Any]) ->
             new_field: Any
             cast_as: type
             if type_info == "array":
-                cast_as = BASE_SCHEMA_TYPE_MAP[param_info["items"]["type"]]
-                new_field = list(map(cast_as, working_value))
+                individual_types: Union[List[Dict[str, Any]], Tuple[Dict[str, Any], ...], Dict[str, Any]] = param_info["items"]
+                if isinstance(individual_types, list) or isinstance(individual_types, tuple):
+                    new_field = []
+                    for i, t in enumerate(individual_types):
+                        cast_as = BASE_SCHEMA_TYPE_MAP[t["type"]]
+                        new_field.append(cast_as(working_value[i]))
+                else:
+                    cast_as = BASE_SCHEMA_TYPE_MAP[individual_types["type"]]
+                    new_field = list(map(cast_as, working_value))
             elif type_info == "null":
                 new_field = None
             elif type_info == "object":
@@ -412,7 +419,10 @@ def construct_task_parameters(schema: Dict[str, Any], values: Dict[str, Any]) ->
                     if "type" in possibility:
                         type_info = possibility["type"]
                         if type_info == "array":
-                            cast_as = BASE_SCHEMA_TYPE_MAP[possibility["items"]["type"]]
+                            items_schema = possibility["items"]
+                            if isinstance(items_schema, list):
+                                items_schema = items_schema[0]
+                            cast_as = BASE_SCHEMA_TYPE_MAP[items_schema["type"]]
                             try:
                                 fields_for_params[param_name] = list(
                                     map(cast_as, working_value)
