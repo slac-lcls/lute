@@ -26,6 +26,7 @@ __author__ = "Gabriel Dorlhiac"
 import json
 import logging
 import os
+import stat
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from lute.execution.logging import get_logger
@@ -87,10 +88,14 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
             add_execution(con=con, cfg=cfg)
         except sqlite3.OperationalError as err:
             logger.error(f"Database storage error: {err}")
-    try:
-        os.chmod(db_path, 0o664)
-    except Exception:
-        logger.error("Cannot setup permissions on database!")
+
+    db_stat: os.stat_result = os.stat(db_path)
+    db_perms: str = oct(stat.S_IMODE(db_stat.st_mode))
+    if db_perms != "0o664":
+        try:
+            os.chmod(db_path, 0o664)
+        except Exception:
+            logger.warn("Cannot setup permissions on database!")
 
 
 def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
