@@ -64,11 +64,14 @@ namespace LWM {
 
   std::mutex JobRegistry::m_registry_mut;
   std::set<std::pair<std::string, std::string>> JobRegistry::m_active_jobs;
+  std::map<std::string, std::string> JobRegistry::m_job_logfiles;
 
   void JobRegistry::register_job(const std::string& task_name,
-                                 const std::string& job_id) {
+                                 const std::string& job_id,
+                                 const std::string& logfile) {
     std::lock_guard<std::mutex> lock(m_registry_mut);
     m_active_jobs.insert({task_name, job_id});
+    m_job_logfiles[job_id] = logfile;
   }
 
   void JobRegistry::unregister_job(const std::string& task_name) {
@@ -103,6 +106,22 @@ namespace LWM {
   bool JobRegistry::is_empty() {
     std::lock_guard<std::mutex> lock(m_registry_mut);
     return m_active_jobs.empty();
+  }
+
+  std::string JobRegistry::get_log_file_for(const std::string& job_id) {
+    std::string logfile { "" };
+    {
+      std::lock_guard<std::mutex> lock(m_registry_mut);
+      if (m_job_logfiles.count(job_id)) {
+        logfile = m_job_logfiles[job_id];
+      }
+    }
+
+    if (!logfile.empty()) {
+      return logfile;
+    }
+
+    throw std::runtime_error("Unable to find log file for Job: " + job_id);
   }
 
   void JsonStatusHandler::update_running_splits(JobStepSplits* splits,
@@ -397,6 +416,20 @@ namespace LWM {
     }
   }
 
+  std::optional<std::string>
+  SubprocessLauncher::add_job_to_registry(std::string& managed_task_name,
+                                          std::string& log) {
+    static std::map<std::string, unsigned> task_counts;
+
+    if (task_counts.count(managed_task_name)) {
+      task_counts[managed_task_name]++;
+    } else {
+      task_counts[managed_task_name] = 1;
+    }
+
+    return std::make_optional(std::to_string(task_counts[managed_task_name]));
+  }
+
   JobReturn SubprocessLauncher::launch_task(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
     JobStepSplits splits;
     std::string managed_task_name = job.managed_task_name;
@@ -427,13 +460,22 @@ namespace LWM {
         status = "SUBPROCESS_FAILED";
         return JobReturn(managed_task_name, status, log, splits);
       }
-      std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
-      std::smatch jobid_match;
-      std::string jobid{""};
-      if (std::regex_search(log,jobid_match,jobid_regex)) {
-        jobid = jobid_match[1].str();
-        JobRegistry::register_job(managed_task_name, jobid);
+
+      auto jobid_opt = this->add_job_to_registry(managed_task_name, log);
+      if (!jobid_opt.has_value()) {
+        status = "SUBPROCESS_NOT_REGISTERED";
+
+        return JobReturn(managed_task_name, status, log, splits);
       }
+
+      std::string jobid { *jobid_opt };
+      std::string logfile = JobRegistry::get_log_file_for(jobid);
+      logger()->info("Will begin monitoring {}. Individual log file will be at: {}. {}",
+                     jobid,
+                     logfile,
+                     this->m_unbuffered_logs
+                     ? "Will stream logs in real time, too."
+                     : "Will collect logs here at end, too.");
 
       while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
         if (s_interrupted) {
@@ -470,6 +512,73 @@ namespace LWM {
     return launch_task(job, is_daq2, wait_for);
   }
 
+  std::optional<std::string>
+  SlurmLauncher::add_job_to_registry(std::string& managed_task_name, std::string& log) {
+    std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
+    std::smatch jobid_match;
+    std::string jobid { "" };
+    if (std::regex_search(log, jobid_match, jobid_regex)) {
+      jobid = jobid_match[1].str();
+
+      if (jobid.empty()) {
+        logger()->error("Determined SLURM jobid was empty!");
+
+        return std::nullopt;
+      }
+
+      // Allow some time for submission and then backoff
+      std::size_t wait_ms { 500 };
+      bool found_logfile { false };
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+      std::string get_logfile_cmd { "sacct -j " + jobid + " -o StdOut%200" };
+      m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
+      auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+
+      std::string logfile_path { "" };
+      while (!found_logfile && wait_ms < 10000) {
+        if (WEXITSTATUS(ret_code)) {
+          logger()->error("Unable to run {}. Return code: {}",
+                          get_logfile_cmd,
+                          std::to_string(WEXITSTATUS(ret_code)));
+          return std::nullopt;
+        }
+
+        std::regex logfile_regex(R"((/[^\s]+\.out))");
+        std::smatch logfile_match;
+        if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
+          logfile_path = logfile_match[1].str();
+          found_logfile = true;
+          break;
+        }
+
+        wait_ms <<= 2;
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+        std::tie(slurm_info, ret_code) = run_subprocess_log(get_logfile_cmd, true);
+      }
+
+      if (!found_logfile) {
+        logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
+                        slurm_info);
+        return std::nullopt;
+      }
+
+      std::size_t pos = logfile_path.find("%J");
+      if (pos != std::string::npos) {
+        logfile_path.replace(pos, 2, jobid);
+      } else {
+        logger()->error("Log file path is in unexpected format! {}", logfile_path);
+        return std::nullopt;
+      }
+
+      JobRegistry::register_job(managed_task_name, jobid, logfile_path);
+
+      return std::make_optional(jobid);
+    }
+
+    return std::nullopt;
+  }
+
   std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
     //if (job.parameters.executable_subdir == "launch_")
     std::string executable =
@@ -496,44 +605,20 @@ namespace LWM {
 
   void SlurmLauncher::update_log(std::string& log, std::string& jobid) {
     if (jobid.empty()) {
-      logger()->error("Trying to get information for an empty SLURM jobid!");
-    }
-    std::string get_logfile_cmd{"sacct -j " + jobid + " -o StdOut%200"};
-    m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
-    auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+      logger()->error("Trying to get information for an empty SLURM jobid! Skipping!");
 
-    if (WEXITSTATUS(ret_code)) {
-      logger()->error("Unable to run {}. Return code: {}",
-                      get_logfile_cmd,
-                      std::to_string(WEXITSTATUS(ret_code)));
       return;
     }
 
+    std::string logfile_path = JobRegistry::get_log_file_for(jobid);
 
-    std::regex logfile_regex(R"((/[^\s]+\.out))");
-    std::smatch logfile_match;
-    std::string logfile_path{""};
-    if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
-      logfile_path = logfile_match[1].str();
-    } else {
-      logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
-                      slurm_info);
-      return;
-    }
-
-    size_t pos = logfile_path.find("%J");
-    if (pos != std::string::npos) {
-      logfile_path.replace(pos, 2, jobid);
-    } else {
-      return;
-    }
-
-    std::string get_slurm_log_cmd{"cat "+logfile_path};
+    std::string get_slurm_log_cmd { "cat " + logfile_path };
     logger()->debug("Attempting to grab output from log file using: {}",
                     get_slurm_log_cmd);
 
     // Wait some milliseconds if it fails. Then wait longer until more than 10 s
-    size_t wait_ms { 500 };
+    int ret_code { 0 };
+    std::size_t wait_ms { 500 };
     std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
     if (WEXITSTATUS(ret_code) == 0) {
       return;
