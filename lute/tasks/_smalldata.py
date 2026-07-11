@@ -1136,10 +1136,12 @@ class AnalyzeSmallData(Task):
             (len(self._q_vals), len(bins))
         )
         las_on: npt.NDArray[np.float64] = np.nansum(
-            normed_xss_las_on, axis=(0, 1),
+            normed_xss_las_on,
+            axis=(0, 1),
         )  # [q_bins]
         las_off: npt.NDArray[np.float64] = np.nansum(
-            normed_xss_las_off, axis=(0, 1),
+            normed_xss_las_off,
+            axis=(0, 1),
         )  # [q_bins]
         xss_las_off: npt.NDArray[np.float64] = np.nanmean(
             normed_xss_las_off, axis=(0, 1)
