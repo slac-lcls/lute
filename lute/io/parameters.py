@@ -369,8 +369,12 @@ def construct_task_parameters(schema: Dict[str, Any], values: Dict[str, Any]) ->
             new_field: Any
             cast_as: type
             if type_info == "array":
-                individual_types: Union[List[Dict[str, Any]], Tuple[Dict[str, Any], ...], Dict[str, Any]] = param_info["items"]
-                if isinstance(individual_types, list) or isinstance(individual_types, tuple):
+                individual_types: Union[
+                    List[Dict[str, Any]], Tuple[Dict[str, Any], ...], Dict[str, Any]
+                ] = param_info["items"]
+                if isinstance(individual_types, list) or isinstance(
+                    individual_types, tuple
+                ):
                     new_field = []
                     for i, t in enumerate(individual_types):
                         cast_as = BASE_SCHEMA_TYPE_MAP[t["type"]]
