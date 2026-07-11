@@ -1090,11 +1090,11 @@ class AnalyzeSmallData(Task):
             diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
                 (q_bins, scan_bins)
 
-            laser_on (npt.NDArray[np.float64]): 2D laser on scattering profiles
-                of shape (n_events_laser_on, q_bins)
+            laser_on (npt.NDArray[np.float64]): 1D laser on scattering profiles
+                of shape (q_bins,)
 
-            laser_off (npt.NDArray[np.float64]): 2D laser off scattering profiles
-                of shape (n_events_laser_off, q_bins)
+            laser_off (npt.NDArray[np.float64]): 1D laser off scattering profiles
+                of shape (q_bins,)
         """
         assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
 
@@ -1135,8 +1135,11 @@ class AnalyzeSmallData(Task):
         binned_xss_las_on: npt.NDArray[np.float64] = np.zeros(
             (len(self._q_vals), len(bins))
         )
-        xss_las_on: npt.NDArray[np.float64] = np.nanmean(
-            normed_xss_las_on, axis=(0, 1)
+        las_on: npt.NDArray[np.float64] = np.nansum(
+            normed_xss_las_on, axis=(0, 1),
+        )  # [q_bins]
+        las_off: npt.NDArray[np.float64] = np.nansum(
+            normed_xss_las_off, axis=(0, 1),
         )  # [q_bins]
         xss_las_off: npt.NDArray[np.float64] = np.nanmean(
             normed_xss_las_off, axis=(0, 1)
@@ -1160,7 +1163,7 @@ class AnalyzeSmallData(Task):
             binned_xss_las_on
         ) - np.nan_to_num(xss_las_off[:, np.newaxis])
 
-        return bins, diff, xss_las_on, xss_las_off
+        return bins, diff, las_on, las_off
 
     def _calc_scan_binned_difference_xas(
         self,
