@@ -218,6 +218,11 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
+        # We also will send the manager a jobid in addition to our name.
+        # If using SLURM this is the SLURM_JOBID
+        # If using straight Python launching the process ID
+        self._job_id: str = os.getenv("SLURM_JOBID", str(os.getpid()))
+
     @property
     def task_name(self) -> str:
         return self._analysis_desc.task_result.task_name
@@ -242,6 +247,11 @@ class BaseExecutor(ABC):
             logger.error(f"Unable to send an HTTP request of type {method}")
             return
 
+        # Include a job id here so it doesn't need to be remembered at each call site
+        tagged_json_data: Dict[str, str] = {"orig_job_id": self._job_id}
+        if json_data is not None:
+            tagged_json_data.update(json_data)
+
         # Set a timeout so we don't hang if the workflow manager dies
         timeout: float = 5.0
         try:
@@ -249,7 +259,7 @@ class BaseExecutor(ABC):
             if json_data is not None:
                 resp = func(
                     f"http://{self._lute_manager_url}/{end_point}",
-                    json=json_data,
+                    json=tagged_json_data,
                     timeout=timeout,
                 )
             else:

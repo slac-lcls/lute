@@ -9,6 +9,8 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <atomic>
+#include <chrono>
+#include <functional>
 #include <future>
 #include <map>
 #include <memory>
@@ -38,23 +40,45 @@ namespace LWM {
   public:
     static void register_job(const std::string& task_name,
                              const std::string& job_id,
-                             const std::string& logfile);
+                             const std::string& logfile,
+                             std::function<bool(const std::string&)> status_func,
+                             std::function<void(const std::string&)> cancel_func);
+
     static void unregister_job(const std::string& task_name);
+
     static void cancel_all();
+
+    static void cancel_one(const std::string& jobid);
+
     static bool is_empty();
+
     static std::string get_log_file_for(const std::string& job_id);
+
+    static std::chrono::time_point<std::chrono::steady_clock>
+    get_last_update_time(const std::string& job_id);
+
+    static void
+    set_last_update_time(const std::string& job_id,
+                         std::chrono::time_point<std::chrono::steady_clock> update_time);
 
   private:
     static std::mutex m_registry_mut;
     // Set of (task_name, job_id) pairs
     static std::set<std::pair<std::string, std::string>> m_active_jobs;
+    static std::map<std::string,
+                    std::chrono::time_point<std::chrono::steady_clock>> m_last_updated;
 
     // Registry of log files for jobids - jobid: logfile
     static std::map<std::string, std::string> m_job_logfiles;
-  };
 
-  template <class Derived>
-  class RegistrySupport {};
+    // Callbacks registered to get status - Currently simply returns true if running
+    // status_func(jobid) -> true if running, false otherwise
+    static std::map<std::string, std::function<bool(const std::string&)>> m_status_funcs;
+
+    // Callbacks registered to cancel a job
+    // cancel_func(jobid) -> cancels job and returns nothing.
+    static std::map<std::string, std::function<void(const std::string&)>> m_cancel_funcs;
+  };
 
   class Launcher {
   public:
@@ -269,6 +293,10 @@ namespace LWM {
     virtual std::optional<std::string>
     add_job_to_registry(std::string& managed_task_name, std::string& log);
 
+    virtual bool is_subprocess_running(const std::string& jobid) = 0;
+
+    virtual void cancel_subprocess(const std::string& jobid) = 0;
+
   protected:
     // Sub-class must override `prepare_parameter_str`
     virtual std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) = 0;
@@ -307,6 +335,10 @@ namespace LWM {
       : SubprocessLauncher(unbuffered_logs)
     {}
 
+    virtual bool is_subprocess_running(const std::string& jobid) final;
+
+    virtual void cancel_subprocess(const std::string& jobid) final;
+
   protected:
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) final;
 
@@ -337,6 +369,10 @@ namespace LWM {
 
     std::optional<std::string>
     add_job_to_registry(std::string& managed_task_name, std::string& log) final;
+
+    virtual bool is_subprocess_running(const std::string& jobid) final;
+
+    virtual void cancel_subprocess(const std::string& jobid) final;
 
   protected:
     void update_log(std::string& log, std::string& jobid);
