@@ -25,7 +25,7 @@ SubmitSMD:
   #epicsAll: False
   #full: False
   #fullSum: False
-  default: true
+  #default: true
   #image: False
   #tiff: False
   #centerpix: False
@@ -43,7 +43,8 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames: ["epix10k2M"]
+  detnames:
+    - "epix10k2M"
   detSumAlgos:
     epix10k2M:
       - calib

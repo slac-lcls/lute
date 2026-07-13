@@ -60,14 +60,15 @@ SubmitSMD:
     - ["SP1L0:DCCM:energy:OphydSetpoint", 'dccm_E_setpoint']
     - ["MFX:LAS:MMN:11.RBV", 'lens_h']
     - ["MFX:LAS:MMN:12.RBV", 'lens_v']
-  getAzIntPyFAIParams:
+  getAzIntParams:
     jungfrau:
-      pix_size: 75e-6
-      poni_file: "/sdf/data/lcls/ds/prj/prjlute22/results/benchmarks/xss/geom/r0082.poni"
-      npts: 256
-      npts_az: 13
-      int_units: "q_A^-1"
-      return2d: true
+      eBeam: 12.965
+      center: [-1107, 918]
+      dis_to_sam: 155.5
+      phiBins: 11
+      qbin: 0.02
+      tx: 0
+      ty: 0
 
 ###########################
 # TR-Scattering Analysis
@@ -84,11 +85,4 @@ AnalyzeSmallDataXSS:
   intensity_thresholds:
     min_Iscat: 500
     min_ipm: 500
-  xss_processing_parameters:
-    q_norm: [0.9, 3.5]
-    median_filter_size: 12
-    water_qs: [1.0, 1.93]
-    water_ratio: 1.25
-    water_sigma: 2.0
-    num_intensity_bins: 20
 ...
