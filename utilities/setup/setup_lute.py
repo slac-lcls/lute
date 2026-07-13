@@ -452,7 +452,7 @@ def main() -> None:
     if args.fresh_install:
         version: str = args.version
         if args.version == "dev":
-            version = "0.2.0"
+            version = "0.3.0"
 
         # Create a venv for each requested Python version
         env_dir = f"{results_dir}/lute_envs"
