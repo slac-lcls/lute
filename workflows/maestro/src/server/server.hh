@@ -1,8 +1,8 @@
 #ifndef HTTP_SERVER_HH
 #define HTTP_SERVER_HH
 
-#include "handler.hh"
-#include "http.hh"
+#include "server/handler.hh"
+#include "server/http.hh"
 
 #include "spdlog/sinks/stdout_color_sinks.h"
 
