@@ -212,7 +212,10 @@ class LuteEnvBuilder:
             _run_subprocess_log(cmd)
 
         # Install lute-lcls.
-        pkg_spec = f"lute-lcls=={self.lute_version}"
+        if self.lute_version == "dev":
+            pkg_spec = f"lute-lcls"
+        else:
+            pkg_spec = f"lute-lcls=={self.lute_version}"
         logger.info(f"Installing {pkg_spec} into {env_dir}...")
         _run_subprocess_log(
             [venv_python, "-m", "pip", "install", "--upgrade", "pip"],
@@ -451,9 +454,6 @@ def main() -> None:
     std_test_config: str
     if args.fresh_install:
         version: str = args.version
-        if args.version == "dev":
-            version = "0.3.0"
-
         # Create a venv for each requested Python version
         env_dir = f"{results_dir}/lute_envs"
         builder = LuteEnvBuilder(lute_version=version, env_dir=env_dir)
