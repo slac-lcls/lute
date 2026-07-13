@@ -37,24 +37,24 @@ DEFAULT_CONFIG = {
     },
 }
 
+
 # Available Python interpreters for multiversioning.
 PYTHON_INTERPRETERS: Dict[str, str] = {
     "3.9": "/sdf/group/lcls/ds/ana/sw/conda2/inst/bin/python3.9",
     "3.11": "/sdf/group/lcls/ds/ana/sw/conda2-v3/inst/bin/python3.11",
 }
 
+
 def _run_subprocess_log(
-        cmd: List[str], 
-        env: Optional[Dict[str, str]] = None,
-        cwd: Optional[str] = None
-        ) -> None:
+    cmd: List[str], env: Optional[Dict[str, str]] = None, cwd: Optional[str] = None
+) -> None:
     """Run a subprocess with logging.
-    
+
     Args:
         cmd (List[str]): Command to run as a list of strings.
-        
+
         env (Optional[Dict[str, str]]): Environment to run the command in.
-        
+
         cwd (Optional[str]):  Working directory to run the command in.
     """
     global logger
@@ -67,7 +67,7 @@ def _run_subprocess_log(
         stderr=subprocess.PIPE,
         universal_newlines=True,
         env=env,
-        cwd=cwd
+        cwd=cwd,
     ).communicate()
     if out:
         logger.info(out)
@@ -163,10 +163,9 @@ class LuteEnvBuilder:
         self._created: Dict[str, str] = {}
 
     def venv_path(self, python_version: str) -> str:
-        """Standard venv directory path for a given Python version.
-        """
-        ver_nodot = python_version.replace(".", "")
-        return os.path.join(self.env_dir, f"lute_env_py{ver_nodot}")
+        """Standard venv directory path for a given Python version."""
+        version = python_version.replace(".", "")
+        return os.path.join(self.env_dir, f"lute_env_py{version}")
 
     def bin_path(self, python_version: str) -> str:
         """Path to the venv's bin directory."""
@@ -176,7 +175,9 @@ class LuteEnvBuilder:
         """Path to the venv's site-packages directory."""
         return os.path.join(
             self.venv_path(python_version),
-            "lib", f"python{python_version}", "site-packages",
+            "lib",
+            f"python{python_version}",
+            "site-packages",
         )
 
     def create(self, python_version: str) -> str:
@@ -206,15 +207,19 @@ class LuteEnvBuilder:
         if os.path.exists(env_dir):
             logger.info(f"Virtual environment already exists at {env_dir}. Reusing.")
         else:
-            logger.info(f"Creating venv with {python_path} at {env_dir}...")
+            logger.info(f"Creating python{python_version} env at {env_dir}...")
             cmd: List[str] = [python_path, "-m", "venv", env_dir]
             _run_subprocess_log(cmd)
 
-        # Upgrade pip, then install lute-lcls
+        # Install lute-lcls.
         pkg_spec = f"lute-lcls=={self.lute_version}"
         logger.info(f"Installing {pkg_spec} into {env_dir}...")
-        _run_subprocess_log([venv_python, "-m", "pip", "install", "--upgrade", "pip"])
-        _run_subprocess_log([venv_python, "-m", "pip", "install", pkg_spec])
+        _run_subprocess_log(
+            [venv_python, "-m", "pip", "install", "--upgrade", "pip"],
+        )
+        _run_subprocess_log(
+            [venv_python, "-m", "pip", "install", "--ignore-installed", pkg_spec],
+        )
 
         # Write LUTE environment variables into the activation script
         self._write_env_vars(env_dir, python_version)
@@ -227,7 +232,7 @@ class LuteEnvBuilder:
         """Append LUTE_ environment variables to the venv activate script."""
         activate_path = os.path.join(env_dir, "bin", "activate")
         env_vars = (
-            f'\n# LUTE environment variables\n'
+            f"\n# LUTE environment variables\n"
             f'export LUTE_VIRTUAL_ENV_PY{python_version.replace(".", "")}="{env_dir}"\n'
             f'export LUTE_NEW_PYVER="python{python_version}"\n'
         )
@@ -297,7 +302,9 @@ def modify_permissions(lute_path: str):
                 os.chmod(file_path, 0o775)
 
 
-def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_params: str) -> None:
+def update_dag_params(
+    dag_path: str, partition: str, account: str, extra_slurm_params: str
+) -> None:
     """Update slurm_params in a DAG file in place.
 
     For tasks listed in DEFAULT_CONFIG, use the task-specific nodes/ntasks_per_node.
@@ -341,8 +348,7 @@ def update_dag_params(dag_path: str, partition: str, account: str, extra_slurm_p
                 )
             else:
                 params = (
-                    f"--account={account} --partition={partition} "
-                    f"{extra_slurm_params}"
+                    f"--account={account} --partition={partition} {extra_slurm_params}"
                 )
             result.append(f"{indent}slurm_params: '{params}'\n")
         else:
@@ -449,7 +455,8 @@ def main() -> None:
             version = "0.2.0"
 
         # Create a venv for each requested Python version
-        builder = LuteEnvBuilder(lute_version=version, env_dir=results_dir)
+        env_dir = f"{results_dir}/lute_envs"
+        builder = LuteEnvBuilder(lute_version=version, env_dir=env_dir)
         for pv in PYTHON_INTERPRETERS.keys():
             builder.create(pv)
 
@@ -464,7 +471,7 @@ def main() -> None:
         std_hutch_config = f"{site_packages}/config/{hutch}.yaml"
         std_test_config = f"{site_packages}/config/test.yaml"
     elif args.fresh_build:
-        lute_path = f"{results_dir}/lute_build"
+        lute_path = f"{results_dir}/lute"
         git_clone("slac-lcls/lute", lute_path, args.version)
         run_build_script(lute_path)
         modify_permissions(lute_path)
@@ -479,6 +486,7 @@ def main() -> None:
         std_hutch_config = f"{lute_path}/config/{hutch}.yaml"
         std_test_config = f"{lute_path}/config/test.yaml"
 
+    central_install: str = f"/sdf/group/lcls/ds/tools/lute/{args.version}/lute"
     lute_output_dir: str = f"{results_dir}/lute_output"
     if not os.path.exists(lute_output_dir):
         os.makedirs(lute_output_dir, mode=0o777)
@@ -499,7 +507,7 @@ def main() -> None:
     inplace_sed(config_path, sed_pattern)
 
     database_setup(f"{lute_output_dir}/lute.db")  # Setup permissions on database
-    
+
     # Check for partition and account. If not provided, prompt the user to use defaults.
     partition: str = "milano"
     account: str = f"lcls:{args.experiment}"
@@ -543,7 +551,7 @@ def main() -> None:
     nodes: int = 1
     if "nodes" not in extra_slurm_params:
         logger.warning(
-            f"No nodes provided. Defaulting to {nodes}. Any key to continue. " 
+            f"No nodes provided. Defaulting to {nodes}. Any key to continue. "
             "Ctrl-C to exit."
         )
         try:
@@ -570,7 +578,7 @@ def main() -> None:
     for wf_name in workflow_names:
         full_workflow_path: str = f"{lute_output_dir}/{wf_name}.dag"
         if not os.path.exists(full_workflow_path):
-            included_wf_defn: str = f"{lute_path}/workflows/common/{wf_name}.dag"
+            included_wf_defn: str = f"{central_install}/workflows/common/{wf_name}.dag"
             if not os.path.exists(included_wf_defn):
                 logger.error(
                     f"Workflow definition not found for workflow: {wf_name}. Skipping workflow."
@@ -591,23 +599,21 @@ def main() -> None:
         # Build workflow dict with appropriate trigger
         if "smd" in wf_name:
             trigger = {"trigger": "START_OF_RUN"}
-        elif wf_name == "bayfai":
-            trigger = {"trigger": "MANUAL"}
         else:
-            trigger = {"trigger": "END_OF_RUN"}
+            trigger = {"trigger": "MANUAL"}
 
-        workflows.append({
-            "name": f"lute_{wf_name}",
-            "executable": arp_executable,
-            "location": "S3DF",
-            "parameters": param_string,
-            **trigger
-        })  
+        workflows.append(
+            {
+                "name": f"lute_{wf_name}",
+                "executable": arp_executable,
+                "location": "S3DF",
+                "parameters": param_string,
+                **trigger,
+            }
+        )
 
     for workflow in workflows:
-        logger.info(
-            f"Creating eLog workflow for {workflow['name']}"
-        )
+        logger.info(f"Creating eLog workflow for {workflow['name']}")
         krbticket: Any = KerberosTicket("HTTP@pswww.slac.stanford.edu")
         krbheaders: dict = krbticket.getAuthHeaders()
         url: str = (

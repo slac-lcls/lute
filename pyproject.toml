@@ -17,6 +17,7 @@ dependencies = [
     "kerberos",
     "lcls-krtc",
     "mpi4py",
+    "textual",
 ]
 authors = [
     { name = "psrel", email = "psrel@slac.stanford.edu" },
