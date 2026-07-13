@@ -236,7 +236,7 @@ class LuteEnvBuilder:
         activate_path = os.path.join(env_dir, "bin", "activate")
         env_vars = (
             f"\n# LUTE environment variables\n"
-            f'export LUTE_VIRTUAL_ENV_PY{python_version.replace(".", "")}="{env_dir}"\n'
+            f'export LUTE_VIRTUAL_ENV_PY{python_version.replace(".", "")}="{env_dir}/bin/python"\n'
             f'export LUTE_NEW_PYVER="python{python_version}"\n'
         )
         with open(activate_path, "a") as f:

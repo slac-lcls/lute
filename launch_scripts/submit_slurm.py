@@ -265,7 +265,11 @@ def fill_in_batch_script(
 
         if lute_virtual_env is not None:
             if os.path.exists(f"{lute_virtual_env}/bin/activate"):
-                batch_script += f"source {lute_virtual_env}/bin/activate\n\n"
+                batch_script += f"source {lute_virtual_env}/bin/activate\n"
+                for key, val in os.environ.items():
+                    if key.startswith("LUTE_VIRTUAL_ENV_PY"):
+                        batch_script += f'export {key}="{val}"\n'
+                batch_script += "\n"
         elif os.path.exists(f"{full_bindir}/activate_installation"):
             batch_script += f"source {full_bindir}/activate_installation\n\n"
         else:

@@ -169,14 +169,14 @@ else
         fi
 
         # Search for all Python version virtual environments at standard locations
-        # Convention: lute_env_py<VER>/bin/activate
+        # Convention: lute_env_py<MAJORMINOR>/bin/activate (e.g. lute_env_py39, lute_env_py311)
         LUTE_ENVS_PARENT="$(dirname "$(dirname "${LUTE_BIN_PATH}")")"
         for env_dir in "${LUTE_ENVS_PARENT}"/lute_env_py*/bin/activate; do
             if [[ -f "${env_dir}" ]]; then
-                env_name="$(basename "$(dirname "$(dirname "${env_dir}")")")"
-                # Extract python version suffix
-                py_ver="${env_name#lute_env_}"
-                export "LUTE_VIRTUAL_ENV_PY${py_ver^^}"="$(dirname "$(dirname "${env_dir}")")"
+                env_name="$(basename "$(dirname "$(dirname "${env_dir}")")")" 
+                # Extract version: "lute_env_pyXYZ" → "XYZ"
+                py_ver="${env_name#lute_env_py}"
+                export "LUTE_VIRTUAL_ENV_PY${py_ver}"="$(dirname "$(dirname "${env_dir}")")/bin/python" 
             fi
         done
     else

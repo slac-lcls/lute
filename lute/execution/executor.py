@@ -1635,9 +1635,13 @@ class MPIExecutor(Executor):
         )
         mpi_cmd: str = f"mpirun -np {nprocs} --map-by core"
         if __debug__:
-            py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = (
+                f"{self._py_executable} -B -u -m mpi4py.run {executable_path} {params}"
+            )
         else:
-            py_cmd = f"python -OB -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = (
+                f"{self._py_executable} -OB -u -m mpi4py.run {executable_path} {params}"
+            )
 
         cmd: str = f"{mpi_cmd} {py_cmd}"
         return cmd
