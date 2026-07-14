@@ -50,11 +50,12 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames: ["jungfrau"]
-  detSumAlgos:
-    jungfrau:
-      - calib
-      - calib_max
+  producer_parameters:
+    detnames: ["jungfrau"]
+    detSumAlgos:
+      jungfrau:
+        - calib
+        - calib_max
 
 ###########
 # BayFAI

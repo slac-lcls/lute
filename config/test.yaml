@@ -11,7 +11,12 @@ work_dir: "/sdf/scratch/users/d/dorlhiac"
 ---
 SubmitSMD:
   # Command line arguments
+  #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
+  #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
   producer: "/sdf/data/lcls/ds/mfx/mfxl1013621/results/smalldata_tools/producers/smd_producer.py"
+  lute_template_cfg:
+    template_name: "smd1_prod_config_template.py"
+    output_path: "/sdf/data/lcls/ds/mfx/mfxl1013621/results/smalldata_tools/producers/smalldata_producer_template.py"
   run: 99
   experiment: "mfxl1013621"
   #stn: 0

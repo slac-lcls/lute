@@ -32,7 +32,7 @@ This will:
    - `lute_envs/lute_env_py39/`
    - `lute_envs/lute_env_py311/`
 3. Install `lute-lcls` from PyPI into each environment. Stable release tags
-   (e.g. `0.3.0`) and a nightly `dev` build are available.
+   (e.g. `0.2.0`) and a nightly `dev` build are available.
 4. Produce a configuration file at
    `<results>/lute_output/<hutch>_lute.yaml`.
 
@@ -41,7 +41,7 @@ This will:
 | `VERSION` value | Package installed |
 |---|---|
 | `dev` | Nightly pre-release wheel (built from `dev` branch via CI) |
-| `0.3.0`, etc. | Pinned stable release from PyPI |
+| `0.2.0`, etc. | Pinned stable release from PyPI |
 
 ### Environment variables set at runtime
 
@@ -61,16 +61,15 @@ path is used; otherwise `bin/activate_installation` (meson build) is used.
 
 ```bash
 # Activate the primary virtual environment (Python 3.9 or 3.11)
-source <results>/lute_envs/lute_env_py311/bin/activate   # or lute_env_py39
+source <path>/<to>/lute_envs/lute_env_py311/bin/activate   # or lute_env_py39
 ```
 
 ---
 
 ## Developer / Advanced: Source Build
 
-If you need to modify LUTE's C-extensions (e.g. Peakfinder8) or want full
-source access, use the `setup_lute -fb` / `--fresh_build` flag, or build
-manually with `build.sh`.
+If you need to modify LUTE's source code, use the `setup_lute -fb` / `--fresh_build` flag,
+or build manually with `build.sh` after cloning the repository.
 
 ### Using `setup_lute -fb`
 

@@ -81,7 +81,7 @@ SubmitSMD:
     template_name: "smd2_prod_config_template.py"
     output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_<hutch>.py"
   producer_parameters:
-    detnames: ["epix10k2M"]
+    detnames: ["jungfrau"]
     # ...
 ```
 
@@ -94,11 +94,6 @@ these paths resolve to real filesystem paths by the time the validators execute.
 > **Important:** `producer_parameters` must always be nested under that key — not
 > directly under `SubmitSMD` — or the values are silently ignored and never passed
 > to the producer.
-
-The hutch YAML templates (`config/mfx.yaml`, `config/xcs.yaml`, etc.) include
-commented-out blocks for both DAQ generations in the `SubmitSMD` section. Uncomment
-the block that matches your case.
-
 ---
 
 ## Configuration
@@ -112,6 +107,9 @@ SubmitSMD:
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
   #np: 5
   #producer: "/path/to/producer"
+  #lute_template_cfg:
+    #template_name: "smdX_prod_config_template.py"
+    #output_path: "path/to/prod_config_hutch"
   #run: "{{ run }}"
   #experiment: "{{ experiment }}"
   #stn: 0

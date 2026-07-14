@@ -43,12 +43,13 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames:
-    - "epix10k2M"
-  detSumAlgos:
-    epix10k2M:
-      - calib
-      - calib_max
+  producer_parameters:
+    detnames:
+      - "epix10k2M"
+    detSumAlgos:
+      epix10k2M:
+        - calib
+        - calib_max
 
 ###########
 # BayFAI

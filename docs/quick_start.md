@@ -13,7 +13,7 @@ Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-fi] [-fb] [-D DIRECTORY] [--test] [
 Parameters:
 
 - `-e EXPERIMENT, --experiment EXPERIMENT`: The experiment to perform setup for.
-- `-fi, --fresh_install`: Install a new version of LUTE in the experiment folder via an isolated virtual environment (`lute-lcls` from PyPI). This allows for local modifications of code. Otherwise, the central installation will be used (which cannot be modified).
+- `-fi, --fresh_install`: **(Recommended)** Install `lute-lcls` from PyPI into isolated Python virtual environments (`lute_env_py39`, `lute_env_py311`) in the experiment folder. No compilation required. Uses stable release tags or nightly `dev` builds.
 - `-fb, --fresh_build`: Install a new version of LUTE by cloning the repository and building from source. Use this if you need to modify LUTE's C-extensions or want full source access.
 - `-D DIRECTORY, --directory DIRECTORY`: Subdirectory name within the experiment results folder to use for LUTE output. If not specified, the results folder is used directly.
 - `--test`: Use test Airflow instance. Only needed for bleeding-edge workflows.
@@ -30,7 +30,7 @@ The example starting points are:
 - `sfx` : Perform end-to-end SFX analysis with molecular replacement.
 - `smd` : Run managed `smalldata_tools` and downstream analysis/summaries.
 
-Providing SLURM arguments is not required, but **highly recommended**. The setup script will try to set some default values for `--partition`, `--account`, and `--ntasks`, depending on the experiment and workflow you are running. If these three arguments are not provided, it will prompt you for each one and tell you the default it has selected. Press enter (or any key) to accept. Otherwise, press `Ctrl-C` to exit the setup, and pass the arguments manually.
+Providing SLURM arguments is not required, but **highly recommended**. The setup script will prompt for sensible defaults for `--partition`, `--account`, `--nodes`, and `--ntasks` if they are not provided. For `--partition` and `--account`, workflow-specific defaults are selected based on the experiment; for `--nodes` and `--ntasks`, the default is 1. Press enter (or any key) to accept each default, or press `Ctrl-C` to exit and pass the arguments manually.
 
 The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/lute_output/<hutch>_lute.yaml`. You will want to modify this configuration prior to running. See [Basic Usage](/#basic-usage) below for more information.
 

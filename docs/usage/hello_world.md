@@ -2,9 +2,14 @@
 This simple example will walk you through running the `Test` `Task`, which simply counts to 10 and then succeed or fails depending on the configuration.
 Please note that this should be run on psana in S3DF, as for now it relies on the specific path of the `psconda` environment.
 
-Clone the Lute repository and run the installation script:
+Install LUTE using `setup_lute` (see [Installation](/usage/installation) for full details).
+The recommended path is the virtual environment install:
 ```bash
-> ./build.sh
+# Recommended: virtual environment install (no compilation required)
+> setup_lute -fi -e <EXPERIMENT>
+
+# Alternative: source build (for developers who need to modify C-extensions)
+> setup_lute -fb -e <EXPERIMENT>
 ```
 
 Start by creating the following `yaml` configuration file for the `Task`.
