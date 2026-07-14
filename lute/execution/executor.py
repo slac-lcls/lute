@@ -693,7 +693,9 @@ class BaseExecutor(ABC):
                 if new_py_executable is not None:
                     self._py_executable = new_py_executable
                     lute_env_root = os.path.dirname(os.path.dirname(new_py_executable))
-                    new_lute_path = os.path.join(lute_env_root, "lib", new_pyver, "site-packages")
+                    new_lute_path = os.path.join(
+                        lute_env_root, "lib", new_pyver, "site-packages"
+                    )
                     new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
                 else:
                     logger.warning(
