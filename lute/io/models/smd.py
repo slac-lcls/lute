@@ -588,6 +588,13 @@ A 4-tuple describing if and how common-mode correction should be applied.
                     _ = psana.xtc_version
                     # xtc_version fails in psana1
                     is_daq2 = True
+                except ImportError:
+                    # psana not available (e.g. isolated venv without psana)
+                    # producer needs to be passed explicitly
+                    raise ValueError(
+                        "psana not available, cannot determine producer path. "
+                        "Please provide a producer path explicitly."
+                    )
                 except AttributeError:
                     is_daq2 = False
             if not is_daq2:
@@ -624,6 +631,13 @@ A 4-tuple describing if and how common-mode correction should be applied.
                     _ = psana.xtc_version
                     # xtc_version fails in psana1
                     is_daq2 = True
+                except ImportError:
+                    # psana not available (e.g. isolated venv without psana)
+                    # template   needs to be passed explicitly
+                    raise ValueError(
+                        "psana not available, cannot determine template. "
+                        "Please provide a template name explicitly."
+                    )
                 except AttributeError:
                     is_daq2 = False
             if not is_daq2:

@@ -38,8 +38,10 @@ logger: logging.Logger = get_logger(__name__)
 class BayFAI(Task):
     """Optimize detector geometry using PyFAI coupled with Bayesian Optimization."""
 
-    def __init__(self, *, params: BayFAIParameters, use_mpi: bool = True) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+    def __init__(
+        self, *, params: BayFAIParameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         start_time = time.time()
@@ -99,9 +101,9 @@ class BayFAI(Task):
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
             calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
-            optimizer.upload_geometry(
-                self._task_parameters.out_file, self._task_parameters.detname
-            )
+            # optimizer.upload_geometry(
+            #     self._task_parameters.out_file, self._task_parameters.detname
+            # )
             powder_plot, qs, resolutions = optimizer.create_interactive_powder()
             diagnostics_plot = optimizer.create_diagnostics_panel(
                 detector=calib_detector,

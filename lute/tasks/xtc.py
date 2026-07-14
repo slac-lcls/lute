@@ -39,11 +39,15 @@ class ConvertXtc1to2(Task):
 
     Args:
         params (ConvertXtc1to2Parameters): Configuration for the conversion task.
+        use_mpi (bool): Whether to use MPI for the task.
+        row_ids (Optional[List[int]]): Specific row IDs to process.
     """
 
-    def __init__(self, *, params: ConvertXtc1to2Parameters) -> None:
+    def __init__(
+        self, *, params: ConvertXtc1to2Parameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
         self._task_parameters: ConvertXtc1to2Parameters
-        super().__init__(params=params)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         par: ConvertXtc1to2Parameters = self._task_parameters
