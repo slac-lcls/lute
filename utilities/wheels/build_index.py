@@ -184,7 +184,7 @@ def main() -> None:
                     base_url, fragment = url, None
 
                 parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(base_url)
-                safe_path: str = urllib.parse.quote(parsed_url.path)
+                safe_path: str = urllib.parse.quote(parsed_url.path, safe="/%")
                 safe_url = parsed_url._replace(path=safe_path).geturl()
                 if fragment:
                     safe_url = f"{safe_url}#{fragment}"
