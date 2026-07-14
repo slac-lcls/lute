@@ -76,7 +76,7 @@ jobs:
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
-    if: github.repository_owner == "slac-lcls"
+    if: ${{ github.repository == 'slac-lcls/lute' }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
 
