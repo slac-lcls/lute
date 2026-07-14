@@ -572,7 +572,11 @@ namespace LWM {
                      ? "Will stream logs in real time, too."
                      : "Will collect logs here at end, too.");
 
-      while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
+      while (status != "COMPLETED"    &&
+             status != "UNRESPONSIVE" &&
+             status != "FAILED"       &&
+             status != "CANCELLED"    &&
+             status != "TIMEDOUT") {
         if (s_interrupted) {
           status = "CANCELLED";
           break;
@@ -614,7 +618,7 @@ namespace LWM {
             // Check status....
             bool is_running = this->is_subprocess_running(jobid);
             if (!is_running) {
-              status = "FAILED_UNRESPONSIVE";
+              status = "UNRESPONSIVE";
               logger()->error("Job exited unexpectedly! No indication of why! Marked failed!");
 
               break;

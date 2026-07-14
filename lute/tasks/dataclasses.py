@@ -74,6 +74,10 @@ class TaskStatus(Enum):
     """
     Task did not reach completion due to timeout.
     """
+    UNRESPONSIVE = 7
+    """
+    Task has not responded in a long time. Considered stuck and failed.
+    """
 
 
 @dataclass
