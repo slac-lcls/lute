@@ -94,7 +94,7 @@ def fetch_repo_releases(org: str, repo_name: str) -> List[Dict[str, Any]]:
 
 def main() -> None:
     # Structure: index_data[normalized_package_name] = list of (filename, url)
-    index_data: Dict[str, List[Tuple[str, str]]] = {}
+    index_data: Dict[str, List[Tuple[str, str, Optional[str]]]] = {}
 
     print(f"Fetching repositories for organization '{ORG}'...")
     repos: List[Dict[str, str]] = fetch_org_repos(ORG)
@@ -132,18 +132,14 @@ def main() -> None:
                         )
 
                     # Add the upload timestamp for pip/UV compat
+                    # Turns out this cannot be used with PEP503. See below.
                     upload_time: Optional[str] = asset.get("created_at")
-                    if upload_time:
-                        if "#" in download_url:
-                            download_url = f"{download_url}&upload_time={upload_time}"
-                        else:
-                            download_url = f"{download_url}#upload_time={upload_time}"
 
                     if norm_pkg_name not in index_data:
                         index_data[norm_pkg_name] = []
 
                     # Store package metadata
-                    index_data[norm_pkg_name].append((name, download_url))
+                    index_data[norm_pkg_name].append((name, download_url, upload_time))
 
     print("Generating static PEP 503 index pages...")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -173,7 +169,7 @@ def main() -> None:
             f.write(f"  <h1>{pkg} Releases</h1>\n")
 
             # Sort files by filename so older releases are at the top, newer at bottom
-            for filename, url in sorted(files, key=lambda x: x[0]):
+            for filename, url, upload_time in sorted(files, key=lambda x: x[0]):
                 # Escaping URL characters just in case -- but have to handle
                 # #sha256=... separately
                 base_url: str
@@ -189,7 +185,12 @@ def main() -> None:
                 if fragment:
                     safe_url = f"{safe_url}#{fragment}"
 
-                f.write(f'  <a href="{safe_url}">{filename}</a><br/>\n')
+                # Can't put upload time in the URL... seem to need to provide a separate JSON endpoint
+                # See PEP691 instead of PEP503
+                upload_attr: str = (
+                    f' data-upload-time="{upload_time}"' if upload_time else ""
+                )
+                f.write(f'  <a href="{safe_url}"{upload_attr}>{filename}</a><br/>\n')
 
             f.write("</body>\n</html>\n")
 
