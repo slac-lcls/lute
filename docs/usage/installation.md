@@ -9,7 +9,79 @@ It can therefore be retrieved on the command-line using:
 # or git clone https://github.com/slac-lcls/lute.git for https
 ```
 
-## Building the Package
+---
+
+## Recommended: Virtual Environment Install
+
+The simplest way to install `LUTE` is via a Python virtual environment using the
+`lute-lcls` package published on PyPI. This requires no C-extension compilation
+and is the recommended path for all experiment users.
+
+### Using `setup_lute -fi`
+
+On S3DF, run the provided `setup_lute` script with the `-fi` / `--fresh_install` flag:
+
+```bash
+setup_lute -fi -e <EXPERIMENT> [-v VERSION] [-W WORKFLOW [WORKFLOW ...]] [SLURM_ARGS ...]
+```
+
+This will:
+
+1. Create a `lute_envs/` directory inside your experiment results folder.
+2. Build two virtual environments — one for each supported Python version:
+   - `lute_envs/lute_env_py39/`
+   - `lute_envs/lute_env_py311/`
+3. Install `lute-lcls` from PyPI into each environment. Stable release tags
+   (e.g. `0.3.0`) and a nightly `dev` build are available.
+4. Produce a configuration file at
+   `<results>/lute_output/<hutch>_lute.yaml`.
+
+### Available versions
+
+| `VERSION` value | Package installed |
+|---|---|
+| `dev` | Nightly pre-release wheel (built from `dev` branch via CI) |
+| `0.3.0`, etc. | Pinned stable release from PyPI |
+
+### Environment variables set at runtime
+
+When using the virtual-environment install the submission scripts
+(`submit_slurm.sh`) automatically detect and export these variables:
+
+| Variable | Meaning |
+|---|---|
+| `LUTE_VIRTUAL_ENV` | Path to the active primary virtual environment directory |
+| `LUTE_VIRTUAL_ENV_PY39` | Path to the Python 3.9 interpreter in `lute_env_py39` |
+| `LUTE_VIRTUAL_ENV_PY311` | Path to the Python 3.11 interpreter in `lute_env_py311` |
+
+Detection logic: if `bin/activate` is present in the LUTE bin path the venv
+path is used; otherwise `bin/activate_installation` (meson build) is used.
+
+### Activating manually (for interactive use)
+
+```bash
+# Activate the primary virtual environment (Python 3.9 or 3.11)
+source <results>/lute_envs/lute_env_py311/bin/activate   # or lute_env_py39
+```
+
+---
+
+## Developer / Advanced: Source Build
+
+If you need to modify LUTE's C-extensions (e.g. Peakfinder8) or want full
+source access, use the `setup_lute -fb` / `--fresh_build` flag, or build
+manually with `build.sh`.
+
+### Using `setup_lute -fb`
+
+```bash
+setup_lute -fb -e <EXPERIMENT> [-v VERSION] [-W WORKFLOW [WORKFLOW ...]] [SLURM_ARGS ...]
+```
+
+This clones the repository into your results folder and runs `build.sh -e -r`
+automatically.
+
+### Building manually with `build.sh`
 
 At the top level of the directory is a script `build.sh` for building the code on S3DF.
 

@@ -76,6 +76,23 @@ AnalyzeSmallDataXES:
 # Set `directory` if you want to write to a different folder
 # For out of memory issues try setting gather_interval
 SubmitSMD:
+  # ── Virtual environment install ────────────────────────────────────────────
+  # When using --fresh_install (venv), psana is not importable at parse time.
+  # The `producer` and `lute_template_cfg` fields cannot be auto-determined.
+  # Uncomment the block matching your DAQ generation and fill in the hutch name.
+  #
+  # LCLS1 (psana1):
+  #producer: "{{ work_dir }}/smalldata_tools/lcls1_producers/smd_producer.py"
+  #lute_template_cfg:
+  #  template_name: "smd1_prod_config_template.py"
+  #  output_path: "{{ work_dir }}/smalldata_tools/lcls1_producers/prod_config_xpp.py"
+  #
+  # LCLS2 (psana2):
+  #producer: "{{ work_dir }}/smalldata_tools/lcls2_producers/smd_producer.py"
+  #lute_template_cfg:
+  #  template_name: "smd2_prod_config_template.py"
+  #  output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_xpp.py"
+  # ───────────────────────────────────────────────────────────────────────────
   # Command line arguments
   #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar

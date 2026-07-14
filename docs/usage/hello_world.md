@@ -36,9 +36,14 @@ Start by sourcing the relevant environments:
 ```bash
 > source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 ```
-and
+and activate the LUTE installation. The activation step depends on how LUTE was installed:
+
 ```bash
-> source <PATH_TO_LUTE>/install/bin/activate_installation
+# If you used --fresh_install (virtual environment):
+source lute_envs/lute_env_py311/bin/activate   # or lute_env_py39
+
+# If you used --fresh_build (source build):
+source <PATH_TO_LUTE>/install/bin/activate_installation
 ```
 
 Now, simply call

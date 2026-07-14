@@ -8,15 +8,17 @@ This package is used to run arbitrary analysis code (first-party or third-party)
 #### On S3DF for experiment analysis
 You, or your analysis point-of-contact should run the provided `setup_lute` script located at `/sdf/group/lcls/ds/tools/lute/dev/lute/utilities/setup_lute`
 
-Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-f] [--test] [-v VERSION] [-w WORKFLOW] [SLURM_ARGS ...]`
+Usage: `setup_lute [-h] [-d] -e EXPERIMENT [-fi] [-fb] [-D DIRECTORY] [--test] [-v VERSION] [-W WORKFLOW [WORKFLOW ...]] [SLURM_ARGS ...]`
 
 Parameters:
 
 - `-e EXPERIMENT, --experiment EXPERIMENT`: The experiment to perform setup for.
-- `-f, --fresh_install`: Install a new version of LUTE in the experiment folder. This allows for local modifications of code. Otherwise, the central installation will be used (which cannot be modified).
+- `-fi, --fresh_install`: Install a new version of LUTE in the experiment folder via an isolated virtual environment (`lute-lcls` from PyPI). This allows for local modifications of code. Otherwise, the central installation will be used (which cannot be modified).
+- `-fb, --fresh_build`: Install a new version of LUTE by cloning the repository and building from source. Use this if you need to modify LUTE's C-extensions or want full source access.
+- `-D DIRECTORY, --directory DIRECTORY`: Subdirectory name within the experiment results folder to use for LUTE output. If not specified, the results folder is used directly.
 - `--test`: Use test Airflow instance. Only needed for bleeding-edge workflows.
 - `-v VERSION, --version VERSION`: Version of LUTE to use. Corresponds to release tag or `dev`. Defaults to `dev`.
-- `-W WORKFLOW, --workflow WORKFLOW`: Which analysis workflow to run. Defaults to `smd`.
+- `-W WORKFLOW [WORKFLOW ...], --workflow WORKFLOW [WORKFLOW ...]`: Which analysis workflow(s) to run. Accepts one or more workflow names, e.g. `-W smd bayfai`. Defaults to `smd`.
 - `-d, --debug`: Turn on verbose logging.
 - `[SLURM ARGS]`: This is any number of SLURM arguments you want to run your workflow with. You will likely want to provide `--ntasks` at a minimum.
 
@@ -30,7 +32,7 @@ The example starting points are:
 
 Providing SLURM arguments is not required, but **highly recommended**. The setup script will try to set some default values for `--partition`, `--account`, and `--ntasks`, depending on the experiment and workflow you are running. If these three arguments are not provided, it will prompt you for each one and tell you the default it has selected. Press enter (or any key) to accept. Otherwise, press `Ctrl-C` to exit the setup, and pass the arguments manually.
 
-The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/lute_output/<hutch>.yaml`. You will want to modify this configuration prior to running. See [Basic Usage](/#basic-usage) below for more information.
+The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/lute_output/<hutch>_lute.yaml`. You will want to modify this configuration prior to running. See [Basic Usage](/#basic-usage) below for more information.
 
 #### Locally or otherwise
 LUTE is publically available on [GitHub](https://github.com/slac-lcls/lute). In order to run it, the first step is to clone the repository:
@@ -76,7 +78,7 @@ Running analysis with LUTE is the process of submitting one or more **managed** 
 **Note:** You configure `Task`s, but submit **managed** `Task`s. If you run the help utility described below, and in the usage manual, you can find which **managed** `Task`s correspond to which `Task`s. In general, `Task`s are verbs and the `Executor`s that run them (i.e. **managed** `Task`s) are nouns. E.g. the `FindPeaksSFX` `Task`, is run by submitting the `PeakFinderSFX` **managed** `Task`. There may be many **managed** `Task`s which submit the same underlying `Task`, but in different environments.
 
 ### Config YAML
-If you ran the `setup_lute` script you will already have a `<hutch>.yaml` file located in your experiment results folder. This YAML file is commented by `Task`. You will **need** to modify a few of these parameters for some of the `Task`s. E.g. a partial example of the config file may look like this:
+If you ran the `setup_lute` script you will already have a `<hutch>_lute.yaml` file located in your experiment results folder. This YAML file is commented by `Task`. You will **need** to modify a few of these parameters for some of the `Task`s. E.g. a partial example of the config file may look like this:
 
 ```yaml
 %YAML 1.3
