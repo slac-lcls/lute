@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -353,8 +354,9 @@ namespace LWM {
     return true; // Broke out of all other cass.
   }
 
-  std::pair<std::string,int> SubprocessLauncher::run_subprocess_log(const std::string& cmd,
-                                                                    bool return_output) {
+  // This is currently Linux/Unix only... will need to update if cross-platform needed
+  std::tuple<std::string, int, pid_t>
+  SubprocessLauncher::run_subprocess_log(const std::string& cmd, bool return_output) {
     std::string final_cmd { cmd };
     std::unique_ptr<ScopedTempFile> tmp_file;
 
@@ -375,7 +377,7 @@ namespace LWM {
       std::string err_result { "Pipe failed - cannot launch subprocess!" };
       m_logger->critical(err_result);
 
-      return std::make_pair(err_result, ret);
+      return std::make_tuple(err_result, ret, -1);
     }
 
     ret = fcntl(err_pipes[1], F_SETFD, FD_CLOEXEC);
@@ -383,7 +385,7 @@ namespace LWM {
       std::string err_result { "fcntl failed - cannot launch subprocess!" };
       m_logger->critical(err_result);
 
-      return std::make_pair(err_result, ret);
+      return std::make_tuple(err_result, ret, -1);
     }
 
     pid_t pid = fork();
@@ -395,7 +397,7 @@ namespace LWM {
       close(err_pipes[0]);
       close(err_pipes[1]);
 
-      return std::make_pair(err_result, pid);
+      return std::make_tuple(err_result, pid, pid);
     } else if (pid == 0) {
       close(err_pipes[0]);
 
@@ -418,13 +420,13 @@ namespace LWM {
         std::string err_result { "read failed - cannot track subprocess state!" };
         m_logger->critical(err_result);
 
-        return std::make_pair(err_result, status);
+        return std::make_tuple(err_result, status, pid);
       } else if (n == sizeof(int)) {
         // exec failed, and an int was written with errno
         std::string err_result { "Exec failed with: " + std::to_string(status) };
         m_logger->error(err_result);
 
-        return std::make_pair(err_result, status);
+        return std::make_tuple(err_result, status, pid);
       }
       // else, n == 0, so pipe closed by FD_CLOEXEC, and can now record proc output
 
@@ -440,7 +442,7 @@ namespace LWM {
           std::string err_result { "waitpid failed - cannot track subprocess state!" };
           m_logger->critical(err_result);
 
-          return std::make_pair(err_result, ret);
+          return std::make_tuple(err_result, ret, pid);
         }
 
         std::string result;
@@ -456,28 +458,51 @@ namespace LWM {
 
           err_result += tmp_file->path.string();
 
-          return std::make_pair(err_result, -1);
+          return std::make_tuple(err_result, -1, pid);
         }
 
-        return std::make_pair(result, status);
+        return std::make_tuple(result, status, pid);
       } else {
-        return std::make_pair("", status);
+        return std::make_tuple("", status, pid);
       }
     }
   }
 
+  // This is currently Linux/Unix only... will need to update if cross-platform needed
   std::optional<std::string>
   SubprocessLauncher::add_job_to_registry(std::string& managed_task_name,
-                                          std::string& log) {
-    static std::map<std::string, unsigned> task_counts;
-
-    if (task_counts.count(managed_task_name)) {
-      task_counts[managed_task_name]++;
-    } else {
-      task_counts[managed_task_name] = 1;
+                                          std::string& log,
+                                          pid_t subproc_pid) {
+    if (subproc_pid <= 0) {
+      logger()->error("Invalid PID '{}' was provided - not adding to registry!",
+                      subproc_pid);
+      return std::nullopt;
     }
 
-    return std::make_optional(std::to_string(task_counts[managed_task_name]));
+    std::string jobid { std::to_string(subproc_pid) };
+
+    auto status_func = [&](const std::string& jobid) {
+      return is_subprocess_running(jobid);
+    };
+
+    auto cancel_func = [&](const std::string& jobid) {
+      return cancel_subprocess(jobid);
+    };
+
+    // Currently, actually, we're not getting a logfile anymore for PythonLauncher
+    // TODO: Cahnge the asynch launch to maintain asynch, but allow the option of
+    //       a log file even for the PythonLauncher...
+    // Just put some placeholder here for now.
+
+    std::string logfile { "/tmp/lute_fake_log_" + jobid + ".log" };
+
+    JobRegistry::register_job(managed_task_name,
+                              jobid,
+                              logfile,
+                              status_func,
+                              cancel_func);
+
+    return std::make_optional(jobid);
   }
 
   JobReturn SubprocessLauncher::launch_task(const JobStep& job,
@@ -503,6 +528,7 @@ namespace LWM {
       m_status_handler->update_running_splits(&splits, managed_task_name);
       splits.launch_point = std::chrono::steady_clock::now();
 
+      // If desired by the subclasses of SubprocessLauncher:
       // run_subprocess_log is modified to not return the actual return code of the
       // subprocess if not tracking the full output (second arg is false). This allows
       // fireing-and-forgetting the subprocess which is important for some launchers
@@ -513,9 +539,12 @@ namespace LWM {
       // - Problem with fork/exec
       // - Or assorted problems with the various fd utilties/fcntl etc.
       // The log will have an exact reason.
+
+      bool return_output { use_submit_log_output() };
       int ret_status;
-      //std::tie(log, ret_status) = run_subprocess_log(launch_cmd, false);
-      std::tie(log, ret_status) = run_subprocess_log(launch_cmd, true);
+      pid_t subproc_pid;
+      std::tie(log, ret_status, subproc_pid) = run_subprocess_log(launch_cmd,
+                                                                  return_output);
       if (ret_status != 0) {
         m_logger->error("Error submitting job for {}. Could not launch or track subprocess",
                         job.managed_task_name);
@@ -526,7 +555,7 @@ namespace LWM {
         return JobReturn(managed_task_name, status, log, splits);
       }
 
-      auto jobid_opt = this->add_job_to_registry(managed_task_name, log);
+      auto jobid_opt = this->add_job_to_registry(managed_task_name, log, subproc_pid);
       if (!jobid_opt.has_value()) {
         status = "SUBPROCESS_NOT_REGISTERED";
 
@@ -576,7 +605,12 @@ namespace LWM {
             }
           }
 
-          if (elapsed > 120.0) {
+          double heartbeat_ttl_s { 120.0 };
+          if (auto hb_ttl = std::getenv("LUTE_NO_HEARTBEAT_TTL")) {
+            heartbeat_ttl_s = std::strtod(hb_ttl, nullptr);
+          }
+
+          if (elapsed > heartbeat_ttl_s) {
             // Check status....
             bool is_running = this->is_subprocess_running(jobid);
             if (!is_running) {
@@ -586,12 +620,12 @@ namespace LWM {
               break;
             } else {
               // Have additional check to cancel?? Stuck job??
-              auto time_for_cancel = std::getenv("LUTE_UNRESP_KILL_TIME");
-              if (time_for_cancel) {
-                if (elapsed > std::atoi(time_for_cancel)) {
-                  JobRegistry::cancel_one(jobid);
-                }
-              } else if (elapsed > 900.0) { // Use a 15 minute default? Should be reasonable
+              double heartbeat_kill_s { 900.0 };  // Use a 15 minute default? Should be reasonable
+              if (auto hb_kill = std::getenv("LUTE_NO_HEARTBEAT_KILL")) {
+                heartbeat_kill_s = std::strtod(hb_kill, nullptr);
+              }
+
+              if (elapsed > heartbeat_kill_s) {
                 JobRegistry::cancel_one(jobid);
               }
             }
@@ -620,7 +654,7 @@ namespace LWM {
     std::string get_job_state_cmd { "sacct -j " + jobid + " -o start,end,state" };
 
     m_logger->debug("Checking job state from SLURMDB with: {}", get_job_state_cmd);
-    auto [slurm_info, ret_code] = run_subprocess_log(get_job_state_cmd, true);
+    auto [slurm_info, ret_code, subproc_pid] = run_subprocess_log(get_job_state_cmd, true);
 
     std::istringstream input;
     input.str(slurm_info);
@@ -700,7 +734,10 @@ namespace LWM {
   }
 
   std::optional<std::string>
-  SlurmLauncher::add_job_to_registry(std::string& managed_task_name, std::string& log) {
+  SlurmLauncher::add_job_to_registry(std::string& managed_task_name,
+                                     std::string& log,
+                                     pid_t subproc_pid) {
+    (void)subproc_pid; // Not used by SLURM, since it has a separate SLURM job ID
     std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
     std::smatch jobid_match;
     std::string jobid { "" };
@@ -720,7 +757,8 @@ namespace LWM {
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
       std::string get_logfile_cmd { "sacct -j " + jobid + " -o StdOut%200" };
       m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
-      auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+      auto [slurm_info, ret_code, subproc_pid] =
+        run_subprocess_log(get_logfile_cmd, true);
 
       std::string logfile_path { "" };
       while (!found_logfile && wait_ms < 10000) {
@@ -741,7 +779,8 @@ namespace LWM {
 
         wait_ms <<= 2;
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-        std::tie(slurm_info, ret_code) = run_subprocess_log(get_logfile_cmd, true);
+        std::tie(slurm_info, ret_code, subproc_pid) =
+          run_subprocess_log(get_logfile_cmd, true);
       }
 
       if (!found_logfile) {
@@ -817,8 +856,9 @@ namespace LWM {
 
     // Wait some milliseconds if it fails. Then wait longer until more than 10 s
     int ret_code { 0 };
+    pid_t subproc_pid;
     std::size_t wait_ms { 500 };
-    std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+    std::tie(log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd, true);
     if (WEXITSTATUS(ret_code) == 0) {
       return;
     }
@@ -827,7 +867,8 @@ namespace LWM {
                       wait_ms);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-      std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+      std::tie(log, ret_code, subproc_pid) =
+        run_subprocess_log(get_slurm_log_cmd, true);
       if (WEXITSTATUS(ret_code) == 0) {
         return;
       }

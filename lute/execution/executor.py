@@ -223,6 +223,10 @@ class BaseExecutor(ABC):
         # If using straight Python launching the process ID
         self._job_id: str = os.getenv("SLURM_JOBID", str(os.getpid()))
 
+        self._maestro_heartbeat_s: float = float(
+            os.getenv("LUTE_MAESTRO_HEARTBEAT", 30.0)
+        )
+
     @property
     def task_name(self) -> str:
         return self._analysis_desc.task_result.task_name
@@ -858,6 +862,9 @@ class BaseExecutor(ABC):
             }
             self._report_to_manager(end_point="status", json_data=json_data)
 
+        # Send periodic heartbeats for liveness tracking
+        last_heartbeat: float = time.monotonic()
+
         affinity: Set[int] = os.sched_getaffinity(0)
         # By convention, the Executor takes the minimum core on this node.
         # Task gets everything else. If we only have 1 core here then out of luck
@@ -872,6 +879,18 @@ class BaseExecutor(ABC):
                 if run_time > self._task_timeout:
                     logger.error("Task timed out!")
                     self._sigalrm_task(proc)
+
+            now: float = time.monotonic()
+            if (now - last_heartbeat) > self._maestro_heartbeat_s:
+                if self._lute_manager_url is not None:
+                    # Send heartbeat ping - message doesn't matter. Just say RUNNING
+                    json_data = {
+                        "managed_task": self._m_task_name,
+                        "task": self.task_name,
+                        "status": "RUNNING",
+                    }
+                    self._report_to_manager(end_point="status", json_data=json_data)
+
             time.sleep(self._analysis_desc.poll_interval)
 
         if proc.stdin is not None:

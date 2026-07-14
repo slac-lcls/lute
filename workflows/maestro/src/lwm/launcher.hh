@@ -242,8 +242,11 @@ namespace LWM {
                          bool is_daq2,
                          MaybeJobFutures_t wait_for = std::nullopt) final;
 
+    // This is currently Linux/Unix only... will need to update if cross-platform needed
     virtual std::optional<std::string>
-    add_job_to_registry(std::string& managed_task_name, std::string& log);
+    add_job_to_registry(std::string& managed_task_name,
+                        std::string& log,
+                        pid_t subproc_pid);
 
     virtual bool is_subprocess_running(const std::string& jobid) = 0;
 
@@ -253,8 +256,9 @@ namespace LWM {
     // Sub-class must override `prepare_parameter_str`
     virtual std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) = 0;
 
-    std::pair<std::string, int> run_subprocess_log(const std::string& cmd,
-                                                   bool return_output = false);
+    // This is currently Linux/Unix only... will need to update if cross-platform needed
+    std::tuple<std::string, int, pid_t>
+    run_subprocess_log(const std::string& cmd, bool return_output = false);
 
     void update_log(std::string& log, std::string& jobid) {}
 
@@ -272,6 +276,8 @@ namespace LWM {
     }();
 
     std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
+
+    virtual bool use_submit_log_output() { return false; }
   };
 
   /**
@@ -320,7 +326,9 @@ namespace LWM {
     {}
 
     std::optional<std::string>
-    add_job_to_registry(std::string& managed_task_name, std::string& log) final;
+    add_job_to_registry(std::string& managed_task_name,
+                        std::string& log,
+                        pid_t subproc_pid) final;
 
     virtual bool is_subprocess_running(const std::string& jobid) final;
 
@@ -340,6 +348,8 @@ namespace LWM {
     }();
 
     std::shared_ptr<spdlog::logger> logger() override { return m_logger; }
+
+    bool use_submit_log_output() final { return true; }
   };
 
   /**
