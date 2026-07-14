@@ -16,7 +16,7 @@ output {
   output_dir = {{ output_output_dir }}
   composite_output = {{ output_composite_output }}
   logging_dir = {{ output_logging_dir }}
-  logging_option = normal *suppressed disabled
+  logging_option = {{ output_logging_option }}
 }
 dispatch {
   index = {{ dispatch_index }}

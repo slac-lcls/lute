@@ -589,6 +589,14 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         output_logging_dir: str = Field(
             "", description="Directory output log files will be placed"
         )
+        output_logging_option: str = Field(
+            "suppressed",
+            description=(
+                "Logging verbosity option. One of: normal, suppressed, disabled. "
+                "'suppressed' silences per-image log output (recommended for MPI jobs). "
+                "'normal' writes a log file per MPI rank. 'disabled' turns off logging."
+            ),
+        )
 
         # Dispatch settings: dispatch_
         dispatch_index: bool = Field(
@@ -604,8 +612,7 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         dispatch_integrate: bool = Field(
             True,
             description=(
-                "Integrate indexed images. Ignored if index=False or "
-                "find_spots=False"
+                "Integrate indexed images. Ignored if index=False or find_spots=False"
             ),
         )
 
@@ -745,12 +752,12 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     _set_phil_template_parameters = template_parameter_validator("phil_parameters")
 
     executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/conda_base/bin/mpirun",
+        "/sdf/group/lcls/ds/tools/cctbx/psana2/conda_base_psana2/bin/mpirun",
         description="MPI executable.",
         flag_type="",
     )
     cctbx_executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/build/bin/dials.stills_process",
+        "/sdf/group/lcls/ds/tools/cctbx/psana2/build/bin/dials.stills_process",
         description="CCTBX indexing program (DIALS).",
         flag_type="",
     )

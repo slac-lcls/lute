@@ -1,8 +1,6 @@
-{%- if dispatch_step_list is defined and dispatch_step_list -%}
 dispatch {
   step_list = {{ dispatch_step_list }}
 }
-{% endif -%}
 input {
   {% for p in input_path -%}
   path = {{ p }}
@@ -58,45 +56,17 @@ scaling {
   {%- endif %}
   resolution_scalar = {{ scaling_resolution_scalar }}
 }
-postrefinement {
-  enable = {{ postrefinement_enable }}
-  algorithm = {{ postrefinement_algorithm }}
-  target_weighting = {{ postrefinement_target_weighting }}
-}
 merging {
   d_min = {{ merging_d_min }}
-  {%- if merging_d_max is defined and merging_d_max %}
-  d_max = {{ merging_d_max }}
-  {%- endif %}
   merge_anomalous = {{ merging_merge_anomalous }}
-  set_average_unit_cell = {{ merging_set_average_unit_cell }}
-  minimum_multiplicity = {{ merging_minimum_multiplicity }}
-  include_multiplicity_column = {{ merging_include_multiplicity_column }}
-  error {
-    model = {{ merging_error_model }}
-    ev11 {
-      minimizer = {{ merging_error_ev11_minimizer }}
-    }
-  }
 }
 statistics {
   n_bins = {{ statistics_n_bins }}
-  report_ML = {{ statistics_report_ML }}
-  cciso {
-    mtz_file = {{ statistics_cciso_mtz_file if statistics_cciso_mtz_file else "None" }}
-    mtz_column_F = {{ statistics_cciso_mtz_column_F }}
-  }
 }
 output {
   prefix = {{ output_prefix }}
   output_dir = {{ output_output_dir }}
-  {%- if output_tmp_dir is defined and output_tmp_dir %}
-  tmp_dir = {{ output_tmp_dir }}
-  {%- endif %}
+  save_experiments_and_reflections = {{ output_save_experiments_and_reflections }}
   do_timing = {{ output_do_timing }}
   log_level = {{ output_log_level }}
-  save_experiments_and_reflections = {{ output_save_experiments_and_reflections }}
-}
-parallel {
-  a2a = {{ parallel_a2a }}
 }

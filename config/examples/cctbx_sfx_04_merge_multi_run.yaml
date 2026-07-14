@@ -1,0 +1,67 @@
+##############################################################################
+# SFX EXAMPLE 4 — MERGING: multiple runs
+#
+# ManagedTask: CCTBXMerger  (Task class: MergeCCTBXXFEL)
+# Binary:  cctbx.xfel.merge  (via mpirun)
+#
+# Merges scaled output from many runs into a single MTZ.
+# Each entry under input_path becomes a separate  path = ...  line in the
+# generated phil file, matching cctbx.xfel.merge's multiple-input syntax.
+##############################################################################
+title: "MFX Lysozyme — multi-run merge v019"
+experiment: mfx101624926
+run: 37
+date: "2024/10/16"
+lute_version: 0.1
+task_timeout: 7200
+work_dir: /sdf/data/lcls/ds/mfx/mfx101624926/scratch
+---
+MergeCCTBXXFEL:
+  phil_parameters:
+    dispatch_step_list: >-
+      input model_scaling statistics_unitcell statistics_beam
+      model_statistics statistics_resolution group errors_merge
+      statistics_intensity merge statistics_intensity_cxi
+
+    # Input: one path per run (generates multiple  path = ...  lines in phil)
+    input_path:
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0037/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0035/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0038/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0039/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0036/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0040/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0041/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0042/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0046/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0043/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0049/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0044/001_rg009/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0052/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0056/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0053/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0054/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0055/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0060/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0062/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0061/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0064/001_rg012/task015/out
+      - /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/r0063/001_rg012/task015/out
+    input_experiments_suffix: .expt
+    input_reflections_suffix: .refl
+
+    scaling_model: /sdf/data/lcls/ds/mfx/mfx101624926/scratch/tutorial/pdb/8P1C.pdb
+    scaling_algorithm: mark0
+
+    merging_d_min: 1.8
+    merging_merge_anomalous: True
+    merging_minimum_multiplicity: 2
+    merging_error_model: ev11
+
+    output_prefix: Lysozyme_smallerUC_v019
+    output_output_dir: /sdf/data/lcls/ds/mfx/mfx101624926/results/pam/Lysozyme_smallerUC/v019
+
+    statistics_n_bins: 20
+
+    # MPI memory tuning for large multi-run jobs
+    parallel_a2a: 64   # set to cores-per-node (e.g. 64 for S3DF nodes)
