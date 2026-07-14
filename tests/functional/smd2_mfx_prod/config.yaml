@@ -38,6 +38,9 @@ SubmitSMD:
   #wait: False
   #xtcav: False
   #noarch: False
+  lute_template_cfg:
+    template_name: "smd2_prod_config_template.py" # Or the smd2 version
+    output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_mfx.py"
   # **************************************************************************/
   # * Below this point you will be configuring the prod_config_mfx file ******/
   # * This will overwrite any manual changes you make to that file      ******/

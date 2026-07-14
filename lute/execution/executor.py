@@ -653,9 +653,11 @@ class BaseExecutor(ABC):
         # for first-party Tasks, regardless of the directory they run in if using
         # a new environment
         old_python_path: str = new_environment.get("PYTHONPATH", "")
+        new_python_path: str = new_environment.get("LUTE_TENV_PYTHONPATH", "")
         new_lute_path: Optional[str] = lute_path
         if lute_path is None:
             logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
+
         elif lute_virtual_env is None:
             assert new_lute_path
             if old_python_path:
@@ -675,18 +677,29 @@ class BaseExecutor(ABC):
                     "extensions!"
                 )
 
-        # Update python executable to the new environment's version
-        if new_pyver != old_pyver:
-            # Strip new_pyver version
-            version: str = new_pyver.replace("python", "").replace(".", "")
-            new_py_executable = os.getenv(f"LUTE_VIRTUAL_ENV_PY{version}")
-            if new_py_executable is not None:
-                self._py_executable = new_py_executable
-            else:
-                logger.warning(
-                    f"Task needs to run in {new_pyver}, but no {version} "
-                    "installation is available! Task may fail."
+            if new_python_path:
+                new_environment["LUTE_TENV_PYTHONPATH"] = (
+                    f"{new_lute_path}:{new_python_path}"
                 )
+            elif new_lute_path:
+                new_environment["LUTE_TENV_PYTHONPATH"] = new_lute_path
+
+        # Update python executable and lute path to correct version
+        elif lute_virtual_env is not None:
+            if new_pyver != old_pyver:
+                # Strip new_pyver version
+                version: str = new_pyver.replace("python", "").replace(".", "")
+                new_py_executable = os.getenv(f"LUTE_VIRTUAL_ENV_PY{version}")
+                if new_py_executable is not None:
+                    self._py_executable = new_py_executable
+                    lute_env_root = os.path.dirname(os.path.dirname(new_py_executable))
+                    new_lute_path = os.path.join(lute_env_root, "lib", new_pyver, "site-packages")
+                    new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
+                else:
+                    logger.warning(
+                        f"Task needs to run in {new_pyver}, but no {version} "
+                        "installation is available! Task may fail."
+                    )
 
         self._analysis_desc.task_env = new_environment
 
@@ -1634,6 +1647,7 @@ class MPIExecutor(Executor):
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
         )
         mpi_cmd: str = f"mpirun -np {nprocs} --map-by core"
+        print(self._py_executable, flush=True)
         if __debug__:
             py_cmd = (
                 f"{self._py_executable} -B -u -m mpi4py.run {executable_path} {params}"

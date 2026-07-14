@@ -30,6 +30,9 @@ SubmitSMD:
   #wait: False
   #xtcav: False
   #noarch: False
+  lute_template_cfg:
+    template_name: "smd1_prod_config_template.py" # Or the smd2 version
+    output_path: "{{ work_dir }}/smalldata_tools/lcls1_producers/prod_config_xpp.py"
   # Producer variables. These are substituted into the producer to run specific
   # data reduction algorithms. Uncomment and modify as needed.
   # If you prefer to modify the producer file directly, leave commented.
