@@ -12,7 +12,7 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    if: github.repository_owner == "slac-lcls"
+    if: ${{ github.repository == 'slac-lcls/lute' }}
     strategy:
       matrix:
         os: [ubuntu-latest]
