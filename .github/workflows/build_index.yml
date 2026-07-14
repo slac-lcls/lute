@@ -40,7 +40,7 @@ jobs:
         run: |
           mkdir -p gh-pages-dir/wheels
           # Copy generated index files to the wheels directory on gh-pages
-          cp -r dist/* gh-pages-dir/wheels/
+          cp -r wheels/* gh-pages-dir/wheels/
 
       - name: Commit and push changes
         working-directory: gh-pages-dir
