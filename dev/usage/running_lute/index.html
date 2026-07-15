@@ -608,6 +608,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#virtual-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#debug-environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3466,6 +3477,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#virtual-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Virtual Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#debug-environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3674,6 +3696,38 @@ next:
 <li><code>LUTE_DB_SPEC_VERSION</code>: Set to determine the database specification version. Either 1 or 2, currently.</li>
 <li><code>LUTE_MAESTRO_LOG_LEVEL</code>: Set the logging level for the workflow manager <code>maestro</code>. Can be <code>trace</code>, <code>debug</code>, <code>info</code>, <code>warning</code>, <code>error</code>. The settings can also be set per logger. E.g. <code>LUTE_MAESTRO_LOG_LEVEL=debug,HTTP:Server=trace</code>.</li>
 </ul>
+<h4 id="virtual-environment-variables">Virtual Environment Variables</h4>
+<p>When LUTE is installed via <code>setup_lute -fi</code> (virtual environment install), the submission
+scripts automatically detect the install type and export additional variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Set by</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LUTE_VIRTUAL_ENV</code></td>
+<td><code>submit_slurm.sh</code> (venv path)</td>
+<td>Path to the active primary virtual environment directory</td>
+</tr>
+<tr>
+<td><code>LUTE_VIRTUAL_ENV_PY39</code></td>
+<td><code>submit_slurm.sh</code> (venv path)</td>
+<td>Path to the Python 3.9 interpreter in the sibling <code>lute_env_py39</code> virtual environment</td>
+</tr>
+<tr>
+<td><code>LUTE_VIRTUAL_ENV_PY311</code></td>
+<td><code>submit_slurm.sh</code> (venv path)</td>
+<td>Path to the Python 3.11 interpreter in the sibling <code>lute_env_py311</code> virtual environment</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Install-type detection:</strong> the submit scripts check whether <code>bin/activate</code> is present
+in the LUTE bin path. If so, the venv path is used and the variables above are exported.
+Otherwise, <code>bin/activate_installation</code> (meson/prefix build) is sourced instead.</p>
 <p>A number of other environment variables are used (<code>LUTE_PATH</code>, <code>LUTE_EXECUTOR_HOST</code>, as examples). These, however, are set internally and are not intended to be managed by users. They will appear in the database records, however.</p>
 <h4 id="debug-environment-variables">Debug Environment Variables</h4>
 <p>Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.</p>
