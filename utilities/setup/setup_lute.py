@@ -212,8 +212,14 @@ class LuteEnvBuilder:
             _run_subprocess_log(cmd)
 
         # Install lute-lcls.
+        extra_index_args: List[str] = []
         if self.lute_version == "dev":
-            pkg_spec = f"lute-lcls"
+            pkg_spec = "lute-lcls"
+            extra_index_args = [
+                "--extra-index-url",
+                "https://slac-lcls.github.io/lute/wheels",
+                "--pre",
+            ]
         else:
             pkg_spec = f"lute-lcls=={self.lute_version}"
         logger.info(f"Installing {pkg_spec} into {env_dir}...")
@@ -221,7 +227,8 @@ class LuteEnvBuilder:
             [venv_python, "-m", "pip", "install", "--upgrade", "pip"],
         )
         _run_subprocess_log(
-            [venv_python, "-m", "pip", "install", "--ignore-installed", pkg_spec],
+            [venv_python, "-m", "pip", "install", "--ignore-installed", pkg_spec]
+            + extra_index_args,
         )
 
         # Write LUTE environment variables into the activation script
@@ -421,7 +428,8 @@ def main() -> None:
         type=str,
         help=(
             "Version of LUTE to use. Corresponds to release tag or `dev`. "
-            "Defaults to `dev`. If `dev`, only works with `--fresh_build`."
+            "Defaults to `dev`. If `fresh_install`, this fetches the latest "
+            "version of LUTE and adds the nightly build wheels."
         ),
         default="dev",
     )
