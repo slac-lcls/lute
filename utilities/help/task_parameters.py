@@ -67,6 +67,31 @@ class EnvVarDefinition(TypedDict):
 
 
 LUTE_ENV_VARS: Dict[str, EnvVarDefinition] = {
+    "LUTE_USE_ZMQ": {
+        "default": "1",
+        "value": os.getenv("LUTE_USE_ZMQ"),
+        "description": (
+            "  - Toggles between the use of a socket-based and ZMQ-based IPC backend.\n"
+            "  - These are functionally identical, but the raw-socket option allows non-ZMQ installs.\n"
+        ),
+    },
+    "LUTE_USE_TCP": {
+        "default": "1",
+        "value": os.getenv("LUTE_USE_TCP"),
+        "description": (
+            "  - Toggles between the use of TCP and Unix IPC sockets.\n"
+            "  - The Unix sockets can be faster if only using 1 node.\n"
+            "  - If multiple nodes are in use, then TCP cannot be turned off.\n"
+        ),
+    },
+    "LUTE_DB_SPEC_VERSION": {
+        "default": "2",
+        "value": os.getenv("LUTE_DB_SPEC_VERSION"),
+        "description": (
+            "  - Selects the database specification to use for the lute.db.\n"
+            "  - Generally, the latest should always be used unless needing to interface with old data.\n"
+        ),
+    },
     "LUTE_MAESTRO_LOG_LEVEL": {
         "default": "info for all loggers",
         "value": os.getenv("LUTE_MAESTRO_LOG_LEVEL"),

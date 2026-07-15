@@ -183,6 +183,13 @@ In order to run a DAG defined in this way, we pass the **path** to the YAML file
 
 Note that fewer options are currently supported for configuring the operators for each step of the DAG.  The slurm arguments can be replaced in their entirety using a custom `slurm_params` string but individual options cannot be modified.
 
+### Task Timeouts, Heartbeats and Preventing Hangs
+
+The LUTE (and `maestro`) workflow system provides a number of tunable parameters to address issues of hung jobs, or jobs taking too long to complete. In particular, there are two principle mechanisms to be aware of:
+
+1. The `task_timeout` is a value set in seconds inside the configuration YAML file. It will apply to all `Task`s that are launched using that specific config YAML. Any job that takes longer than the time interval specified there will be killed via `SIGALRM`.
+2. The status monitoring system. There is a hierarchical status monitoring system that does its best to conservatively address the concern of unresponsive/hung jobs. This can occassionally occur in various analysis jobs, where the code is not from LUTE itself, but rather than underlying processing code. When using `maestro` as the workflow backend, it will expect regular updates from the `Executor` to ensure that the LUTE infrastructure is healthy. Furthermore, the `Executor` itself will manage the analysis `Task` looking for any sign of life whatsoever (generating logs, making forward progress, sending status updates, etc.). Failure of the `Task` to show life for an extended period of time will result in a job cancellation. The various values associated to these status monitoring features are configurable by environment variable described below.
+
 ### Environment Variables
 A number of environment variables can be set to control certain aspects of LUTE behaviour.
 
@@ -207,6 +214,14 @@ in the LUTE bin path. If so, the venv path is used and the variables above are e
 Otherwise, `bin/activate_installation` (meson/prefix build) is sourced instead.
 
 A number of other environment variables are used (`LUTE_PATH`, `LUTE_EXECUTOR_HOST`, as examples). These, however, are set internally and are not intended to be managed by users. They will appear in the database records, however.
+
+#### Status Monitoring Variables
+
+Three variables control the status monitoring system.
+
+- `LUTE_MAESTRO_HEARTBEAT`: This is the period at which the Executor sends sign of life updates to the `maestro` workflow manager. The heartbeat period is used to judge whether a managed Task has become unresponsive. The value is set in seconds. The default is 30 seconds.
+- `LUTE_NO_HEARTBEAT_TTL`: This sets the time after which `maestro` will use a fallback strategy to check job status. The fallback strategy is used if it has not received a heartbeat update after this amount of seconds has elapsed. E.g., when using a SLURM Launcher, `maestro` will check the SLURMDB for the submitted job to see if it is still running. If the fallback strategy shows the job has exited, the job will be marked as failed. The value is set in seconds, with a default of 120 seconds (2 minutes).
+- `LUTE_NO_HEARTBEAT_KILL`: This sets the time after which an unresponsive job will be killed. The time limit applies to monitoring at both the Execution and maestro levels. The Executor monitors the Task for responsiveness, and likewise, `maestro` monitors the Executor. The value is set in seconds, with a default of 900 seconds (15 minutes).
 
 #### Debug Environment Variables
 Special markers have been inserted at certain points in the execution flow for LUTE. These can be enabled by setting the environment variables detailed below. These are intended to allow developers to exit the program at certain points to investigate behaviour or a bug. For instance, when working on configuration parsing, an environment variable can be set which exits the program after passing this step. This allows you to run LUTE otherwise as normal (described above), without having to modify any additional code or insert your own early exits.
@@ -235,3 +250,8 @@ MYENVVAR=1 python -B run_task.py -t Tester -c config/test.yaml
 ##### Currently used debug environment variables
 - `LUTE_DEBUG_EXIT_AT_YAML`: Exits the program after reading in a YAML configuration file and performing variable substitutions, but BEFORE Pydantic validation.
 - `LUTE_DEBUG_BEFORE_TPP_EXEC`: Exits the program after a ThirdPartyTask has prepared its submission command, but before `exec` is used to run it.
+
+
+#### Using `lute_help` for environment variables
+
+The `lute_help` utility can be used to display information about the environment variables and their current settings. Using `lute_help -e` will display a short-list summary of their variables and their settings. `lute_help -e <var>` can then be used to get the detailed description of the specific environment variable `<var>`.
