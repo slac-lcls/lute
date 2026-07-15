@@ -51,13 +51,16 @@ For a **stable release** (available on the standard PyPI index):
 pip install lute-lcls==0.3.0
 ```
 
+*Nota Bene*
+Version 0.3.0 will be released soon!
+
 For a **nightly build**: wheels are built and published at 3 AM from the `dev`
 branch and are available from a self-hosted PEP 503 simple package index at
 `https://slac-lcls.github.io/lute/wheels`. Pass `--extra-index-url` to pip:
 
 ```bash
 # Pin to a specific nightly (version identifier uses the +dev local label):
-pip install lute-lcls==v0.3.0+dev --extra-index-url https://slac-lcls.github.io/lute/wheels
+pip install lute-lcls==0.3.0+dev --extra-index-url https://slac-lcls.github.io/lute/wheels
 
 # Or install the latest nightly without pinning a version:
 pip install lute-lcls --extra-index-url https://slac-lcls.github.io/lute/wheels --pre
