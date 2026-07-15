@@ -8,11 +8,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #else
+#include <BaseTsd.h>
 #include <windows.h>
+typedef SSIZE_T ssize_t;
 #endif
 #include <unistd.h>
 
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -404,7 +407,8 @@ namespace LWM {
       execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
 
       int err { errno };
-      (void)write(err_pipes[1], &err, sizeof(err));
+      ssize_t ignored { write(err_pipes[1], &err, sizeof(err)) };
+      (void)ignored;
 
       close(err_pipes[1]);
       _exit(127);
@@ -572,6 +576,31 @@ namespace LWM {
                      ? "Will stream logs in real time, too."
                      : "Will collect logs here at end, too.");
 
+      // Setup variables for checking status
+      // LUTE_NO_HEARTBEAT_TTL - if no heartbeat received in this time, fallback
+      //                         to secondary status check.
+      // LUTE_NO_HEARTBEAT_KILL - if no heartbeat received in this time, kill.
+      double heartbeat_ttl_s { 120.0 };
+      if (auto hb_ttl = std::getenv("LUTE_NO_HEARTBEAT_TTL")) {
+        heartbeat_ttl_s = std::strtod(hb_ttl, nullptr);
+      }
+
+      double heartbeat_kill_s { 900.0 }; // Use a 15 minute default? Should be reasonable
+      if (auto hb_kill = std::getenv("LUTE_NO_HEARTBEAT_KILL")) {
+        heartbeat_kill_s = std::strtod(hb_kill, nullptr);
+      }
+
+      // So we don't use the fallback startegy to check an unresponsive job
+      // continuously, we reset the status each time. But we count how many times
+      // we did it, so when heartbeat_kill_s is reached, we can kill the process
+      int unresponsive_checks_remaining =
+        static_cast<int>(heartbeat_kill_s) / static_cast<int>(heartbeat_ttl_s);
+      // Also track the left-over seconds.
+      double unresponsive_remainder_s = std::fmod(heartbeat_kill_s, heartbeat_ttl_s);
+
+      // The above tracking system doesn't need to be overly complicated and real time
+      // ... It should work +/- a second or two.
+
       while (status != "COMPLETED"    &&
              status != "UNRESPONSIVE" &&
              status != "FAILED"       &&
@@ -609,9 +638,11 @@ namespace LWM {
             }
           }
 
-          double heartbeat_ttl_s { 120.0 };
-          if (auto hb_ttl = std::getenv("LUTE_NO_HEARTBEAT_TTL")) {
-            heartbeat_ttl_s = std::strtod(hb_ttl, nullptr);
+          if (unresponsive_checks_remaining == 0 && // No status checks left and
+              elapsed > unresponsive_remainder_s) { // we used up any left-over secs
+            JobRegistry::cancel_one(jobid);
+            status = "CANCELLED";
+            break;
           }
 
           if (elapsed > heartbeat_ttl_s) {
@@ -623,15 +654,25 @@ namespace LWM {
 
               break;
             } else {
-              // Have additional check to cancel?? Stuck job??
-              double heartbeat_kill_s { 900.0 };  // Use a 15 minute default? Should be reasonable
-              if (auto hb_kill = std::getenv("LUTE_NO_HEARTBEAT_KILL")) {
-                heartbeat_kill_s = std::strtod(hb_kill, nullptr);
-              }
+              // Decrement our check counter. A bit above, we hvae the check
+              // where we kill the job if its been checked too many times.
+              unresponsive_checks_remaining--;
 
-              if (elapsed > heartbeat_kill_s) {
-                JobRegistry::cancel_one(jobid);
-              }
+              double secs_remaining {
+                static_cast<double>(unresponsive_checks_remaining) * heartbeat_ttl_s + unresponsive_remainder_s
+              };
+
+              logger()->warn("We haven't heard from {} (Job '{}') in more than {} seconds! "
+                             "Job will be killed in {} seconds if still unresponsive!",
+                             managed_task_name,
+                             jobid,
+                             heartbeat_ttl_s,
+                             secs_remaining);
+
+              // Update the status, so we dont use the fallback pinging too much
+              // Because of the unresponsive_checks_remaining counter we'll know when
+              // to kill the job still.
+              JobRegistry::set_last_update_time(jobid, now);
             }
           }
         }
@@ -723,6 +764,10 @@ namespace LWM {
 
       cols.push_back(col);
     }
+
+    // I guess we couldn't determine if running or not.
+    // Mark `true` here so that it can try to kill it later if unresponsive.
+    return true;
   }
 
   void SlurmLauncher::cancel_subprocess(const std::string& jobid) {
