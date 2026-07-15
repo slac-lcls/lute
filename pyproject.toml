@@ -69,17 +69,18 @@ before-build = [
 #       DO NOT SET IN YAMLs for GitHub CI - will just overwrite, not combine!
 
 [tool.cibuildwheel.linux]
+# Need to provide kerberos and MPI (for musl) since the test venv will need them
 before-all = [
     """
     if command -v apt-get >/dev/null; then
         apt-get update
-        apt-get install -y ccache libkrb5-dev
+        apt-get install -y ccache libkrb5-dev libopenmpi-dev
     elif command -v dnf >/dev/null; then
-        dnf install -y ccache krb5-devel
+        dnf install -y ccache krb5-devel openmpi-devel
     elif command -v yum >/dev/null; then
-        yum install -y ccache krb5-devel
+        yum install -y ccache krb5-devel openmpi-devel
     elif command -v apk >/dev/null; then
-        apk add ccache krb5-dev
+        apk add ccache krb5-dev openmpi-dev
     fi
     """,
 ]
