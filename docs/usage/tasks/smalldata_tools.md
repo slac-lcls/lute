@@ -56,6 +56,7 @@ your YAML.
 |---|---|---|
 | `producer` | string | Absolute path to `smd_producer.py` for the target DAQ generation |
 | `lute_template_cfg` | mapping | Nested object with `template_name` and `output_path` |
+| `producer_parameters` | mapping | Nested object with `detnames` and `smalldata` reduction algorithms |
 
 Both fields live directly under `SubmitSMD:` (not under `producer_parameters:`).
 
