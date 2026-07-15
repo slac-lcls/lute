@@ -64,6 +64,11 @@ before-build = [
     "pip install 'meson>=1.10.1' meson-python ninja numpy pybind11 setuptools",
     "ccache -z",
 ]
+
+# Kerberos requires GSAPPI C-dependencies to build from source. Trying not to deal with that
+# Instead, force a binary-only installation for that package. Use commas to add more.
+environment = { PIP_ONLY_BINARY = "kerberos" }
+
 [tool.cibuildwheel.linux]
 before-all = [
     """
