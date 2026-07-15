@@ -51,6 +51,10 @@ RequestTester: Executor = Executor("TestRequest")
 """Runs a test whether requests go from Task to Executor to Workflow manager."""
 RequestTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
+UnresponsiveTester: Executor = Executor("TestUnresponsive")
+"""Runs a test to see if unresponsive jobs are killed."""
+RequestTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+
 # SmallData-related
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")

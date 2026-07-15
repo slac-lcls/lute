@@ -900,6 +900,26 @@ class BaseExecutor(ABC):
                 if (now - self._task_last_update) > self._no_heartbeat_kill:
                     stat_str = "UNRESPONSIVE"
 
+                # Break early - the Executor will send a message at the very end
+                # `maestro` is faster than Python. We want it to wait around until
+                # the last minute, so we only send the UNRESPONSIVE update before tear-down
+                if stat_str == "UNRESPONSIVE":
+                    unresp_msg: str = (
+                        f"Task did not respond for more than {self._no_heartbeat_kill} seconds. "
+                        "It is marked as UNRESPONSIVE and failed!"
+                    )
+                    logger.error(unresp_msg)
+                    if self._lute_manager_url is not None:
+                        json_log_data: Dict[str, str] = {
+                            "managed_task": self._m_task_name,
+                            "message": unresp_msg,
+                        }
+                        self._report_to_manager(
+                            end_point="log", json_data=json_log_data
+                        )
+                    self._kill_task(proc=proc, status=TaskStatus.UNRESPONSIVE)
+                    break
+
                 # Since we may run without maestro, we will check the UNRESPONSIVE
                 # outside the lute_manager_url check.
                 if self._lute_manager_url is not None:
@@ -909,14 +929,6 @@ class BaseExecutor(ABC):
                         "status": stat_str,
                     }
                     self._report_to_manager(end_point="status", json_data=json_data)
-
-                if stat_str == "UNRESPONSIVE":
-                    logger.error(
-                        f"Task did not respond for more than {self._no_heartbeat_kill} seconds. "
-                        "It is marked as UNRESPONSIVE and failed!"
-                    )
-                    self._kill_task(proc=proc, status=TaskStatus.UNRESPONSIVE)
-                    break
 
             time.sleep(self._analysis_desc.poll_interval)
 
@@ -999,6 +1011,7 @@ class BaseExecutor(ABC):
         ):
             logger.info("Exiting after Task failure. Result recorded.")
             logging.shutdown()
+            time.sleep(0.5)  # Try to give a chance for any unsent messages to drain
             sys.exit(-1)
         logger.info("Exiting after Task completion.")
         logging.shutdown()
