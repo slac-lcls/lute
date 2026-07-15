@@ -65,9 +65,8 @@ before-build = [
     "ccache -z",
 ]
 
-# Kerberos requires GSAPPI C-dependencies to build from source. Trying not to deal with that
-# Instead, force a binary-only installation for that package. Use commas to add more.
-environment = { PIP_ONLY_BINARY = "kerberos" }
+# NOTE: SET THE `environment` per-platform!
+#       DO NOT SET IN YAMLs for GitHub CI - will just overwrite, not combine!
 
 [tool.cibuildwheel.linux]
 before-all = [
@@ -87,6 +86,10 @@ before-all = [
 CC = "ccache gcc"
 CXX = "ccache g++"
 CCACHE_DIR = "/project/.ccache"
+
+# Kerberos requires GSAPPI C-dependencies to build from source. Trying not to deal with that
+# Instead, force a binary-only installation for that package. Use commas to add more.
+PIP_ONLY_BINARY = "kerberos"
 
 #[tool.cibuildwheel.macos.environment]
 #CC = "ccache clang"
