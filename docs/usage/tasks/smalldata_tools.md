@@ -33,6 +33,70 @@ smalldata_tools (via the `Task` `SubmitSMD`) can be run in various environments 
 - `SmallDataProducer2`: Run the psana2 smalldata_tools production
 - `SmallDataProducerSpack`: Run the psana2 smalldata_tools production, **in the spack environment**. This is required for compression features.
 
+## Running with a Virtual Environment Install
+
+When LUTE is installed with `setup_lute -fi` (the `--fresh_install` virtual-environment
+path), the executor runs inside the venv Python. The psana conda environment is only
+sourced in the batch script that spawns the Task subprocess — **after** parameter
+parsing. This matters for `SubmitSMD` because two Pydantic validators in
+`lute/io/models/smd.py` (lines 573–646, `validate_producer_path` and `use_producer`)
+call `import psana` at parse time to auto-determine the correct producer path and
+template. In the venv `psana` is absent, so these validators raise:
+
+```
+ValueError: psana not available, cannot determine producer path
+```
+
+To avoid this error you must set `producer` and `lute_template_cfg` explicitly in
+your YAML.
+
+### Fields to set
+
+| Field | Type | Description |
+|---|---|---|
+| `producer` | string | Absolute path to `smd_producer.py` for the target DAQ generation |
+| `lute_template_cfg` | mapping | Nested object with `template_name` and `output_path` |
+| `producer_parameters` | mapping | Nested object with `detnames` and `smalldata` reduction algorithms |
+
+Both fields live directly under `SubmitSMD:` (not under `producer_parameters:`).
+
+### LCLS1 (psana1) example
+
+```yaml
+SubmitSMD:
+  producer: "{{ work_dir }}/smalldata_tools/lcls1_producers/smd_producer.py"
+  lute_template_cfg:
+    template_name: "smd1_prod_config_template.py"
+    output_path: "{{ work_dir }}/smalldata_tools/lcls1_producers/prod_config_<hutch>.py"
+  producer_parameters:
+    detnames: ["epix10k2M"]
+    # ...
+```
+
+### LCLS2 (psana2) example
+
+```yaml
+SubmitSMD:
+  producer: "{{ work_dir }}/smalldata_tools/lcls2_producers/smd_producer.py"
+  lute_template_cfg:
+    template_name: "smd2_prod_config_template.py"
+    output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_<hutch>.py"
+  producer_parameters:
+    detnames: ["jungfrau"]
+    # ...
+```
+
+The `{{ work_dir }}` placeholder is substituted before Pydantic validation runs, so
+these paths resolve to real filesystem paths by the time the validators execute.
+`smalldata_tools` itself will be cloned to `<work_dir>/smalldata_tools/` (three
+`.parent` steps up from the `producer` path, as implemented in
+`lute/tasks/tasklets.py:186`).
+
+> **Important:** `producer_parameters` must always be nested under that key — not
+> directly under `SubmitSMD` — or the values are silently ignored and never passed
+> to the producer.
+---
+
 ## Configuration
 
 The starting YAML for smalldata_tools may look like:
@@ -44,6 +108,9 @@ SubmitSMD:
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
   #np: 5
   #producer: "/path/to/producer"
+  #lute_template_cfg:
+    #template_name: "smdX_prod_config_template.py"
+    #output_path: "path/to/prod_config_hutch"
   #run: "{{ run }}"
   #experiment: "{{ experiment }}"
   #stn: 0

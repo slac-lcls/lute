@@ -79,7 +79,11 @@ SubmitSMD:
   # Command line arguments
   #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
-  #producer: "/path/to/smalldata_tools/producers/smd_producer.py"
+  # LCLS2 (psana2)
+  producer: "{{ work_dir }}/smalldata_tools/lcls2_producers/smd_producer.py"
+  lute_template_cfg:
+    template_name: "smd2_prod_config_template.py"
+    output_path: "{{ work_dir }}/smalldata_tools/lcls2_producers/prod_config_xpp.py"
   #run: 99
   #experiment: ""
   #stn: 0

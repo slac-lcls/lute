@@ -191,6 +191,21 @@ A number of environment variables can be set to control certain aspects of LUTE 
 - `LUTE_DB_SPEC_VERSION`: Set to determine the database specification version. Either 1 or 2, currently.
 - `LUTE_MAESTRO_LOG_LEVEL`: Set the logging level for the workflow manager `maestro`. Can be `trace`, `debug`, `info`, `warning`, `error`. The settings can also be set per logger. E.g. `LUTE_MAESTRO_LOG_LEVEL=debug,HTTP:Server=trace`.
 
+#### Virtual Environment Variables
+
+When LUTE is installed via `setup_lute -fi` (virtual environment install), the submission
+scripts automatically detect the install type and export additional variables:
+
+| Variable | Set by | Meaning |
+|---|---|---|
+| `LUTE_VIRTUAL_ENV` | `submit_slurm.sh` (venv path) | Path to the active primary virtual environment directory |
+| `LUTE_VIRTUAL_ENV_PY39` | `submit_slurm.sh` (venv path) | Path to the Python 3.9 interpreter in the sibling `lute_env_py39` virtual environment |
+| `LUTE_VIRTUAL_ENV_PY311` | `submit_slurm.sh` (venv path) | Path to the Python 3.11 interpreter in the sibling `lute_env_py311` virtual environment |
+
+**Install-type detection:** the submit scripts check whether `bin/activate` is present
+in the LUTE bin path. If so, the venv path is used and the variables above are exported.
+Otherwise, `bin/activate_installation` (meson/prefix build) is sourced instead.
+
 A number of other environment variables are used (`LUTE_PATH`, `LUTE_EXECUTOR_HOST`, as examples). These, however, are set internally and are not intended to be managed by users. They will appear in the database records, however.
 
 #### Debug Environment Variables
