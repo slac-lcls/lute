@@ -72,13 +72,14 @@ before-build = [
 before-all = [
     """
     if command -v apt-get >/dev/null; then
-        apt-get update && apt-get install -y ccache
+        apt-get update
+        apt-get install -y ccache libkrb5-dev
     elif command -v dnf >/dev/null; then
-        dnf install -y ccache
+        dnf install -y ccache krb5-devel
     elif command -v yum >/dev/null; then
-        yum install -y ccache
+        yum install -y ccache krb5-devel
     elif command -v apk >/dev/null; then
-        apk add ccache
+        apk add ccache krb5-dev
     fi
     """,
 ]
@@ -86,10 +87,6 @@ before-all = [
 CC = "ccache gcc"
 CXX = "ccache g++"
 CCACHE_DIR = "/project/.ccache"
-
-# Kerberos requires GSAPPI C-dependencies to build from source. Trying not to deal with that
-# Instead, force a binary-only installation for that package. Use commas to add more.
-PIP_ONLY_BINARY = "kerberos"
 
 #[tool.cibuildwheel.macos.environment]
 #CC = "ccache clang"
