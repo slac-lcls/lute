@@ -260,7 +260,7 @@ namespace LWM {
     std::tuple<std::string, int, pid_t>
     run_subprocess_log(const std::string& cmd, bool return_output = false);
 
-    void update_log(std::string& log, std::string& jobid) {}
+    virtual void update_log(std::string& log, std::string& jobid) {}
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
     std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
@@ -335,7 +335,7 @@ namespace LWM {
     virtual void cancel_subprocess(const std::string& jobid) final;
 
   protected:
-    void update_log(std::string& log, std::string& jobid);
+    void update_log(std::string& log, std::string& jobid) override;
 
     std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) final;
 

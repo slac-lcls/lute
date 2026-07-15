@@ -677,8 +677,8 @@ namespace LWM {
           }
         }
       }
-      JobRegistry::unregister_job(managed_task_name);
       update_log(log, jobid);
+      JobRegistry::unregister_job(managed_task_name);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger
       // rule and explain why not running
@@ -897,6 +897,9 @@ namespace LWM {
       return;
     }
 
+    // The `log` should likely contain the submit log from sbatch right now.
+    // We'll fetch the actual logfile and *append* so we get both!
+    std::string mtask_log;
     std::string logfile_path = JobRegistry::get_log_file_for(jobid);
 
     std::string get_slurm_log_cmd { "cat " + logfile_path };
@@ -907,8 +910,10 @@ namespace LWM {
     int ret_code { 0 };
     pid_t subproc_pid;
     std::size_t wait_ms { 500 };
-    std::tie(log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd, true);
+    std::tie(mtask_log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd,
+                                                                    true);
     if (WEXITSTATUS(ret_code) == 0) {
+      log += "\n" + mtask_log; // Append now.
       return;
     }
     while (WEXITSTATUS(ret_code) && wait_ms < 10000) {
@@ -916,9 +921,10 @@ namespace LWM {
                       wait_ms);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-      std::tie(log, ret_code, subproc_pid) =
-        run_subprocess_log(get_slurm_log_cmd, true);
+      std::tie(mtask_log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd,
+                                                                      true);
       if (WEXITSTATUS(ret_code) == 0) {
+        log += "\n" + mtask_log; // Append now.
         return;
       }
       wait_ms <<= 2;
