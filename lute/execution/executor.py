@@ -701,6 +701,10 @@ class BaseExecutor(ABC):
                     "for that version exists! Things may fail if depending on C "
                     "extensions!"
                 )
+            else:
+                # Because of the venv updates below, setting PYTHONPATH isn't
+                # sufficient to pickup new Python. Need to make sure LUTE_PATH is set
+                new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
 
             if new_python_path:
                 new_environment["LUTE_TENV_PYTHONPATH"] = (

@@ -41,11 +41,11 @@ class BayFAI(Task):
     def __init__(
         self, *, params: BayFAIParameters, use_mpi: bool = True, row_ids=None
     ) -> None:
+        self._task_parameters: BayFAIParameters
         super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         start_time = time.time()
-        assert isinstance(self._task_parameters, BayFAIParameters)
         optimizer: Union[BayFAIOpt, BayFAIOpt2]
         if IS_PSANA2:
             optimizer = BayFAIOpt2(
