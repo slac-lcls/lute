@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 from typing import Dict, Optional, List, Set, Tuple, Any, Callable, Generic, Union, cast
 from typing_extensions import TypedDict, TypeVar
@@ -57,6 +58,81 @@ class ModelSchema(TypedDict):
 class EnumSpec(TypedDict):
     enum: List[Union[str, int, bool]]
     type: str
+
+
+class EnvVarDefinition(TypedDict):
+    default: str
+    value: Optional[str]
+    description: str
+
+
+LUTE_ENV_VARS: Dict[str, EnvVarDefinition] = {
+    "LUTE_MAESTRO_LOG_LEVEL": {
+        "default": "info for all loggers",
+        "value": os.getenv("LUTE_MAESTRO_LOG_LEVEL"),
+        "description": (
+            "  - Sets the log level of the `maestro` workflow manager.\n"
+            "  - It can be set per logger, or for all loggers.\n"
+            "    - E.g. `LUTE_MAESTRO_LOG_LEVEL=debug`\n"
+            "    - Or LUTE_MAESTRO_LOG_LEVEL=LWM:Manager=trace.\n"
+        ),
+    },
+    "LUTE_DEBUG_EXIT_AT_YAML": {
+        "default": "Not set",
+        "value": os.getenv("LUTE_DEBUG_EXIT_AT_YAML"),
+        "description": (
+            "  - If set at all, exit after parsing YAML.\n"
+            "  - This variable enables an early debug exit.\n"
+            "  - The YAML will be parsed and any template substitutions evaluated.\n"
+            "  - It will then print and exit.\n"
+        ),
+    },
+    "LUTE_DEBUG_BEFORE_TPP_EXEC": {
+        "default": "Not set",
+        "value": os.getenv("LUTE_DEBUG_BEFORE_TPP_EXEC"),
+        "description": (
+            "  - If set at all, exit before submitting third-party Task.\n"
+            "  - This variable enables an early debug exit.\n"
+            "  - The submission command will be printed for a third-party Task.\n"
+            "  - It will exit after printing before actually submitting the Task.\n"
+        ),
+    },
+    "LUTE_MAESTRO_HEARTBEAT": {
+        "default": "30 seconds period",
+        "value": os.getenv("LUTE_MAESTRO_HEARTBEAT"),
+        "description": (
+            "  - The period at which the Executor sends sign of life updates to the "
+            "`maestro` workflow manager.\n"
+            "  - The heartbeat period is used to judge whether a managed Task has "
+            "become unresponsive.\n"
+            "  - The value is set in seconds.\n"
+        ),
+    },
+    "LUTE_NO_HEARTBEAT_TTL": {
+        "default": "120 seconds period",
+        "value": os.getenv("LUTE_NO_HEARTBEAT_TTL"),
+        "description": (
+            "  - Sets the time after which `maestro` will use a fallback strategy to "
+            "check job status.\n"
+            "  - Fallback strategy is used if it has not received a heartbeat update.\n"
+            "  - E.g., when using a SLURM Launcher, `maestro` will check the SLURMDB.\n"
+            "  - If the fallback strategy shows the job has exited, the job will be marked "
+            "as failed.\n"
+            "  - The value is set in seconds.\n"
+        ),
+    },
+    "LUTE_NO_HEARTBEAT_KILL": {
+        "default": "900 seconds period (15 minutes)",
+        "value": os.getenv("LUTE_NO_HEARTBEAT_KILL"),
+        "description": (
+            "  - Sets the time after which an unresponsive job will be killed.\n"
+            "  - This applies to both the Execution and maestro levels.\n"
+            "    - The Executor monitors the Task for responsiveness.\n"
+            "    - `maestro` monitors the Executor.\n"
+            "  - The value is set in seconds.\n"
+        ),
+    },
+}
 
 
 def _format_enum(param: str, enum_spec: EnumSpec) -> str:
@@ -122,11 +198,46 @@ def _format_parameter_row(
     return msg
 
 
+def _print_env_config(env_var: Optional[str] = None):
+    print("LUTE Configuration via Environment Variables:")
+    print("-" * 80)
+    if env_var is not None:
+        if env_var in LUTE_ENV_VARS:
+            env_var_defn: EnvVarDefinition = LUTE_ENV_VARS[env_var]
+            print(env_var)
+            val: str
+            if env_var_defn["value"] is not None:
+                val = env_var_defn["value"]
+            else:
+                val = env_var_defn["default"]
+            print(f"{env_var} = {val}")
+            print(env_var_defn["description"])
+    else:
+        for env_var, env_var_defn in LUTE_ENV_VARS.items():
+            if env_var_defn["value"] is not None:
+                val = env_var_defn["value"]
+            else:
+                val = env_var_defn["default"]
+            print(f"{env_var} = {val}")
+
+
 def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         prog="Task parameters help utility.",
         description="Display parameter descriptions and types for a specified Task.",
         epilog="Refer to https://github.com/slac-lcls/lute for more information.",
+    )
+    parser.add_argument(
+        "-e",
+        "--env",
+        nargs="?",
+        const=True,
+        default=False,
+        help=(
+            "Print configuration coming from env vars.\n"
+            "If passed as a flag, print variable/value pairs. (lute_help -e)\n"
+            "If passed with a variable, print the long description. (lute_help -e <var>)."
+        ),
     )
     parser.add_argument("-l", "--list", action="store_true", help="List out all Tasks")
     parser.add_argument(
@@ -138,6 +249,11 @@ def main() -> None:
         help="Dump an unformated full model schema. Has more information.",
     )
     args: argparse.Namespace = parser.parse_args()
+
+    if args.env:
+        env_var: Optional[str] = args.env if isinstance(args.env, str) else None
+        _print_env_config(env_var=env_var)
+
     task_name: str
     parameter_schema: ModelSchema
     if args.list:
