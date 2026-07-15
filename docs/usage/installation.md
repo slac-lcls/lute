@@ -43,6 +43,26 @@ This will:
 | `dev` | Nightly pre-release wheel (built from `dev` branch via CI) |
 | `0.2.0`, etc. | Pinned stable release from PyPI |
 
+### Installing manually (without `setup_lute`)
+
+For a **stable release** (available on the standard PyPI index):
+
+```bash
+pip install lute-lcls==0.3.0
+```
+
+For a **nightly build**: wheels are built and published at 3 AM from the `dev`
+branch and are available from a self-hosted PEP 503 simple package index at
+`https://slac-lcls.github.io/lute/wheels`. Pass `--extra-index-url` to pip:
+
+```bash
+# Pin to a specific nightly (version identifier uses the +dev local label):
+pip install lute-lcls==v0.3.0+dev --extra-index-url https://slac-lcls.github.io/lute/wheels
+
+# Or install the latest nightly without pinning a version:
+pip install lute-lcls --extra-index-url https://slac-lcls.github.io/lute/wheels --pre
+```
+
 ### Environment variables set at runtime
 
 When using the virtual-environment install the submission scripts
