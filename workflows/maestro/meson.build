@@ -99,7 +99,7 @@ test_http = executable(
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: '$ORIGIN',
+    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
     include_directories: maestro_headers,
 )
 test('HTTP parsing tests', test_http)
@@ -119,7 +119,7 @@ test_server = executable(
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: '$ORIGIN',
+    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
     include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
@@ -142,7 +142,7 @@ test_maestro_api = executable(
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: '$ORIGIN',
+    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
     include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
