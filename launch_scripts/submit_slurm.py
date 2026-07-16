@@ -247,6 +247,7 @@ def fill_in_batch_script(
         )
 
     lute_location: Optional[str] = os.getenv("LUTE_PATH")
+    lute_virtual_env: Optional[str] = os.getenv("LUTE_VIRTUAL_ENV")
     if lute_location is None:
         raise RuntimeError("LUTE path env var is empty! Check the launch scripts!")
 
@@ -262,7 +263,19 @@ def fill_in_batch_script(
         # Note that in this case, the LUTE_PATH included the /install/ dir
         os.environ["LUTE_PATH"] = f"{lute_location}/lib/python{py_ver}/site-packages"
 
-        batch_script += f"source {full_bindir}/activate_installation\n\n"
+        if lute_virtual_env is not None:
+            if os.path.exists(f"{lute_virtual_env}/bin/activate"):
+                batch_script += f"source {lute_virtual_env}/bin/activate\n"
+                for key, val in os.environ.items():
+                    if key.startswith("LUTE_VIRTUAL_ENV_PY"):
+                        batch_script += f'export {key}="{val}"\n'
+                batch_script += "\n"
+        elif os.path.exists(f"{full_bindir}/activate_installation"):
+            batch_script += f"source {full_bindir}/activate_installation\n\n"
+        else:
+            raise RuntimeError(
+                f"Could not find a valid LUTE environment in {full_bindir}!"
+            )
 
     cmd: str
     if args.debug:

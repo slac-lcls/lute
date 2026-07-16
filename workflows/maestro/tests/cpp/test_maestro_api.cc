@@ -1,6 +1,8 @@
-#include "http.hh"
-#include "launcher.hh"
+#include "lwm/launcher.hh"
+#include "server/http.hh"
+
 #include <gtest/gtest.h>
+
 #include <iostream>
 #include <map>
 #include <memory>

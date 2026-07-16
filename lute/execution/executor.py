@@ -193,6 +193,7 @@ class BaseExecutor(ABC):
         )
         task_parameters: Optional[TaskParameters] = None
         task_env: Dict[str, str] = os.environ.copy()
+        self._py_executable: str = sys.executable
         self._communicators: List[Communicator] = communicators
 
         self._analysis_desc: DescribedAnalysis = DescribedAnalysis(
@@ -216,6 +217,26 @@ class BaseExecutor(ABC):
         # Check to see if we are running from the Slurm WF manager
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
+
+        # We also will send the manager a jobid in addition to our name.
+        # If using SLURM this is the SLURM_JOBID
+        # If using straight Python launching the process ID
+        self._job_id: str = os.getenv("SLURM_JOBID", str(os.getpid()))
+
+        self._maestro_heartbeat_s: float = float(
+            os.getenv("LUTE_MAESTRO_HEARTBEAT", 30.0)
+        )
+        # We also update task_last_update if a message of ANY kind is
+        # received -- This is done in _task_loop (if overriden, must be done
+        # by overriding class as well). This is used as proxy of Task life.
+        # Maestro uses the env var LUTE_NO_HEARTBEAT_KILL to consider the
+        # unresponsive timeout. We'll do the same here. If last update
+        # was longer than LUTE_NO_HEARTBEAT_KILL or a default of 900.0 seconds
+        # ago. Consider it UNRESPONSIVE and dead.
+        self._task_last_update: float = 0.0  # Irrespective of timeout, track updates
+        self._no_heartbeat_kill: float = float(
+            os.getenv("LUTE_NO_HEARTBEAT_KILL", 900.0)
+        )
 
     @property
     def task_name(self) -> str:
@@ -241,6 +262,11 @@ class BaseExecutor(ABC):
             logger.error(f"Unable to send an HTTP request of type {method}")
             return
 
+        # Include a job id here so it doesn't need to be remembered at each call site
+        tagged_json_data: Dict[str, str] = {"orig_job_id": self._job_id}
+        if json_data is not None:
+            tagged_json_data.update(json_data)
+
         # Set a timeout so we don't hang if the workflow manager dies
         timeout: float = 5.0
         try:
@@ -248,7 +274,7 @@ class BaseExecutor(ABC):
             if json_data is not None:
                 resp = func(
                     f"http://{self._lute_manager_url}/{end_point}",
-                    json=json_data,
+                    json=tagged_json_data,
                     timeout=timeout,
                 )
             else:
@@ -587,26 +613,31 @@ class BaseExecutor(ABC):
         logger.info(f"Sourcing file {self._shell_source_script}")
         subproc_env: Dict[str, str] = {}
         lute_path: Optional[str] = os.getenv("LUTE_PATH")
+        lute_virtual_env: Optional[str] = os.getenv("LUTE_VIRTUAL_ENV")
         for key, val in os.environ.items():
-            if "CONDA" not in key:
-                if key == "PYTHONPATH":
-                    # Strip out psana2 environment leakage
-                    curr_parts: List[str] = val.split(":")
-                    cleaned_parts: List[str] = []
-                    for part in curr_parts:
-                        part_lower: str = part.lower()
-                        is_lute: bool = "lute" in part_lower
-                        if lute_path:
-                            is_lute = (
-                                is_lute
-                                or (lute_path.lower() in part_lower)
-                                or (part_lower in lute_path.lower())
-                            )
-                        if is_lute:
-                            cleaned_parts.append(part)
-                    subproc_env[key] = ":".join(cleaned_parts)
-                else:
+            if lute_virtual_env is not None:
+                if "CONDA" not in key and "PYTHONPATH" not in key:
                     subproc_env[key] = val
+            else:
+                if "CONDA" not in key:
+                    if key == "PYTHONPATH":
+                        # Strip out psana2 environment leakage
+                        curr_parts: List[str] = val.split(":")
+                        cleaned_parts: List[str] = []
+                        for part in curr_parts:
+                            part_lower: str = part.lower()
+                            is_lute: bool = "lute" in part_lower
+                            if lute_path:
+                                is_lute = (
+                                    is_lute
+                                    or (lute_path.lower() in part_lower)
+                                    or (part_lower in lute_path.lower())
+                                )
+                            if is_lute:
+                                cleaned_parts.append(part)
+                        subproc_env[key] = ":".join(cleaned_parts)
+                    else:
+                        subproc_env[key] = val
 
         o, e = subprocess.Popen(
             ["bash", "-c", script], stdout=subprocess.PIPE, env=subproc_env
@@ -617,6 +648,7 @@ class BaseExecutor(ABC):
         # For picking up LUTE, the new environment may be a different python version
         # So we need to make sure to pick it up appropriately for C-extension usage
         new_pyver: str = tmp_environment.get("LUTE_NEW_PYVER", "python3.9")
+        old_pyver: str = f"python{sys.version_info[0]}.{sys.version_info[1]}"
         for key, value in tmp_environment.items():
             # Make sure LUTE vars are available
             if "LUTE_" in key or "SLURM_" in key or key in ("RUN", "EXPERIMENT"):
@@ -637,7 +669,10 @@ class BaseExecutor(ABC):
                             # e.g. pydantic
                             new_environment[key] = f"{curr}:{value}"
                             # For the TENV, make sure they get the environment requested
-                            new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
+                            if key == "PATH":
+                                new_environment[f"LUTE_TENV_{key}"] = f"{value}:{curr}"
+                            else:
+                                new_environment[f"LUTE_TENV_{key}"] = value
 
         # Until we make LUTE installable... Need to make sure this is available
         # for first-party Tasks, regardless of the directory they run in if using
@@ -647,7 +682,8 @@ class BaseExecutor(ABC):
         new_lute_path: Optional[str] = lute_path
         if lute_path is None:
             logger.warning("LUTE_PATH not defined! Task may fail to find LUTE!")
-        else:
+
+        elif lute_virtual_env is None:
             assert new_lute_path
             if old_python_path:
                 new_environment["PYTHONPATH"] = f"{lute_path}:{old_python_path}"
@@ -656,7 +692,6 @@ class BaseExecutor(ABC):
 
             if new_pyver not in lute_path:
                 # We have a new lute_path to use for a different Python version
-                old_pyver: str = f"python{sys.version_info[0]}.{sys.version_info[1]}"
                 new_lute_path = lute_path.replace(old_pyver, new_pyver)
                 logger.debug(f"Task will use LUTE from: {new_lute_path}")
 
@@ -666,6 +701,10 @@ class BaseExecutor(ABC):
                     "for that version exists! Things may fail if depending on C "
                     "extensions!"
                 )
+            else:
+                # Because of the venv updates below, setting PYTHONPATH isn't
+                # sufficient to pickup new Python. Need to make sure LUTE_PATH is set
+                new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
 
             if new_python_path:
                 new_environment["LUTE_TENV_PYTHONPATH"] = (
@@ -673,8 +712,25 @@ class BaseExecutor(ABC):
                 )
             elif new_lute_path:
                 new_environment["LUTE_TENV_PYTHONPATH"] = new_lute_path
-            else:
-                logger.warning("Could not determine a new Python version LUTE_PATH!")
+
+        # Update python executable and lute path to correct version
+        elif lute_virtual_env is not None:
+            if new_pyver != old_pyver:
+                # Strip new_pyver version
+                version: str = new_pyver.replace("python", "").replace(".", "")
+                new_py_executable = os.getenv(f"LUTE_VIRTUAL_ENV_PY{version}")
+                if new_py_executable is not None:
+                    self._py_executable = new_py_executable
+                    lute_env_root = os.path.dirname(os.path.dirname(new_py_executable))
+                    new_lute_path = os.path.join(
+                        lute_env_root, "lib", new_pyver, "site-packages"
+                    )
+                    new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
+                else:
+                    logger.warning(
+                        f"Task needs to run in {new_pyver}, but no {version} "
+                        "installation is available! Task may fail."
+                    )
 
         self._analysis_desc.task_env = new_environment
 
@@ -783,9 +839,9 @@ class BaseExecutor(ABC):
         """
         cmd: str = ""
         if __debug__:
-            cmd = f"{sys.executable} -B {executable_path} {params}"
+            cmd = f"{self._py_executable} -B {executable_path} {params}"
         else:
-            cmd = f"{sys.executable} -OB {executable_path} {params}"
+            cmd = f"{self._py_executable} -OB {executable_path} {params}"
 
         return cmd
 
@@ -821,6 +877,9 @@ class BaseExecutor(ABC):
             }
             self._report_to_manager(end_point="status", json_data=json_data)
 
+        # Send periodic heartbeats for liveness tracking
+        last_heartbeat: float = time.monotonic()
+
         affinity: Set[int] = os.sched_getaffinity(0)
         # By convention, the Executor takes the minimum core on this node.
         # Task gets everything else. If we only have 1 core here then out of luck
@@ -835,6 +894,46 @@ class BaseExecutor(ABC):
                 if run_time > self._task_timeout:
                     logger.error("Task timed out!")
                     self._sigalrm_task(proc)
+
+            now: float = time.monotonic()
+            if (now - last_heartbeat) > self._maestro_heartbeat_s:
+                # If unresponsive for longer than kill period, we exit.
+                # Otherwise, just send the normal heartbeat ping - message doesn't
+                # matter. Just say RUNNING
+                stat_str: str = "RUNNING"
+                if (now - self._task_last_update) > self._no_heartbeat_kill:
+                    stat_str = "UNRESPONSIVE"
+
+                # Break early - the Executor will send a message at the very end
+                # `maestro` is faster than Python. We want it to wait around until
+                # the last minute, so we only send the UNRESPONSIVE update before tear-down
+                if stat_str == "UNRESPONSIVE":
+                    unresp_msg: str = (
+                        f"Task did not respond for more than {self._no_heartbeat_kill} seconds. "
+                        "It is marked as UNRESPONSIVE and failed!"
+                    )
+                    logger.error(unresp_msg)
+                    if self._lute_manager_url is not None:
+                        json_log_data: Dict[str, str] = {
+                            "managed_task": self._m_task_name,
+                            "message": unresp_msg,
+                        }
+                        self._report_to_manager(
+                            end_point="log", json_data=json_log_data
+                        )
+                    self._kill_task(proc=proc, status=TaskStatus.UNRESPONSIVE)
+                    break
+
+                # Since we may run without maestro, we will check the UNRESPONSIVE
+                # outside the lute_manager_url check.
+                if self._lute_manager_url is not None:
+                    json_data = {
+                        "managed_task": self._m_task_name,
+                        "task": self.task_name,
+                        "status": stat_str,
+                    }
+                    self._report_to_manager(end_point="status", json_data=json_data)
+
             time.sleep(self._analysis_desc.poll_interval)
 
         if proc.stdin is not None:
@@ -887,6 +986,8 @@ class BaseExecutor(ABC):
         status_str: str
         if status == TaskStatus.FAILED:
             status_str = "FAILED"
+        elif status == TaskStatus.UNRESPONSIVE:
+            status_str = "UNRESPONSIVE"
         elif status == TaskStatus.CANCELLED:
             status_str = "CANCELLED"
         elif status == TaskStatus.TIMEDOUT:
@@ -910,9 +1011,11 @@ class BaseExecutor(ABC):
             TaskStatus.FAILED,
             TaskStatus.TIMEDOUT,
             TaskStatus.CANCELLED,
+            TaskStatus.UNRESPONSIVE,
         ):
             logger.info("Exiting after Task failure. Result recorded.")
             logging.shutdown()
+            time.sleep(0.5)  # Try to give a chance for any unsent messages to drain
             sys.exit(-1)
         logger.info("Exiting after Task completion.")
         logging.shutdown()
@@ -954,6 +1057,22 @@ class BaseExecutor(ABC):
         """Timeout the Task subprocess with SIGALRM."""
         os.kill(proc.pid, signal.SIGALRM)
         self._analysis_desc.task_result.task_status = TaskStatus.TIMEDOUT
+
+    def _kill_task(
+        self, proc: subprocess.Popen, status: TaskStatus = TaskStatus.UNRESPONSIVE
+    ) -> None:
+        """Kill the Task subprocess with SIGKILL.
+
+        Args:
+            proc (subprocess.Popen): The subprocess to signal.
+
+            status (TaskStatus): The status to mark the Task with after signalling.
+                By default, this will be UNRESPONSIVE, as this is the usual reason
+                that this method would be employed (as opposed to SIGALRM above). But
+                a separate status can be used instead.
+        """
+        os.kill(proc.pid, signal.SIGKILL)
+        self._analysis_desc.task_result.task_status = status
 
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
@@ -1390,14 +1509,20 @@ class Executor(BaseExecutor):
         should_continue: Optional[bool]
         for communicator in self._communicators:
             while True:
+                # We'll try to track any sort of signal of Task life.
+                # Any message at ALL will be used as a proxy of life (logs, signals, etc)
                 msg: Message = communicator.read(proc)
                 if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
+                    # Have signal? ---> Consider it a sign of life
+                    self._task_last_update = time.monotonic()
                     hook: Hook = getattr(self.Hooks, msg.signal.lower())
                     should_continue = hook(self, msg, proc)
                     if should_continue:
                         continue
 
                 if msg.contents is not None:
+                    # Have message contents? ---> Consider it a sign of life
+                    self._task_last_update = time.monotonic()
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
                         if self._lute_manager_url is not None:
@@ -1622,10 +1747,15 @@ class MPIExecutor(Executor):
             int(os.environ.get("SLURM_NPROCS", len(os.sched_getaffinity(0)))) - 1, 1
         )
         mpi_cmd: str = f"mpirun -np {nprocs} --map-by core"
+        print(self._py_executable, flush=True)
         if __debug__:
-            py_cmd = f"python -B -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = (
+                f"{self._py_executable} -B -u -m mpi4py.run {executable_path} {params}"
+            )
         else:
-            py_cmd = f"python -OB -u -m mpi4py.run {executable_path} {params}"
+            py_cmd = (
+                f"{self._py_executable} -OB -u -m mpi4py.run {executable_path} {params}"
+            )
 
         cmd: str = f"{mpi_cmd} {py_cmd}"
         return cmd

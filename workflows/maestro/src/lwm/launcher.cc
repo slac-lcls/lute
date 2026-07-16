@@ -1,15 +1,25 @@
-#include "launcher.hh"
+#include "lwm/launcher.hh"
 
-#include "job.hh"
+#include "lwm/job.hh"
+#include "lwm/job_registry.hh"
 
-#include <cstdlib>
-#include <string>
+#if defined(__linux__) || defined(__APPLE__) || defined(__OSX__) || defined(__APPLE_CC__)
+#include <signal.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#else
+#include <BaseTsd.h>
+#include <windows.h>
+typedef SSIZE_T ssize_t;
+#endif
 #include <unistd.h>
 
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -17,7 +27,9 @@
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <thread>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -31,7 +43,7 @@ namespace {
    */
   struct ScopedTempFile {
     fs::path path;
-    int fd = -1;
+    int fd { -1 };
 
     ScopedTempFile() {
       char temp_template[] = "/tmp/lute_maestro_XXXXXX";
@@ -50,6 +62,7 @@ namespace {
       if (fd != -1) {
         close(fd);
       }
+
       if (!path.empty()) {
         std::error_code ec;
         fs::remove(path, ec);
@@ -59,51 +72,7 @@ namespace {
 } // anonymous namespace
 
 namespace LWM {
-
-  std::atomic<bool> s_interrupted{false};
-
-  std::mutex JobRegistry::m_registry_mut;
-  std::set<std::pair<std::string, std::string>> JobRegistry::m_active_jobs;
-
-  void JobRegistry::register_job(const std::string& task_name,
-                                 const std::string& job_id) {
-    std::lock_guard<std::mutex> lock(m_registry_mut);
-    m_active_jobs.insert({task_name, job_id});
-  }
-
-  void JobRegistry::unregister_job(const std::string& task_name) {
-    std::lock_guard<std::mutex> lock(m_registry_mut);
-    for (auto it = m_active_jobs.begin(); it != m_active_jobs.end();) {
-      if (it->first == task_name) {
-        it = m_active_jobs.erase(it);
-      } else {
-        ++it;
-      }
-    }
-  }
-
-  void JobRegistry::cancel_all() {
-    std::lock_guard<std::mutex> lock(m_registry_mut);
-    if (m_active_jobs.empty()) {
-      return;
-    }
-
-    std::string cancel_cmd = "scancel";
-    for (const auto& pair : m_active_jobs) {
-      cancel_cmd += " " + pair.second;
-    }
-    // We use std::system here as a quick way to fire and forget the scancel
-    // Since we are likely in a signal handler or exiting, we don't want to get
-    // too fancy
-    int ret = std::system(cancel_cmd.c_str());
-    (void)ret;
-    m_active_jobs.clear();
-  }
-
-  bool JobRegistry::is_empty() {
-    std::lock_guard<std::mutex> lock(m_registry_mut);
-    return m_active_jobs.empty();
-  }
+  std::atomic<bool> s_interrupted { false };
 
   void JsonStatusHandler::update_running_splits(JobStepSplits* splits,
                                                 std::string& managed_task_name) {
@@ -121,6 +90,14 @@ namespace LWM {
   HTTP::Response JsonStatusHandler::operator()(const HTTP::Request& request) {
     std::map<std::string,std::string> status_plus_data;
     parse_json(request.content(), status_plus_data); // Implemented by HTTP::JsonHandler
+
+    // Check for JobID and update the most recent time stamp
+    if (status_plus_data.count("orig_job_id")) {
+      std::string jobid { status_plus_data["orig_job_id"] };
+      auto ts { std::chrono::steady_clock::now() };
+      JobRegistry::set_last_update_time(jobid, ts);
+    }
+
     if (status_plus_data.count("managed_task")) {
       std::lock_guard<std::mutex> lock(m_status_mut);
       std::string task_name = status_plus_data["managed_task"];
@@ -152,6 +129,12 @@ namespace LWM {
     if (m_unbuffered_logs) {
       parse_json(request.content(), log);
       {
+        // Check for JobID and update the most recent time stamp
+        if (log.count("orig_job_id")) {
+          std::string jobid { log["orig_job_id"] };
+          auto ts { std::chrono::steady_clock::now() };
+          JobRegistry::set_last_update_time(jobid, ts);
+        }
         //  std::lock_guard<std::mutex> lock(m_log_mut);
         //  m_log_map[log["managed_task"]] = log["message"];
         if (log.find("managed_task") != log.end()) {
@@ -213,6 +196,13 @@ namespace LWM {
       std::map<std::string, std::string> rpc_data;
       parse_json(request.content(), rpc_data);
 
+      // Check for JobID and update the most recent time stamp
+      if (rpc_data.count("orig_job_id")) {
+        std::string jobid { rpc_data["orig_job_id"] };
+        auto ts { std::chrono::steady_clock::now() };
+        JobRegistry::set_last_update_time(jobid, ts);
+      }
+
       if (rpc_data.find("target") != rpc_data.end()
           && rpc_data.find("message") != rpc_data.end()) {
         std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
@@ -239,6 +229,13 @@ namespace LWM {
         parse_json(request.content(), rpc_data);
         if (rpc_data.find("task") != rpc_data.end()) {
           task_name = rpc_data["task"];
+        }
+
+        // Check for JobID and update the most recent time stamp
+        if (rpc_data.count("orig_job_id")) {
+          std::string jobid { rpc_data["orig_job_id"] };
+          auto ts { std::chrono::steady_clock::now() };
+          JobRegistry::set_last_update_time(jobid, ts);
         }
       }
 
@@ -360,9 +357,10 @@ namespace LWM {
     return true; // Broke out of all other cass.
   }
 
-  std::pair<std::string,int> SubprocessLauncher::run_subprocess_log(const std::string& cmd,
-                                                                    bool return_output) {
-    std::string final_cmd = cmd;
+  // This is currently Linux/Unix only... will need to update if cross-platform needed
+  std::tuple<std::string, int, pid_t>
+  SubprocessLauncher::run_subprocess_log(const std::string& cmd, bool return_output) {
+    std::string final_cmd { cmd };
     std::unique_ptr<ScopedTempFile> tmp_file;
 
     if (return_output) {
@@ -376,66 +374,238 @@ namespace LWM {
       }
     }
 
-    int status = std::system(final_cmd.c_str());
+    int err_pipes[2];
+    auto ret { pipe(err_pipes) };
+    if (ret == -1) {
+      std::string err_result { "Pipe failed - cannot launch subprocess!" };
+      m_logger->critical(err_result);
 
-    if (!return_output) {
-      return std::make_pair("", status);
+      return std::make_tuple(err_result, ret, -1);
+    }
+
+    ret = fcntl(err_pipes[1], F_SETFD, FD_CLOEXEC);
+    if (ret == -1) {
+      std::string err_result { "fcntl failed - cannot launch subprocess!" };
+      m_logger->critical(err_result);
+
+      return std::make_tuple(err_result, ret, -1);
+    }
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+      std::string err_result { "Fork failed - cannot launch subprocess!" };
+      m_logger->critical(err_result);
+
+      close(err_pipes[0]);
+      close(err_pipes[1]);
+
+      return std::make_tuple(err_result, pid, pid);
+    } else if (pid == 0) {
+      close(err_pipes[0]);
+
+      execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
+
+      int err { errno };
+      ssize_t ignored { write(err_pipes[1], &err, sizeof(err)) };
+      (void)ignored;
+
+      close(err_pipes[1]);
+      _exit(127);
     } else {
-      std::string result;
-      std::ifstream in(tmp_file->path);
-      if (in.is_open()) {
-        result.assign((std::istreambuf_iterator<char>(in)),
-                      std::istreambuf_iterator<char>());
-        in.close();
-      } else {
-        std::string err =
-          "Unable to open temporary command output file: ";
-        err += tmp_file->path.string();
-        throw std::runtime_error(err.c_str());
+      close(err_pipes[1]);
+
+      int status { 0 };
+
+      ssize_t n = read(err_pipes[0], &status, sizeof(status));
+      close(err_pipes[0]);
+
+      if (n < 0) {
+        std::string err_result { "read failed - cannot track subprocess state!" };
+        m_logger->critical(err_result);
+
+        return std::make_tuple(err_result, status, pid);
+      } else if (n == sizeof(int)) {
+        // exec failed, and an int was written with errno
+        std::string err_result { "Exec failed with: " + std::to_string(status) };
+        m_logger->error(err_result);
+
+        return std::make_tuple(err_result, status, pid);
       }
-      return std::make_pair(result, status);
+      // else, n == 0, so pipe closed by FD_CLOEXEC, and can now record proc output
+
+      // If we're returning all the output from the launch, wait here.
+      // `status` will record the final process exit status.
+      // If not returning all the output, then the `status` records that the fork/exec
+      // was successful. The newly launched subprocess will use other means to report
+      // back as it progresses.
+      if (return_output) {
+        ret = waitpid(pid, &status, 0);
+
+        if (ret == -1) {
+          std::string err_result { "waitpid failed - cannot track subprocess state!" };
+          m_logger->critical(err_result);
+
+          return std::make_tuple(err_result, ret, pid);
+        }
+
+        std::string result;
+        std::ifstream in(tmp_file->path);
+
+        if (in.is_open()) {
+          result.assign((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+        } else {
+          std::string err_result {
+            "Unable to open temporary command output file: "
+          };
+
+          err_result += tmp_file->path.string();
+
+          return std::make_tuple(err_result, -1, pid);
+        }
+
+        return std::make_tuple(result, status, pid);
+      } else {
+        return std::make_tuple("", status, pid);
+      }
     }
   }
 
-  JobReturn SubprocessLauncher::launch_task(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
+  // This is currently Linux/Unix only... will need to update if cross-platform needed
+  std::optional<std::string>
+  SubprocessLauncher::add_job_to_registry(std::string& managed_task_name,
+                                          std::string& log,
+                                          pid_t subproc_pid) {
+    if (subproc_pid <= 0) {
+      logger()->error("Invalid PID '{}' was provided - not adding to registry!",
+                      subproc_pid);
+      return std::nullopt;
+    }
+
+    std::string jobid { std::to_string(subproc_pid) };
+
+    auto status_func = [&](const std::string& jobid) {
+      return is_subprocess_running(jobid);
+    };
+
+    auto cancel_func = [&](const std::string& jobid) {
+      return cancel_subprocess(jobid);
+    };
+
+    // Currently, actually, we're not getting a logfile anymore for PythonLauncher
+    // TODO: Cahnge the asynch launch to maintain asynch, but allow the option of
+    //       a log file even for the PythonLauncher...
+    // Just put some placeholder here for now.
+
+    std::string logfile { "/tmp/lute_fake_log_" + jobid + ".log" };
+
+    JobRegistry::register_job(managed_task_name,
+                              jobid,
+                              logfile,
+                              status_func,
+                              cancel_func);
+
+    return std::make_optional(jobid);
+  }
+
+  JobReturn SubprocessLauncher::launch_task(const JobStep& job,
+                                            bool is_daq2,
+                                            MaybeJobFutures_t wait_for) {
     JobStepSplits splits;
     std::string managed_task_name = job.managed_task_name;
-    std::string msg{"Preparing to run: "};
+    logger()->debug("Preparing to run: {}", managed_task_name);
+
     std::string reason;
-    msg += managed_task_name;
-    logger()->debug(msg);
     std::string log, status;
     if (can_task_run(job, wait_for, reason)) { // This will block on futures as needed
       std::string launch_cmd = prepare_launch_cmd(job, is_daq2);
-      msg = "Will launch " + managed_task_name + " with: " + launch_cmd;
-      logger()->info(msg);
+      logger()->info("Will launch {} with: {}", managed_task_name, launch_cmd);
+
       if (launch_cmd.empty()) {
         std::string err_msg = "Unable to create a command string for " +
                               job.managed_task_name +
                               " the return string was empty!";
         throw std::runtime_error(err_msg.c_str());
       }
+
       m_status_handler->update_running_splits(&splits, managed_task_name);
       splits.launch_point = std::chrono::steady_clock::now();
+
+      // If desired by the subclasses of SubprocessLauncher:
+      // run_subprocess_log is modified to not return the actual return code of the
+      // subprocess if not tracking the full output (second arg is false). This allows
+      // fireing-and-forgetting the subprocess which is important for some launchers
+      // e.g. the PythonLauncher - we dont want to stall this process to track it.
+      // The log will be collated later (either via the HTTP server, or at the end).
+      //
+      // If non-zero, it means that the actual launch failed in some manner:
+      // - Problem with fork/exec
+      // - Or assorted problems with the various fd utilties/fcntl etc.
+      // The log will have an exact reason.
+
+      bool return_output { use_submit_log_output() };
       int ret_status;
-      std::tie(log, ret_status) = run_subprocess_log(launch_cmd, true);
+      pid_t subproc_pid;
+      std::tie(log, ret_status, subproc_pid) = run_subprocess_log(launch_cmd,
+                                                                  return_output);
       if (ret_status != 0) {
-        m_logger->error("Error submitting job for {}. Subprocess return code: {}",
-                        job.managed_task_name,
-                        std::to_string(WEXITSTATUS(ret_status)));
+        m_logger->error("Error submitting job for {}. Could not launch or track subprocess",
+                        job.managed_task_name);
 
         status = "SUBPROCESS_FAILED";
+
+        splits.end_point = std::chrono::steady_clock::now();
         return JobReturn(managed_task_name, status, log, splits);
       }
-      std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
-      std::smatch jobid_match;
-      std::string jobid{""};
-      if (std::regex_search(log,jobid_match,jobid_regex)) {
-        jobid = jobid_match[1].str();
-        JobRegistry::register_job(managed_task_name, jobid);
+
+      auto jobid_opt = this->add_job_to_registry(managed_task_name, log, subproc_pid);
+      if (!jobid_opt.has_value()) {
+        status = "SUBPROCESS_NOT_REGISTERED";
+
+        splits.end_point = std::chrono::steady_clock::now();
+        return JobReturn(managed_task_name, status, log, splits);
       }
 
-      while (status != "COMPLETED" && status != "FAILED" && status != "CANCELLED" && status != "TIMEDOUT") {
+      std::string jobid { *jobid_opt };
+      std::string logfile = JobRegistry::get_log_file_for(jobid);
+      logger()->info("Will begin monitoring {}. Individual log file will be at: {}. {}",
+                     jobid,
+                     logfile,
+                     this->m_unbuffered_logs
+                     ? "Will stream logs in real time, too."
+                     : "Will collect logs here at end, too.");
+
+      // Setup variables for checking status
+      // LUTE_NO_HEARTBEAT_TTL - if no heartbeat received in this time, fallback
+      //                         to secondary status check.
+      // LUTE_NO_HEARTBEAT_KILL - if no heartbeat received in this time, kill.
+      double heartbeat_ttl_s { 120.0 };
+      if (auto hb_ttl = std::getenv("LUTE_NO_HEARTBEAT_TTL")) {
+        heartbeat_ttl_s = std::strtod(hb_ttl, nullptr);
+      }
+
+      double heartbeat_kill_s { 900.0 }; // Use a 15 minute default? Should be reasonable
+      if (auto hb_kill = std::getenv("LUTE_NO_HEARTBEAT_KILL")) {
+        heartbeat_kill_s = std::strtod(hb_kill, nullptr);
+      }
+
+      // So we don't use the fallback startegy to check an unresponsive job
+      // continuously, we reset the status each time. But we count how many times
+      // we did it, so when heartbeat_kill_s is reached, we can kill the process
+      int unresponsive_checks_remaining =
+        static_cast<int>(heartbeat_kill_s) / static_cast<int>(heartbeat_ttl_s);
+      // Also track the left-over seconds.
+      double unresponsive_remainder_s = std::fmod(heartbeat_kill_s, heartbeat_ttl_s);
+
+      // The above tracking system doesn't need to be overly complicated and real time
+      // ... It should work +/- a second or two.
+
+      while (status != "COMPLETED"    &&
+             status != "UNRESPONSIVE" &&
+             status != "FAILED"       &&
+             status != "CANCELLED"    &&
+             status != "TIMEDOUT") {
         if (s_interrupted) {
           status = "CANCELLED";
           break;
@@ -451,9 +621,64 @@ namespace LWM {
           }
         }
         logger()->trace(managed_task_name + "'s current status is " + status);
+
+        {
+          // Check last update time and ping directly if too long
+          using namespace std::literals;
+          auto update_pt { JobRegistry::get_last_update_time(jobid) };
+          auto now = std::chrono::steady_clock::now();
+          const std::chrono::duration<double> elapsed_dur { (now - update_pt) / 1ms };
+          const double elapsed { elapsed_dur.count() / 1e3 };
+
+          if (status.empty() || status == "PENDING") {
+            // If we're waiting for the job to even start, we'll wait 15 minutes before
+            // even pinging database...
+            if (elapsed < 900.0) {
+              continue;
+            }
+          }
+
+          if (unresponsive_checks_remaining == 0 && // No status checks left and
+              elapsed > unresponsive_remainder_s) { // we used up any left-over secs
+            JobRegistry::cancel_one(jobid);
+            status = "CANCELLED";
+            break;
+          }
+
+          if (elapsed > heartbeat_ttl_s) {
+            // Check status....
+            bool is_running = this->is_subprocess_running(jobid);
+            if (!is_running) {
+              status = "UNRESPONSIVE";
+              logger()->error("Job exited unexpectedly! No indication of why! Marked failed!");
+
+              break;
+            } else {
+              // Decrement our check counter. A bit above, we hvae the check
+              // where we kill the job if its been checked too many times.
+              unresponsive_checks_remaining--;
+
+              double secs_remaining {
+                static_cast<double>(unresponsive_checks_remaining) * heartbeat_ttl_s + unresponsive_remainder_s
+              };
+
+              logger()->warn("We haven't heard from {} (Job '{}') in more than {} seconds! "
+                             "Job will be killed in {} seconds if still unresponsive!",
+                             managed_task_name,
+                             jobid,
+                             heartbeat_ttl_s,
+                             secs_remaining);
+
+              // Update the status, so we dont use the fallback pinging too much
+              // Because of the unresponsive_checks_remaining counter we'll know when
+              // to kill the job still.
+              JobRegistry::set_last_update_time(jobid, now);
+            }
+          }
+        }
       }
-      JobRegistry::unregister_job(managed_task_name);
       update_log(log, jobid);
+      JobRegistry::unregister_job(managed_task_name);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger
       // rule and explain why not running
@@ -468,6 +693,177 @@ namespace LWM {
 
   JobReturn SubprocessLauncher::operator()(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
     return launch_task(job, is_daq2, wait_for);
+  }
+
+  bool SlurmLauncher::is_subprocess_running(const std::string& jobid) {
+    std::string get_job_state_cmd { "sacct -j " + jobid + " -o start,end,state" };
+
+    m_logger->debug("Checking job state from SLURMDB with: {}", get_job_state_cmd);
+    auto [slurm_info, ret_code, subproc_pid] = run_subprocess_log(get_job_state_cmd, true);
+
+    std::istringstream input;
+    input.str(slurm_info);
+
+    // Expecting a columnar output of this format:
+    //              Start                 End      State
+    // ------------------- ------------------- ----------
+    // YYYY-MM-DDTHH:MM:SS YYYY-MM-DDTHH:MM:SS  <STATUS>+
+    // YYYY-MM-DDTHH:MM:SS YYYY-MM-DDTHH:MM:SS   <STATUS>
+    // YYYY-MM-DDTHH:MM:SS YYYY-MM-DDTHH:MM:SS   <STATUS>
+
+    // Possible failures are:
+    // - CANCELLED
+    // - FAILED
+    // - DEADLINE
+    // - TIMEOUT
+    // - BOOT_FAIL
+    // - NODE_FAIL
+    // - OUT_OF_MEMORY
+    // - PREEMPTED
+    //
+    // Otehrwise if not RUNNING/COMPLETING we have:
+    // - COMPLETED
+
+    // The below loop is currently redundant since just looking for a substring above
+    // Eventually, though, can use the timestamps we pull out here, or do smarter
+    // parsing (e.g. preempted vs timed out vs cancelled and so on).
+    // For now, just say its dead or done
+    std::string line;
+    while (std::getline(input, line)) {
+      std::vector<std::string> cols;
+      std::size_t pos { 0 };
+      std::size_t last_pos { 0 };
+      std::string col;
+      while ((pos = line.find(' ', last_pos)) != std::string::npos) {
+        col = line.substr(last_pos, pos);
+        if (col.find("RUNNING") != std::string::npos ||
+            col.find("PENDING") != std::string::npos) { // Treat this as running for our purposes
+          // Check the common states first, RUNNING, PENDING
+          // or below, COMPLETED/CANCELLED/FAILED
+          logger()->trace("Job {} marked as running to {}.", jobid, col);
+          return true;
+        }
+
+        // This is incredibly dumb....
+        if (col.find("COMPLETED")     != std::string::npos ||
+            col.find("CANCELLED")     != std::string::npos ||
+            col.find("FAILED")        != std::string::npos ||
+            col.find("BOOT_FAIL")     != std::string::npos ||
+            col.find("DEADLINE")      != std::string::npos ||
+            col.find("PREEMPTED")     != std::string::npos ||
+            col.find("OUT_OF_MEMORY") != std::string::npos ||
+            col.find("NODE_FAIL")     != std::string::npos) {
+          logger()->debug("Job {} marked as not running due to {}.", jobid, col);
+
+          return false;
+        }
+
+        cols.push_back(col);
+        last_pos = pos + 1;
+      }
+
+      cols.push_back(col);
+    }
+
+    // I guess we couldn't determine if running or not.
+    // Mark `true` here so that it can try to kill it later if unresponsive.
+    return true;
+  }
+
+  void SlurmLauncher::cancel_subprocess(const std::string& jobid) {
+    // Will use scancel <jobid> for the cancel operation
+    std::string cancel_cmd { "scancel " + jobid };
+
+    // Since it will maybe be called from the JobRegistry, and it could be from
+    // inside a signal handler/during rapid teardown, use std::system to just
+    // fire it off.
+
+    int ret { std::system(cancel_cmd.c_str()) };
+    (void)ret;
+  }
+
+  std::optional<std::string>
+  SlurmLauncher::add_job_to_registry(std::string& managed_task_name,
+                                     std::string& log,
+                                     pid_t subproc_pid) {
+    (void)subproc_pid; // Not used by SLURM, since it has a separate SLURM job ID
+    std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
+    std::smatch jobid_match;
+    std::string jobid { "" };
+    if (std::regex_search(log, jobid_match, jobid_regex)) {
+      jobid = jobid_match[1].str();
+
+      if (jobid.empty()) {
+        logger()->error("Determined SLURM jobid was empty!");
+
+        return std::nullopt;
+      }
+
+      // Allow some time for submission and then backoff
+      std::size_t wait_ms { 500 };
+      bool found_logfile { false };
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+      std::string get_logfile_cmd { "sacct -j " + jobid + " -o StdOut%200" };
+      m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
+      auto [slurm_info, ret_code, subproc_pid] =
+        run_subprocess_log(get_logfile_cmd, true);
+
+      std::string logfile_path { "" };
+      while (!found_logfile && wait_ms < 10000) {
+        if (WEXITSTATUS(ret_code)) {
+          logger()->error("Unable to run {}. Return code: {}",
+                          get_logfile_cmd,
+                          std::to_string(WEXITSTATUS(ret_code)));
+          return std::nullopt;
+        }
+
+        std::regex logfile_regex(R"((/[^\s]+\.out))");
+        std::smatch logfile_match;
+        if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
+          logfile_path = logfile_match[1].str();
+          found_logfile = true;
+          break;
+        }
+
+        wait_ms <<= 2;
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
+        std::tie(slurm_info, ret_code, subproc_pid) =
+          run_subprocess_log(get_logfile_cmd, true);
+      }
+
+      if (!found_logfile) {
+        logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
+                        slurm_info);
+        return std::nullopt;
+      }
+
+      std::size_t pos = logfile_path.find("%J");
+      if (pos != std::string::npos) {
+        logfile_path.replace(pos, 2, jobid);
+      } else {
+        logger()->error("Log file path is in unexpected format! {}", logfile_path);
+        return std::nullopt;
+      }
+
+      auto status_func = [&](const std::string& job_id) {
+        return is_subprocess_running(job_id);
+      };
+
+      auto cancel_func = [&](const std::string& job_id) {
+        cancel_subprocess(job_id);
+      };
+
+      JobRegistry::register_job(managed_task_name,
+                                jobid,
+                                logfile_path,
+                                status_func,
+                                cancel_func);
+
+      return std::make_optional(jobid);
+    }
+
+    return std::nullopt;
   }
 
   std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
@@ -496,46 +892,28 @@ namespace LWM {
 
   void SlurmLauncher::update_log(std::string& log, std::string& jobid) {
     if (jobid.empty()) {
-      logger()->error("Trying to get information for an empty SLURM jobid!");
-    }
-    std::string get_logfile_cmd{"sacct -j " + jobid + " -o StdOut%200"};
-    m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
-    auto [slurm_info, ret_code] = run_subprocess_log(get_logfile_cmd, true);
+      logger()->error("Trying to get information for an empty SLURM jobid! Skipping!");
 
-    if (WEXITSTATUS(ret_code)) {
-      logger()->error("Unable to run {}. Return code: {}",
-                      get_logfile_cmd,
-                      std::to_string(WEXITSTATUS(ret_code)));
       return;
     }
 
+    // The `log` should likely contain the submit log from sbatch right now.
+    // We'll fetch the actual logfile and *append* so we get both!
+    std::string mtask_log;
+    std::string logfile_path = JobRegistry::get_log_file_for(jobid);
 
-    std::regex logfile_regex(R"((/[^\s]+\.out))");
-    std::smatch logfile_match;
-    std::string logfile_path{""};
-    if (std::regex_search(slurm_info, logfile_match, logfile_regex)) {
-      logfile_path = logfile_match[1].str();
-    } else {
-      logger()->error("Unable to grab a logfile path from sacct -j. Output was: {}",
-                      slurm_info);
-      return;
-    }
-
-    size_t pos = logfile_path.find("%J");
-    if (pos != std::string::npos) {
-      logfile_path.replace(pos, 2, jobid);
-    } else {
-      return;
-    }
-
-    std::string get_slurm_log_cmd{"cat "+logfile_path};
+    std::string get_slurm_log_cmd { "cat " + logfile_path };
     logger()->debug("Attempting to grab output from log file using: {}",
                     get_slurm_log_cmd);
 
     // Wait some milliseconds if it fails. Then wait longer until more than 10 s
-    size_t wait_ms { 500 };
-    std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+    int ret_code { 0 };
+    pid_t subproc_pid;
+    std::size_t wait_ms { 500 };
+    std::tie(mtask_log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd,
+                                                                    true);
     if (WEXITSTATUS(ret_code) == 0) {
+      log += "\n" + mtask_log; // Append now.
       return;
     }
     while (WEXITSTATUS(ret_code) && wait_ms < 10000) {
@@ -543,14 +921,73 @@ namespace LWM {
                       wait_ms);
 
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-      std::tie(log, ret_code) = run_subprocess_log(get_slurm_log_cmd, true);
+      std::tie(mtask_log, ret_code, subproc_pid) = run_subprocess_log(get_slurm_log_cmd,
+                                                                      true);
       if (WEXITSTATUS(ret_code) == 0) {
+        log += "\n" + mtask_log; // Append now.
         return;
       }
       wait_ms <<= 2;
     }
 
     logger()->error("Unable to read log file: {}", logfile_path);
+  }
+
+  bool PythonLauncher::is_subprocess_running(const std::string& jobid) {
+    try {
+#if defined(__linux__) || defined(__APPLE__) || defined(__OSX__) || defined(__APPLE_CC__)
+      pid_t pid { static_cast<pid_t>(std::stol(jobid)) };
+
+      if (pid <= 0) {
+        return false;
+      }
+
+      if (kill(pid, 0) == 0) {
+        return true;
+      }
+
+      const int kill_err { errno };
+
+      return kill_err != ESRCH;
+#else
+      DWORD pid { static_cast<DWORD>(std::stoul(jobid)) };
+
+      if (pid == 0) {
+        return false;
+      }
+
+      HANDLE h { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid) };
+      if (!h) {
+        return false;
+      }
+
+      DWORD code;
+      bool running { GetExitCodeProcess(h, &code) && code == STILL_ACTIVE };
+
+      CloseHandle(h);
+
+      return running;
+#endif
+    } catch (const std::exception& e) {
+      logger()->error("Likely invalid job ID '{}' passed to is_subprocess_running, got error: {}",
+                      jobid,
+                      e.what());
+
+      return false;
+    }
+  }
+
+
+  void PythonLauncher::cancel_subprocess(const std::string &jobid) {
+    // Will use kill -9 <jobid> for the cancel operation
+    std::string cancel_cmd { "kill -9 " + jobid };
+
+    // Since it will maybe be called from the JobRegistry, and it could be from
+    // inside a signal handler/during rapid teardown, use std::system to just
+    // fire it off.
+
+    int ret { std::system(cancel_cmd.c_str()) };
+    (void)ret;
   }
 
   std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {

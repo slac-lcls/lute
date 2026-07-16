@@ -1,6 +1,6 @@
-#include "server.hh"
+#include "server/server.hh"
 
-#include "http.hh"
+#include "server/http.hh"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"

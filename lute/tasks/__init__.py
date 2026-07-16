@@ -56,6 +56,11 @@ def import_task(task_name: str) -> Type[Task]:
 
         return TestWriteOutput
 
+    if task_name == "TestUnresponsive":
+        from .test import TestUnresponsive
+
+        return TestUnresponsive
+
     if task_name == "FindPeaksSFX":
         from .sfx_find_peaks import FindPeaksSFX
 

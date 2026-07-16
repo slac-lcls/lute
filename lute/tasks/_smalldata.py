@@ -45,8 +45,10 @@ class AnalyzeSmallData(Task):
     _LARGE_DETNAMES: ClassVar[List[str]] = ["epix10k2M", "Rayonix", "Jungfrau4M"]
     _SMALL_DETNAMES: ClassVar[List[str]] = ["epix_1", "epix_2"]
 
-    def __init__(self, *, params: TaskParameters, use_mpi: bool = True) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+    def __init__(
+        self, *, params: TaskParameters, use_mpi: bool = True, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._task_parameters = cast(
             Union[
                 AnalyzeSmallDataXASParameters,
@@ -432,7 +434,12 @@ class AnalyzeSmallData(Task):
         Returns:
             processed_profiles (npt.NDArray[np.float64]): The processed water profiles.
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+        if hasattr(self._task_parameters, "xss_processing_parameters"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXSSParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XSS!")
 
         from scipy.stats import zscore  # type: ignore
 
@@ -652,7 +659,12 @@ class AnalyzeSmallData(Task):
         Sets up filters for each event code provided in the input list.
         Will search for both psana1 and psana2 formats of event code storage.
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+        if hasattr(self._task_parameters, "xss_event_codes"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXSSParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XSS!")
 
         self._xss_event_codes = []
         if self._task_parameters.xss_event_codes:
@@ -742,7 +754,13 @@ class AnalyzeSmallData(Task):
         Args:
             detname (str): The detector name to extract data for.
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXASParameters)
+        if hasattr(self._task_parameters, "ccm_set"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXASParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XAS!")
+
         self._xas_raw = self._smd_h5[f"{detname}/ROI_0_sum"][
             self._start_idx : self._stop_idx
         ]
@@ -858,7 +876,13 @@ class AnalyzeSmallData(Task):
         Args:
             detname (str): The detector name to extract data for.
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXESParameters)
+        if hasattr(self._task_parameters, "invert_xes_axes"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXESParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XES!")
+
         # Lets assume they set up the ROI nicley?
         # By xcsl1004821
         # proj0 should be spatial distribution
@@ -1088,13 +1112,18 @@ class AnalyzeSmallData(Task):
             diff (npt.NDArray[np.float64]): 2D binned difference scattering of shape
                 (q_bins, scan_bins)
 
-            laser_on (npt.NDArray[np.float64]): 2D laser on scattering profiles
-                of shape (n_events_laser_on, q_bins)
+            laser_on (npt.NDArray[np.float64]): 1D laser on scattering profiles
+                of shape (q_bins,)
 
-            laser_off (npt.NDArray[np.float64]): 2D laser off scattering profiles
-                of shape (n_events_laser_off, q_bins)
+            laser_off (npt.NDArray[np.float64]): 1D laser off scattering profiles
+                of shape (q_bins,)
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+        if hasattr(self._task_parameters, "xss_processing_parameters"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXSSParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XSS!")
 
         dark_mean: npt.NDArray[np.float64] = self._calc_xss_dark_mean()
         if len(np.unique(dark_mean)) > 1:
@@ -1133,8 +1162,13 @@ class AnalyzeSmallData(Task):
         binned_xss_las_on: npt.NDArray[np.float64] = np.zeros(
             (len(self._q_vals), len(bins))
         )
-        xss_las_on: npt.NDArray[np.float64] = np.nanmean(
-            normed_xss_las_on, axis=(0, 1)
+        las_on: npt.NDArray[np.float64] = np.nansum(
+            normed_xss_las_on,
+            axis=(0, 1),
+        )  # [q_bins]
+        las_off: npt.NDArray[np.float64] = np.nansum(
+            normed_xss_las_off,
+            axis=(0, 1),
         )  # [q_bins]
         xss_las_off: npt.NDArray[np.float64] = np.nanmean(
             normed_xss_las_off, axis=(0, 1)
@@ -1158,7 +1192,7 @@ class AnalyzeSmallData(Task):
             binned_xss_las_on
         ) - np.nan_to_num(xss_las_off[:, np.newaxis])
 
-        return bins, diff, xss_las_on, xss_las_off
+        return bins, diff, las_on, las_off
 
     def _calc_scan_binned_difference_xas(
         self,
@@ -1376,7 +1410,12 @@ class AnalyzeSmallData(Task):
         Returns:
             plot (pn.GridSpec): Plotted azimuthally integrated difference by scan variable.
         """
-        assert isinstance(self._task_parameters, AnalyzeSmallDataXSSParameters)
+        if hasattr(self._task_parameters, "xss_processing_parameters"):
+            self._task_parameters = cast(
+                AnalyzeSmallDataXSSParameters, self._task_parameters
+            )
+        else:
+            raise RuntimeError("This method should only be used for XSS!")
 
         scan_grid = pn.GridSpec(
             sizing_mode="stretch_both",

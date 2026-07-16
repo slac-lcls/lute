@@ -1,6 +1,8 @@
-#include "manager.hh"
-#include "job.hh"
-#include "launcher.hh"
+#include "lwm/manager.hh"
+
+#include "lwm/job.hh"
+#include "lwm/job_registry.hh"
+#include "lwm/launcher.hh"
 
 #include "spdlog/cfg/env.h"
 #include "spdlog/sinks/stdout_color_sinks.h"

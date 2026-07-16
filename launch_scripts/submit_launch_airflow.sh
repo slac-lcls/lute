@@ -31,7 +31,30 @@ echo $?
 export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
 LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
-source "${LUTE_BIN_PATH}/activate_installation"
+
+# Detect install type
+if [[ -f "${LUTE_BIN_PATH}/activate" ]]; then
+    # Virtual environment install
+    source "${LUTE_BIN_PATH}/activate"
+    if [[ -n "${VIRTUAL_ENV}" ]]; then
+        export LUTE_VIRTUAL_ENV="${VIRTUAL_ENV}"
+    fi
+
+    # Search for all Python version virtual environments at standard locations
+    # Convention: lute_env_py<MAJORMINOR>/bin/activate
+    LUTE_ENVS_PARENT="$(dirname "$(dirname "${LUTE_BIN_PATH}")")"
+    for env_dir in "${LUTE_ENVS_PARENT}"/lute_env_py*/bin/activate; do
+        if [[ -f "${env_dir}" ]]; then
+            env_name="$(basename "$(dirname "$(dirname "${env_dir}")")")" 
+            # Extract version: "lute_env_pyXYZ" → "XYZ"
+            py_ver="${env_name#lute_env_py}"
+            export "LUTE_VIRTUAL_ENV_PY${py_ver}"="$(dirname "$(dirname "${env_dir}")")/bin/python" 
+        fi
+    done
+else
+    # Standard (meson/prefix) installation
+    source "${LUTE_BIN_PATH}/activate_installation"
+fi
 
 CMD="${@}"
 CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"

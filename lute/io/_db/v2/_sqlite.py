@@ -840,13 +840,13 @@ def _add_parameters(
         # environments -- so check the class name... not great...
         if raw_val.__class__.__name__ == "TemplateParameters":
             if hasattr(raw_val.params, "dict"):
-                json_val = json.dumps(raw_val.params.dict())
+                json_val = json.dumps(raw_val.params.dict(), default=list)
             else:
-                json_val = json.dumps(raw_val.params)
+                json_val = json.dumps(raw_val.params, default=list)
         elif hasattr(raw_val, "dict"):
-            json_val = json.dumps(raw_val.dict())
+            json_val = json.dumps(raw_val.dict(), default=list)
         else:
-            json_val = json.dumps(raw_val)
+            json_val = json.dumps(raw_val, default=list)
         param_entries: Dict[str, Any] = {
             "execution_id": execution_id,
             "meta_id": param_meta_id,

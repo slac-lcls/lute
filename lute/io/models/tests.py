@@ -25,6 +25,7 @@ __all__ = [
     "TestWriteOutputParameters",
     "TestReadOutputParameters",
     "TestRequestParameters",
+    "TestUnresponsiveParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -111,4 +112,8 @@ class TestReadOutputParameters(TaskParameters):
 
 
 class TestRequestParameters(TaskParameters):
+    placeholder: str = Field("Test", description="This is just a placeholder.")
+
+
+class TestUnresponsiveParameters(TaskParameters):
     placeholder: str = Field("Test", description="This is just a placeholder.")
