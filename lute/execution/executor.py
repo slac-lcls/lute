@@ -218,6 +218,26 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
+        # We also will send the manager a jobid in addition to our name.
+        # If using SLURM this is the SLURM_JOBID
+        # If using straight Python launching the process ID
+        self._job_id: str = os.getenv("SLURM_JOBID", str(os.getpid()))
+
+        self._maestro_heartbeat_s: float = float(
+            os.getenv("LUTE_MAESTRO_HEARTBEAT", 30.0)
+        )
+        # We also update task_last_update if a message of ANY kind is
+        # received -- This is done in _task_loop (if overriden, must be done
+        # by overriding class as well). This is used as proxy of Task life.
+        # Maestro uses the env var LUTE_NO_HEARTBEAT_KILL to consider the
+        # unresponsive timeout. We'll do the same here. If last update
+        # was longer than LUTE_NO_HEARTBEAT_KILL or a default of 900.0 seconds
+        # ago. Consider it UNRESPONSIVE and dead.
+        self._task_last_update: float = 0.0  # Irrespective of timeout, track updates
+        self._no_heartbeat_kill: float = float(
+            os.getenv("LUTE_NO_HEARTBEAT_KILL", 900.0)
+        )
+
     @property
     def task_name(self) -> str:
         return self._analysis_desc.task_result.task_name
@@ -242,6 +262,11 @@ class BaseExecutor(ABC):
             logger.error(f"Unable to send an HTTP request of type {method}")
             return
 
+        # Include a job id here so it doesn't need to be remembered at each call site
+        tagged_json_data: Dict[str, str] = {"orig_job_id": self._job_id}
+        if json_data is not None:
+            tagged_json_data.update(json_data)
+
         # Set a timeout so we don't hang if the workflow manager dies
         timeout: float = 5.0
         try:
@@ -249,7 +274,7 @@ class BaseExecutor(ABC):
             if json_data is not None:
                 resp = func(
                     f"http://{self._lute_manager_url}/{end_point}",
-                    json=json_data,
+                    json=tagged_json_data,
                     timeout=timeout,
                 )
             else:
@@ -676,6 +701,10 @@ class BaseExecutor(ABC):
                     "for that version exists! Things may fail if depending on C "
                     "extensions!"
                 )
+            else:
+                # Because of the venv updates below, setting PYTHONPATH isn't
+                # sufficient to pickup new Python. Need to make sure LUTE_PATH is set
+                new_environment["LUTE_TENV_LUTE_PATH"] = new_lute_path
 
             if new_python_path:
                 new_environment["LUTE_TENV_PYTHONPATH"] = (
@@ -848,6 +877,9 @@ class BaseExecutor(ABC):
             }
             self._report_to_manager(end_point="status", json_data=json_data)
 
+        # Send periodic heartbeats for liveness tracking
+        last_heartbeat: float = time.monotonic()
+
         affinity: Set[int] = os.sched_getaffinity(0)
         # By convention, the Executor takes the minimum core on this node.
         # Task gets everything else. If we only have 1 core here then out of luck
@@ -862,6 +894,46 @@ class BaseExecutor(ABC):
                 if run_time > self._task_timeout:
                     logger.error("Task timed out!")
                     self._sigalrm_task(proc)
+
+            now: float = time.monotonic()
+            if (now - last_heartbeat) > self._maestro_heartbeat_s:
+                # If unresponsive for longer than kill period, we exit.
+                # Otherwise, just send the normal heartbeat ping - message doesn't
+                # matter. Just say RUNNING
+                stat_str: str = "RUNNING"
+                if (now - self._task_last_update) > self._no_heartbeat_kill:
+                    stat_str = "UNRESPONSIVE"
+
+                # Break early - the Executor will send a message at the very end
+                # `maestro` is faster than Python. We want it to wait around until
+                # the last minute, so we only send the UNRESPONSIVE update before tear-down
+                if stat_str == "UNRESPONSIVE":
+                    unresp_msg: str = (
+                        f"Task did not respond for more than {self._no_heartbeat_kill} seconds. "
+                        "It is marked as UNRESPONSIVE and failed!"
+                    )
+                    logger.error(unresp_msg)
+                    if self._lute_manager_url is not None:
+                        json_log_data: Dict[str, str] = {
+                            "managed_task": self._m_task_name,
+                            "message": unresp_msg,
+                        }
+                        self._report_to_manager(
+                            end_point="log", json_data=json_log_data
+                        )
+                    self._kill_task(proc=proc, status=TaskStatus.UNRESPONSIVE)
+                    break
+
+                # Since we may run without maestro, we will check the UNRESPONSIVE
+                # outside the lute_manager_url check.
+                if self._lute_manager_url is not None:
+                    json_data = {
+                        "managed_task": self._m_task_name,
+                        "task": self.task_name,
+                        "status": stat_str,
+                    }
+                    self._report_to_manager(end_point="status", json_data=json_data)
+
             time.sleep(self._analysis_desc.poll_interval)
 
         if proc.stdin is not None:
@@ -914,6 +986,8 @@ class BaseExecutor(ABC):
         status_str: str
         if status == TaskStatus.FAILED:
             status_str = "FAILED"
+        elif status == TaskStatus.UNRESPONSIVE:
+            status_str = "UNRESPONSIVE"
         elif status == TaskStatus.CANCELLED:
             status_str = "CANCELLED"
         elif status == TaskStatus.TIMEDOUT:
@@ -937,9 +1011,11 @@ class BaseExecutor(ABC):
             TaskStatus.FAILED,
             TaskStatus.TIMEDOUT,
             TaskStatus.CANCELLED,
+            TaskStatus.UNRESPONSIVE,
         ):
             logger.info("Exiting after Task failure. Result recorded.")
             logging.shutdown()
+            time.sleep(0.5)  # Try to give a chance for any unsent messages to drain
             sys.exit(-1)
         logger.info("Exiting after Task completion.")
         logging.shutdown()
@@ -981,6 +1057,22 @@ class BaseExecutor(ABC):
         """Timeout the Task subprocess with SIGALRM."""
         os.kill(proc.pid, signal.SIGALRM)
         self._analysis_desc.task_result.task_status = TaskStatus.TIMEDOUT
+
+    def _kill_task(
+        self, proc: subprocess.Popen, status: TaskStatus = TaskStatus.UNRESPONSIVE
+    ) -> None:
+        """Kill the Task subprocess with SIGKILL.
+
+        Args:
+            proc (subprocess.Popen): The subprocess to signal.
+
+            status (TaskStatus): The status to mark the Task with after signalling.
+                By default, this will be UNRESPONSIVE, as this is the usual reason
+                that this method would be employed (as opposed to SIGALRM above). But
+                a separate status can be used instead.
+        """
+        os.kill(proc.pid, signal.SIGKILL)
+        self._analysis_desc.task_result.task_status = status
 
     def _continue(self, proc: subprocess.Popen) -> None:
         """Resume a stopped Task subprocess."""
@@ -1417,14 +1509,20 @@ class Executor(BaseExecutor):
         should_continue: Optional[bool]
         for communicator in self._communicators:
             while True:
+                # We'll try to track any sort of signal of Task life.
+                # Any message at ALL will be used as a proxy of life (logs, signals, etc)
                 msg: Message = communicator.read(proc)
                 if msg.signal is not None and msg.signal.upper() in LUTE_SIGNALS:
+                    # Have signal? ---> Consider it a sign of life
+                    self._task_last_update = time.monotonic()
                     hook: Hook = getattr(self.Hooks, msg.signal.lower())
                     should_continue = hook(self, msg, proc)
                     if should_continue:
                         continue
 
                 if msg.contents is not None:
+                    # Have message contents? ---> Consider it a sign of life
+                    self._task_last_update = time.monotonic()
                     if isinstance(msg.contents, str) and msg.contents != "":
                         logger.info(msg.contents)
                         if self._lute_manager_url is not None:

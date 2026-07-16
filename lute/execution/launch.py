@@ -79,7 +79,7 @@ def request_arp_token(exp: str, lifetime: int = 300) -> str:
             "HTTP@pswww.slac.stanford.edu"
         ).getAuthHeaders()
     except GSSError:
-        logger.info(
+        logger.error(
             "Cannot proceed without credentials. Try running `kinit` from the command-line."
         )
         raise
@@ -188,8 +188,17 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
         os.environ["EXPERIMENT"] = experiment
         os.environ["RUN_NUM"] = run_num
 
-        jid_authorization = request_arp_token(experiment)
-        os.environ["Authorization"] = jid_authorization
+        try:
+            from kerberos import GSSError  # type: ignore
+
+            jid_authorization = request_arp_token(experiment)
+            os.environ["Authorization"] = jid_authorization
+        except (ImportError, GSSError):
+            logger.warning(
+                "Unable to use Kerberos and request JWTs. "
+                "eLog and other integrations may not work!"
+            )
+            jid_authorization = ""
 
         if arp_job_id is None:
             arp_job_id = uuid.uuid4().hex[:24]

@@ -12,9 +12,17 @@ Classes:
         database access.
 """
 
-__all__ = ["Test", "TestSocket", "TestWriteOutput", "TestReadOutput", "TestRequest"]
+__all__ = [
+    "Test",
+    "TestSocket",
+    "TestWriteOutput",
+    "TestReadOutput",
+    "TestRequest",
+    "TestUnresponsive",
+]
 __author__ = "Gabriel Dorlhiac"
 
+import os
 import time
 from typing import List, cast
 
@@ -26,6 +34,7 @@ from lute.io.models.tests import (
     TestSocketParameters,
     TestWriteOutputParameters,
     TestReadOutputParameters,
+    TestUnresponsiveParameters,
 )
 from lute.tasks.dataclasses import TaskStatus
 from lute.execution.ipc import Message
@@ -185,3 +194,35 @@ class TestRequest(Task):
         self._result.summary = "Was able to request via workflow manager.."
         self._result.payload = "This Task produces no output."
         self._result.task_status = TaskStatus.COMPLETED
+
+
+class TestUnresponsive(Task):
+    """Simple test Task to check unresponsive Task cancellation."""
+
+    def __init__(
+        self, *, params: TestUnresponsiveParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        self._task_parameters: TestUnresponsiveParameters
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
+
+    def _run(self) -> None:
+        # Get the cancellation time (default is 900 s)
+        # Hopefully someone set it so we don't wait 900 s...
+        kill_time: float = float(os.getenv("LUTE_NO_HEARTBEAT_KILL", 900.0))
+        wait_time: float = kill_time + 30.0
+        msg: Message = Message(
+            contents=(
+                "TestUnresponsive has started! Going quiet! "
+                f"You should kill me after {kill_time} s. I will wait {wait_time} s."
+            )
+        )
+        self._report_to_executor(msg)
+        time.sleep(wait_time)
+
+        msg = Message(contents="If you get this, you didn't kill me! Why?!")
+        self._report_to_executor(msg)
+
+    def _post_run(self) -> None:
+        self._result.summary = "TestUnresponsive Finished."
+        self._result.task_status = TaskStatus.COMPLETED
+        time.sleep(0.1)
