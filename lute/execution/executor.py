@@ -294,7 +294,7 @@ class BaseExecutor(ABC):
                     ...
             if hasattr(resp, "content"):
                 return resp.content
-        except requests.ConnectTimeout:
+        except (requests.ConnectTimeout, requests.exceptions.ConnectionError):
             logger.error(
                 f"HTTP request to workflow manager timed out after {timeout} seconds!"
             )
@@ -933,6 +933,7 @@ class BaseExecutor(ABC):
                         "status": stat_str,
                     }
                     self._report_to_manager(end_point="status", json_data=json_data)
+                last_heartbeat = now
 
             time.sleep(self._analysis_desc.poll_interval)
 

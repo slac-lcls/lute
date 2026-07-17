@@ -174,11 +174,10 @@ def get_run_type_nodes(
         and ``next`` keys for that branch.
     """
     if run_type is None:
-        warnings.warn(
+        logger.warning(
             "run_type is None: the run type could not be determined from the "
             "eLog. No !run_type branches will be taken. Check that the run is "
             "registered in the eLog and that the authorization token is valid.",
-            category=RuntimeWarning,
         )
         return []
 
@@ -197,11 +196,10 @@ def get_run_type_nodes(
                 matched.append(val_node)
 
     if not matched:
-        warnings.warn(
+        logger.warning(
             f"run_type '{run_type}' did not match any branch in the !run_type "
             "block. No downstream tasks will be scheduled for this branch. "
             "Check the DAG definition if this is unexpected.",
-            category=RuntimeWarning,
         )
     return matched
 
@@ -402,7 +400,7 @@ def get_lute_dag_loader(
                     )
         except ImportError:
             # If we can't import managed_tasks, use managed_task_name as fallback
-            logger.warn(
+            logger.warning(
                 "Could not import managed_tasks to determine Task name. "
                 f"Using '{managed_task_name}' as-is...",
             )
