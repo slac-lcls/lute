@@ -294,7 +294,7 @@ class BaseExecutor(ABC):
                     ...
             if hasattr(resp, "content"):
                 return resp.content
-        except (requests.ConnectTimeout, requests.exceptions.ConnectionError):
+        except requests.ConnectTimeout:
             logger.error(
                 f"HTTP request to workflow manager timed out after {timeout} seconds!"
             )
@@ -1402,7 +1402,7 @@ class Executor(BaseExecutor):
                         if is_printable_type(item):
                             logger.info(item)
                             if self._lute_manager_url is not None:
-                                message: str = repr(msg.contents)
+                                message: str = repr(item)
                                 json_data: Dict[str, str] = {
                                     "managed_task": self._m_task_name,
                                     "message": message,
