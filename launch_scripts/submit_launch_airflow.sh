@@ -30,7 +30,7 @@ cp $KERB_CACHE_PATH $HOME/.tmp_cache/kerbcache
 echo $?
 export KRB5CCNAME="FILE:${HOME}/.tmp_cache/kerbcache"
 
-LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
+LUTE_BIN_PATH="$(builtin cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
 
 # Detect install type
 if [[ -f "${LUTE_BIN_PATH}/activate" ]]; then
@@ -45,10 +45,10 @@ if [[ -f "${LUTE_BIN_PATH}/activate" ]]; then
     LUTE_ENVS_PARENT="$(dirname "$(dirname "${LUTE_BIN_PATH}")")"
     for env_dir in "${LUTE_ENVS_PARENT}"/lute_env_py*/bin/activate; do
         if [[ -f "${env_dir}" ]]; then
-            env_name="$(basename "$(dirname "$(dirname "${env_dir}")")")" 
+            env_name="$(basename "$(dirname "$(dirname "${env_dir}")")")"
             # Extract version: "lute_env_pyXYZ" → "XYZ"
             py_ver="${env_name#lute_env_py}"
-            export "LUTE_VIRTUAL_ENV_PY${py_ver}"="$(dirname "$(dirname "${env_dir}")")/bin/python" 
+            export "LUTE_VIRTUAL_ENV_PY${py_ver}"="$(dirname "$(dirname "${env_dir}")")/bin/python"
         fi
     done
 else

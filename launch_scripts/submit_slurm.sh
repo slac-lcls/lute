@@ -156,7 +156,7 @@ SCRIPT_DIR="$( readlink -f "$( dirname "${BASH_SOURCE[0]}" )" )"
 export LUTE_PATH="$( echo $SCRIPT_DIR | sed s/launch_scripts//g | sed s/bin//g )"
 EXECUTABLE="run_task.py"
 
-LUTE_BIN_PATH="$(cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
+LUTE_BIN_PATH="$(builtin cd "$(dirname ${BASH_SOURCE[0]})" &> /dev/null && pwd)"
 
 if [[ $SCRIPT_DIR == *"launch_scripts"* ]]; then
     EXECUTABLE="${LUTE_PATH}run_task.py"
