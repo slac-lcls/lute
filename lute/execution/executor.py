@@ -53,6 +53,8 @@ from typing import (
 )
 from typing_extensions import TypedDict, TypeAlias
 
+from urllib3.util import Retry
+
 from lute.execution.logging import get_logger
 from lute.execution.ipc import (
     Communicator,
@@ -218,6 +220,19 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
+        # 
+        self._lute_maestro_session: Optional[requests.Session] = None
+        if self._lute_manager_url is not None:
+            self._lute_maestro_session = requests.Session()
+            retries: Retry = Retry(
+                total=5, 
+                backoff_factor=0.1, 
+                status_forcelist=[502, 503, 504],
+                allowed_methods=["GET", "POST"],
+            )
+            adapter = requests.adapters.HTTPAdapter(max_retries=retries)
+            self._lute_maestro_session.mount("http://", adapter)
+
         # We also will send the manager a jobid in addition to our name.
         # If using SLURM this is the SLURM_JOBID
         # If using straight Python launching the process ID
@@ -257,7 +272,10 @@ class BaseExecutor(ABC):
         method: str = "POST",
     ) -> Any:
         try:
-            func = getattr(requests, method.lower())
+            if self._lute_maestro_session is not None:
+                func = getattr(self._lute_maestro_session, method.lower())
+            else:
+                func = getattr(requests, method.lower())
         except AttributeError:
             logger.error(f"Unable to send an HTTP request of type {method}")
             return
@@ -298,7 +316,9 @@ class BaseExecutor(ABC):
             logger.error(
                 f"HTTP request to workflow manager timed out after {timeout} seconds!"
             )
-
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection Failed: {e}")
+    
     def add_tasklet(
         self,
         tasklet: Callable,
@@ -897,6 +917,7 @@ class BaseExecutor(ABC):
 
             now: float = time.monotonic()
             if (now - last_heartbeat) > self._maestro_heartbeat_s:
+                last_heartbeat = now
                 # If unresponsive for longer than kill period, we exit.
                 # Otherwise, just send the normal heartbeat ping - message doesn't
                 # matter. Just say RUNNING
@@ -933,7 +954,6 @@ class BaseExecutor(ABC):
                         "status": stat_str,
                     }
                     self._report_to_manager(end_point="status", json_data=json_data)
-                last_heartbeat = now
 
             time.sleep(self._analysis_desc.poll_interval)
 
@@ -1392,14 +1412,14 @@ class Executor(BaseExecutor):
             if isinstance(msg.contents, TaskResult):
                 executor._analysis_desc.task_result = msg.contents
                 # flake8: noqa: E731
-                is_printable_type: Callable[[Any], bool] = lambda x: isinstance(
-                    x, dict
-                ) or isinstance(x, str)
-                if is_printable_type(executor._analysis_desc.task_result.summary):
+                should_be_printed: Callable[[Any], bool] = lambda x: (
+                    isinstance(x, dict) or isinstance(x, str) or (not isinstance(x, ElogSummaryPlots))
+                )
+                if should_be_printed(executor._analysis_desc.task_result.summary):
                     logger.info(executor._analysis_desc.task_result.summary)
                 elif isinstance(executor._analysis_desc.task_result.summary, list):
                     for item in executor._analysis_desc.task_result.summary:
-                        if is_printable_type(item):
+                        if should_be_printed(item):
                             logger.info(item)
                             if self._lute_manager_url is not None:
                                 message: str = repr(item)
