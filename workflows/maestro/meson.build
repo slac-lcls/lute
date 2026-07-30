@@ -94,12 +94,11 @@ test_http = executable(
     ],
     dependencies: [
         gtest_dep,
-        lwm_dep,
         spdlog_dep,
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
+    install_rpath: '$ORIGIN',
     include_directories: maestro_headers,
 )
 test('HTTP parsing tests', test_http)
@@ -114,12 +113,11 @@ test_server = executable(
     ],
     dependencies: [
         gtest_dep,
-        lwm_dep,
         spdlog_dep,
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
+    install_rpath: '$ORIGIN',
     include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
@@ -133,16 +131,16 @@ test_maestro_api = executable(
         'src/server/handler.cc',
         'src/lwm/launcher.cc',
         'src/lwm/job.cc',
+        'src/lwm/job_registry.cc',
         'src/parallel/threadpool.cc'
     ],
     dependencies: [
         gtest_dep,
-        lwm_dep,
         spdlog_dep,
         rapidjson_dep,
     ],
     install: get_option('install_tests'),
-    install_rpath: py3.get_install_dir() / 'maestro/_maestro',
+    install_rpath: '$ORIGIN',
     include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
