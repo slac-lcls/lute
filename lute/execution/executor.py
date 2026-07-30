@@ -220,13 +220,13 @@ class BaseExecutor(ABC):
         # It passes us a URL for status updates
         self._lute_manager_url: Optional[str] = os.getenv("LUTE_MANAGER_URL")
 
-        # 
+        #
         self._lute_maestro_session: Optional[requests.Session] = None
         if self._lute_manager_url is not None:
             self._lute_maestro_session = requests.Session()
             retries: Retry = Retry(
-                total=5, 
-                backoff_factor=0.1, 
+                total=5,
+                backoff_factor=0.1,
                 status_forcelist=[502, 503, 504],
                 allowed_methods=["GET", "POST"],
             )
@@ -318,7 +318,7 @@ class BaseExecutor(ABC):
             )
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection Failed: {e}")
-    
+
     def add_tasklet(
         self,
         tasklet: Callable,
@@ -1413,7 +1413,9 @@ class Executor(BaseExecutor):
                 executor._analysis_desc.task_result = msg.contents
                 # flake8: noqa: E731
                 should_be_printed: Callable[[Any], bool] = lambda x: (
-                    isinstance(x, dict) or isinstance(x, str) or (not isinstance(x, ElogSummaryPlots))
+                    isinstance(x, dict)
+                    or isinstance(x, str)
+                    or (not isinstance(x, ElogSummaryPlots))
                 )
                 if should_be_printed(executor._analysis_desc.task_result.summary):
                     logger.info(executor._analysis_desc.task_result.summary)
