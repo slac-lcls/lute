@@ -125,6 +125,11 @@ namespace LWM {
     const std::string RESET = "\033[0m";
     const std::string BOLD = "\033[1m";
     const std::string GREEN = "\033[32m";
+
+    // Reasonable cutoff? 64 kB? 1 MB?
+    // constexpr std::size_t MAX_BYTES_TO_LOG { 64 * 1024 };
+    constexpr std::size_t MAX_BYTES_TO_LOG { 1024 * 1024 };
+
     std::map<std::string, std::string> log;
     if (m_unbuffered_logs) {
       parse_json(request.content(), log);
@@ -141,11 +146,27 @@ namespace LWM {
           std::string msg {
             "\n\t" + BOLD + GREEN + "[Logs from **" + log["managed_task"] + "**]" + RESET + "\n"
           };
+
+          std::string raw_log;
           if (log.find("log") != log.end()) {
-            msg += log["log"];
+            raw_log = log["log"];
           } else if (log.find("message") != log.end()) {
-            msg += log["message"];
+            raw_log = log["message"];
           }
+
+          if (raw_log.size() > MAX_BYTES_TO_LOG) {
+            std::size_t orig_size_mb { raw_log.size() / (1024 * 1024) };
+            raw_log.resize(MAX_BYTES_TO_LOG);
+
+            // NOTE: IF the limit of MAX_BYTES_TO_LOG is set less than 1 MB, need to
+            // change printing here, since it will display as "0" if its less than
+            // 1 MB, but greater than the cutoff.
+            raw_log +=
+              "\n ... [TRUNCATED: Log payload of " + std::to_string(orig_size_mb) +
+              " MB exceeds " + std::to_string(MAX_BYTES_TO_LOG) + " limit] ...\n";
+          }
+
+          msg += raw_log;
           m_logger->info(msg);
         }
       }

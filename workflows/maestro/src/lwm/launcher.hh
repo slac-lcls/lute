@@ -5,6 +5,7 @@
 #include "server/handler.hh"
 #include "server/http.hh"
 
+#include "spdlog/async.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
@@ -143,7 +144,15 @@ namespace LWM {
       if (auto tmp = spdlog::get("LWM:JsonLogHandler")) {
         return tmp;
       } else {
-        return spdlog::stdout_color_mt("LWM:JsonLogHandler");
+        spdlog::init_thread_pool(8192, 1);
+        auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        auto logger =
+          std::make_shared<spdlog::async_logger>("LWM:JsonLogHandler",
+                                                 sink,
+                                                 spdlog::thread_pool(),
+                                                 spdlog::async_overflow_policy::overrun_oldest);
+        spdlog::register_logger(logger);
+        return std::dynamic_pointer_cast<spdlog::logger>(logger);
       }
     }();
     bool m_unbuffered_logs{false};

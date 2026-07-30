@@ -1,6 +1,7 @@
 #ifndef HTTP_SERVER_HH
 #define HTTP_SERVER_HH
 
+#include "parallel/threadpool.hh"
 #include "server/handler.hh"
 #include "server/http.hh"
 
@@ -94,10 +95,11 @@ namespace HTTP {
     std::atomic_bool m_running{false};
 
     static constexpr unsigned m_max_events = 10000;
-    static constexpr unsigned m_num_threads = 5;
+    static constexpr unsigned m_num_epoll_threads { 3 };
+    static constexpr unsigned m_num_cb_threads { 2 };
     static constexpr unsigned m_backlog_size = 1000;
 
-    std::thread m_event_threads[m_num_threads]; ///< Threads for processing requests
+    std::thread m_event_threads[m_num_epoll_threads]; ///< Threads for processing requests
     int m_sock_fd; ///< Bound socket fd the server is listening on.
     int m_epoll_fd; ///< epoll file descriptor. Shared by all threads.
 
@@ -118,7 +120,7 @@ namespace HTTP {
       return std::hash<int>{}(fd) % m_shard_count;
     }
 
-    epoll_event m_worker_events[m_num_threads][m_max_events];
+    epoll_event m_worker_events[m_num_epoll_threads][m_max_events];
 
     void process_events(int thread_idx);
     void handle_event(epoll_event& event, int thread_idx);
@@ -169,6 +171,8 @@ namespace HTTP {
     };
 
     LogThrottler m_throttled_logger;
+
+    LWM::ThreadPool m_thread_pool { m_num_cb_threads };
   };
 } // Namespace HTTP
 
