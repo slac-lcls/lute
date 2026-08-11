@@ -1512,10 +1512,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#managed_tasks.Xtc1to2Converter" class="md-nav__link">
+  <a href="#managed_tasks.Xtc1Reader" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Xtc1to2Converter
+        Xtc1Reader
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managed_tasks.Xtc2Writer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Xtc2Writer
       
     </span>
   </a>
@@ -3863,10 +3874,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#managed_tasks.Xtc1to2Converter" class="md-nav__link">
+  <a href="#managed_tasks.Xtc1Reader" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Xtc1to2Converter
+        Xtc1Reader
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#managed_tasks.Xtc2Writer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Xtc2Writer
       
     </span>
   </a>
@@ -4721,8 +4743,8 @@ database so that a downstream CCTBXMerger task can auto-resolve input_path.</p>
 
 
 
-<h2 id="managed_tasks.Xtc1to2Converter" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">Xtc1to2Converter</span> <span class="o">=</span> <span class="n">Executor</span><span class="p">(</span><span class="s1">&#39;ConvertXtc1to2&#39;</span><span class="p">)</span></code>
+<h2 id="managed_tasks.Xtc1Reader" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Xtc1Reader</span> <span class="o">=</span> <span class="n">MPIExecutor</span><span class="p">(</span><span class="s1">&#39;ReadXtc1&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -4733,7 +4755,29 @@ database so that a downstream CCTBXMerger task can auto-resolve input_path.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Converts Xtc1 files to Xtc2 to use in psana2</p>
+        <p>Read XTC1 file and send to Xtc2Writer for conversion.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="managed_tasks.Xtc2Writer" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Xtc2Writer</span> <span class="o">=</span> <span class="n">MPIExecutor</span><span class="p">(</span><span class="s1">&#39;WriteXtc2&#39;</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Write XTC2 files from XTC1 data received from to Xtc1Reader.</p>
 
     </div>
 

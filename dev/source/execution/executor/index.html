@@ -9621,7 +9621,15 @@ environment that is passed to the Task subprocess.</p>
 <span class="normal">1729</span>
 <span class="normal">1730</span>
 <span class="normal">1731</span>
-<span class="normal">1732</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Executor</span><span class="p">(</span><span class="n">BaseExecutor</span><span class="p">):</span>
+<span class="normal">1732</span>
+<span class="normal">1733</span>
+<span class="normal">1734</span>
+<span class="normal">1735</span>
+<span class="normal">1736</span>
+<span class="normal">1737</span>
+<span class="normal">1738</span>
+<span class="normal">1739</span>
+<span class="normal">1740</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Executor</span><span class="p">(</span><span class="n">BaseExecutor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Basic implementation of an Executor which manages simple IPC with Task.</span>
 
 <span class="sd">    Attributes:</span>
@@ -9863,9 +9871,13 @@ environment that is passed to the Task subprocess.</p>
                             <span class="p">)</span>
                             <span class="k">for</span> <span class="n">communicator</span> <span class="ow">in</span> <span class="n">executor</span><span class="o">.</span><span class="n">_communicators</span><span class="p">:</span>
                                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">communicator</span><span class="p">,</span> <span class="n">PipeCommunicator</span><span class="p">):</span>
+                                    <span class="c1"># Ensure pickle is used.</span>
+                                    <span class="n">old_use_pickle</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span>
+                                    <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span> <span class="o">=</span> <span class="kc">True</span>
                                     <span class="n">communicator</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
                                         <span class="n">Message</span><span class="p">(</span><span class="n">contents</span><span class="o">=</span><span class="n">resp</span><span class="p">),</span> <span class="n">proc</span><span class="o">=</span><span class="n">proc</span>
                                     <span class="p">)</span>
+                                    <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span> <span class="o">=</span> <span class="n">old_use_pickle</span>
                             <span class="c1"># Immediately read again in this case, since the Task</span>
                             <span class="c1"># may have an answer instantly</span>
                             <span class="n">executor</span><span class="o">.</span><span class="n">_task_loop</span><span class="p">(</span><span class="n">proc</span><span class="o">=</span><span class="n">proc</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -9878,7 +9890,11 @@ environment that is passed to the Task subprocess.</p>
                     <span class="s2">&quot;Task Request improperly formatted. Received message of &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
-            <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">__debug__</span><span class="p">:</span>
+                <span class="c1"># This means the request gets printed.</span>
+                <span class="c1"># We don&#39;t actually want that in general...</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">add_hook</span><span class="p">(</span><span class="s2">&quot;task_request&quot;</span><span class="p">,</span> <span class="n">task_request</span><span class="p">)</span>
 
@@ -10151,13 +10167,13 @@ reporting to third party services, etc.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1588</span>
-<span class="normal">1589</span>
-<span class="normal">1590</span>
-<span class="normal">1591</span>
-<span class="normal">1592</span>
-<span class="normal">1593</span>
-<span class="normal">1594</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_finalize_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1596</span>
+<span class="normal">1597</span>
+<span class="normal">1598</span>
+<span class="normal">1599</span>
+<span class="normal">1600</span>
+<span class="normal">1601</span>
+<span class="normal">1602</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_finalize_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Any actions to be performed after the Task has ended.</span>
 
 <span class="sd">    Examples include a final clearing of the pipes, retrieving results,</span>
@@ -10245,15 +10261,7 @@ which can be directly written to an HTML file.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1634</span>
-<span class="normal">1635</span>
-<span class="normal">1636</span>
-<span class="normal">1637</span>
-<span class="normal">1638</span>
-<span class="normal">1639</span>
-<span class="normal">1640</span>
-<span class="normal">1641</span>
-<span class="normal">1642</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1642</span>
 <span class="normal">1643</span>
 <span class="normal">1644</span>
 <span class="normal">1645</span>
@@ -10279,7 +10287,15 @@ which can be directly written to an HTML file.</p>
 <span class="normal">1665</span>
 <span class="normal">1666</span>
 <span class="normal">1667</span>
-<span class="normal">1668</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_elog_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plots</span><span class="p">:</span> <span class="n">ElogSummaryPlots</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="normal">1668</span>
+<span class="normal">1669</span>
+<span class="normal">1670</span>
+<span class="normal">1671</span>
+<span class="normal">1672</span>
+<span class="normal">1673</span>
+<span class="normal">1674</span>
+<span class="normal">1675</span>
+<span class="normal">1676</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_elog_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plots</span><span class="p">:</span> <span class="n">ElogSummaryPlots</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Process an ElogSummaryPlots</span>
 
 <span class="sd">    Writes out the eLog summary plot for display and returns the path of</span>
@@ -10370,15 +10386,7 @@ individually.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1670</span>
-<span class="normal">1671</span>
-<span class="normal">1672</span>
-<span class="normal">1673</span>
-<span class="normal">1674</span>
-<span class="normal">1675</span>
-<span class="normal">1676</span>
-<span class="normal">1677</span>
-<span class="normal">1678</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1678</span>
 <span class="normal">1679</span>
 <span class="normal">1680</span>
 <span class="normal">1681</span>
@@ -10405,7 +10413,15 @@ individually.</p>
 <span class="normal">1702</span>
 <span class="normal">1703</span>
 <span class="normal">1704</span>
-<span class="normal">1705</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_result_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">summary</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">1705</span>
+<span class="normal">1706</span>
+<span class="normal">1707</span>
+<span class="normal">1708</span>
+<span class="normal">1709</span>
+<span class="normal">1710</span>
+<span class="normal">1711</span>
+<span class="normal">1712</span>
+<span class="normal">1713</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_result_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">summary</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Process an object destined for the results summary.</span>
 
 <span class="sd">    Args:</span>
@@ -10466,16 +10482,16 @@ individually.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1596</span>
-<span class="normal">1597</span>
-<span class="normal">1598</span>
-<span class="normal">1599</span>
-<span class="normal">1600</span>
-<span class="normal">1601</span>
-<span class="normal">1602</span>
-<span class="normal">1603</span>
-<span class="normal">1604</span>
-<span class="normal">1605</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1604</span>
+<span class="normal">1605</span>
+<span class="normal">1606</span>
+<span class="normal">1607</span>
+<span class="normal">1608</span>
+<span class="normal">1609</span>
+<span class="normal">1610</span>
+<span class="normal">1611</span>
+<span class="normal">1612</span>
+<span class="normal">1613</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs result processing.</span>
 
 <span class="sd">    Actions include:</span>
@@ -10562,15 +10578,7 @@ summary field of the database.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1707</span>
-<span class="normal">1708</span>
-<span class="normal">1709</span>
-<span class="normal">1710</span>
-<span class="normal">1711</span>
-<span class="normal">1712</span>
-<span class="normal">1713</span>
-<span class="normal">1714</span>
-<span class="normal">1715</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1715</span>
 <span class="normal">1716</span>
 <span class="normal">1717</span>
 <span class="normal">1718</span>
@@ -10587,7 +10595,15 @@ summary field of the database.</p>
 <span class="normal">1729</span>
 <span class="normal">1730</span>
 <span class="normal">1731</span>
-<span class="normal">1732</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_summary_run_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">1732</span>
+<span class="normal">1733</span>
+<span class="normal">1734</span>
+<span class="normal">1735</span>
+<span class="normal">1736</span>
+<span class="normal">1737</span>
+<span class="normal">1738</span>
+<span class="normal">1739</span>
+<span class="normal">1740</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_process_summary_run_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Process a dictionary of run parameters to be posted to the eLog.</span>
 
 <span class="sd">    Args:</span>
@@ -10637,15 +10653,7 @@ that its finished.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1525</span>
-<span class="normal">1526</span>
-<span class="normal">1527</span>
-<span class="normal">1528</span>
-<span class="normal">1529</span>
-<span class="normal">1530</span>
-<span class="normal">1531</span>
-<span class="normal">1532</span>
-<span class="normal">1533</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1533</span>
 <span class="normal">1534</span>
 <span class="normal">1535</span>
 <span class="normal">1536</span>
@@ -10698,7 +10706,15 @@ that its finished.</p>
 <span class="normal">1583</span>
 <span class="normal">1584</span>
 <span class="normal">1585</span>
-<span class="normal">1586</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_task_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">1586</span>
+<span class="normal">1587</span>
+<span class="normal">1588</span>
+<span class="normal">1589</span>
+<span class="normal">1590</span>
+<span class="normal">1591</span>
+<span class="normal">1592</span>
+<span class="normal">1593</span>
+<span class="normal">1594</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_task_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Actions to perform while the Task is running.</span>
 
 <span class="sd">    This function is run in the body of a loop until the Task signals</span>
@@ -11034,7 +11050,15 @@ that its finished.</p>
 <span class="normal">1520</span>
 <span class="normal">1521</span>
 <span class="normal">1522</span>
-<span class="normal">1523</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_default_hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">1523</span>
+<span class="normal">1524</span>
+<span class="normal">1525</span>
+<span class="normal">1526</span>
+<span class="normal">1527</span>
+<span class="normal">1528</span>
+<span class="normal">1529</span>
+<span class="normal">1530</span>
+<span class="normal">1531</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_default_hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the set of default event hooks.&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">no_pickle_mode</span><span class="p">(</span>
@@ -11242,9 +11266,13 @@ that its finished.</p>
                         <span class="p">)</span>
                         <span class="k">for</span> <span class="n">communicator</span> <span class="ow">in</span> <span class="n">executor</span><span class="o">.</span><span class="n">_communicators</span><span class="p">:</span>
                             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">communicator</span><span class="p">,</span> <span class="n">PipeCommunicator</span><span class="p">):</span>
+                                <span class="c1"># Ensure pickle is used.</span>
+                                <span class="n">old_use_pickle</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span>
+                                <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span> <span class="o">=</span> <span class="kc">True</span>
                                 <span class="n">communicator</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
                                     <span class="n">Message</span><span class="p">(</span><span class="n">contents</span><span class="o">=</span><span class="n">resp</span><span class="p">),</span> <span class="n">proc</span><span class="o">=</span><span class="n">proc</span>
                                 <span class="p">)</span>
+                                <span class="n">communicator</span><span class="o">.</span><span class="n">use_pickle</span> <span class="o">=</span> <span class="n">old_use_pickle</span>
                         <span class="c1"># Immediately read again in this case, since the Task</span>
                         <span class="c1"># may have an answer instantly</span>
                         <span class="n">executor</span><span class="o">.</span><span class="n">_task_loop</span><span class="p">(</span><span class="n">proc</span><span class="o">=</span><span class="n">proc</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -11257,7 +11285,11 @@ that its finished.</p>
                 <span class="s2">&quot;Task Request improperly formatted. Received message of &quot;</span>
                 <span class="sa">f</span><span class="s2">&quot;type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">__debug__</span><span class="p">:</span>
+            <span class="c1"># This means the request gets printed.</span>
+            <span class="c1"># We don&#39;t actually want that in general...</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">add_hook</span><span class="p">(</span><span class="s2">&quot;task_request&quot;</span><span class="p">,</span> <span class="n">task_request</span><span class="p">)</span>
 
@@ -11456,15 +11488,7 @@ of ranks is determined from the cores dedicated to Task execution.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>lute/execution/executor.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1735</span>
-<span class="normal">1736</span>
-<span class="normal">1737</span>
-<span class="normal">1738</span>
-<span class="normal">1739</span>
-<span class="normal">1740</span>
-<span class="normal">1741</span>
-<span class="normal">1742</span>
-<span class="normal">1743</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1743</span>
 <span class="normal">1744</span>
 <span class="normal">1745</span>
 <span class="normal">1746</span>
@@ -11505,7 +11529,15 @@ of ranks is determined from the cores dedicated to Task execution.</p>
 <span class="normal">1781</span>
 <span class="normal">1782</span>
 <span class="normal">1783</span>
-<span class="normal">1784</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MPIExecutor</span><span class="p">(</span><span class="n">Executor</span><span class="p">):</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span>
+<span class="normal">1786</span>
+<span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span>
+<span class="normal">1791</span>
+<span class="normal">1792</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MPIExecutor</span><span class="p">(</span><span class="n">Executor</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs first-party Tasks that require MPI.</span>
 
 <span class="sd">    This Executor is otherwise identical to the standard Executor, except it</span>
@@ -11657,15 +11689,7 @@ of ranks is determined from the cores dedicated to Task execution.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/execution/executor.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1757</span>
-<span class="normal">1758</span>
-<span class="normal">1759</span>
-<span class="normal">1760</span>
-<span class="normal">1761</span>
-<span class="normal">1762</span>
-<span class="normal">1763</span>
-<span class="normal">1764</span>
-<span class="normal">1765</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1765</span>
 <span class="normal">1766</span>
 <span class="normal">1767</span>
 <span class="normal">1768</span>
@@ -11684,7 +11708,15 @@ of ranks is determined from the cores dedicated to Task execution.</p>
 <span class="normal">1781</span>
 <span class="normal">1782</span>
 <span class="normal">1783</span>
-<span class="normal">1784</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_submit_cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">executable_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">1784</span>
+<span class="normal">1785</span>
+<span class="normal">1786</span>
+<span class="normal">1787</span>
+<span class="normal">1788</span>
+<span class="normal">1789</span>
+<span class="normal">1790</span>
+<span class="normal">1791</span>
+<span class="normal">1792</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_submit_cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">executable_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Override submission command to use `mpirun`</span>
 
 <span class="sd">    Args:</span>
