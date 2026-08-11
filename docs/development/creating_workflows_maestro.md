@@ -136,7 +136,72 @@ A set of trigger rules can be provided before each step definition with an appro
 
 ### Setting up branching
 
-A number of branching conditions can be defined as well. Currently supported are branching based on LCLS1 vs LCLS2 DAQ, and the run type. These are defined by using the tag `!branch_daq2` (for example) and defining two dictionaries underneath it for the various cases (`daq2` or `daq1` in this example).
+Two independent branching mechanisms are available. They work differently and can be composed together.
+
+#### DAQ type branching (`!branch_<key>`)
+
+This is a **binary, exclusive** branch — exactly one sub-tree is selected and the other is discarded. The tag name encodes the condition key (e.g. `!branch_daq2`), and the two sub-trees underneath it must be keyed by the condition name (`daq2`) and by any other name (conventionally `daq1`).
+
+```yaml
+- !branch_daq2
+  daq2:
+    task_name: SmallDataProducer2   # taken when running on LCLS-II DAQ
+    slurm_params: "..."
+    next: []
+  daq1:
+    task_name: SmallDataProducer    # taken when running on LCLS-I DAQ
+    slurm_params: "..."
+    next: []
+```
+
+The branch key is resolved at launch time from eLog metadata (`is_daq2`). Only `!branch_daq2` is currently populated; other `!branch_<key>` tags can be defined in YAML but require a matching entry in `branch_conditions` passed to the parser.
+
+> **Only binary branching is supported.** If more than two sub-trees appear under a `!branch_<key>` tag, a `RuntimeWarning` is emitted and one of the non-primary branches will be selected.
+
+#### Run-type branching (`!run_type`)
+
+This is an **additive** branch — every key in the block is evaluated independently, and **all matching branches fire in parallel**. The run type string (e.g. `GEOM`, `DARK`, `DATA`, ...) is retrieved from the eLog at launch time.
+
+Two kinds of keys are supported:
+
+- **Exact match** (e.g. `DATA:`) — fires only when `run_type` equals the key exactly.
+- **Negative match** (e.g. `NOT_DARK:`) — fires when `run_type` is *not* the excluded type. The prefix `NOT_` is stripped to derive the excluded type.
+
+```yaml
+next:
+  - !run_type
+    DATA:
+      task_name: SmallDataXSSAnalyzer
+      slurm_params: "..."
+      next: []
+    GEOM:
+      task_name: BayFAIOptimizer
+      slurm_params: "..."
+      next: []
+    NOT_DARK:
+      task_name: BeamlineSummarizer
+      slurm_params: "..."
+      next: []
+```
+
+Because matching is additive, a single run can launch multiple downstream tasks simultaneously. Using the example above:
+
+| `run_type` | `DATA:` | `GEOM:` | `NOT_DARK:` | Tasks launched |
+|---|---|---|---|---|
+| `DATA` | ✓ | ✗ | ✓ | `SmallDataXSSAnalyzer` + `BeamlineSummarizer` |
+| `GEOM` | ✗ | ✓ | ✓ | `BayFAIOptimizer` + `BeamlineSummarizer` |
+| `DUMMY` | ✗ | ✗ | ✓ | `BeamlineSummarizer` only |
+| `DARK` | ✗ | ✗ | ✗ | nothing — warning is logged |
+
+Key points:
+
+- **`NOT_` is additive, not exclusive-OR.** A `GEOM` run matches both `GEOM:` and `NOT_DARK:` — both tasks are launched in parallel. If you want a task to run only for `GEOM` and not for other non-dark run types, use only the exact-match `GEOM:` key.
+- **No match → no tasks, with a warning.** If `run_type` matches no key in the block, no downstream tasks are scheduled and a warning is logged. There is no silent fallback to a default branch.
+- **Unknown run type → no tasks, with a warning.** If the eLog could not be reached or the run is not yet registered, `run_type` will be `None`. In this case all `!run_type` branches are skipped (a `NOT_` key would otherwise incorrectly match `None != "DARK"`).
+
+#### Combining both mechanisms
+
+The two mechanisms compose naturally. `!branch_daq2` selects which variant of a task to run (e.g. `SmallDataProducer2` vs `SmallDataProducer`), and `!run_type` then selects which downstream analyses to launch based on the run type. See `run_type_branching.yaml` in the repository root for a complete worked example.
 
 ### Parameter generation
 
