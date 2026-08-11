@@ -60,9 +60,15 @@ namespace HTTP {
     int opt{1};
     sockaddr_in server_addr;
 
+    unsigned num_threads { m_num_epoll_threads + m_num_cb_threads };
+    std::string threads_msg =
+      std::to_string(num_threads) + " threads (" +
+      std::to_string(m_num_epoll_threads) + " workers, " +
+      std::to_string(m_num_cb_threads) + " handlers)";
+
     std::string msg {
       "Starting server on " + m_host + ":" + std::to_string(m_port) + " with " +
-      std::to_string(m_num_threads) + " threads, using " +
+      threads_msg + ", using " +
       std::to_string(m_shard_count) + " shards, with a backlog size of " +
       std::to_string(m_backlog_size) + " and " +
       std::to_string(m_max_events) + " maximum events."
@@ -114,7 +120,7 @@ namespace HTTP {
       throw std::runtime_error("Unable to add socket with epoll_ctl.");
     }
 
-    for (size_t i = 0; i < m_num_threads; i++) {
+    for (size_t i = 0; i < m_num_epoll_threads; i++) {
       m_event_threads[i] = std::thread(&Server::process_events, this, i);
     }
   }
@@ -122,7 +128,7 @@ namespace HTTP {
   void Server::stop() {
     m_running = false;
     m_logger->info("Shutting down server...");
-    for (size_t i_worker=0; i_worker < m_num_threads; ++i_worker) {
+    for (size_t i_worker=0; i_worker < m_num_epoll_threads; ++i_worker) {
       m_event_threads[i_worker].join();
     }
 
@@ -351,9 +357,11 @@ namespace HTTP {
   }
 
   void Server::handle_raw_http(epoll_event event) {
-    size_t shard_id = shard_index(event.data.fd);
+    int fd { event.data.fd };
+    size_t shard_id = shard_index(fd);
     Shard& shard = m_shards[shard_id];
-    auto& buffer = shard.buffers[event.data.fd];
+    auto& buffer = shard.buffers[fd];
+
     if (buffer.empty()) {
       // This should NOT happen - if it does something is incorrect in the locking
       // and management of shared resources. But we can recover, so no abort is done.
@@ -361,11 +369,14 @@ namespace HTTP {
       mod_epoll_event(event, EPOLLIN);
       return;
     }
+
     // Must use begin and end to avoid truncating null-bytes
     std::string request_string(buffer.begin(), buffer.end());
 
     Request request;
     Response response;
+
+    bool error_caught { false };
 
     try {
       request = Request(request_string);
@@ -377,19 +388,11 @@ namespace HTTP {
           // Need to read more data
           {
             std::lock_guard<std::mutex> shard_lock(shard.shard_mutex);
-            shard.missing_chunk[event.data.fd] = diff;
+            shard.missing_chunk[fd] = diff;
           }
           // Don't think lock needs to be held at this point?
           mod_epoll_event(event, EPOLLIN);
           return;
-        }
-      }
-      response = handle_request(request);
-      if (!request.persistent()) {
-        response.set_header("Connection", "close");
-        {
-          std::lock_guard<std::mutex> shard_lock(shard.shard_mutex);
-          shard.non_persistent_fds.insert(event.data.fd);
         }
       }
     } catch (const IncompleteHeader& e) {
@@ -400,23 +403,78 @@ namespace HTTP {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());
+
+      error_caught = true;
     } catch (const std::logic_error& e) {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());
+
+      error_caught = true;
     } catch (const std::exception& e) {
       response = Response(CODE::BadRequest);
       response.set_content(e.what());
       m_logger->debug(std::string("Error in handle_raw_http: ") + e.what());
+
+      error_caught = true;
     }
 
-    // Set response to write to client
-    std::string response_string = response.to_string();
-    std::fill(buffer.begin(), buffer.end(), 0);
-    buffer.resize(response_string.size());
-    std::copy(response_string.begin(), response_string.end(), buffer.begin());
-    // Rearm the fd
-    mod_epoll_event(event, EPOLLOUT);
+    if (error_caught) {
+      std::string response_string = response.to_string();
+      std::fill(buffer.begin(), buffer.end(), 0);
+      buffer.resize(response_string.size());
+      std::copy(response_string.begin(), response_string.end(), buffer.begin());
+
+      // Rearm the fd
+      mod_epoll_event(event, EPOLLOUT);
+      return;
+    }
+
+    auto handler_response = [this, event, request = std::move(request)]() mutable {
+      int client_fd { event.data.fd };
+      std::size_t s_id = this->shard_index(client_fd);
+      Shard& shard = this->m_shards[s_id];
+
+      Response response;
+
+      try {
+        response = this->handle_request(request);
+        if (!request.persistent()) {
+          response.set_header("Connection", "close");
+          {
+            std::lock_guard<std::mutex> shard_lock(shard.shard_mutex);
+            shard.non_persistent_fds.insert(client_fd);
+          }
+        }
+
+      } catch (const std::exception& e) {
+        response = Response(CODE::InternalServerError);
+        m_logger->debug("Error in handle_raw_http callback lambda: {}", e.what());
+      }
+
+      std::mutex* fd_mutex_ptr;
+      {
+        std::lock_guard<std::mutex> shard_lock(shard.shard_mutex);
+        fd_mutex_ptr = &shard.fd_mutexes.try_emplace(client_fd).first->second;
+        shard.chunk_mutexes.try_emplace(client_fd);
+        shard.buffers.try_emplace(client_fd);
+      }
+      {
+        std::lock_guard<std::mutex> buf_lock(*fd_mutex_ptr);
+
+        auto& buffer = shard.buffers[client_fd];
+        // Set response to write to client
+        std::string response_string = response.to_string();
+        std::fill(buffer.begin(), buffer.end(), 0);
+        buffer.resize(response_string.size());
+        std::copy(response_string.begin(), response_string.end(), buffer.begin());
+      }
+
+      // Rearm the fd
+      mod_epoll_event(event, EPOLLOUT);
+    };
+
+    m_thread_pool.enqueue(handler_response);
   }
 
   Response Server::handle_request(const Request& request) {

@@ -26,7 +26,8 @@ liblwmhttp = shared_library(
     [
         'src/server/handler.cc',
         'src/server/http.cc',
-        'src/server/server.cc'
+        'src/server/server.cc',
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [spdlog_dep, rapidjson_dep],
     include_directories: maestro_headers,
@@ -50,7 +51,6 @@ liblwm = shared_library(
         'src/lwm/job_registry.cc',
         'src/lwm/launcher.cc',
         'src/lwm/manager.cc',
-        'src/parallel/threadpool.cc'
     ],
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
@@ -109,7 +109,8 @@ test_server = executable(
         'tests/cpp/test_server.cc',
         'src/server/http.cc',
         'src/server/server.cc',
-        'src/server/handler.cc'
+        'src/server/handler.cc',
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [
         gtest_dep,
@@ -132,7 +133,7 @@ test_maestro_api = executable(
         'src/lwm/launcher.cc',
         'src/lwm/job.cc',
         'src/lwm/job_registry.cc',
-        'src/parallel/threadpool.cc'
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [
         gtest_dep,
