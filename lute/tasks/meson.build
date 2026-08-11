@@ -16,7 +16,8 @@ py_sources = [
     'tasklets.py',
     'task.py',
     'test.py',
-    'xtc.py',
+    'xtc1.py',
+    'xtc2.py',
 ]
 
 py3.install_sources(

@@ -1476,9 +1476,13 @@ class Executor(BaseExecutor):
                             )
                             for communicator in executor._communicators:
                                 if isinstance(communicator, PipeCommunicator):
+                                    # Ensure pickle is used.
+                                    old_use_pickle: bool = communicator.use_pickle
+                                    communicator.use_pickle = True
                                     communicator.write(
                                         Message(contents=resp), proc=proc
                                     )
+                                    communicator.use_pickle = old_use_pickle
                             # Immediately read again in this case, since the Task
                             # may have an answer instantly
                             executor._task_loop(proc=proc)  # type: ignore
@@ -1491,7 +1495,11 @@ class Executor(BaseExecutor):
                     "Task Request improperly formatted. Received message of "
                     f"type: {type(msg)}"
                 )
-            return None
+            if __debug__:
+                # This means the request gets printed.
+                # We don't actually want that in general...
+                return False
+            return True
 
         self.add_hook("task_request", task_request)
 

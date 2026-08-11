@@ -248,9 +248,13 @@ PeakFinderPsocake.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psco
 
 # XTC
 #####
-Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
-"""Converts Xtc1 files to Xtc2 to use in psana2"""
-Xtc1to2Converter.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+Xtc1Reader: MPIExecutor = MPIExecutor("ReadXtc1")
+"""Read XTC1 file and send to Xtc2Writer for conversion."""
+Xtc1Reader.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
+
+Xtc2Writer: MPIExecutor = MPIExecutor("WriteXtc2")
+"""Write XTC2 files from XTC1 data received from to Xtc1Reader."""
+Xtc2Writer.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 # Cheetah
 #########
