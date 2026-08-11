@@ -95,7 +95,7 @@ def get_droplet2photon(run):
 {{- step_parameters("droplet_dict", detector, params["droplet"], False) }}
         d2p_dict["droplet"] = droplet_dict
         d2p_dict["d2p"] = {
-            "aduspphot": 20,
+            "aduspphot": {{ params["aduspphot"] }},
             "cputime": {{ params["cputime"] }},
         }
         d2p_dict["nData"] = None
