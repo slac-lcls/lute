@@ -4,7 +4,7 @@ title: "Multi-node T-Jump Analysis Configuration"
 experiment: "mfx101262725"
 run: 96
 date: "2026/02/03"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 6000
 work_dir: "/tmp"
 ...

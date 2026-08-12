@@ -8,7 +8,7 @@ title: "Some title."
 experiment: "MYEXP123"
 # run: 12 # Does not need to be provided
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
@@ -171,7 +171,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
@@ -249,7 +249,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/data/lcls/ds/exp/experiment/scratch"
 ...
@@ -274,7 +274,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/data/lcls/ds/exp/experiment/scratch"
 ...
