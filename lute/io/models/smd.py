@@ -725,6 +725,13 @@ class AnalyzeSmallDataXSSParameters(TaskParameters):
     xss_event_codes: Optional[List[int]] = Field(
         None, description="List of event codes to use for XSS T-Jump analysis."
     )
+    sim_path: Optional[str] = Field(
+        None,
+        description=(
+            "Path to a .npz file with simulated I(Q,T) curves for thermometry "
+            "(keys: q, curves, temps). If None, thermometry is skipped."
+        ),
+    )
     ipm_var: str = Field(
         description="Name of the IPM to use for X-Ray intensity filtering."
     )

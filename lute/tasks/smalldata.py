@@ -94,6 +94,19 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
             laser_off = self._mpi_comm.reduce(laser_off, op=sum_laser_off)
             tjumps = self._mpi_comm.reduce(tjumps, op=sum_tjump)
             processed_tjumps = self._mpi_comm.reduce(processed_tjumps, op=sum_tjump)
+
+        # All ranks preprocess their local slice; rank 0 runs the ML pipeline.
+        thermo_results: Optional[dict] = None
+        if self._task_parameters.sim_path:
+            thermo_results = self.infer_temperature(self._task_parameters.sim_path)
+
+        all_plots: List[ElogSummaryPlots] = []
+        run: int
+        try:
+            run = int(self._task_parameters.lute_config.run)
+        except ValueError:
+            run = 0
+
         if (
             self._mpi_rank == 0
             and diff is not None
@@ -108,10 +121,33 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
             tjumps /= self._mpi_size
             processed_tjumps /= self._mpi_size
             name: str = self._scan_var_name if self._scan_var_name else "by_event"
-            plots = self.plot_all_xss(
-                laser_on, bins, diff, name, tjumps, processed_tjumps
+
+            # Build inner TJump tabs; append thermometry tabs if available.
+            tjump_inner: pn.Tabs = self.plot_xss_tjump_hv(tjumps, processed_tjumps)
+            if thermo_results is not None:
+                thermo_tabs = thermo_results.get("plot")
+                if thermo_tabs is not None:
+                    for label, tab_content in zip(
+                        thermo_tabs._names, thermo_tabs.objects
+                    ):
+                        tjump_inner.append((label, tab_content))
+
+            # Assemble outer XSS page with thermometry nested inside "XSS T-Jump".
+            scan_grid = self.plot_xss_scan_hv(bins, diff, name)
+            overlap_grid = self.plot_xss_overlap_fit_hv(laser_on, bins, diff)
+            plots: pn.Tabs = pn.Tabs(
+                ("XSS Scan", scan_grid),
+                ("XSS Overlap Fit", overlap_grid),
+                ("XSS T-Jump", tjump_inner),
             )
             plot_display_name: str
+            if "lens" in name:
+                plot_display_name = f"XSS/{run:04d}/lens_scans/{name}"
+            elif name == "by_event":
+                plot_display_name = f"XSS/{run:04d}/event_scans/by_event"
+            else:
+                plot_display_name = f"XSS/{run:04d}/time_scans/{name}"
+            all_plots.append(ElogSummaryPlots(plot_display_name, plots))
             run: int
             try:
                 run = int(self._task_parameters.lute_config.run)
@@ -122,7 +158,7 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
             else:
                 plot_display_name = f"XSS/{run:04d}_{name}"
 
-            self._result.payload = ElogSummaryPlots(plot_display_name, plots)
+        self._result.payload = all_plots
 
 
 class AnalyzeSmallDataXAS(AnalyzeSmallData):
