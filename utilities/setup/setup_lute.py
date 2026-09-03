@@ -297,19 +297,19 @@ def inplace_sed(in_file: str, pattern: str) -> None:
     _run_subprocess_log(cmd)
 
 
-def modify_permissions(lute_path: str):
-    """Recursively set permissions for a LUTE installation."""
-    os.chmod(lute_path, 0o775)
-    for root, dirs, files in os.walk(lute_path):
-        for d in dirs:
-            dir_path = os.path.join(root, d)
-            if not os.path.islink(dir_path):
-                os.chmod(dir_path, 0o775)
+def modify_permissions(lute_path: str) -> None:
+    """Recursively ensure world-readable, world-traversable permissions.
 
-        for f in files:
-            file_path = os.path.join(root, f)
-            if not os.path.islink(file_path):
-                os.chmod(file_path, 0o775)
+    Uses chmod -R a+rX: adds read for all and execute only for directories
+    and already-executable files, leaving non-executable data files unchanged.
+    Works correctly on Lustre/NFSv4 ACL filesystems (e.g. S3DF).
+
+    Args:
+        lute_path (str): Root path to apply permissions to.
+    """
+    cmd: List[str] = ["chmod", "-R", "a+rX", lute_path]
+    logger.info(f"Setting permissions on {lute_path}...")
+    _run_subprocess_log(cmd)
 
 
 def update_dag_params(
@@ -467,6 +467,7 @@ def main() -> None:
         builder = LuteEnvBuilder(lute_version=version, env_dir=env_dir)
         for pv in PYTHON_INTERPRETERS.keys():
             builder.create(pv)
+        modify_permissions(env_dir)
 
         # Use the first requested version as the primary for workflow setup
         primary_version: str = list(PYTHON_INTERPRETERS.keys())[0]

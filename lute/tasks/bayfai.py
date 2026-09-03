@@ -9,17 +9,7 @@ Classes:
 __all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
-import psana  # type: ignore
-
-if hasattr(psana, "xtc_version"):
-    from lute.tasks._bayfai2 import BayFAIOpt2
-
-    IS_PSANA2 = True
-else:
-    from lute.tasks._bayfai import BayFAIOpt
-
-    IS_PSANA2 = False
-
+from lute.tasks._bayfai import BayFAIOpt
 from lute.io.models.bayfai import BayFAIParameters
 
 from lute.tasks.task import Task
@@ -30,7 +20,6 @@ import os
 import logging
 import panel as pn  # type: ignore
 import time  # type: ignore
-from typing import Union
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -46,34 +35,30 @@ class BayFAI(Task):
 
     def _run(self) -> None:
         start_time = time.time()
-        optimizer: Union[BayFAIOpt, BayFAIOpt2]
-        if IS_PSANA2:
-            optimizer = BayFAIOpt2(
-                exp=self._task_parameters.lute_config.experiment,
-                run=int(self._task_parameters.lute_config.run),
-            )
-        else:
-            optimizer = BayFAIOpt(
-                exp=self._task_parameters.lute_config.experiment,
-                run=int(self._task_parameters.lute_config.run),
-            )
+        optimizer: BayFAIOpt = BayFAIOpt(
+            exp=self._task_parameters.lute_config.experiment,
+            run=int(self._task_parameters.lute_config.run),
+        )
         optimizer.setup(
             detname=self._task_parameters.detname,
-            powder=self._task_parameters.powder,
+            h5=self._task_parameters.h5,
             smooth=self._task_parameters.preprocess,
+            Imin=self._task_parameters.Imin,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
-            in_file=self._task_parameters.in_file,
+            wavelength=self._task_parameters.wavelength,
         )
         bayfai_hyperparams = {
             "n_samples": self._task_parameters.bo_params.n_samples,
             "n_iterations": self._task_parameters.bo_params.n_iterations,
             "max_rings": self._task_parameters.bo_params.max_rings,
+            "pts_per_deg": self._task_parameters.bo_params.pts_per_deg,
             "Imin": optimizer.Imin,
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
             "step": self._task_parameters.bo_params.step,
             "seed": self._task_parameters.bo_params.seed,
+            "bragg_threshold": self._task_parameters.bo_params.bragg_threshold,
         }
         optimizer.bayfai_opt(
             center=self._task_parameters.center,
@@ -100,20 +85,13 @@ class BayFAI(Task):
             )
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
-            calib_detector = optimizer.update_geometry(self._task_parameters.out_file)
+            optimizer.update_geometry(self._task_parameters.out_file)
             # optimizer.upload_geometry(
             #     self._task_parameters.out_file, self._task_parameters.detname
             # )
             powder_plot, qs, resolutions = optimizer.create_interactive_powder()
-            diagnostics_plot = optimizer.create_diagnostics_panel(
-                detector=calib_detector,
-                distance=distance,
-            )
-            _ = optimizer.create_summary_plot(
-                detector=calib_detector,
-                distance=distance,
-                plot=plot,
-            )
+            diagnostics_plot = optimizer.create_diagnostics_panel()
+            _ = optimizer.create_summary_plot(plot=plot)
             pn.extension("matplotlib", "bokeh")
             plots = pn.Row(
                 pn.pane.Matplotlib(diagnostics_plot, sizing_mode="fixed"),
@@ -143,8 +121,8 @@ class BayFAI(Task):
                 {
                     "Detector distance (m)": f"{params[0]:.6f}",
                     "Detector center (pix)": (
-                        f"{cx/optimizer.detector.pixel_size:.3f}",
-                        f"{cy/optimizer.detector.pixel_size:.3f}",
+                        f"{cx / optimizer.detector.pixel_size:.3f}",
+                        f"{cy / optimizer.detector.pixel_size:.3f}",
                     ),
                     "Lowest q": f"{qs['closest']:.3f} \u00c5-1 | {resolutions['closest']:.3f} \u00c5",
                     "Highest q": f"{qs['furthest']:.3f} \u00c5-1 | {resolutions['furthest']:.3f} \u00c5 (detector corner)",

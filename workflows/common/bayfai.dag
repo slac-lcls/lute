@@ -4,7 +4,7 @@
     task_name: "SmallDataProducer2"
     slurm_params: ""
     next:
-    - task_name: "BayFAIOptimizer2"
+    - task_name: "BayFAIOptimizer"
       slurm_params: ""
       next: []
   daq1:

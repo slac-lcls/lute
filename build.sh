@@ -219,6 +219,7 @@ meson compile -C "${BUILD_DIR}"
 LINES=("Installing files in ${INSTALL_DIR}...")
 print_banner "${LINES[@]}"
 meson install -C "${BUILD_DIR}"
+chmod -R a+rX "${INSTALL_DIR}"
 
 # Run pip at the end - this gets the entrypoints defined in pyproject.toml
 # It can be pointed at the build directory to prevent pip from trying to rebuild

@@ -13,37 +13,9 @@ from typing import Any, Dict, List, Tuple, Optional
 from pydantic import BaseModel, Field, validator
 
 from lute.io.models.base import TaskParameters
-from lute.io.calib import group_from_det_type, source_from_det_info, select_calib_file
 from lute.io.models.validators import (
     validate_smd_path,
 )
-
-
-def validate_metrology_path(calib_path_name: str):
-    """Finds the path to a valid calibration metrology file (psana1).
-    If no calib folder found, returns empty string (e.g. for psana2)."""
-
-    def _validate_metrology_path(
-        cls, calib_path: str, values: Dict[str, Any]
-    ) -> Optional[str]:
-        if calib_path == "":
-            exp: str = values["lute_config"].experiment
-            run: int = int(values["lute_config"].run)
-            try:
-                det_type: str = values["det_type"]
-            except KeyError:
-                det_type = values["detname"]
-            cdir = f"/sdf/data/lcls/ds/{exp[:3]}/{exp}/calib"
-            src = source_from_det_info(det_type.lower(), exp[:3])
-            group = group_from_det_type(det_type.lower())
-            calib_type = "geometry"
-            calib_dir = f"{cdir}/{group}/{src}/{calib_type}/"
-            if os.path.exists(calib_dir):
-                calib_run_path = select_calib_file(calib_dir, run)
-                return calib_run_path
-        return calib_path
-
-    return validator(calib_path_name, always=True)(_validate_metrology_path)
 
 
 def validate_geometry_path(output_path_name: str):
@@ -90,6 +62,16 @@ class BayFAIParameters(TaskParameters):
             description="Maximum number of rings to search for Bragg peaks.",
         )
 
+        pts_per_deg: float = Field(
+            default=0.5,
+            description="Number of Bragg peaks to extract per azimuthal degree.",
+        )
+
+        Imin: float = Field(
+            default=95,
+            description="Minimum intensity percentile threshold for Bragg peak detection.",
+        )
+
         prior: bool = Field(
             default=True,
             description="Whether to sample initial points around the center of search space or randomly.",
@@ -108,6 +90,11 @@ class BayFAIParameters(TaskParameters):
         seed: Optional[int] = Field(
             default=None,
             description="Random seed for reproducibility.",
+        )
+
+        bragg_threshold: int = Field(
+            default=5,
+            description="Threshold on Bragg peak finding occurences for filtering out false positives.",
         )
 
     center: Dict[str, float] = Field(
@@ -156,19 +143,19 @@ class BayFAIParameters(TaskParameters):
         description="Detector name",
     )
 
-    in_file: str = Field(
-        "",
-        description="Path to the input .data file containing the detector metrology to be calibrated.",
-    )
-
     calibrant: str = Field(
         "",
         description="Calibrant used for the calibration supported by pyFAI: https://github.com/silx-kit/pyFAI/tree/main/src/pyFAI/resources/calibration, \n e.g. Silver Behenate 'AgBh', LaB6 'CeO2', etc.",
     )
 
-    powder: str = Field(
+    wavelength: float = Field(
+        1e-10,
+        description="Wavelength in meters. If provided (non-default), overrides the value read from the h5 file.",
+    )
+
+    h5: str = Field(
         "",
-        description="Powder diffraction image path to be used for the calibration.",
+        description="Smalldata hdf5 file path to be used for the calibration.",
     )
 
     preprocess: bool = Field(
@@ -187,8 +174,6 @@ class BayFAIParameters(TaskParameters):
         description="Bayesian optimization hyperparameters.",
     )
 
-    _find_in_file_path = validate_metrology_path("in_file")
-
-    _find_smd_path = validate_smd_path("powder")
+    _find_smd_path = validate_smd_path("h5")
 
     _find_out_file_path = validate_geometry_path("out_file")
