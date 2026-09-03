@@ -1395,8 +1395,7 @@ class BayFAIOpt:
             f"{closest_resol:.3f} Å",
             color="red",
             fontsize=10,
-            bbox=dict(facecolor="white", 
-                      alpha=0.6, edgecolor="none", pad=1),
+            bbox=dict(facecolor="white", alpha=0.6, edgecolor="none", pad=1),
         )
 
         d1f, d2f = np.unravel_index(np.argmax(radii), p1.shape)
