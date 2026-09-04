@@ -93,7 +93,7 @@ class BayFAIParameters(TaskParameters):
         )
 
         bragg_threshold: int = Field(
-            default=5,
+            default=2,
             description="Threshold on Bragg peak finding occurences for filtering out false positives.",
         )
 
@@ -150,7 +150,10 @@ class BayFAIParameters(TaskParameters):
 
     wavelength: float = Field(
         1e-10,
-        description="Wavelength in meters. If provided (non-default), overrides the value read from the h5 file.",
+        description=(
+            "Wavelength in meters. If provided (non-default), it takes precedence "
+            "over the mean photon energy read from the h5 file."
+        ),
     )
 
     h5: str = Field(
@@ -160,7 +163,12 @@ class BayFAIParameters(TaskParameters):
 
     preprocess: bool = Field(
         False,
-        description="Whether to apply preprocessing to the powder diffraction image before calibration.",
+        description="Whether to remove the background of the powder diffraction image with a median filter before calibration.",
+    )
+
+    median_filter_size: int = Field(
+        21,
+        description="Size in pixels of the median filter used to estimate the powder background.",
     )
 
     out_file: str = Field(

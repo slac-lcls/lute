@@ -43,10 +43,11 @@ class BayFAI(Task):
             detname=self._task_parameters.detname,
             h5=self._task_parameters.h5,
             smooth=self._task_parameters.preprocess,
-            Imin=self._task_parameters.Imin,
+            Imin=self._task_parameters.bo_params.Imin,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
             wavelength=self._task_parameters.wavelength,
+            median_filter_size=self._task_parameters.median_filter_size,
         )
         bayfai_hyperparams = {
             "n_samples": self._task_parameters.bo_params.n_samples,
@@ -72,8 +73,8 @@ class BayFAI(Task):
             params = optimizer.params
             score = optimizer.neglog_score
             distance = params[0]
-            cx = params[1]
-            cy = params[2]
+            cy = params[1]
+            cx = params[2]
             logger.info(f"Detector Distance to Sample: {distance:.6f}")
             logger.info(f"Beam center ({cx:.6f}, {cy:.6f})")
             logger.info(
@@ -86,9 +87,6 @@ class BayFAI(Task):
             os.makedirs(fig_folder, exist_ok=True)
             plot = f"{fig_folder}/bayFAI_summary_{optimizer.exp}_r{optimizer.run:0>4}_{self._task_parameters.detname}.png"
             optimizer.update_geometry(self._task_parameters.out_file)
-            # optimizer.upload_geometry(
-            #     self._task_parameters.out_file, self._task_parameters.detname
-            # )
             powder_plot, qs, resolutions = optimizer.create_interactive_powder()
             diagnostics_plot = optimizer.create_diagnostics_panel()
             _ = optimizer.create_summary_plot(plot=plot)

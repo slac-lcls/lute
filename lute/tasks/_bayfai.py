@@ -36,7 +36,7 @@ from pyFAI.geometryRefinement import GeometryRefinement  # type: ignore
 from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
-from scipy.ndimage import median_filter  # type: ignore
+from scipy.ndimage import median_filter, zoom  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
@@ -50,6 +50,11 @@ pyFAI.use_opencl = False
 
 logger: logging.Logger = get_logger(__name__)
 
+PHOTON_ENERGY_KEYS: tuple = (
+    "ebeamh/ebeamPhotonEnergy",
+    "ebeam/ebeamPhotonEnergy",
+    "ebeam/photon_energy",
+)
 
 def _build_ai(
     detector: pyFAI.detectors.Detector,
@@ -136,6 +141,7 @@ class BayFAIOpt:
         calibrant: str,
         fixed: list,
         wavelength: float = 1e-10,
+        median_filter_size: int = 21,
     ):
         """
         Setup the BayFAI optimization.
@@ -147,7 +153,7 @@ class BayFAIOpt:
         h5 : str
             Path to the smalldata h5 file to use for calibration
         smooth : bool
-            If True, apply smoothing to the powder image
+            If True, remove the background of the powder image
         Imin : float
             Minimum intensity percentile threshold for Bragg peak detection
         calibrant : PyFAI.Calibrant
@@ -157,6 +163,8 @@ class BayFAIOpt:
         wavelength : float, optional
             X-ray wavelength in meters. If provided (non-default 1e-10),
             overrides the value read from the h5 file.
+        median_filter_size : int, optional
+            Size in pixels of the median filter used to estimate the background.
 
         Returns
         -------
@@ -164,7 +172,10 @@ class BayFAIOpt:
             Minimum intensity value for identifying Bragg peaks
         """
         self.detector = self.build_detector(detname)
-        self.powder = self.generate_powder(h5, detname, smooth, Imin)
+        self.median_filter_size = median_filter_size if smooth else None
+        self.powder = self.generate_powder(
+            h5, detname, smooth, Imin, median_filter_size
+        )
         self.calibrant = self.define_calibrant(calibrant, h5, wavelength)
         self.set_search_space(fixed)
 
@@ -208,6 +219,7 @@ class BayFAIOpt:
         mask: npt.NDArray[np.integer],
         smooth: bool = False,
         Imin: float = 95,
+        median_filter_size: int = 21,
     ) -> npt.NDArray[np.float64]:
         """
         Preprocess extracted powder for enhancing optimization
@@ -219,16 +231,29 @@ class BayFAIOpt:
         mask : npt.NDArray[np.integer]
             Pixel mask to apply to the powder image
         smooth : bool, optional
-            If True, apply smoothing to the powder image.
+            If True, remove the background of the powder image.
         Imin : float, optional
             Minimum intensity percentile threshold for Bragg peak detection.
+        median_filter_size : int, optional
+            Size in pixels of the median filter used to estimate the background.
         """
+        powder = np.asarray(powder, dtype=np.float64).copy()
+        good = mask != 0
+        powder[~good] = 0
         powder[powder < 0] = 0
         if smooth:
             for p in range(powder.shape[0]):
-                background = median_filter(powder[p], size=3)
-                powder[p] = powder[p] - background
-        powder[mask == 0] = 0
+                panel = powder[p]
+                panel_good = good[p]
+                filled = np.where(
+                    panel_good,
+                    panel,
+                    np.median(panel[panel_good]) if panel_good.any() else 0.0,
+                )
+                background = median_filter(filled, size=median_filter_size, mode="nearest")
+                powder[p] = panel - background
+            powder[powder < 0] = 0
+        powder[~good] = 0
         self.powder = powder
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         non_zero_pixels = self.powder[self.powder > 0]
@@ -257,7 +282,12 @@ class BayFAIOpt:
         return assembled_powder
 
     def generate_powder(
-        self, powder_path: str, detname: str, smooth: bool = False, Imin: float = 95
+        self,
+        powder_path: str,
+        detname: str,
+        smooth: bool = False,
+        Imin: float = 95,
+        median_filter_size: int = 21,
     ) -> npt.NDArray[np.float64]:
         """
         Generate a preprocessed powder image from smalldata reduction.
@@ -269,14 +299,16 @@ class BayFAIOpt:
         detname : str
             Name of the detector
         smooth : bool, optional
-            If True, apply smoothing to the powder image.
+            If True, remove the background of the powder image.
         Imin : float, optional
             Minimum intensity percentile threshold for Bragg peak detection.
+        median_filter_size : int, optional
+            Size in pixels of the median filter used to estimate the background.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
         mask = np.squeeze(mask, axis=0)
         powder = self.extract_powder(powder_path, detname)
-        powder = self.preprocess_powder(powder, mask, smooth, Imin)
+        powder = self.preprocess_powder(powder, mask, smooth, Imin, median_filter_size)
         self.assembled_powder = self.assemble_image(powder)
         return powder
 
@@ -327,7 +359,7 @@ class BayFAIOpt:
     def define_calibrant(
         self,
         calibrant_name: str,
-        h5_file: str,
+        h5: str,
         wavelength: float = 1e-10,
     ) -> pyFAI.calibrant.Calibrant:
         """
@@ -337,19 +369,41 @@ class BayFAIOpt:
         ----------
         calibrant_name : str
             Name of the calibrant
-        h5_file : str
-            Path to the smalldata h5 file containing ebeamh/ebeamPhotonEnergy
+        h5 : str
+            Path to the smalldata h5 file containing the photon energy.
         wavelength : float, optional
-            X-ray wavelength in meters. If non-default (1e-10), this value is
-            used directly. Otherwise the wavelength is derived from the mean
-            photon energy read from the h5 file.
+            X-ray wavelength in meters.
         """
         self.calibrant_name = calibrant_name
         calibrant = CALIBRANT_FACTORY(calibrant_name)
-        if wavelength == 1e-10:
-            with h5py.File(h5_file) as f:
-                photon_energy = np.mean(f["ebeamh"]["ebeamPhotonEnergy"][:])
-            wavelength = 1.23984193e-6 / photon_energy
+        if wavelength != 1e-10:
+            logger.info(f"Using user-provided wavelength {wavelength} m")
+        else:
+            try:
+                with h5py.File(h5) as f:
+                    for key in PHOTON_ENERGY_KEYS:
+                        if key not in f:
+                            continue
+                        energies = np.asarray(f[key][()], dtype=float)
+                        energies = energies[np.isfinite(energies) & (energies > 0)]
+                        if energies.size == 0:
+                            continue
+                        photon_energy = float(np.mean(energies))
+                        wavelength = 1.23984193e-6 / photon_energy
+                        logger.info(
+                            f"Read {photon_energy:.2f} eV from {key} "
+                            f"-> wavelength {wavelength:.4e} m"
+                        )
+                        break
+                    else:
+                        raise KeyError(
+                            f"None of {PHOTON_ENERGY_KEYS} hold usable photon "
+                            f"energies in the h5 file"
+                        )
+            except Exception as e:
+                logger.warning(
+                    f"Could not read photon energy from {h5} due to {e}, defaulting to provided wavelength {wavelength} m"
+                )
         calibrant.wavelength = wavelength
         return calibrant
 
@@ -1370,7 +1424,7 @@ class BayFAIOpt:
                 ax.scatter(
                     cp_x[mask],
                     cp_y[mask],
-                    s=20,
+                    s=10,
                     color=cmap(ring_id % 10),
                     alpha=0.6,
                     label=f"Ring {ring_id}",
@@ -1486,7 +1540,7 @@ class BayFAIOpt:
                 p.circle(
                     cp_x[mask].tolist(),
                     cp_y[mask].tolist(),
-                    size=20,
+                    size=10,
                     color=palette[ring_id % len(palette)],
                     alpha=0.6,
                     legend_label=f"Ring {ring_id}",
