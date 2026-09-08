@@ -298,11 +298,7 @@ def inplace_sed(in_file: str, pattern: str) -> None:
 
 
 def modify_permissions(lute_path: str) -> None:
-    """Recursively ensure world-readable, world-traversable permissions.
-
-    Uses chmod -R a+rX: adds read for all and execute only for directories
-    and already-executable files, leaving non-executable data files unchanged.
-    Works correctly on Lustre/NFSv4 ACL filesystems (e.g. S3DF).
+    """Recursively set permissions for a LUTE installation.
 
     Args:
         lute_path (str): Root path to apply permissions to.

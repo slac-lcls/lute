@@ -286,7 +286,7 @@ BayFAIOptimizer.update_environment(
 )
 
 BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
-"""Optimize LCLS-I detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+"""Optimize LCLS-II detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
 BayFAIOptimizer2.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 BayFAIOptimizer2.update_environment(
     {
