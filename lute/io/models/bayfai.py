@@ -89,7 +89,7 @@ class BayFAIParameters(TaskParameters):
 
         lbda: float = Field(
             default=0.1,
-            description="Penalty weight in final scoring to select winner geometry."
+            description="Penalty weight in final scoring to select winner geometry.",
         )
 
         seed: Optional[int] = Field(
