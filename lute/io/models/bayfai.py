@@ -87,14 +87,14 @@ class BayFAIParameters(TaskParameters):
             description="Size of the refinement space around best parameters.",
         )
 
+        lbda: float = Field(
+            default=0.1,
+            description="Penalty weight in final scoring to select winner geometry."
+        )
+
         seed: Optional[int] = Field(
             default=None,
             description="Random seed for reproducibility.",
-        )
-
-        bragg_threshold: int = Field(
-            default=2,
-            description="Threshold on Bragg peak finding occurences for filtering out false positives.",
         )
 
     center: Dict[str, float] = Field(
@@ -159,16 +159,6 @@ class BayFAIParameters(TaskParameters):
     h5: str = Field(
         "",
         description="Smalldata hdf5 file path to be used for the calibration.",
-    )
-
-    preprocess: bool = Field(
-        False,
-        description="Whether to remove the background of the powder diffraction image with a median filter before calibration.",
-    )
-
-    median_filter_size: int = Field(
-        21,
-        description="Size in pixels of the median filter used to estimate the powder background.",
     )
 
     out_file: str = Field(

@@ -42,12 +42,10 @@ class BayFAI(Task):
         optimizer.setup(
             detname=self._task_parameters.detname,
             h5=self._task_parameters.h5,
-            smooth=self._task_parameters.preprocess,
             Imin=self._task_parameters.bo_params.Imin,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
             wavelength=self._task_parameters.wavelength,
-            median_filter_size=self._task_parameters.median_filter_size,
         )
         bayfai_hyperparams = {
             "n_samples": self._task_parameters.bo_params.n_samples,
@@ -58,8 +56,8 @@ class BayFAI(Task):
             "prior": self._task_parameters.bo_params.prior,
             "beta": self._task_parameters.bo_params.beta,
             "step": self._task_parameters.bo_params.step,
+            "lbda": self._task_parameters.bo_params.lbda,
             "seed": self._task_parameters.bo_params.seed,
-            "bragg_threshold": self._task_parameters.bo_params.bragg_threshold,
         }
         optimizer.bayfai_opt(
             center=self._task_parameters.center,

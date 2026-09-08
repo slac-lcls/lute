@@ -67,6 +67,11 @@ SmallDataProducer.add_tasklet(
     set_result=False,
     set_summary=False,
 )
+SmallDataProducer.update_environment(
+    {
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+    }
+)
 
 SmallDataProducer2: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file."""
@@ -81,6 +86,11 @@ SmallDataProducer2.add_tasklet(
     set_summary=False,
 )
 SmallDataProducer2.update_environment(setup_smd2_env)
+SmallDataProducer2.update_environment(
+    {
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+    }
+)
 
 SmallDataProducer2Test: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file using the test environment."""
@@ -265,5 +275,25 @@ CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/setup-om.sh")
 # BayFAI
 #######
 BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
-"""Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+"""Optimize LCLS-I detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
 BayFAIOptimizer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
+BayFAIOptimizer.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+    }
+)
+
+BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
+"""Optimize LCLS-I detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer2.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+BayFAIOptimizer2.update_environment(
+    {
+        "NUMEXPR_MAX_THREADS": "16",
+        "NUMEXPR_NUM_THREADS": "16",
+        "PS_SRV_NODES": "0",
+        "PS_EB_NODES": "1",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+    }
+)

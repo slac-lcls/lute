@@ -136,12 +136,10 @@ class BayFAIOpt:
         self,
         detname: str,
         h5: str,
-        smooth: bool,
         Imin: float,
         calibrant: str,
         fixed: list,
         wavelength: float = 1e-10,
-        median_filter_size: int = 21,
     ):
         """
         Setup the BayFAI optimization.
@@ -152,8 +150,6 @@ class BayFAIOpt:
             Name of the detector
         h5 : str
             Path to the smalldata h5 file to use for calibration
-        smooth : bool
-            If True, remove the background of the powder image
         Imin : float
             Minimum intensity percentile threshold for Bragg peak detection
         calibrant : PyFAI.Calibrant
@@ -163,8 +159,6 @@ class BayFAIOpt:
         wavelength : float, optional
             X-ray wavelength in meters. If provided (non-default 1e-10),
             overrides the value read from the h5 file.
-        median_filter_size : int, optional
-            Size in pixels of the median filter used to estimate the background.
 
         Returns
         -------
@@ -172,10 +166,7 @@ class BayFAIOpt:
             Minimum intensity value for identifying Bragg peaks
         """
         self.detector = self.build_detector(detname)
-        self.median_filter_size = median_filter_size if smooth else None
-        self.powder = self.generate_powder(
-            h5, detname, smooth, Imin, median_filter_size
-        )
+        self.powder = self.generate_powder(h5, detname, Imin)
         self.calibrant = self.define_calibrant(calibrant, h5, wavelength)
         self.set_search_space(fixed)
 
@@ -217,9 +208,7 @@ class BayFAIOpt:
         self,
         powder: npt.NDArray[np.float64],
         mask: npt.NDArray[np.integer],
-        smooth: bool = False,
         Imin: float = 95,
-        median_filter_size: int = 21,
     ) -> npt.NDArray[np.float64]:
         """
         Preprocess extracted powder for enhancing optimization
@@ -230,30 +219,13 @@ class BayFAIOpt:
             Powder image to use for calibration
         mask : npt.NDArray[np.integer]
             Pixel mask to apply to the powder image
-        smooth : bool, optional
-            If True, remove the background of the powder image.
         Imin : float, optional
             Minimum intensity percentile threshold for Bragg peak detection.
-        median_filter_size : int, optional
-            Size in pixels of the median filter used to estimate the background.
         """
         powder = np.asarray(powder, dtype=np.float64).copy()
         good = mask != 0
         powder[~good] = 0
         powder[powder < 0] = 0
-        if smooth:
-            for p in range(powder.shape[0]):
-                panel = powder[p]
-                panel_good = good[p]
-                filled = np.where(
-                    panel_good,
-                    panel,
-                    np.median(panel[panel_good]) if panel_good.any() else 0.0,
-                )
-                background = median_filter(filled, size=median_filter_size, mode="nearest")
-                powder[p] = panel - background
-            powder[powder < 0] = 0
-        powder[~good] = 0
         self.powder = powder
         self.stacked_powder = np.reshape(self.powder, self.detector.shape)
         non_zero_pixels = self.powder[self.powder > 0]
@@ -285,9 +257,7 @@ class BayFAIOpt:
         self,
         powder_path: str,
         detname: str,
-        smooth: bool = False,
         Imin: float = 95,
-        median_filter_size: int = 21,
     ) -> npt.NDArray[np.float64]:
         """
         Generate a preprocessed powder image from smalldata reduction.
@@ -298,17 +268,13 @@ class BayFAIOpt:
             Path to the h5 or npy file containing the powder data.
         detname : str
             Name of the detector
-        smooth : bool, optional
-            If True, remove the background of the powder image.
         Imin : float, optional
             Minimum intensity percentile threshold for Bragg peak detection.
-        median_filter_size : int, optional
-            Size in pixels of the median filter used to estimate the background.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
         mask = np.squeeze(mask, axis=0)
         powder = self.extract_powder(powder_path, detname)
-        powder = self.preprocess_powder(powder, mask, smooth, Imin, median_filter_size)
+        powder = self.preprocess_powder(powder, mask, Imin)
         self.assembled_powder = self.assemble_image(powder)
         return powder
 
@@ -580,75 +546,6 @@ class BayFAIOpt:
         sg.extract_cp(max_rings=max_rings, pts_per_deg=pts_per_deg, Imin=Imin)
         return sg.geometry_refinement.data
 
-    def create_dataset(self, data, bragg_threshold):
-        """
-        Build a common pixel dataset from all BO ranks.
-
-        Parameters
-        ----------
-        data : list
-            List of control points (d1, d2, ring_index)
-        bragg_threshold : int
-            Agreement threshold between ranks
-
-        Returns
-        -------
-        pixels : np.ndarray
-            Deduplicated integer pixel positions (d1, d2)
-        """
-        valid = [d for d in data if d is not None and len(d) > 0]
-        if not valid:
-            return np.array([], dtype=np.int32).reshape(0, 2)
-        all_pixels = np.vstack([np.round(d[:, :2]).astype(np.int32) for d in valid])
-        pixels, counts = np.unique(all_pixels, axis=0, return_counts=True)
-        return pixels[counts >= bragg_threshold]
-
-    def index_pixels(self, pixels, sample):
-        """
-        Assign ring indices to a set of pixel positions using a given geometry.
-
-        Parameters
-        ----------
-        pixels : np.ndarray
-            Integer pixel positions (d1, d2)
-        sample : array-like of 6 floats
-            Geometry parameters [dist, poni1, poni2, rot1, rot2, rot3].
-
-        Returns
-        -------
-        data : np.ndarray
-            Control points (d1, d2, ring_index) with ring labels consistent
-            sample geometry.
-        """
-        dist, poni1, poni2, rot1, rot2, rot3 = sample
-        geom = Geometry(
-            dist=dist,
-            poni1=poni1,
-            poni2=poni2,
-            rot1=rot1,
-            rot2=rot2,
-            rot3=rot3,
-            detector=self.detector,
-            wavelength=self.calibrant.wavelength,
-        )
-
-        # Compute 2θ for all pixels in one vectorised call.
-        tth_pixels = geom.tth(pixels[:, 0], pixels[:, 1])  # shape (M,)
-
-        # Expected ring positions and tolerance (half the smallest ring gap).
-        ring_tth = np.array(self.calibrant.get_2th())
-        delta = np.min(np.diff(ring_tth)) / 2
-
-        # Nearest-ring assignment: (n_rings, M) distance matrix.
-        dist_matrix = np.abs(ring_tth[:, None] - tth_pixels[None, :])
-        ring_indices = np.argmin(dist_matrix, axis=0)  # (M,)
-        min_dist = np.min(dist_matrix, axis=0)  # (M,)
-
-        mask = min_dist < delta
-        return np.column_stack(
-            [pixels[mask].astype(np.float64), ring_indices[mask].astype(np.int32)]
-        )
-
     def score(self, sample, Imin, max_rings, pts_per_deg):
         """
         Evaluate score at a given sampled geometry based on the residual between predicted and observed Bragg peak positions.
@@ -782,7 +679,7 @@ class BayFAIOpt:
         cov = np.linalg.inv(hessian)
         sigmas = f_min * np.diag(cov) / dof
         sigmas = np.sqrt(sigmas)
-        penalty = -np.log(np.linalg.det(cov)) / 2
+        penalty = -np.log(np.linalg.det(cov))
         return sigmas, penalty
 
     def gradient_descent(self, sample, data, resolutions, step=5):
@@ -859,6 +756,7 @@ class BayFAIOpt:
         pts_per_deg,
         beta=1.96,
         prior=True,
+        step=5,
         seed=None,
     ):
         """
@@ -888,6 +786,8 @@ class BayFAIOpt:
             Exploration-exploitation trade-off parameter for UCB acquisition function
         prior : bool
             Whether to sample initial points around the center or randomly
+        step : int
+            Step size for the gradient descent refinement
         seed : optional, int
             Random seed for reproducibility
         """
@@ -967,17 +867,19 @@ class BayFAIOpt:
         # 9. Gather results
         best_idx = np.argmax(y)
         best_param = X_samples[best_idx]
-        best_score = self.score(best_param, Imin, max_rings, pts_per_deg)
         data = self.extract_data(best_param, Imin, max_rings, pts_per_deg)
-
+        score, sigma, penalty, params = self.gradient_descent(
+            best_param, data, res, step
+        )
         logger.info(
-            f"Rank {self.rank} dist={dist:.4f}m: score={score:3e}, size={len(data)}"
+            f"Rank {self.rank} dist={dist:.4f}m: score={score:3e}, penalty={penalty:3e}"
         )
         result = {
             "bo_history": bo_history,
-            "params": best_param,
-            "score": best_score,
-            "data": data,
+            "params": params,
+            "score": score,
+            "sigma": sigma,
+            "penalty": penalty,
             "best_idx": best_idx,
         }
         return result
@@ -993,10 +895,10 @@ class BayFAIOpt:
         max_rings,
         pts_per_deg,
         beta=1.96,
-        step=5,
         prior=True,
+        step=5,
+        lbda=0.1,
         seed=None,
-        bragg_threshold=2,
     ):
         """
         Run BayFAI optimization.
@@ -1031,9 +933,6 @@ class BayFAIOpt:
             Whether to sample initial points around the center or randomly
         seed : optional, int
             Random seed for reproducibility
-        bragg_threshold : int
-            Minimum number of BO ranks that must have extracted a pixel for it
-            to be included in the common gradient-descent dataset.
         """
         # Distribute distances across MPI ranks
         dist = self.distribute_distances(center, res)
@@ -1048,6 +947,7 @@ class BayFAIOpt:
             "max_rings": max_rings,
             "pts_per_deg": pts_per_deg,
             "beta": beta,
+            "step": step,
             "prior": prior,
             "seed": seed,
         }
@@ -1061,55 +961,22 @@ class BayFAIOpt:
             **bayfai_hyperparams,
         )
 
-        # Gather BO-level results from all ranks
+        # Gather BayFAI results from all ranks
         self.comm.Barrier()
         self.scan = {}
         self.scan["bo_history"] = self.comm.gather(results["bo_history"], root=0)
-        self.scan["bo_score"] = self.comm.gather(results["score"], root=0)
+        self.scan["params"] = self.comm.gather(results["params"], root=0)
+        self.scan["score"] = self.comm.gather(results["score"], root=0)
+        self.scan["sigma"] = self.comm.gather(results["sigma"], root=0)
+        self.scan["penalty"] = self.comm.gather(results["penalty"], root=0)
         self.scan["best_idx"] = self.comm.gather(results["best_idx"], root=0)
-
-        # Build a common pixel set from all BO ranks
-        all_bo_data = self.comm.gather(results["data"], root=0)
-        if self.rank == 0:
-            common_pixels = self.create_dataset(all_bo_data, bragg_threshold)
-            logger.info(
-                f"Common dataset: {len(common_pixels)} pixels"
-                f" (bragg_threshold={bragg_threshold})"
-            )
-        else:
-            common_pixels = None
-        # Broadcast shared pixel positions to all ranks.
-        common_pixels = self.comm.bcast(common_pixels, root=0)
-
-        # Index the common pixels using the rank's best BO geometry.
-        data = self.index_pixels(common_pixels, results["params"])
-        logger.info(f"Rank {self.rank}: {len(data)} control points after ring indexing")
-
-        # Run PyFAI gradient descent on the rank-labelled common dataset
-        gd_score, sigma, penalty, params = self.gradient_descent(
-            sample=results["params"],
-            data=data,
-            resolutions=res,
-            step=step,
-        )
-        logger.info(
-            f"Rank {self.rank}: gradient descent score={gd_score:.3e},"
-            f" n_pts={len(data)}"
-        )
-
-        # Gather Gradient Descent results from all ranks
-        self.comm.Barrier()
-        self.scan["params"] = self.comm.gather(params, root=0)
-        self.scan["score"] = self.comm.gather(gd_score, root=0)
-        self.scan["sigma"] = self.comm.gather(sigma, root=0)
-        self.scan["penalty"] = self.comm.gather(penalty, root=0)
 
         # Winner selection
         if self.rank == 0:
             for key in self.scan.keys():
                 self.scan[key] = np.array([item for item in self.scan[key]])
 
-            self.final_score = self.scan["score"]
+            self.final_score = self.scan["score"] + lbda * self.scan["penalty"]
             self.index = np.argmax(self.final_score)
             self.bo_history = self.scan["bo_history"][self.index]
             self.params = self.scan["params"][self.index]
@@ -1117,11 +984,7 @@ class BayFAIOpt:
             self.sigma = self.scan["sigma"][self.index]
             self.penalty = self.scan["penalty"][self.index]
             self.best_idx = self.scan["best_idx"][self.index]
-
-            # Re-index the common pixels with the winner's refined params
-            winner_data = self.index_pixels(common_pixels, self.params)
             self.gr = GeometryRefinement(
-                data=winner_data,
                 calibrant=self.calibrant,
                 dist=self.params[0],
                 poni1=self.params[1],
