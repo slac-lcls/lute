@@ -56,6 +56,7 @@ PHOTON_ENERGY_KEYS: tuple = (
     "ebeam/photon_energy",
 )
 
+
 def _build_ai(
     detector: pyFAI.detectors.Detector,
     params: list,
