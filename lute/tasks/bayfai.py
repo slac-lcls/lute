@@ -42,22 +42,22 @@ class BayFAI(Task):
         optimizer.setup(
             detname=self._task_parameters.detname,
             h5=self._task_parameters.h5,
-            Imin=self._task_parameters.bo_params.Imin,
+            Imin=self._task_parameters.bayfai_params.Imin,
             calibrant=self._task_parameters.calibrant,
             fixed=self._task_parameters.fixed,
             wavelength=self._task_parameters.wavelength,
         )
         bayfai_hyperparams = {
-            "n_samples": self._task_parameters.bo_params.n_samples,
-            "n_iterations": self._task_parameters.bo_params.n_iterations,
-            "max_rings": self._task_parameters.bo_params.max_rings,
-            "pts_per_deg": self._task_parameters.bo_params.pts_per_deg,
+            "n_samples": self._task_parameters.bayfai_params.n_samples,
+            "n_iterations": self._task_parameters.bayfai_params.n_iterations,
+            "max_rings": self._task_parameters.bayfai_params.max_rings,
+            "pts_per_deg": self._task_parameters.bayfai_params.pts_per_deg,
             "Imin": optimizer.Imin,
-            "prior": self._task_parameters.bo_params.prior,
-            "beta": self._task_parameters.bo_params.beta,
-            "step": self._task_parameters.bo_params.step,
-            "lbda": self._task_parameters.bo_params.lbda,
-            "seed": self._task_parameters.bo_params.seed,
+            "prior": self._task_parameters.bayfai_params.prior,
+            "beta": self._task_parameters.bayfai_params.beta,
+            "step": self._task_parameters.bayfai_params.step,
+            "lbda": self._task_parameters.bayfai_params.lbda,
+            "seed": self._task_parameters.bayfai_params.seed,
         }
         optimizer.bayfai_opt(
             center=self._task_parameters.center,
