@@ -37,15 +37,15 @@ def validate_geometry_path(output_path_name: str):
 class BayFAIParameters(TaskParameters):
     """Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.
 
-    The Bayesian Optimization has default hyperparameters that can be overriden by the user.
+    BayFAI has default hyperparameters that can be overriden by the user.
     """
 
     class Config(TaskParameters.Config):
         set_result: bool = True
         """Whether the Executor should mark a specified parameter as a result."""
 
-    class BayesGeomOptParameters(BaseModel):
-        """Bayesian optimization hyperparameters."""
+    class BayFAIHyperparameters(BaseModel):
+        """BayFAI hyperparameters."""
 
         n_samples: int = Field(
             default=20,
@@ -167,9 +167,9 @@ class BayFAIParameters(TaskParameters):
         is_result=True,
     )
 
-    bo_params: BayesGeomOptParameters = Field(
-        BayesGeomOptParameters(),
-        description="Bayesian optimization hyperparameters.",
+    bayfai_params: BayFAIHyperparameters = Field(
+        BayFAIHyperparameters(),
+        description="BayFAI hyperparameters.",
     )
 
     _find_smd_path = validate_smd_path("h5")
