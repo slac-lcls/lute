@@ -74,7 +74,11 @@ class ZmqSender:
             logger.error(f"[XTC1 Sender]: Error during sending pickled object: {e}")
 
     def send_array(
-        self, data: npt.NDArray[Any], flags: int = 0, copy: bool = True, track: bool = False
+        self,
+        data: npt.NDArray[Any],
+        flags: int = 0,
+        copy: bool = True,
+        track: bool = False,
     ) -> None:
         """
         Send a NumPy array with metadata (dtype and shape) over a ZeroMQ socket.
