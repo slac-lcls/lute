@@ -303,9 +303,16 @@ def modify_permissions(lute_path: str) -> None:
     Args:
         lute_path (str): Root path to apply permissions to.
     """
-    cmd: List[str] = ["chmod", "-R", "a+rX", lute_path]
-    logger.info(f"Setting permissions on {lute_path}...")
-    _run_subprocess_log(cmd)
+    os.chmod(lute_path, 0o775)
+    for root, dirs, files in os.walk(lute_path):
+        for d in dirs:
+            dir_path = os.path.join(root, d)
+            if not os.path.islink(dir_path):
+                os.chmod(dir_path, 0o775)
+        for f in files:
+            file_path = os.path.join(root, f)
+            if not os.path.islink(file_path):
+                os.chmod(file_path, 0o775)
 
 
 def update_dag_params(
