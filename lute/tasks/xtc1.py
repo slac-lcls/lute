@@ -29,6 +29,7 @@ from typing import (
     Union,
     cast,
 )
+from typing_extensions import Buffer
 
 
 import numpy as np
@@ -103,7 +104,7 @@ class ZmqSender:
 
             # Send metadata then the actual array
             self.zmq_socket.send_json(md, flags | zmq.SNDMORE)
-            self.zmq_socket.send(data, flags, copy=copy, track=track)
+            self.zmq_socket.send(cast(Buffer, data), flags, copy=copy, track=track)
 
         except (AttributeError, zmq.ZMQError, TypeError, ValueError) as e:
             logger.error(f"[XTC1 Sender]: Error, failed to send array: {e}")
