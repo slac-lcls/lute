@@ -125,7 +125,7 @@ def get_droplet(run):
         {% else %}
         {{- step_parameters("droplet_dict", detector, params, False) }}
         {% endif %}
-        ret_dict["{{ detector }}"] = [droplet_dict]
+        ret_dict["{{ detector }}"] = droplet_dict
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -144,7 +144,7 @@ def get_azav(run):
         {% else %}
         {{- step_parameters("az_dict", detector, params, False) }}
         {% endif %}
-        ret_dict["{{ detector }}"] = [az_dict]
+        ret_dict["{{ detector }}"] = az_dict
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -163,7 +163,7 @@ def get_azav_pyfai(run):
         {% else %}
         {{- step_parameters("az_dict", detector, params, False) }}
         {% endif %}
-        ret_dict["{{ detector }}"] = [az_dict]
+        ret_dict["{{ detector }}"] = az_dict
 {% endfor %}
     return ret_dict
 {% endif %}
