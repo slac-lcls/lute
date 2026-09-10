@@ -29,6 +29,7 @@ from typing import (
     Union,
     cast,
 )
+from typing_extensions import Buffer
 
 
 import numpy as np
@@ -74,13 +75,17 @@ class ZmqSender:
             logger.error(f"[XTC1 Sender]: Error during sending pickled object: {e}")
 
     def send_array(
-        self, data: np.ndarray, flags: int = 0, copy: bool = True, track: bool = False
+        self,
+        data: npt.NDArray[Any],
+        flags: int = 0,
+        copy: bool = True,
+        track: bool = False,
     ) -> None:
         """
         Send a NumPy array with metadata (dtype and shape) over a ZeroMQ socket.
 
         Args:
-            data (np.ndarray): Array to send.
+            data (npt.NDArray): Array to send.
 
             flags (int): ZMQ flags (e.g., zmq.SNDMORE).
 
@@ -99,7 +104,7 @@ class ZmqSender:
 
             # Send metadata then the actual array
             self.zmq_socket.send_json(md, flags | zmq.SNDMORE)
-            self.zmq_socket.send(data, flags, copy=copy, track=track)
+            self.zmq_socket.send(cast(Buffer, data), flags, copy=copy, track=track)
 
         except (AttributeError, zmq.ZMQError, TypeError, ValueError) as e:
             logger.error(f"[XTC1 Sender]: Error, failed to send array: {e}")
