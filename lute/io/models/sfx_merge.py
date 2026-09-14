@@ -21,7 +21,6 @@ __all__ = [
 __author__ = "Gabriel Dorlhiac"
 
 import os
-import warnings
 from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, validator, BaseModel
@@ -268,6 +267,24 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
                 "launch_slurm)."
             ),
         )
+        sample: Optional[str] = Field(
+            None,
+            description=(
+                "eLog sample name identifying a set of runs to merge together. "
+                "The sample counterpart of `tag` above, and behaves "
+                "identically: when set and input_path is left empty, "
+                "input_path is auto-resolved by calling "
+                "get_elog_runs_by_sample(experiment, sample) and looking up "
+                "each resolved run's ScaleCCTBXXFEL output directory in the "
+                "LUTE database. Selects on the `sample` field stored directly "
+                "on each run document (what was physically in the beam) rather "
+                "than on tags attached to eLog entries. Mutually exclusive "
+                "with `tag`. Ignored if input_path is set explicitly. Can be "
+                "populated literally, or via `{{ $SAMPLE }}` substitution if "
+                "the submission set the SAMPLE environment variable (e.g. via "
+                "--sample on submit_slurm/launch_slurm)."
+            ),
+        )
         input_path: Union[str, List[str]] = Field(
             "",
             description=(
@@ -275,7 +292,8 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
                 "Accepts a single path string or a list of paths for "
                 "multi-run merging. When empty, auto-resolved from the "
                 "ScaleCCTBXXFEL output stored in the LUTE database - across "
-                "every run in `tag` if set, otherwise for the current run."
+                "every run in `tag`/`sample` if either is set, otherwise for "
+                "the current run."
             ),
         )
         input_experiments_suffix: Optional[str] = Field(
@@ -682,18 +700,26 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
         ) -> List[str]:
             """Normalize input_path to a list and auto-resolve from DB if empty.
 
-            If `tag` is set (and input_path is empty), resolves every run
-            carrying that eLog tag and gathers each one's ScaleCCTBXXFEL
-            output directory - this is how a non-run-dependent CCTBXMerger
-            submission (see `--tag` on submit_slurm/launch_slurm) merges
-            data from multiple runs together. Otherwise, falls back to the
-            pre-existing single-run auto-chain, unchanged.
+            If `tag` (or `sample`) is set (and input_path is empty), resolves
+            every run carrying that eLog tag (or associated with that eLog
+            sample) and gathers each one's ScaleCCTBXXFEL output directory -
+            this is how a non-run-dependent CCTBXMerger submission (see
+            `--tag`/`--sample` on submit_slurm/launch_slurm) merges data from
+            multiple runs together. Otherwise, falls back to the pre-existing
+            single-run auto-chain, unchanged.
             """
             # Normalize to list first
             if isinstance(v, str):
                 if v == "":
                     work_dir: str = os.getenv("LUTE_WORK_DIR", "")
                     tag: Optional[str] = values.get("tag")
+                    sample: Optional[str] = values.get("sample")
+                    if tag and sample:
+                        raise ValueError(
+                            "phil_parameters.tag and phil_parameters.sample are "
+                            "mutually exclusive run selectors - set one or the "
+                            "other (or set input_path explicitly)."
+                        )
                     if tag and work_dir:
                         experiment: str = os.getenv("EXPERIMENT", "")
                         if not experiment:
@@ -701,39 +727,34 @@ class MergeCCTBXXFELParameters(ThirdPartyParameters):
                                 "phil_parameters.tag is set but EXPERIMENT is "
                                 "not in the environment to resolve it."
                             )
-                        from lute.io.elog import get_elog_runs_by_tag
+                        from lute.io.db import gather_tagged_run_results
 
-                        runs: List[int] = get_elog_runs_by_tag(experiment, tag)
-                        if not runs:
+                        return gather_tagged_run_results(
+                            experiment,
+                            tag,
+                            "ScaleCCTBXXFEL",
+                            "result.payload",
+                            work_dir,
+                        )
+                    if sample and work_dir:
+                        experiment = os.getenv("EXPERIMENT", "")
+                        if not experiment:
                             raise ValueError(
-                                f"No runs found for tag '{tag}' in "
-                                f"'{experiment}' - cannot resolve input_path."
+                                "phil_parameters.sample is set but EXPERIMENT "
+                                "is not in the environment to resolve it."
                             )
-                        resolved: List[str] = []
-                        for run in runs:
-                            scaled_dir: Optional[str] = read_latest_db_entry(
-                                work_dir,
-                                "ScaleCCTBXXFEL",
-                                "result.payload",
-                                for_run=run,
-                            )
-                            if scaled_dir:
-                                resolved.append(scaled_dir)
-                            else:
-                                warnings.warn(
-                                    f"No ScaleCCTBXXFEL DB result for run "
-                                    f"{run} (tag '{tag}') - excluding from "
-                                    "merge."
-                                )
-                        if not resolved:
-                            raise ValueError(
-                                f"Tag '{tag}' resolved to {runs} but none "
-                                "had a valid ScaleCCTBXXFEL DB entry."
-                            )
-                        return resolved
+                        from lute.io.db import gather_sampled_run_results
+
+                        return gather_sampled_run_results(
+                            experiment,
+                            sample,
+                            "ScaleCCTBXXFEL",
+                            "result.payload",
+                            work_dir,
+                        )
                     # Try to auto-resolve from ScaleCCTBXXFEL output in LUTE DB
                     if work_dir:
-                        scaled_dir = read_latest_db_entry(
+                        scaled_dir: Optional[str] = read_latest_db_entry(
                             work_dir, "ScaleCCTBXXFEL", "result.payload"
                         )
                         if scaled_dir:

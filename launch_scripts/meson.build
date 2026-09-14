@@ -16,6 +16,7 @@ py_sources = [
     'launch_airflow.py',
     'launch_prefect.py',
     'launch_slurm_v1.py',
+    'resolve_sample.py',
     'resolve_tag.py',
     'submit_slurm.py',
     'tagged_launch.py',

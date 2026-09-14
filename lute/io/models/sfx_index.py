@@ -14,7 +14,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 from pydantic import (
     BaseModel,
@@ -507,6 +507,53 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         description="Tag identifying the stream files to merge.",
     )
 
+    elog_tag: Optional[str] = Field(
+        "",
+        description=(
+            "eLog tag identifying a set of runs to gather stream files from. "
+            "When set, `stream_files` is auto-resolved by calling "
+            "get_elog_runs_by_tag(experiment, elog_tag) and looking up each "
+            "resolved run's IndexCrystFEL output stream in the LUTE "
+            "database - this is how a non-run-dependent StreamFileConcatenator "
+            "submission (see `--tag` on submit_slurm/launch_slurm) gathers an "
+            "eLog-authoritative file list instead of relying on the "
+            "filename-glob fallback below. Can be populated literally, or via "
+            "`{{ $TAG }}` substitution if the submission set the TAG "
+            "environment variable. Ignored if `stream_files` is set "
+            "explicitly."
+        ),
+    )
+
+    elog_sample: Optional[str] = Field(
+        "",
+        description=(
+            "eLog sample name identifying a set of runs to gather stream files "
+            "from. The sample counterpart of `elog_tag` above, and behaves "
+            "identically: when set, `stream_files` is auto-resolved by calling "
+            "get_elog_runs_by_sample(experiment, elog_sample) and looking up "
+            "each resolved run's IndexCrystFEL output stream in the LUTE "
+            "database. Selects on the `sample` field stored directly on each "
+            "run document (what was physically in the beam) rather than on "
+            "tags attached to eLog entries. Mutually exclusive with "
+            "`elog_tag`. Can be populated literally, or via `{{ $SAMPLE }}` "
+            "substitution if the submission set the SAMPLE environment "
+            "variable (e.g. via --sample on submit_slurm/launch_slurm). "
+            "Ignored if `stream_files` is set explicitly."
+        ),
+    )
+
+    stream_files: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit list of stream files to concatenate. When non-empty, "
+            "this takes precedence over the `in_file`/`tag` directory-glob "
+            "used today. Auto-resolved from `elog_tag`/`elog_sample` when "
+            "either is set and this is left empty; otherwise stays empty and "
+            "the task falls back to its existing glob-based behavior, "
+            "unchanged."
+        ),
+    )
+
     out_file: str = Field(
         "", description="Path to merged output stream file.", is_result=True
     )
@@ -532,6 +579,45 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 stream_tag: str = Path(stream_file).name.split("_")[-1].split(".")[0]
                 return stream_tag
         return tag
+
+    @validator("stream_files", always=True)
+    def validate_stream_files(
+        cls, stream_files: List[str], values: Dict[str, Any]
+    ) -> List[str]:
+        if not stream_files:
+            elog_tag: Optional[str] = values.get("elog_tag")
+            elog_sample: Optional[str] = values.get("elog_sample")
+            if elog_tag and elog_sample:
+                raise ValueError(
+                    "elog_tag and elog_sample are mutually exclusive run "
+                    "selectors - set one or the other (or set stream_files "
+                    "explicitly)."
+                )
+            if elog_tag:
+                experiment: str = values["lute_config"].experiment
+                work_dir: str = values["lute_config"].work_dir
+                from lute.io.db import gather_tagged_run_results
+
+                return gather_tagged_run_results(
+                    experiment,
+                    elog_tag,
+                    "IndexCrystFEL",
+                    "out_file",
+                    work_dir,
+                )
+            if elog_sample:
+                experiment = values["lute_config"].experiment
+                work_dir = values["lute_config"].work_dir
+                from lute.io.db import gather_sampled_run_results
+
+                return gather_sampled_run_results(
+                    experiment,
+                    elog_sample,
+                    "IndexCrystFEL",
+                    "out_file",
+                    work_dir,
+                )
+        return stream_files
 
     @validator("out_file", always=True)
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
@@ -630,6 +716,26 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
                 "find_spots=False. Omitted from the rendered phil (falling "
                 "back to dials.stills_process's own default of True) unless "
                 "explicitly set."
+            ),
+        )
+        dispatch_process_percent: Optional[float] = Field(
+            None,
+            description=(
+                "Process only a subsample of the input images. "
+                "dials.stills_process (and cctbx.xfel.process, which wraps it "
+                "unchanged) selects a uniform-stride subset of the full event "
+                "list scaled to this percentage (0-100), NOT the first N "
+                "images -- that is input.max_images instead, which truncates "
+                "to a contiguous prefix and introduces start-of-run bias. "
+                "Confirmed as a genuine, validated top-level phil field via "
+                "`cctbx.xfel.process -c -e2` (it appears as `dispatch.process_percent`); "
+                "previously missing from this model, which silently dropped "
+                "the value as an unrecognized PhilParameters.Config.extra='allow' "
+                "passthrough field with no effect on the rendered phil -- see "
+                "LUTE's own '_sqlite: Unable to parse parameter ... properly!' "
+                "warning for the symptom this field fixes. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default of processing every image) unless explicitly set."
             ),
         )
         dispatch_hit_finder_enable: Optional[bool] = Field(

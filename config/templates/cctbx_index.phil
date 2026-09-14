@@ -22,7 +22,7 @@ output {
   logging_option = {{ output_logging_option }}
   {%- endif %}
 }
-{%- if (dispatch_index is defined and dispatch_index is not none) or (dispatch_refine is defined and dispatch_refine is not none) or (dispatch_integrate is defined and dispatch_integrate is not none) or (dispatch_hit_finder_enable is defined and dispatch_hit_finder_enable is not none) or (dispatch_hit_finder_minimum_number_of_reflections is defined and dispatch_hit_finder_minimum_number_of_reflections is not none) or (dispatch_hit_finder_maximum_number_of_reflections is defined and dispatch_hit_finder_maximum_number_of_reflections is not none) %}
+{%- if (dispatch_index is defined and dispatch_index is not none) or (dispatch_refine is defined and dispatch_refine is not none) or (dispatch_integrate is defined and dispatch_integrate is not none) or (dispatch_process_percent is defined and dispatch_process_percent is not none) or (dispatch_hit_finder_enable is defined and dispatch_hit_finder_enable is not none) or (dispatch_hit_finder_minimum_number_of_reflections is defined and dispatch_hit_finder_minimum_number_of_reflections is not none) or (dispatch_hit_finder_maximum_number_of_reflections is defined and dispatch_hit_finder_maximum_number_of_reflections is not none) %}
 dispatch {
   {%- if dispatch_index is defined and dispatch_index is not none %}
   index = {{ dispatch_index }}
@@ -32,6 +32,9 @@ dispatch {
   {%- endif %}
   {%- if dispatch_integrate is defined and dispatch_integrate is not none %}
   integrate = {{ dispatch_integrate }}
+  {%- endif %}
+  {%- if dispatch_process_percent is defined and dispatch_process_percent is not none %}
+  process_percent = {{ dispatch_process_percent }}
   {%- endif %}
   {%- if (dispatch_hit_finder_enable is defined and dispatch_hit_finder_enable is not none) or (dispatch_hit_finder_minimum_number_of_reflections is defined and dispatch_hit_finder_minimum_number_of_reflections is not none) or (dispatch_hit_finder_maximum_number_of_reflections is defined and dispatch_hit_finder_maximum_number_of_reflections is not none) %}
   hit_finder {

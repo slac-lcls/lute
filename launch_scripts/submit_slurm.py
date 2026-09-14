@@ -72,6 +72,21 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     optional_args.add_argument(
+        "--sample",
+        type=str,
+        default=None,
+        required=False,
+        help=(
+            "Submit against every run associated with this eLog sample. "
+            "Behaves exactly like --tag - submitting once per resolved run "
+            "without -r/--run, or once with SAMPLE exported when -r/--run is "
+            "also given - but selects runs by the `sample` field stored on "
+            "each run document (what was physically in the beam) rather than "
+            "by tags on eLog entries. Mutually exclusive with --tag."
+        ),
+    )
+
+    optional_args.add_argument(
         "-d", "--debug", help="Run in debug mode.", action="store_true"
     )
 
@@ -327,6 +342,13 @@ def main() -> None:
 
     args, slurm_args = parse_arguments(parser)
 
+    if args.tag and args.sample:
+        parser.error(
+            "--tag and --sample are mutually exclusive run selectors - pass "
+            "one or the other. (--tag selects runs via tags on eLog entries; "
+            "--sample via the `sample` field on each run document.)"
+        )
+
     if args.tag and not args.run:
         # Run-dependent case: no explicit -r, resolve every run tagged
         # `args.tag` and submit once per run, reusing the existing
@@ -357,11 +379,48 @@ def main() -> None:
             _submit_batch_script(args.taskname, batch_script, args.debug, slurm_args)
         return
 
+    if args.sample and not args.run:
+        # Sample counterpart of the --tag run-dependent case above: no explicit
+        # -r, so resolve every run associated with `args.sample` and submit
+        # once per run, reusing the same unmodified single-run functions.
+        sample_experiment: Optional[str] = os.getenv("EXPERIMENT") or args.experiment
+        if sample_experiment is None:
+            parser.error(
+                "--sample without -r/--run requires -e/--experiment (or the "
+                "EXPERIMENT env var) to resolve which runs carry the sample."
+            )
+
+        from lute.io.elog import get_elog_runs_by_sample
+
+        sample_runs: List[int] = sorted(
+            get_elog_runs_by_sample(sample_experiment, args.sample)
+        )
+        if not sample_runs:
+            parser.error(
+                f"No runs found for sample '{args.sample}' in experiment "
+                f"'{sample_experiment}'."
+            )
+
+        os.environ["SAMPLE"] = args.sample
+        for run in sample_runs:
+            os.environ["RUN_NUM"] = str(run)
+            bin_subdir = prepare_environment_variables(parser=parser, args=args)
+            batch_script = fill_in_batch_script(
+                args=args, slurm_args=slurm_args, bin_subdir=bin_subdir
+            )
+            _submit_batch_script(args.taskname, batch_script, args.debug, slurm_args)
+        return
+
     if args.tag:
         # Non-run-dependent case: -r given alongside --tag. Submit once, as
         # usual, but export TAG so the Task's own parameter validator can
         # resolve which runs to aggregate (e.g. MergeCCTBXXFELParameters).
         os.environ["TAG"] = args.tag
+
+    if args.sample:
+        # Same, for --sample: -r given alongside it, so submit once and export
+        # SAMPLE for the Task's validator to resolve.
+        os.environ["SAMPLE"] = args.sample
 
     bin_subdir = prepare_environment_variables(parser=parser, args=args)
 
