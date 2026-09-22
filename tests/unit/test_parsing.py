@@ -79,7 +79,7 @@ SIMPLE_BRANCH_DAG: str = """
         next: []
 """
 
-PARAM_GENERATION_DAG = f"""
+EXPAND_PARAM_GENERATION_DAG = f"""
 !LUTE_DAG
 task_name: "Tester"
 next:
@@ -367,7 +367,7 @@ class TestParsing:
         )
         assert is_equal(wf_defn, job_steps)
 
-    def test_param_generation(self):
+    def test_expand_param_generation(self):
         import tempfile
         import yaml
         import os
@@ -387,7 +387,7 @@ class TestParsing:
                 yaml.dump_all(config_data, f)
 
             wf_defn: List[JobStep] = load_lute_dag_str(
-                workflow_str=PARAM_GENERATION_DAG,
+                workflow_str=EXPAND_PARAM_GENERATION_DAG,
                 lute_location=TestParsing.lute_location,
                 executable_subdir=TestParsing.executable_subdir,
                 config_file=temp_config,
@@ -533,10 +533,10 @@ class TestParsing:
             with open(expanded_config_stored, "r") as f:
                 expanded_docs = list(yaml.safe_load_all(f))
             expanded_params_doc = expanded_docs[-1]
-            assert expanded_params_doc["SocketTester_0"]["num_arrays"] == 5
-            assert expanded_params_doc["SocketTester_0"]["label"] == "first"
-            assert expanded_params_doc["SocketTester_1"]["num_arrays"] == 10
-            assert expanded_params_doc["SocketTester_1"]["label"] == "second"
+            assert expanded_params_doc["TestSocket_0"]["num_arrays"] == 5
+            assert expanded_params_doc["TestSocket_0"]["label"] == "first"
+            assert expanded_params_doc["TestSocket_1"]["num_arrays"] == 10
+            assert expanded_params_doc["TestSocket_1"]["label"] == "second"
 
         finally:
             # Clean up temp config
