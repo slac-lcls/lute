@@ -854,9 +854,13 @@ class BayFAIOpt:
             y_norm = y - np.mean(y)
 
         # 4. Initialize the Gaussian Process model
-        kernel = Matern(length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5) * ConstantKernel(
+        kernel = Matern(
+            length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5
+        ) * ConstantKernel(
             constant_value=1.0, constant_value_bounds=(0.5, 1.5)
-        ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
+        ) + WhiteKernel(
+            noise_level=0.001, noise_level_bounds="fixed"
+        )
         gp_model = GaussianProcessRegressor(
             kernel=kernel, n_restarts_optimizer=10, random_state=0
         )
@@ -892,9 +896,7 @@ class BayFAIOpt:
         score, sigma, penalty, params = self.gradient_descent(
             best_param, data, res, step
         )
-        logger.info(
-            f"Rank {self.rank}: score={score:3e}, penalty={penalty:3e}"
-        )
+        logger.info(f"Rank {self.rank}: score={score:3e}, penalty={penalty:3e}")
         result = {
             "bo_history": bo_history,
             "params": params,
@@ -963,9 +965,7 @@ class BayFAIOpt:
                     f"Running BayFAI parallelizing {self.size} ranks over '{self.parallelized}'"
                 )
             else:
-                logger.info(
-                    f"Running BayFAI on {self.size} ranks"
-                )
+                logger.info(f"Running BayFAI on {self.size} ranks")
 
         bayfai_hyperparams = {
             "n_samples": n_samples,
