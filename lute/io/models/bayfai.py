@@ -25,9 +25,10 @@ def validate_geometry_path(output_path_name: str):
         if output_path == "":
             work_dir = values["lute_config"].work_dir
             run = int(values["lute_config"].run)
+            detname = values["detname"]
             geom_dir = os.path.join(work_dir, "geom")
             os.makedirs(geom_dir, exist_ok=True)
-            output_run_path = os.path.join(geom_dir, f"{run}-end.data")
+            output_run_path = os.path.join(geom_dir, f"{run}-end_{detname}.data")
             return output_run_path
         return output_path
 
@@ -63,7 +64,7 @@ class BayFAIParameters(TaskParameters):
         )
 
         pts_per_deg: float = Field(
-            default=0.5,
+            default=2.0,
             description="Number of Bragg peaks to extract per azimuthal degree.",
         )
 
@@ -97,6 +98,18 @@ class BayFAIParameters(TaskParameters):
             description="Random seed for reproducibility.",
         )
 
+    parallelized: Optional[str] = Field(
+        None,
+        description="Name of the geometry parameter to distribute across MPI ranks as a "
+        "sliding window (e.g. 'dist'). If None, all ranks instead run BO over the same space.",
+    )
+
+    fixed: List[str] = Field(
+        ["rot3"],
+        description="List of fixed parameters for the optimization (rot3 is fixed by default) "
+        "because diffraction rings are invariance by rotation around the beam axis.",
+    )
+
     center: Dict[str, float] = Field(
         {
             "dist": 0.1,
@@ -111,9 +124,9 @@ class BayFAIParameters(TaskParameters):
 
     bounds: Dict[str, Tuple[float, float]] = Field(
         {
-            "dist": (-0.05, 0.05),
-            "poni1": (-0.005, 0.005),
-            "poni2": (-0.005, 0.005),
+            "dist": (-0.01, 0.01),
+            "poni1": (-0.0025, 0.0025),
+            "poni2": (-0.0025, 0.0025),
             "rot1": (-0.1, 0.1),
             "rot2": (-0.1, 0.1),
             "rot3": (-0.1, 0.1),
@@ -131,11 +144,6 @@ class BayFAIParameters(TaskParameters):
             "rot3": 0.02,
         },
         description="Resolution of the search space for the detector geometry parameters.",
-    )
-
-    fixed: List[str] = Field(
-        ["rot3"],
-        description="List of fixed parameters for the optimization.",
     )
 
     detname: str = Field(

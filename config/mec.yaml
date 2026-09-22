@@ -130,15 +130,17 @@ SubmitSMD:
 # BayFAI
 ###########
 
-# Depending on the Quad being calibrated, you may need to change the detname
-# the fixed parameters, and the center standard configuration.
-# For example, for Epix10kaQuad0, you would set (uncomment this)
+# Base/default BayFAI parameters (used as a template when BayFAI runs as a
+# single Task). To run BayFAI on all 4 Quads in parallel, use a `!param_sweep`
+# with `zip: true` in the DAG (see dag.yaml) - the per-quad detname/center/
+# fixed/calibrant values below are collected there instead of being repeated
+# as separate commented-out blocks here.
 BayFAI:
   fixed:
   - "rot1"
   - "rot3"
   center:
-    dist: 0.28                # Fill this section with rough estimates
+    dist: 0.27                # Fill this section with rough estimates
     poni1: 0.06
     poni2: 0.06
     rot1: 0.0
@@ -146,49 +148,4 @@ BayFAI:
     rot3: 0.0
   calibrant: "CeO2"           # Fill this line with calibrant name (CeO2, LaB6...)
   detname: "Epix10kaQuad0"
-
-# For example, for Epix10kaQuad1, you would set
-# BayFAI:
-#   fixed:                
-#   - "rot1"
-#   - "rot3"
-#   center:
-#     dist: 0.28                # Fill this section with rough estimates
-#     poni1: 0.09
-#     poni2: -0.04
-#     rot1: 0.0
-#     rot2: -0.6
-#     rot3: 0.0
-#   calibrant: "CeO2"           # Fill this line with calibrant name (CeO2, LaB6...)
-#   detname: "Epix10kaQuad1"
-
-# For example, for Epix10kaQuad2, you would set
-# BayFAI:
-#   fixed:                
-#   - "rot2"
-#   - "rot3"
-#   center:
-#     dist: 0.19                # Fill this section with rough estimates
-#     poni1: -0.01
-#     poni2: 0.0
-#     rot1: 1.1
-#     rot2: 0.0
-#     rot3: 0.0
-#   calibrant: "CeO2"           # Fill this line with calibrant name (CeO2, LaB6...)
-#   detname: "Epix10kaQuad2"
-
-# For example, for Epix10kaQuad3, you would set
-# BayFAI:
-#   fixed:                
-#   - "rot2"
-#   - "rot3"
-#   center:
-#     dist: 0.1                 # Fill this section with rough estimates
-#     poni1: -0.01
-#     poni2: 0.04
-#     rot1: -1.1
-#     rot2: 0.0
-#     rot3: 0.0
-#   calibrant: "CeO2"           # Fill this line with calibrant name (CeO2, LaB6...)
-#   detname: "Epix10kaQuad3"
 ...

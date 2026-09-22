@@ -85,12 +85,9 @@ SmallDataProducer2.add_tasklet(
     set_result=False,
     set_summary=False,
 )
-SmallDataProducer2.update_environment(setup_smd2_env)
-SmallDataProducer2.update_environment(
-    {
-        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
-    }
-)
+smd2_env = setup_smd2_env()
+smd2_env["PYTHONPATH"] = "/sdf/group/lcls/ds/tools/LCLSGeom/src"
+SmallDataProducer2.update_environment(smd2_env)
 
 SmallDataProducer2Test: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file using the test environment."""

@@ -224,7 +224,7 @@ next:
   next: []
 ```
 
-This will create a workflow which runs four instances of the **managed** `Task` **IN PARALLEL**.
+This will create a workflow which runs five instances of the **managed** `Task` **IN PARALLEL**.
 
 ```
           - SocketTester_0   # Has 5 for num_arrays
@@ -238,6 +238,35 @@ Tester    - SocketTester_2   # Has 15 for num_arrays
           - SocketTester_3   # Has 25 for num_arrays
 ```
 
+#### Zipping correlated parameters
+
+By default, `param_matrix` keys are treated as independent sweep axes and
+combined via a Cartesian product - e.g. two keys with 4 values each produce 16
+instances. This is wrong when the parameters are *correlated*, e.g. one
+`Task` instance per detector, where several parameters all vary together
+rather than independently.
+
+Add `zip: true` to the `!param_sweep` block to pair up the value lists
+positionally instead of taking their product. All value lists in
+`param_matrix` must then be the same length:
+
+```yaml
+!LUTE_DAG
+task_name: Tester
+next:
+- !param_sweep
+  task_name: SocketTester
+  zip: true
+  param_matrix:
+    num_arrays: [5, 10]
+    label: ["first", "second"]
+  next: []
+```
+
+This produces two instances - `SocketTester_0` with `num_arrays=5, label="first"`
+and `SocketTester_1` with `num_arrays=10, label="second"` - instead of the four
+that a Cartesian product would generate.
+
 #### How does this actually work? Important notes for developers
 
 The parameter generation mechanism works by creating a new temporary config YAML. The original that the user has provided is used as the starting point. When using parameter generation it is generally still required to provide a config YAML to start with.
@@ -250,7 +279,7 @@ In particular, the process works as:
 
     - I.e., `SocketTester_0` -> `SocketTester`
 
-2. This determination is not enough, however. For this **managed** `Task` instance, it will then make sure that t modifies the name of the `Task` that it is running. So, it will take the stripped suffix and add it to the `Task` name. `TestSocket` will become `TestSocket_0`. This allows the underlying `Task` layer to lookup the information in the config YAML transparently.
+2. This determination is not enough, however. For this **managed** `Task` instance, it will then make sure that it modifies the name of the `Task` that it is running. So, it will take the stripped suffix and add it to the `Task` name. `TestSocket` will become `TestSocket_0`. This allows the underlying `Task` layer to lookup the information in the config YAML transparently.
 
     - More specifically, it will do `SocketTester.task_name = "TestSocket"` -> `SocketTester.task_name = "TestSocket_0"`
 

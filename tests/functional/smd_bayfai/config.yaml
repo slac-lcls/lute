@@ -60,6 +60,7 @@ SubmitSMD:
 BayFAI:
   detname: "epix10k2M"
   calibrant: "LaB6"
+  parallelized: "dist"
   fixed: ["rot1", "rot2", "rot3"]
   center:
     dist: 0.1

@@ -17,6 +17,7 @@ __author__ = "Louis Conreux"
 from lute.execution.logging import get_logger
 
 import os
+from typing import Optional
 import numpy as np
 import numpy.typing as npt
 import logging
@@ -36,7 +37,7 @@ from pyFAI.calibrant import CALIBRANT_FACTORY  # type: ignore
 from pyFAI.units import RADIAL_UNITS  # type: ignore
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator  # type: ignore
 from sklearn.gaussian_process import GaussianProcessRegressor  # type: ignore
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel  # type: ignore
+from sklearn.gaussian_process.kernels import Matern, ConstantKernel, WhiteKernel  # type: ignore
 from sklearn.utils._testing import ignore_warnings  # type: ignore
 from sklearn.exceptions import ConvergenceWarning  # type: ignore
 from mpi4py import MPI
@@ -138,6 +139,7 @@ class BayFAIOpt:
         Imin: float,
         calibrant: str,
         fixed: list,
+        parallelized: Optional[str] = None,
         wavelength: float = 1e-10,
     ):
         """
@@ -155,6 +157,10 @@ class BayFAIOpt:
             PyFAI calibrant object
         fixed : list
             List of parameters to keep fixed during optimization
+        parallelized : str, optional
+            Name of the parameter to distribute across MPI ranks as a
+            sliding window. If None, ranks instead run full BO differentiated
+            only by seed.
         wavelength : float, optional
             X-ray wavelength in meters. If provided (non-default 1e-10),
             overrides the value read from the h5 file.
@@ -167,7 +173,7 @@ class BayFAIOpt:
         self.detector = self.build_detector(detname)
         self.powder = self.generate_powder(h5, detname, Imin)
         self.calibrant = self.define_calibrant(calibrant, h5, wavelength)
-        self.set_search_space(fixed)
+        self.set_search_space(parallelized, fixed)
 
     def extract_powder(self, powder_path: str, detname: str) -> npt.NDArray[np.float64]:
         """
@@ -271,7 +277,8 @@ class BayFAIOpt:
             Minimum intensity percentile threshold for Bragg peak detection.
         """
         mask = self.detector.geo.get_pixel_mask(mbits=3)
-        mask = np.squeeze(mask, axis=0)
+        if mask.shape[0] == 1 and mask.ndim > 3:
+            mask = np.squeeze(mask, axis=0)
         powder = self.extract_powder(powder_path, detname)
         powder = self.preprocess_powder(powder, mask, Imin)
         self.assembled_powder = self.assemble_image(powder)
@@ -295,7 +302,7 @@ class BayFAIOpt:
         detector = PsanaToPyFAI.convert(in_file=metrology, detname=detname)
         return detector
 
-    def update_geometry(self, out_file: str) -> pyFAI.detectors.Detector:
+    def update_geometry(self, out_file: str, detname: str) -> pyFAI.detectors.Detector:
         """
         Update the geometry and write a new .poni, .geom and .data file
 
@@ -307,14 +314,14 @@ class BayFAIOpt:
             Path to the output file
         """
         path = os.path.dirname(out_file)
-        poni_file = os.path.join(path, f"r{self.run:0>4}.poni")
+        poni_file = os.path.join(path, f"r{self.run:0>4}_{detname}.poni")
         self.gr.save(poni_file)
         PyFAIToPsana.convert(
             in_file=poni_file,
             detector=self.detector,
             out_file=out_file,
         )
-        geom_file = os.path.join(path, f"r{self.run:0>4}.geom")
+        geom_file = os.path.join(path, f"r{self.run:0>4}_{detname}.geom")
         PyFAIToCrystFEL.convert(
             in_file=poni_file,
             detector=self.detector,
@@ -372,55 +379,66 @@ class BayFAIOpt:
         calibrant.wavelength = wavelength
         return calibrant
 
-    def set_search_space(self, fixed: list) -> None:
+    def set_search_space(self, parallelized: Optional[str], fixed: list) -> None:
         """
         Define the search space for the free parameters.
 
         Parameters
         ----------
+        parallelized : str, optional
+            Name of the parameter to be distributed across MPI ranks as a
+            sliding window. Stays part of the free search space.
         fixed : list
             List of parameters to keep fixed during optimization
         """
+        if parallelized and parallelized in fixed:
+            raise ValueError(
+                f"Parameter '{parallelized}' cannot be both parallelized and fixed."
+            )
+        self.parallelized = parallelized
         self.fixed = fixed
         self.space = []
-        parallelized = ["dist"]
         self.order = ["dist", "poni1", "poni2", "rot1", "rot2", "rot3"]
         for p in self.order:
-            if p not in fixed and p not in parallelized:
+            if p not in fixed:
                 self.space.append(p)
 
-    def distribute_distances(self, center, res):
+    def distribute_parallelized(self, center, res):
         """
-        Distribute distances across MPI ranks.
+        Distribute the parallelized parameter across MPI ranks around
+        the center value and desired resolutions.
 
         Parameters
         ----------
         center : dict
             Center values for each parameter
-        res : float
-            Resolution of the grid used to discretize the parameter search space
+        res : dict
+            Resolution per parameter
 
         Returns
         -------
-        dist : float
-            The distance assigned to this MPI rank
+        value : float, optional
+            The shifted center for the parallelized parameter assigned to
+            this MPI rank, or None if no parameter is parallelized.
         """
+        if not self.parallelized:
+            self.param_values = None
+            return None
+        p = self.parallelized
         half = self.size // 2
-        offsets = (np.arange(self.size) - half) * res["dist"]
-        distances = center["dist"] + offsets
-        distances = np.round(distances, 6)
-        self.distances = distances
-        dist = distances[self.rank]
-        return dist
+        values = center[p] + (np.arange(self.size) - half) * res[p]
+        values = np.round(values, 6)
+        self.param_values = values
+        return values[self.rank]
 
-    def create_search_space(self, dist, center, bounds, res):
+    def create_search_space(self, value, center, bounds, res):
         """
         Discretize the search space for the free parameters.
 
         Parameters
         ----------
-        dist : float
-            Distance on this MPI rank
+        value : float, optional
+            Shifted center for the parallelized parameter on this MPI rank
         center : dict
             Center values for each parameter
         bounds : dict
@@ -435,7 +453,8 @@ class BayFAIOpt:
         X_norm : np.ndarray
             Normalized search space (between-1 and 1)
         """
-        center["dist"] = dist
+        if self.parallelized is not None and value is not None:
+            center[self.parallelized] = value
         full_params = {}
         search_params = {}
         for p in self.order:
@@ -742,9 +761,9 @@ class BayFAIOpt:
         return score, sigma, penalty, params
 
     @ignore_warnings(category=ConvergenceWarning)
-    def bayes_opt_distance(
+    def bayes_opt_rank(
         self,
-        dist,
+        value,
         center,
         bounds,
         res,
@@ -759,12 +778,13 @@ class BayFAIOpt:
         seed=None,
     ):
         """
-        Run Bayesian Optimization on a subspace of fixed distance.
+        Run Bayesian Optimization on this MPI rank's search space.
 
         Parameters
         ----------
-        dist : float
-            Distance on this MPI rank
+        value : float, optional
+            Shifted center for the parallelized parameter on this MPI rank,
+            or None if no parameter is parallelized.
         center : dict
             Dictionary of center values for each parameter
         bounds : dict
@@ -788,13 +808,15 @@ class BayFAIOpt:
         step : int
             Step size for the gradient descent refinement
         seed : optional, int
-            Random seed for reproducibility
+            Random seed for reproducibility. Offset by this rank's index so
+            that every rank is independently seeded.
         """
         if seed is not None:
-            np.random.seed(seed)
+            np.random.seed(seed + self.rank)
 
         # 1. Create the search space
-        X, X_norm = self.create_search_space(dist, center, bounds, res)
+        X, X_norm = self.create_search_space(value, center, bounds, res)
+        center[self.parallelized] = value
 
         # 2. Sample initial points
         X_samples, X_norm_samples = self.sample_initial_points(
@@ -812,7 +834,7 @@ class BayFAIOpt:
         if np.all(y == 0.0):
             result = {
                 "bo_history": bo_history,
-                "params": [dist, 0, 0, 0, 0, 0],
+                "params": center,
                 "data": [],
                 "score": 0.0,
                 "best_idx": 0,
@@ -832,7 +854,7 @@ class BayFAIOpt:
             y_norm = y - np.mean(y)
 
         # 4. Initialize the Gaussian Process model
-        kernel = RBF(length_scale=0.3, length_scale_bounds=(0.2, 0.4)) * ConstantKernel(
+        kernel = Matern(length_scale=0.3, length_scale_bounds=(0.2, 0.4), nu=2.5) * ConstantKernel(
             constant_value=1.0, constant_value_bounds=(0.5, 1.5)
         ) + WhiteKernel(noise_level=0.001, noise_level_bounds="fixed")
         gp_model = GaussianProcessRegressor(
@@ -871,7 +893,7 @@ class BayFAIOpt:
             best_param, data, res, step
         )
         logger.info(
-            f"Rank {self.rank} dist={dist:.4f}m: score={score:3e}, penalty={penalty:3e}"
+            f"Rank {self.rank}: score={score:3e}, penalty={penalty:3e}"
         )
         result = {
             "bo_history": bo_history,
@@ -901,8 +923,8 @@ class BayFAIOpt:
     ):
         """
         Run BayFAI optimization.
-        Split the distance parameter across MPI ranks.
-        Run Bayesian Optimization on each rank with fixed distance.
+        Distribute BO across MPI ranks for the parallelized parameter.
+        Run Bayesian Optimization on each rank with fixed search space.
         Perform pyFAI least-squares refinement for each rank's best geometry.
         Optimal geometry is chosen based on the lowest residual among ranks.
 
@@ -933,11 +955,17 @@ class BayFAIOpt:
         seed : optional, int
             Random seed for reproducibility
         """
-        # Distribute distances across MPI ranks
-        dist = self.distribute_distances(center, res)
-        logger.info(
-            f"Rank {self.rank}: Running Bayesian Optimization on distance {dist:.4f} m"
-        )
+        # Distribute the parallelized parameter's window across MPI ranks
+        value = self.distribute_parallelized(center, res)
+        if self.rank == 0:
+            if self.parallelized is not None:
+                logger.info(
+                    f"Running BayFAI parallelizing {self.size} ranks over '{self.parallelized}'"
+                )
+            else:
+                logger.info(
+                    f"Running BayFAI on {self.size} ranks"
+                )
 
         bayfai_hyperparams = {
             "n_samples": n_samples,
@@ -951,9 +979,9 @@ class BayFAIOpt:
             "seed": seed,
         }
 
-        # Run BO on the distributed distance for this rank
-        results = self.bayes_opt_distance(
-            dist,
+        # Run BO on this rank's search space
+        results = self.bayes_opt_rank(
+            value,
             center,
             bounds,
             res,
@@ -1098,6 +1126,10 @@ class BayFAIOpt:
         """
         bo_history = self.scan["bo_history"]
         iters = np.arange(len(bo_history[self.index]["scores"]))
+        if self.param_values is not None:
+            label = f"Best {self.parallelized}: {self.param_values[self.index]:.3f}"
+        else:
+            label = f"Best rank: {self.index}"
         ax.plot(
             iters,
             bo_history[self.index]["scores"],
@@ -1108,7 +1140,7 @@ class BayFAIOpt:
             color="black",
             markerfacecolor="red",
             markeredgecolor="black",
-            label=f"Best Distance (m): {self.distances[self.index]:.3f}",
+            label=label,
         )
         ax.legend(fontsize=6)
         ax.set_xlabel("Iteration", fontsize=6)
@@ -1127,8 +1159,10 @@ class BayFAIOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        ax.plot(self.distances, self.scan["score"], linewidth=0.8, color="k")
-        ax.set_xlabel("Distance (m)", fontsize=6)
+        x = self.param_values if self.param_values is not None else np.arange(self.size)
+        xlabel = self.parallelized if self.parallelized is not None else "Rank"
+        ax.plot(x, self.scan["score"], linewidth=0.8, color="k")
+        ax.set_xlabel(xlabel, fontsize=6)
         ax.set_ylabel(
             r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$", fontsize=6
         )
@@ -1136,7 +1170,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            "Score vs Distance",
+            f"Score vs {xlabel}",
             fontsize=6,
         )
 
@@ -1149,15 +1183,17 @@ class BayFAIOpt:
         ax : plt.Axes
             Matplotlib axes
         """
-        ax.plot(self.distances, self.final_score, linewidth=0.8, color="k")
+        x = self.param_values if self.param_values is not None else np.arange(self.size)
+        xlabel = self.parallelized if self.parallelized is not None else "Rank"
+        ax.plot(x, self.final_score, linewidth=0.8, color="k")
         ax.scatter(
-            self.distances[self.index],
+            x[self.index],
             self.final_score[self.index],
             color="red",
             s=50,
             marker="*",
         )
-        ax.set_xlabel("Distance (m)", fontsize=6)
+        ax.set_xlabel(xlabel, fontsize=6)
         ax.set_ylabel(
             r"$-\log\left(\frac{1}{N}\sum (2\theta_g - 2\theta_c)^2\right)$", fontsize=6
         )
@@ -1165,7 +1201,7 @@ class BayFAIOpt:
         ax.tick_params(axis="x", labelsize=6)
         ax.tick_params(axis="y", labelsize=6)
         ax.set_title(
-            "Penalized Score vs Distance",
+            f"Penalized Score vs {xlabel}",
             fontsize=6,
         )
 

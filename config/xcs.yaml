@@ -209,6 +209,7 @@ SubmitSMD:
 # BayFAI
 ###########
 BayFAI:
+  parallelized: "dist"
   fixed:
   - "rot1"
   - "rot2"

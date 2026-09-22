@@ -66,6 +66,7 @@ SubmitSMD:
 BayFAI:
   detname: "jungfrau"
   calibrant: "AgBh"
+  parallelized: "dist"
   fixed: ["rot1", "rot2", "rot3"]
   center:
     dist: 0.13
