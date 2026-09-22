@@ -19,11 +19,12 @@ __author__ = "Gabriel Dorlhiac"
 import os
 import re
 import warnings
-from typing import List, Dict, Iterator, Any, Union, Optional
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 import pprint
 import yaml
 
+from lute.io.db import read_latest_db_entry
 from lute.io.models import *
 from lute.execution.debug_utils import LUTE_DEBUG_EXIT
 
@@ -52,6 +53,114 @@ def _check_str_numeric(string: str) -> Union[str, int, float]:
         return float(string)
     else:
         return string
+
+
+def _is_run_in_group(current_run: int, applies_to: Dict[str, Any]) -> bool:
+    """Check if current_run matches the applies_to rule for run group parameter rules."""
+    if "range" in applies_to:
+        r_min: int
+        r_max: int
+        r_min, r_max = applies_to["range"]
+        return r_min <= current_run <= r_max
+    elif "runs" in applies_to:
+        return current_run in applies_to["runs"]
+    return False
+
+
+def resolve_run_group_directives(
+    task_name: str,
+    task_config: Dict[str, Any],
+    global_groups: Dict[str, Any],
+    work_dir: str,
+    current_run: Optional[Union[int, str]],
+) -> Dict[str, Any]:
+    """Resolves `@` directives to look up parameters based on matching RUN_GROUPS rules.
+
+    Possible directives include the following three options:
+    1. `@db:current`: Use the parameter value from the last valid database entry
+      for the experiment run of the current execution.
+    2. `@db:run:NNNN`: Use the last valid database entry for the specified run `NNNN`.
+    3. `@literal`: Use the literal value included in the YAML file.
+
+    Args:
+        task_name (str): The current Task to process configuration for.
+
+        task_config (Dict[str, Any]): The configuration YAML data.
+
+        global_groups (Dict[str, Any]): Globally defined RUN GROUPS from the YAML.
+
+        work_dir (str): The LUTE working directory.
+
+        current_run (Optional[Union[int, str]]): The current run.
+
+    Returns:
+        updated_config (Dict[str, Any]): Parameter configuration after directive
+            resolution.
+    """
+    # This shouldn't happen, but if the run is not set, just leave YAML unmodified.
+    if current_run is None:
+        return task_config
+    try:
+        current_run_int: int = int(current_run)
+    except (ValueError, TypeError):
+        return task_config
+
+    # In addition to the global RUN_GROUPS, you can override settings per-Task
+    task_groups: Dict[str, Any] = task_config.pop("RUN_GROUPS", {})
+    if not global_groups and not task_groups:
+        return task_config
+
+    # Use Task-RUN_GROUP if exists
+    active_policy: Optional[Dict[str, Any]] = None
+
+    all_group_names: List[str] = list(task_groups.keys()) + [
+        g for g in global_groups if g not in task_groups
+    ]
+    for group_name in all_group_names:
+        task_grp: Dict[str, Any] = task_groups.get(group_name, {})
+        global_grp: Dict[str, Any] = global_groups.get(group_name, {})
+
+        applies_to: Dict[str, Any] = task_grp.get(
+            "applies_to", global_grp.get("applies_to", {})
+        )
+        if applies_to and _is_run_in_group(current_run_int, applies_to):
+            active_policy = {**global_grp, **task_grp}
+            break
+
+    if not active_policy:
+        return task_config
+
+    default_directive: str = active_policy.get("default", "@literal")
+    for param_name, literal_val in list(task_config.items()):
+        directive: str = active_policy.get(param_name, default_directive)
+        if isinstance(directive, str) and directive.startswith("@db:"):
+            target_run: Optional[int] = None
+            if directive == "@db:current":
+                target_run = current_run_int
+            elif directive.startswith("@db:run:"):
+                try:
+                    target_run = int(directive.split(":")[-1])
+                except ValueError:
+                    warnings.warn(f"Invalid run directive format: '{directive}'")
+                    continue
+            if target_run is not None:
+                # If doing parameter sweeps, need to remove the suffix identifier from
+                # the Task name
+                db_task_name: str = re.sub(r"_\d+$", "", task_name)
+                db_val: Optional[Any] = read_latest_db_entry(
+                    db_dir=work_dir,
+                    task_name=db_task_name,
+                    param=param_name,
+                    for_run=target_run,
+                )
+                if db_val is not None:
+                    task_config[param_name] = db_val
+                else:
+                    warnings.warn(
+                        f"No DB entry found for {task_name}.{param_name} (run {target_run}). "
+                        f"Falling back to YAML literal: {literal_val}"
+                    )
+    return task_config
 
 
 def substitute_variables(
@@ -180,12 +289,30 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
         docs: Iterator[Dict[str, Any]] = yaml.load_all(stream=f, Loader=yaml.FullLoader)
         header: Dict[str, Any] = next(docs)
         config: Dict[str, Any] = next(docs)
+
     substitute_variables(header, header)
     substitute_variables(header, config)
+
     LUTE_DEBUG_EXIT("LUTE_DEBUG_EXIT_AT_YAML", pprint.pformat(config))
+
+    # Check for global RUN_GROUPS
+    global_run_groups: Dict[str, Any] = header.pop("RUN_GROUPS", {})
+
     lute_config: Dict[str, AnalysisHeader] = {"lute_config": AnalysisHeader(**header)}
+
     try:
         task_config: Dict[str, Any] = dict(config[task_name])
+
+        work_dir: str = header.get("work_dir", "")
+        current_run: Optional[Union[str, int]] = header.get("run") or os.getenv("RUN")
+
+        task_config = resolve_run_group_directives(
+            task_name=task_name,
+            task_config=task_config,
+            global_groups=global_run_groups,
+            work_dir=work_dir,
+            current_run=current_run,
+        )
         lute_config.update(task_config)
     except KeyError:
         warnings.warn(
