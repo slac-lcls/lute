@@ -15,6 +15,7 @@ from maestro._maestro._maestro import JobParameters, JobStep, TriggerRule
 from maestro.config_generator import expand_config_for_sweep
 from maestro.parser_params import (
     expand_param_matrix,
+    zip_param_matrix,
     format_slurm_params,
     validate_param_matrix,
     get_sweep_metadata,
@@ -369,6 +370,9 @@ def get_lute_dag_loader(
             elif key == "param_matrix":
                 # Construct param_matrix as a dictionary
                 sweep_dict[key] = loader.construct_mapping(val_node, deep=True)
+            elif key == "zip":
+                # Boolean flag - use PyYAML's bool resolver via construct_yaml_bool
+                sweep_dict[key] = loader.construct_yaml_bool(val_node)
             else:
                 # Simple scalar
                 sweep_dict[key] = loader.construct_scalar(val_node)
@@ -378,6 +382,7 @@ def get_lute_dag_loader(
         param_matrix: Dict[str, Any] = sweep_dict.get("param_matrix", {})
         slurm_template: str = sweep_dict.get("slurm_params", "")
         next_steps: List[Dict[str, Any]] = sweep_dict.get("next", [])
+        use_zip: bool = sweep_dict.get("zip", False)
 
         if not managed_task_name:
             raise DagParseError("!param_sweep requires 'task_name' field")
@@ -406,8 +411,12 @@ def get_lute_dag_loader(
             )
 
         # Validate and expand parameter matrix
-        validate_param_matrix(param_matrix)
-        param_combinations: List[Dict[str, Any]] = expand_param_matrix(param_matrix)
+        validate_param_matrix(param_matrix, require_equal_length=use_zip)
+        param_combinations: List[Dict[str, Any]]
+        if use_zip:
+            param_combinations = zip_param_matrix(param_matrix)
+        else:
+            param_combinations = expand_param_matrix(param_matrix)
 
         metadata: Dict[str, Any] = get_sweep_metadata(param_combinations)
         logger.debug(

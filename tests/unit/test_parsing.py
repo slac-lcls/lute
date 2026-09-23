@@ -79,7 +79,7 @@ SIMPLE_BRANCH_DAG: str = """
         next: []
 """
 
-PARAM_GENERATION_DAG = f"""
+EXPAND_PARAM_GENERATION_DAG = f"""
 !LUTE_DAG
 task_name: "Tester"
 next:
@@ -87,6 +87,19 @@ next:
   task_name: SocketTester
   param_matrix:
     num_arrays: [5, 10, 15]
+  next: []
+"""
+
+ZIP_PARAM_GENERATION_DAG = f"""
+!LUTE_DAG
+task_name: "Tester"
+next:
+- !param_sweep
+  task_name: SocketTester
+  zip: true
+  param_matrix:
+    num_arrays: [5, 10]
+    label: ["first", "second"]
   next: []
 """
 
@@ -354,7 +367,7 @@ class TestParsing:
         )
         assert is_equal(wf_defn, job_steps)
 
-    def test_param_generation(self):
+    def test_expand_param_generation(self):
         import tempfile
         import yaml
         import os
@@ -374,7 +387,7 @@ class TestParsing:
                 yaml.dump_all(config_data, f)
 
             wf_defn: List[JobStep] = load_lute_dag_str(
-                workflow_str=PARAM_GENERATION_DAG,
+                workflow_str=EXPAND_PARAM_GENERATION_DAG,
                 lute_location=TestParsing.lute_location,
                 executable_subdir=TestParsing.executable_subdir,
                 config_file=temp_config,
@@ -431,6 +444,99 @@ class TestParsing:
             ]
 
             assert is_equal(job_steps, wf_defn)
+
+        finally:
+            # Clean up temp config
+            if os.path.exists(temp_config):
+                os.unlink(temp_config)
+
+            # Clean up any expanded config that was created
+            if os.path.exists(expanded_config_stored):
+                os.unlink(expanded_config_stored)
+
+    def test_zip_param_generation(self):
+        import tempfile
+        import yaml
+        import os
+
+        # This one actual needs a config file
+        config_data = [
+            {"experiment": "test", "run": 1, "work_dir": "/tmp"},
+            {"SocketTester": {"num_arrays": 10}},
+        ]
+
+        fd: int
+        temp_config: str
+        fd, temp_config = tempfile.mkstemp(suffix=".yaml")
+        expanded_config_stored: str = ""
+        try:
+            with os.fdopen(fd, "w") as f:
+                yaml.dump_all(config_data, f)
+
+            wf_defn: List[JobStep] = load_lute_dag_str(
+                workflow_str=ZIP_PARAM_GENERATION_DAG,
+                lute_location=TestParsing.lute_location,
+                executable_subdir=TestParsing.executable_subdir,
+                config_file=temp_config,
+                debug=TestParsing.debug,
+                branch_conditions={"daq2": True},
+            )
+
+            # Zipping 2 values per key should produce exactly 2 instances,
+            # not 4 (which a Cartesian product would produce).
+            assert len(wf_defn[0].next) == 2
+
+            expanded_config_stored = wf_defn[0].next[0].parameters.config_file
+
+            starting_params: JobParameters = JobParameters(
+                TestParsing.lute_location,
+                TestParsing.executable_subdir,
+                temp_config,
+                TestParsing.debug,
+            )
+            starting_params.config_file = temp_config
+            expanded_params: JobParameters = JobParameters(
+                TestParsing.lute_location,
+                TestParsing.executable_subdir,
+                expanded_config_stored,
+                TestParsing.debug,
+            )
+
+            job_steps: List[JobStep] = [
+                JobStep(
+                    "Tester",
+                    TriggerRule.ALL_SUCCESS,
+                    starting_params,
+                    "",
+                    [
+                        JobStep(
+                            "SocketTester_0",
+                            TriggerRule.ALL_SUCCESS,
+                            expanded_params,
+                            "",
+                            [],
+                        ),
+                        JobStep(
+                            "SocketTester_1",
+                            TriggerRule.ALL_SUCCESS,
+                            expanded_params,
+                            "",
+                            [],
+                        ),
+                    ],
+                )
+            ]
+
+            assert is_equal(job_steps, wf_defn)
+
+            # Confirm the zipped values were paired correctly (not producted)
+            with open(expanded_config_stored, "r") as f:
+                expanded_docs = list(yaml.safe_load_all(f))
+            expanded_params_doc = expanded_docs[-1]
+            assert expanded_params_doc["TestSocket_0"]["num_arrays"] == 5
+            assert expanded_params_doc["TestSocket_0"]["label"] == "first"
+            assert expanded_params_doc["TestSocket_1"]["num_arrays"] == 10
+            assert expanded_params_doc["TestSocket_1"]["label"] == "second"
 
         finally:
             # Clean up temp config

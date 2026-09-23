@@ -27,10 +27,11 @@ def getAzIntParams(run):
         az_dict = {}
         {%- if 'userMask' in params and params['userMask'] %}
         az_dict['userMask'] = np.load("{{ params['userMask'] }}")
-        {{- step_parameters("az_dict", detector, params, skip_keys=["userMask"]) }}
+        {{- step_parameters("az_dict", detector, params, False, ["userMask"]) }}
         {% else %}
-        {{- step_parameters("az_dict", detector, params) }}
+        {{- step_parameters("az_dict", detector, params, False) }}
         {% endif %}
+        ret_dict["{{ detector }}"] = [az_dict]
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -44,7 +45,13 @@ def getAzIntPyFAIParams(run):
     if run>0:
 {% for detector, params in getAzIntPyFAIParams.items() %}
         az_dict = {}
-{{- step_parameters("az_dict", detector, params) }}
+        {%- if 'userMask' in params and params['userMask'] %}
+        az_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("az_dict", detector, params, False, skip_keys=["userMask"]) }}
+        {% else %}
+        {{- step_parameters("az_dict", detector, params, False) }}
+        {% endif %}
+        ret_dict["{{ detector }}"] = [az_dict]
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -56,7 +63,7 @@ def getPhotonParams(run):
         run=int(run)
     ret_dict = {}
     if run>0:
-{% for detector, params in getPhotonsParams.items() %}
+{% for detector, params in getPhotonParams.items() %}
         photon_dict = {}
 {{- step_parameters("photon_dict", detector, params) }}
 {% endfor %}
@@ -65,21 +72,27 @@ def getPhotonParams(run):
 
 
 {%- if getDropletParams is defined and getDropletParams %}
-def getDropletParams(run):
+def get_droplet(run):
     if isinstance(run,str):
         run=int(run)
     ret_dict = {}
     if run>0:
 {% for detector, params in getDropletParams.items() %}
         droplet_dict = {}
-{{- step_parameters("droplet_dict", detector, params) }}
+        {%- if 'userMask' in params and params['userMask'] %}
+        droplet_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("droplet_dict", detector, params, False, skip_keys=["userMask"]) }}
+        {% else %}
+        {{- step_parameters("droplet_dict", detector, params, False) }}
+        {% endif %}
+        ret_dict["{{ detector }}"] = [droplet_dict]
 {% endfor %}
     return ret_dict
 {% endif %}
 
 
 {%- if getDroplet2Photons is defined and getDroplet2Photons %}
-def getDroplet2Photons(run):
+def get_droplet2photon(run):
     if isinstance(run,str):
         run=int(run)
     ret_dict = {}
@@ -92,6 +105,7 @@ def getDroplet2Photons(run):
         d2p_dict['d2p'] = {
             'aduspphot': {{ params['aduspphot'] }},
             'cputime': {{ params['cputime'] }},
+            'nData': {{ params['nData'] }},
         }
         ret_dict['{{ detector }}'] = d2p_dict
 {% endfor %}
@@ -161,7 +175,12 @@ def getDetSums(run):
         run = int(run)
     ret_dict = {}
     if run > 0:
-{% for detector, params in detSumAlgos.items() %}
+{%- if 'all' in detSumAlgos %}
+{%- for det in detnames %}
+{{- step_value(det, detSumAlgos['all']) }}
+{% endfor %}
+{%- endif %}
+{% for detector, params in detSumAlgos.items() if detector != 'all' %}
 {{- step_value(detector, params) }}
 {% endfor %}
     return ret_dict

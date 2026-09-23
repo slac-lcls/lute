@@ -60,6 +60,7 @@ SubmitSMD:
 BayFAI:
   detname: "epix10k2M"
   calibrant: "LaB6"
+  parallelized: "dist"
   fixed: ["rot1", "rot2", "rot3"]
   center:
     dist: 0.1
@@ -68,7 +69,7 @@ BayFAI:
     rot1: 0.0
     rot2: 0.0
     rot3: 0.0
-  bo_params:
+  bayfai_params:
     n_samples: 5       # Reduced for functional test speed (default: 20)
     n_iterations: 10   # Reduced for functional test speed (default: 80)
     max_rings: 4
