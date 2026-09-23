@@ -111,7 +111,50 @@ def substitute_variables(
                 new_key = f"{curr_key}.{param}"
             substitute_variables(header, config, curr_key=new_key)
         elif isinstance(value, list):
-            ...
+            for idx, item in enumerate(value):
+                if not isinstance(item, str):
+                    continue
+                matches_list: List[str] = re.findall(_sub_pattern, item)
+                for m in matches_list:
+                    item_key_to_sub_maybe_with_fmt = m[2:-2].strip().split(":")
+                    item_key_to_sub = item_key_to_sub_maybe_with_fmt[0]
+                    item_fmt = None
+                    if len(item_key_to_sub_maybe_with_fmt) == 2:
+                        item_fmt = item_key_to_sub_maybe_with_fmt[1]
+                    item_sub: Any
+                    if item_key_to_sub[0] == "$":
+                        item_sub = os.getenv(item_key_to_sub[1:], None)
+                        if item_sub is None:
+                            # Check if we use a different env - substitution
+                            # happens before environment reset
+                            item_sub = os.getenv(f"LUTE_TENV_{item_key_to_sub[1:]}")
+                        if item_sub is None:
+                            print(
+                                f"Environment variable {item_key_to_sub[1:]} not found! Cannot substitute in YAML config!",
+                                flush=True,
+                            )
+                            continue
+                        # substitutions from env vars will be strings, so
+                        # convert back to numeric for formatting (e.g. {var:04d})
+                        item_sub = _check_str_numeric(item_sub)
+                    else:
+                        try:
+                            item_sub = config
+                            for key in item_key_to_sub.split("."):
+                                item_sub = item_sub[key]
+                        except KeyError:
+                            item_sub = header[item_key_to_sub]
+                    item_pattern = (
+                        m.replace("{{", r"\{\{")
+                        .replace("}}", r"\}\}")
+                        .replace("$", r"\$")
+                    )
+                    if item_fmt is not None:
+                        item_sub = f"{item_sub:{item_fmt}}"
+                    else:
+                        item_sub = f"{item_sub}"
+                    item = re.sub(item_pattern, item_sub, item)
+                iterable[param][idx] = _check_str_numeric(item)
         # Scalars str - we skip numeric types
         elif isinstance(value, str):
             matches: List[str] = re.findall(_sub_pattern, value)
