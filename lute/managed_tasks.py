@@ -187,6 +187,9 @@ CrystFELIndexer.add_tasklet(
     set_summary=True,
 )
 
+GLINTIndexer: Executor = Executor("IndexGLINT")
+"""Runs GPU blind indexing (cross-frame consensus) using GLINT. Needs a GPU partition."""
+
 StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
 """Concatenate output stream files."""
 
@@ -232,6 +235,12 @@ DimpleSolver.add_tasklet(
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFX.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+
+PeakFinderSFXPsana1: MPIExecutor = MPIExecutor("FindPeaksSFX")
+"""FindPeaksSFX on LCLS-I (xtc) data. Set `psana_version: 1` in the config."""
+PeakFinderSFXPsana1.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
+)
 
 PeakFinderSFXXpp: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""

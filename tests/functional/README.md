@@ -26,4 +26,12 @@
 | smd_bayfai                    | SmallDataProducer → BayFAIOptimizer                                                                        | mfx100824024 | 5   | psana1, epix10k2M, LaB6 calibrant. Powder auto-resolved from SMD.    |
 | smd2_bayfai                   | SmallDataProducer2 → BayFAIOptimizer2                                                                      | mfx100852324 | 298 | psana2, jungfrau, AgBh calibrant. Powder auto-resolved from SMD2.    |
 | smd2_xss                      | SmallDataProducer2 → SmallDataXSSAnalyzer                                                                  | mfx101344525 | 82  | psana2, jungfrau, PyFAI azint (r0082.poni), lxt/lens scan.           |
+| sfx_mfx101343025_r194_crystfel | FindPeaksSFX → CrystFEL (xgandalf) → merge | mfx101343025 | 194 | Jungfrau16M, monoclinic lysozyme, BayFAI-refined r0139 geometry. |
+| sfx_mfx101343025_r194_glint | FindPeaksSFX → GLINT → merge | mfx101343025 | 194 | Same peaks as the CrystFEL test. GLINT needs an A100 node. |
+| sfx_mfx100848724_r51_crystfel | FindPeaksSFX → CrystFEL (xgandalf) → merge | mfx100848724 | 51 | Jungfrau16M, tetragonal lysozyme, refined 356 mm geometry. |
+| sfx_mfx100848724_r51_glint | FindPeaksSFX → GLINT → merge | mfx100848724 | 51 | Same peaks as the CrystFEL test. GLINT needs an A100 node. |
+| sfx_cxil1015922_r136_crystfel | FindPeaksSFX (psana1) → CrystFEL → merge | cxil1015922 | 136 | LCLS-I, Jungfrau4M, monoclinic C2 'B2' protein. |
+| sfx_cxil1015922_r136_glint | FindPeaksSFX (psana1) → GLINT → merge | cxil1015922 | 136 | LCLS-I. Same peaks as the CrystFEL test. |
+| sfx_mfxl1038923_r58_crystfel | FindPeaksSFX (psana1) → CrystFEL, blind | mfxl1038923 | 58 | LCLS-I, epix10k2M. No known cell: indexing only, no merge. |
+| sfx_mfxl1038923_r58_glint | FindPeaksSFX (psana1) → GLINT, blind | mfxl1038923 | 58 | LCLS-I, epix10k2M. No known cell: indexing only, no merge. |
 |                               |                                                                                                            |              |     |                                                                       |

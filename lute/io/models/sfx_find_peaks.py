@@ -71,6 +71,12 @@ class FindPeaksSFXParameters(TaskParameters):
         description="Required events code for events to be processed if event logic "
         "is True",
     )
+    psana_version: Literal[1, 2] = Field(
+        2,
+        description="psana generation of the data: 2 for LCLS-II xtc2, 1 for LCLS-I xtc. "
+        "psana 1 must run in a psana1 environment: use the PeakFinderSFXPsana1 managed "
+        "Task, which sources conda1.",
+    )
     psana_mask: bool = Field(
         False,
         description="If True, apply mask from psana Detector object",

@@ -1,0 +1,64 @@
+%YAML 1.3
+---
+title: "SFX GLINT test: mfx101343025 r194"
+experiment: "mfx101343025"
+run: 194
+date: "2026/09/24"
+lute_version: 0.3.0      # Do not be change unless need to force older version
+task_timeout: 30000
+work_dir: "/tmp"
+...
+---
+FindPeaksSFX:
+    outdir: "{{ work_dir }}/sfx_mfx101343025_r194_glint/peaks"
+    out_file: "{{ work_dir }}/sfx_mfx101343025_r194_glint/peaks/sfx_mfx101343025_r194_glint.list"
+    tag: "sfx_mfx101343025_r194_glint"
+    det_name: "jungfrau"
+    event_receiver: "evr0"
+    event_logic: false
+    psana_mask: false
+    mask_file: null
+    min_peaks: 10
+    max_peaks: 2048
+    npix_min: 1
+    npix_max: 30
+    amax_thr: 100
+    son_min: 5.0
+    peak_rank: 3
+    r0: 4.0
+    dr: 2.0
+    nsigm: 10.0
+    pv_camera_length: 0.0   # the .geom carries a numeric clen
+    n_events: 3000
+    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/r0139_refined.geom"
+    make_powder_plots: false
+
+IndexGLINT:
+    images: "{{ work_dir }}/sfx_mfx101343025_r194_glint/peaks/sfx_mfx101343025_r194_glint.list"
+    peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
+    geom: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/r0139_refined.geom"
+    out: "{{ work_dir }}/sfx_mfx101343025_r194_glint/streams/sfx_mfx101343025_r194_glint.stream"
+    nbest: 3
+    device: "auto"
+    cell: "28.00 62.50 60.90 90.00 90.80 90.00"
+    integrate: true
+    int_dmin: 2.0
+
+ConcatenateStreamFiles:
+    in_file: "{{ work_dir }}/sfx_mfx101343025_r194_glint/streams"
+    tag: "sfx_mfx101343025_r194_glint"
+    out_file: "{{ work_dir }}/sfx_mfx101343025_r194_glint/sfx_mfx101343025_r194_glint_all.stream"
+
+MergePartialator:
+    in_file: "{{ work_dir }}/sfx_mfx101343025_r194_glint/sfx_mfx101343025_r194_glint_all.stream"
+    out_file: "{{ work_dir }}/sfx_mfx101343025_r194_glint/sfx_mfx101343025_r194_glint.hkl"
+    symmetry: "2/m_uab"
+    model: "unity"
+
+CompareHKL:
+    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/lyso_monoclinic.cell"
+    symmetry: "2/m_uab"
+
+ManipulateHKL:
+    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/lyso_monoclinic.cell"
+...
