@@ -20,9 +20,9 @@ FindPeaksSFX:
     mask_file: null
     min_peaks: 10
     max_peaks: 2048
-    npix_min: 1
+    npix_min: 2
     npix_max: 30
-    amax_thr: 100
+    amax_thr: 1000
     son_min: 5.0
     peak_rank: 3
     r0: 4.0

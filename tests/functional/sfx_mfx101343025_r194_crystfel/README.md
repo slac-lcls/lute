@@ -6,6 +6,10 @@ mm, ~15 keV.
 The beamline's cctbx.xfel.process indexed 238 of 28,650 events in this run; 22 of those fall in the
 first 2,000 events, so 3,000 events should give roughly 30 indexed frames.
 
+Peak finding: On 16 calibrated frames of this run the water ring sits at 400-600 (99.9th pixel
+percentile 588); a 1000 threshold leaves a median 49 connected 2-30 px components per frame, 500
+leaves ~10,000.
+
 ## Inputs committed with this test
 
 `mfx101343025_r0139_refined.geom`: Converted from the BayFAI-refined DIALS geometry

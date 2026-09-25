@@ -6,6 +6,9 @@ the one run of the experiment in the public data area.
 The beamline's cctbx.xfel.process integrated 225 of 17,872 events (1.3%), so 4,000 events should
 give roughly 50 indexed frames. Runs 52-55 index at 2.5-4%.
 
+Peak finding: On 16 calibrated frames of this run the 99.9th pixel percentile is 615; a 1000
+threshold leaves a median 28 connected 2-30 px components per frame, 500 leaves ~3,500.
+
 ## Inputs committed with this test
 
 `mfx100848724_356mm_refined.geom`: Converted from the refined DIALS geometry

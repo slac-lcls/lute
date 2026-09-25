@@ -6,6 +6,9 @@ Jungfrau-4M at 109.4 mm, 8.85 keV.
 The users' CrystFEL 0.10.2 run indexed 1,433 crystals in this run's 37,522 events (about 3.8%), so
 3,000 events should give roughly 110.
 
+Peak finding: On 30 calibrated events of this run (every 10th) a 200 threshold leaves a median 0
+connected 2-30 px components per frame (max 60); 100 leaves a median 58, mostly the water ring.
+
 ## Inputs committed with this test
 
 `cxil1015922_r0136_b2.geom`: The geometry the users indexed with, recovered from the header of their

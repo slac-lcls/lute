@@ -3,8 +3,11 @@
 LCLS-I (psana1), ePix10k2M at about 50 mm, ~9.8 keV. No unit cell was ever recorded for this sample,
 so both indexers run BLIND and the DAG stops at the concatenated stream (no merge).
 
-GLINT's cross-frame consensus on this run finds a cell near 43.6/67.8/89.1 A. The peakfinder8
-thresholds are a first guess for this detector and are expected to need tuning.
+GLINT's cross-frame consensus on this run finds a cell near 43.6/67.8/89.1 A.
+
+Peak finding: On 30 calibrated events of this run a 200 threshold leaves a median 0 connected 2-30
+px components but a 90th percentile of 172; 500 leaves a 90th percentile of 70. 300 is a compromise
+and the least certain setting in these tests.
 
 ## Inputs committed with this test
 

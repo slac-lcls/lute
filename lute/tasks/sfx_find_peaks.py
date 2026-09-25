@@ -986,11 +986,9 @@ class FindPeaksSFX(Task):
 
             det: Any = Detector(self._task_parameters.det_name)
             det.do_reshape_2d_to_3d(flag=True)
-            i_x = det.indexes_x(self._task_parameters.lute_config.run).astype(np.int64)
-            i_y = det.indexes_y(self._task_parameters.lute_config.run).astype(np.int64)
-            ipx, ipy = det.point_indexes(
-                self._task_parameters.lute_config.run, pxy_um=(0, 0)
-            )
+            i_x = det.indexes_x(run_num).astype(np.int64)
+            i_y = det.indexes_y(run_num).astype(np.int64)
+            ipx, ipy = det.point_indexes(run_num, pxy_um=(0, 0))
 
             return DetectorGeomInfo(i_x=i_x, i_y=i_y, ipx=ipx, ipy=ipy)
 
@@ -1139,7 +1137,7 @@ class FindPeaksSFX(Task):
                         continue
                     mask: npt.NDArray[np.uint8] = np.ones(data.shape, dtype=np.uint8)
                     psana_mask: Optional[npt.NDArray[Any]] = det.mask(
-                        self._task_parameters.lute_config.run,
+                        run_num,
                         calib=False,
                         status=True,
                         edges=False,
