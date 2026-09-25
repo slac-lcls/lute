@@ -8,10 +8,10 @@ thresholds are a first guess for this detector and are expected to need tuning.
 
 ## Inputs committed with this test
 
-`r0058.geom`: Panel X/Y from mfxx49820 results/btx/geom/r0016.geom (same detector model); psana's
-deployed geometry for this experiment has a placeholder distance. The 50 mm distance comes from a
-consensus-support scan and agrees with a 3.669 A ice ring at 49.4 mm. The interaction point moved
-between runs (r0278 sits about 8 mm further), so this file is specific to r0058.
+`mfxl1038923_r0058.geom`: Panel X/Y from mfxx49820 results/btx/geom/r0016.geom (same detector
+model); psana's deployed geometry for this experiment has a placeholder distance. The 50 mm distance
+comes from a consensus-support scan and agrees with a 3.669 A ice ring at 49.4 mm. The interaction
+point moved between runs (r0278 sits about 8 mm further), so this file is specific to r0058.
 
-Paths are resolved through `$LUTE_PATH`, so they point at this directory in the checkout the
-tests run from.
+The config reads these files from `/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/`; the copies
+here are the source to deploy there (`maybe_lyso.cell` is already in `test_utilities/`).

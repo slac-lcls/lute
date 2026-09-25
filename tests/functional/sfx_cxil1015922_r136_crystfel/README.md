@@ -8,12 +8,12 @@ The users' CrystFEL 0.10.2 run indexed 1,433 crystals in this run's 37,522 event
 
 ## Inputs committed with this test
 
-`r0136_b2.geom`: The geometry the users indexed with, recovered from the header of their stream
-results/b2/indexing/r0136-b2-100-6-350.process/r0136-b2-100-6-350.lst.6.50.stream (the original file
-is gone). Photon energy is fixed at 8852 eV there, as in their run. The lysozyme runs of this
-experiment (30, 33, 34) have been purged from disk.
+`cxil1015922_r0136_b2.geom`: The geometry the users indexed with, recovered from the header of their
+stream results/b2/indexing/r0136-b2-100-6-350.process/r0136-b2-100-6-350.lst.6.50.stream (the
+original file is gone). Photon energy is fixed at 8852 eV there, as in their run. The lysozyme runs
+of this experiment (30, 33, 34) have been purged from disk.
 
-`b2.cell`: the reference cell (111.94 172.23 41.23 90.00 106.20 90.00).
+`cxil1015922_b2.cell`: the reference cell (111.94 172.23 41.23 90.00 106.20 90.00).
 
-Paths are resolved through `$LUTE_PATH`, so they point at this directory in the checkout the
-tests run from.
+The config reads these files from `/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/`; the copies
+here are the source to deploy there (`maybe_lyso.cell` is already in `test_utilities/`).

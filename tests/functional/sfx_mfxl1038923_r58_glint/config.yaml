@@ -31,13 +31,13 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 3000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfxl1038923_r58_glint/r0058.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     make_powder_plots: false
 
 IndexGLINT:
     images: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/peaks/sfx_mfxl1038923_r58_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
-    geom: "{{ $LUTE_PATH }}/tests/functional/sfx_mfxl1038923_r58_glint/r0058.geom"
+    geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     out: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/streams/sfx_mfxl1038923_r58_glint.stream"
     nbest: 3
     device: "auto"

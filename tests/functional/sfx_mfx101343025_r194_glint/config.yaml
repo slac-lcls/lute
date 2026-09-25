@@ -30,13 +30,13 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 3000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/r0139_refined.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx101343025_r0139_refined.geom"
     make_powder_plots: false
 
 IndexGLINT:
     images: "{{ work_dir }}/sfx_mfx101343025_r194_glint/peaks/sfx_mfx101343025_r194_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
-    geom: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/r0139_refined.geom"
+    geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx101343025_r0139_refined.geom"
     out: "{{ work_dir }}/sfx_mfx101343025_r194_glint/streams/sfx_mfx101343025_r194_glint.stream"
     nbest: 3
     device: "auto"
@@ -56,9 +56,9 @@ MergePartialator:
     model: "unity"
 
 CompareHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/lyso_monoclinic.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/maybe_lyso.cell"
     symmetry: "2/m_uab"
 
 ManipulateHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx101343025_r194_glint/lyso_monoclinic.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/maybe_lyso.cell"
 ...

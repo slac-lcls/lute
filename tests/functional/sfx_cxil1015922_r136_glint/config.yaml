@@ -31,13 +31,13 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 3000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_glint/r0136_b2.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"
     make_powder_plots: false
 
 IndexGLINT:
     images: "{{ work_dir }}/sfx_cxil1015922_r136_glint/peaks/sfx_cxil1015922_r136_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
-    geom: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_glint/r0136_b2.geom"
+    geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"
     out: "{{ work_dir }}/sfx_cxil1015922_r136_glint/streams/sfx_cxil1015922_r136_glint.stream"
     nbest: 3
     device: "auto"
@@ -57,9 +57,9 @@ MergePartialator:
     model: "unity"
 
 CompareHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_glint/b2.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
     symmetry: "2/m_uab"
 
 ManipulateHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_glint/b2.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
 ...

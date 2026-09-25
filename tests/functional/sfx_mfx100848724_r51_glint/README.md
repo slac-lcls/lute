@@ -8,14 +8,14 @@ give roughly 50 indexed frames. Runs 52-55 index at 2.5-4%.
 
 ## Inputs committed with this test
 
-`refined_356mm.geom`: Converted from the refined DIALS geometry
+`mfx100848724_356mm_refined.geom`: Converted from the refined DIALS geometry
 results/common/geom/refined_356mm_17jun.expt with a 180-degree rotation about y (x -> -x, z -> -z).
 No CrystFEL geometry for this experiment existed.
 
-`lyso_tetragonal.cell`: the reference cell (79.17 79.17 37.96 90.00 90.00 90.00).
+`lyso_tetragonal_p43212.cell`: the reference cell (79.17 79.17 37.96 90.00 90.00 90.00).
 
-Paths are resolved through `$LUTE_PATH`, so they point at this directory in the checkout the
-tests run from.
+The config reads these files from `/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/`; the copies
+here are the source to deploy there (`maybe_lyso.cell` is already in `test_utilities/`).
 
 ## GLINT
 

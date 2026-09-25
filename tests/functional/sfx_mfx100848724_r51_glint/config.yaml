@@ -30,13 +30,13 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 4000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx100848724_r51_glint/refined_356mm.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
     make_powder_plots: false
 
 IndexGLINT:
     images: "{{ work_dir }}/sfx_mfx100848724_r51_glint/peaks/sfx_mfx100848724_r51_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
-    geom: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx100848724_r51_glint/refined_356mm.geom"
+    geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
     out: "{{ work_dir }}/sfx_mfx100848724_r51_glint/streams/sfx_mfx100848724_r51_glint.stream"
     nbest: 3
     device: "auto"
@@ -56,9 +56,9 @@ MergePartialator:
     model: "unity"
 
 CompareHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx100848724_r51_glint/lyso_tetragonal.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
     symmetry: "4/mmm"
 
 ManipulateHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfx100848724_r51_glint/lyso_tetragonal.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
 ...

@@ -31,19 +31,19 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 3000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_crystfel/r0136_b2.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"
     make_powder_plots: false
 
 IndexCrystFEL:
     in_file: "{{ work_dir }}/sfx_cxil1015922_r136_crystfel/peaks/sfx_cxil1015922_r136_crystfel.list"
     out_file: "{{ work_dir }}/sfx_cxil1015922_r136_crystfel/streams/sfx_cxil1015922_r136_crystfel.stream"
-    geometry: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_crystfel/r0136_b2.geom"
+    geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"
     indexing: "xgandalf,mosflm"
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
     int_radius: "3,4,7"
     multi: true
     no_revalidate: true
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_crystfel/b2.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
 
 ConcatenateStreamFiles:
     in_file: "{{ work_dir }}/sfx_cxil1015922_r136_crystfel/streams"
@@ -57,9 +57,9 @@ MergePartialator:
     model: "unity"
 
 CompareHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_crystfel/b2.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
     symmetry: "2/m_uab"
 
 ManipulateHKL:
-    cell_file: "{{ $LUTE_PATH }}/tests/functional/sfx_cxil1015922_r136_crystfel/b2.cell"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
 ...

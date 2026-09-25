@@ -31,13 +31,13 @@ FindPeaksSFX:
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
     n_events: 3000
-    geometry_file: "{{ $LUTE_PATH }}/tests/functional/sfx_mfxl1038923_r58_crystfel/r0058.geom"
+    geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     make_powder_plots: false
 
 IndexCrystFEL:
     in_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/peaks/sfx_mfxl1038923_r58_crystfel.list"
     out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/streams/sfx_mfxl1038923_r58_crystfel.stream"
-    geometry: "{{ $LUTE_PATH }}/tests/functional/sfx_mfxl1038923_r58_crystfel/r0058.geom"
+    geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     indexing: "xgandalf"
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
     int_radius: "3,4,6"
