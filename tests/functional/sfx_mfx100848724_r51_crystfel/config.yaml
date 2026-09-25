@@ -10,8 +10,8 @@ work_dir: "/tmp"
 ...
 ---
 FindPeaksSFX:
-    outdir: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/peaks"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/peaks/sfx_mfx100848724_r51_crystfel.list"
+    outdir: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel_peaks"
+    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel_peaks/sfx_mfx100848724_r51_crystfel.list"
     tag: "sfx_mfx100848724_r51_crystfel"
     det_name: "jungfrau"
     event_receiver: "evr0"
@@ -34,8 +34,8 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexCrystFEL:
-    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/peaks/sfx_mfx100848724_r51_crystfel.list"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/streams/sfx_mfx100848724_r51_crystfel.stream"
+    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel_peaks/sfx_mfx100848724_r51_crystfel.list"
+    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel.stream"
     geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
     indexing: "xgandalf"
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
@@ -45,13 +45,13 @@ IndexCrystFEL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
 
 ConcatenateStreamFiles:
-    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/streams"
+    in_file: "{{ work_dir }}"
     tag: "sfx_mfx100848724_r51_crystfel"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/sfx_mfx100848724_r51_crystfel_all.stream"
+    out_file: "{{ work_dir }}/mfx100848724_r51_crystfel_all.stream"
 
 MergePartialator:
-    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/sfx_mfx100848724_r51_crystfel_all.stream"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_crystfel/sfx_mfx100848724_r51_crystfel.hkl"
+    in_file: "{{ work_dir }}/mfx100848724_r51_crystfel_all.stream"
+    out_file: "{{ work_dir }}/mfx100848724_r51_crystfel.hkl"
     symmetry: "4/mmm"
     model: "unity"
 

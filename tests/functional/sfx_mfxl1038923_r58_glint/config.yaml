@@ -10,8 +10,8 @@ work_dir: "/tmp"
 ...
 ---
 FindPeaksSFX:
-    outdir: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/peaks"
-    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/peaks/sfx_mfxl1038923_r58_glint.list"
+    outdir: "{{ work_dir }}/sfx_mfxl1038923_r58_glint_peaks"
+    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_glint_peaks/sfx_mfxl1038923_r58_glint.list"
     tag: "sfx_mfxl1038923_r58_glint"
     det_name: "epix10k2M"
     event_receiver: "evr0"
@@ -35,15 +35,15 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexGLINT:
-    images: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/peaks/sfx_mfxl1038923_r58_glint.list"
+    images: "{{ work_dir }}/sfx_mfxl1038923_r58_glint_peaks/sfx_mfxl1038923_r58_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
-    out: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/streams/sfx_mfxl1038923_r58_glint.stream"
+    out: "{{ work_dir }}/sfx_mfxl1038923_r58_glint.stream"
     nbest: 3
     device: "auto"
 
 ConcatenateStreamFiles:
-    in_file: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/streams"
+    in_file: "{{ work_dir }}"
     tag: "sfx_mfxl1038923_r58_glint"
-    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_glint/sfx_mfxl1038923_r58_glint_all.stream"
+    out_file: "{{ work_dir }}/mfxl1038923_r58_glint_all.stream"
 ...

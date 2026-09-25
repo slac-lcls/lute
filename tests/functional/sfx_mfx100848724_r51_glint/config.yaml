@@ -10,8 +10,8 @@ work_dir: "/tmp"
 ...
 ---
 FindPeaksSFX:
-    outdir: "{{ work_dir }}/sfx_mfx100848724_r51_glint/peaks"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint/peaks/sfx_mfx100848724_r51_glint.list"
+    outdir: "{{ work_dir }}/sfx_mfx100848724_r51_glint_peaks"
+    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint_peaks/sfx_mfx100848724_r51_glint.list"
     tag: "sfx_mfx100848724_r51_glint"
     det_name: "jungfrau"
     event_receiver: "evr0"
@@ -34,10 +34,10 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexGLINT:
-    images: "{{ work_dir }}/sfx_mfx100848724_r51_glint/peaks/sfx_mfx100848724_r51_glint.list"
+    images: "{{ work_dir }}/sfx_mfx100848724_r51_glint_peaks/sfx_mfx100848724_r51_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
-    out: "{{ work_dir }}/sfx_mfx100848724_r51_glint/streams/sfx_mfx100848724_r51_glint.stream"
+    out: "{{ work_dir }}/sfx_mfx100848724_r51_glint.stream"
     nbest: 3
     device: "auto"
     cell: "79.17 79.17 37.96 90.00 90.00 90.00"
@@ -45,13 +45,13 @@ IndexGLINT:
     int_dmin: 2.0
 
 ConcatenateStreamFiles:
-    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint/streams"
+    in_file: "{{ work_dir }}"
     tag: "sfx_mfx100848724_r51_glint"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint/sfx_mfx100848724_r51_glint_all.stream"
+    out_file: "{{ work_dir }}/mfx100848724_r51_glint_all.stream"
 
 MergePartialator:
-    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint/sfx_mfx100848724_r51_glint_all.stream"
-    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint/sfx_mfx100848724_r51_glint.hkl"
+    in_file: "{{ work_dir }}/mfx100848724_r51_glint_all.stream"
+    out_file: "{{ work_dir }}/mfx100848724_r51_glint.hkl"
     symmetry: "4/mmm"
     model: "unity"
 

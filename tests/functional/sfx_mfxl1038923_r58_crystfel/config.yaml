@@ -10,8 +10,8 @@ work_dir: "/tmp"
 ...
 ---
 FindPeaksSFX:
-    outdir: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/peaks"
-    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/peaks/sfx_mfxl1038923_r58_crystfel.list"
+    outdir: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel_peaks"
+    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel_peaks/sfx_mfxl1038923_r58_crystfel.list"
     tag: "sfx_mfxl1038923_r58_crystfel"
     det_name: "epix10k2M"
     event_receiver: "evr0"
@@ -35,8 +35,8 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexCrystFEL:
-    in_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/peaks/sfx_mfxl1038923_r58_crystfel.list"
-    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/streams/sfx_mfxl1038923_r58_crystfel.stream"
+    in_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel_peaks/sfx_mfxl1038923_r58_crystfel.list"
+    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel.stream"
     geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     indexing: "xgandalf"
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
@@ -45,7 +45,7 @@ IndexCrystFEL:
     no_revalidate: true
 
 ConcatenateStreamFiles:
-    in_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/streams"
+    in_file: "{{ work_dir }}"
     tag: "sfx_mfxl1038923_r58_crystfel"
-    out_file: "{{ work_dir }}/sfx_mfxl1038923_r58_crystfel/sfx_mfxl1038923_r58_crystfel_all.stream"
+    out_file: "{{ work_dir }}/mfxl1038923_r58_crystfel_all.stream"
 ...

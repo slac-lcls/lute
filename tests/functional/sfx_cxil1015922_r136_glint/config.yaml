@@ -10,8 +10,8 @@ work_dir: "/tmp"
 ...
 ---
 FindPeaksSFX:
-    outdir: "{{ work_dir }}/sfx_cxil1015922_r136_glint/peaks"
-    out_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint/peaks/sfx_cxil1015922_r136_glint.list"
+    outdir: "{{ work_dir }}/sfx_cxil1015922_r136_glint_peaks"
+    out_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint_peaks/sfx_cxil1015922_r136_glint.list"
     tag: "sfx_cxil1015922_r136_glint"
     det_name: "jungfrau4M"
     event_receiver: "evr0"
@@ -35,10 +35,10 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexGLINT:
-    images: "{{ work_dir }}/sfx_cxil1015922_r136_glint/peaks/sfx_cxil1015922_r136_glint.list"
+    images: "{{ work_dir }}/sfx_cxil1015922_r136_glint_peaks/sfx_cxil1015922_r136_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"
-    out: "{{ work_dir }}/sfx_cxil1015922_r136_glint/streams/sfx_cxil1015922_r136_glint.stream"
+    out: "{{ work_dir }}/sfx_cxil1015922_r136_glint.stream"
     nbest: 3
     device: "auto"
     cell: "111.94 172.23 41.23 90.00 106.20 90.00"
@@ -46,13 +46,13 @@ IndexGLINT:
     int_dmin: 2.0
 
 ConcatenateStreamFiles:
-    in_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint/streams"
+    in_file: "{{ work_dir }}"
     tag: "sfx_cxil1015922_r136_glint"
-    out_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint/sfx_cxil1015922_r136_glint_all.stream"
+    out_file: "{{ work_dir }}/cxil1015922_r136_glint_all.stream"
 
 MergePartialator:
-    in_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint/sfx_cxil1015922_r136_glint_all.stream"
-    out_file: "{{ work_dir }}/sfx_cxil1015922_r136_glint/sfx_cxil1015922_r136_glint.hkl"
+    in_file: "{{ work_dir }}/cxil1015922_r136_glint_all.stream"
+    out_file: "{{ work_dir }}/cxil1015922_r136_glint.hkl"
     symmetry: "2/m_uab"
     model: "unity"
 
