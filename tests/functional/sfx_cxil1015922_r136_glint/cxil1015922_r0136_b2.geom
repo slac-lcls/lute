@@ -13,6 +13,7 @@ dim2 = fs
 mask = /entry_1/data_1/mask
 mask_good = 0x0
 mask_bad = 0x1
+peak_list = /entry_1/result_1
 ;mask_file = /path/to/mask.h5
 
 p0a0/fs = +1.000000x +0.000000y
