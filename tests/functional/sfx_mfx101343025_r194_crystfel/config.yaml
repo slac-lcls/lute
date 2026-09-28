@@ -22,7 +22,7 @@ FindPeaksSFX:
     max_peaks: 2048
     npix_min: 2
     npix_max: 30
-    amax_thr: 1000
+    amax_thr: 5000        # see README: the 4-6 A band of faint peaks is not crystals
     son_min: 5.0
     peak_rank: 3
     r0: 4.0
@@ -57,6 +57,7 @@ MergePartialator:
 CompareHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/maybe_lyso.cell"
     symmetry: "2/m_uab"
+    fom: "CC"            # overall CC1/2: the pass criterion (README)
 
 ManipulateHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/maybe_lyso.cell"

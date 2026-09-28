@@ -60,6 +60,7 @@ MergePartialator:
 CompareHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
     symmetry: "2/m_uab"
+    fom: "CC"            # overall CC1/2: the pass criterion (README)
 
 ManipulateHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"

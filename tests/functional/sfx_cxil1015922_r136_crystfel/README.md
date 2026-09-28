@@ -9,6 +9,13 @@ The users' CrystFEL 0.10.2 run indexed 1,433 crystals in this run's 37,522 event
 Peak finding: On 30 calibrated events of this run (every 10th) a 200 threshold leaves a median 0
 connected 2-30 px components per frame (max 60); 100 leaves a median 58, mostly the water ring.
 
+## Pass criterion
+
+The workflow completes, the merge has at least ~100 crystals, and CompareHKL's overall CC1/2 is above
+0.3 (`fom: "CC"`, the "Overall CC" line in its log). run_functional.py checks only that the
+workflow completes; the CC1/2 and the crystal count are read by hand. The beamline's indexing rates
+quoted above are floors, not targets: the peak lists here include crystals it did not index.
+
 ## Inputs committed with this test
 
 `cxil1015922_r0136_b2.geom`: The geometry the users indexed with, recovered from the header of their

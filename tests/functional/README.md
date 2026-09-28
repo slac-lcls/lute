@@ -35,3 +35,14 @@
 | sfx_mfxl1038923_r58_crystfel | FindPeaksSFX (psana1) → CrystFEL, blind | mfxl1038923 | 58 | LCLS-I, epix10k2M. No known cell: indexing only, no merge. |
 | sfx_mfxl1038923_r58_glint | FindPeaksSFX (psana1) → GLINT, blind | mfxl1038923 | 58 | LCLS-I, epix10k2M. No known cell: indexing only, no merge. |
 |                               |                                                                                                            |              |     |                                                                       |
+
+## SFX tests: what counts as a pass
+
+- The merged SFX tests (r194, r51, r136, CrystFEL and GLINT) pass when the workflow completes, the
+  merge has at least ~100 crystals, and CompareHKL's overall CC1/2 is above 0.3. run_functional.py
+  checks only completion; the CC1/2 and the crystal count are read from the logs by hand.
+- The indexing rates quoted in the test READMEs come from the beamline's cctbx or the users' CrystFEL
+  runs. They are floors, not targets: the peak lists here include crystals those runs did not index.
+  A test that indexes far MORE than the floor has to be justified by its merge, not by the count.
+- mfxl1038923 r58 has no cell and no merge, so both r58 tests are smoke tests: they pass when the
+  workflow completes.

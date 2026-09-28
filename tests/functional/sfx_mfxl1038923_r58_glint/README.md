@@ -9,6 +9,13 @@ Peak finding: On 30 calibrated events of this run a 200 threshold leaves a media
 px components but a 90th percentile of 172; 500 leaves a 90th percentile of 70. 300 is a compromise
 and the least certain setting in these tests.
 
+## Smoke test only
+
+This test passes when the workflow completes. It has no science criterion: there is no reference
+cell, no merge and no independent indexing of this run to compare with. At the 300 threshold, 57%
+of the peaks are faint (median intensity 1000-2000) and sit at 1.8-2.8 A, which looks like detector
+noise near the edge, so the number of indexed frames here says little about either indexer.
+
 ## Inputs committed with this test
 
 `mfxl1038923_r0058.geom`: Panel X/Y from mfxx49820 results/btx/geom/r0016.geom (same detector

@@ -3,11 +3,19 @@
 Tetragonal lysozyme (P4_32_12, 79.17/79.17/37.96 A), Jungfrau-16M at 356.5 mm, ~11.6 keV. This is
 the one run of the experiment in the public data area.
 
-The beamline's cctbx.xfel.process integrated 225 of 17,872 events (1.3%), so 4,000 events should
-give roughly 50 indexed frames. Runs 52-55 index at 2.5-4%.
+The beamline's cctbx.xfel.process integrated 225 of 17,872 events (1.3%), so 12,000 events should
+give roughly 150 indexed frames, enough for the pass criterion below (4,000 gave about 50). Runs
+52-55 index at 2.5-4%.
 
 Peak finding: On 16 calibrated frames of this run the 99.9th pixel percentile is 615; a 1000
 threshold leaves a median 28 connected 2-30 px components per frame, 500 leaves ~3,500.
+
+## Pass criterion
+
+The workflow completes, the merge has at least ~100 crystals, and CompareHKL's overall CC1/2 is above
+0.3 (`fom: "CC"`, the "Overall CC" line in its log). run_functional.py checks only that the
+workflow completes; the CC1/2 and the crystal count are read by hand. The beamline's indexing rates
+quoted above are floors, not targets: the peak lists here include crystals it did not index.
 
 ## Inputs committed with this test
 

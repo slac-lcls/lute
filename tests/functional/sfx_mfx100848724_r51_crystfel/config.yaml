@@ -29,7 +29,7 @@ FindPeaksSFX:
     dr: 2.0
     nsigm: 10.0
     pv_camera_length: 0.0   # the .geom carries a numeric clen
-    n_events: 4000
+    n_events: 12000
     geometry_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
     make_powder_plots: false
 
@@ -57,6 +57,7 @@ MergePartialator:
 CompareHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
     symmetry: "4/mmm"
+    fom: "CC"            # overall CC1/2: the pass criterion (README)
 
 ManipulateHKL:
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
