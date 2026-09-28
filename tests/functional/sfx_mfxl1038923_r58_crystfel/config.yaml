@@ -42,7 +42,6 @@ IndexCrystFEL:
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
     int_radius: "3,4,6"
     multi: true
-    no_revalidate: true
 
 ConcatenateStreamFiles:
     in_file: "{{ work_dir }}"

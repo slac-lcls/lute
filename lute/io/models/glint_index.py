@@ -333,6 +333,17 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="bg-mode",
     )
+    gate: Optional[Literal["none", "strict"]] = Field(
+        None,
+        description="What a frame must satisfy to be WRITTEN as a crystal (GLINT --gate). Unset = "
+        "GLINT default `none`: every registration is written, which with a known `cell` is nearly "
+        "every frame -- a known-cell search always returns the cell it was asked for. `strict`: at "
+        "least 10 peaks and 25% of the frame's peaks matched (the GLINT paper's scoring bar); a "
+        "failing frame is written as unindexed. Not null-calibrated: about 5% of dense frames with "
+        "no lattice still pass. Needs a GLINT checkout that has --gate.",
+        flag_type="--",
+        rename_param="gate",
+    )
 
     # Validators run in field-definition order and see only EARLIER fields in `values`, so each of
     # these is declared after everything it inspects. They exist because the corresponding failures

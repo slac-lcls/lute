@@ -152,6 +152,7 @@ def test_legacy_fromfile_is_renamed_not_dropped() -> None:
     [
         ("event_axis", "event-axis", ("auto", "event", "panel")),
         ("bg_mode", "bg-mode", ("clipmean", "median", "mean")),
+        ("gate", "gate", ("none", "strict")),
     ],
 )
 def test_enum_fields_render_as_cli_flags(field: str, flag: str, values: tuple) -> None:

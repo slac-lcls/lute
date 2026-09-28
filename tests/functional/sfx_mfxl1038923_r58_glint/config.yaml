@@ -40,6 +40,7 @@ IndexGLINT:
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfxl1038923_r0058.geom"
     out: "{{ work_dir }}/sfx_mfxl1038923_r58_glint.stream"
     nbest: 3
+    gate: "strict"        # write only frames that pass the strict bar (GLINT --gate)
     device: "auto"
 
 ConcatenateStreamFiles:

@@ -39,6 +39,7 @@ IndexGLINT:
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx101343025_r0139_refined.geom"
     out: "{{ work_dir }}/sfx_mfx101343025_r194_glint.stream"
     nbest: 3
+    gate: "strict"        # write only frames that pass the strict bar (GLINT --gate)
     device: "auto"
     cell: "28.00 62.50 60.90 90.00 90.80 90.00"
     integrate: true

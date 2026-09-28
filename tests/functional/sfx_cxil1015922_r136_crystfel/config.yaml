@@ -42,7 +42,6 @@ IndexCrystFEL:
     peaks: "cxi"             # index the peakfinder8 peaks stored in the .cxi
     int_radius: "3,4,7"
     multi: true
-    no_revalidate: true
     cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
 
 ConcatenateStreamFiles:
