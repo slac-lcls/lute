@@ -42,7 +42,15 @@ here are the source to deploy there (`maybe_lyso.cell` is already in `test_utili
 
 GLINTIndexer reads the .cxi files FindPeaksSFX writes and reuses their stored peakfinder8 peaks
 (`peakfinder: stored`), so it indexes exactly the peaks the CrystFEL test does. It is given the same
-cell and integrates its own reflections (`integrate: true`), so the stream goes straight to
-partialator. GLINT is not bundled with LUTE: `executable` defaults to a GLINT checkout's
-`lute/glint_launch.sh`, and the indexing step needs a GPU node (ampere). If run_functional.py is
-given `--account=...`, that account must also be valid on ampere.
+cell and writes only orientations (`tofile`, lattice `mPb`). CrystFELIndexer then reads them with
+`--indexing=file`, refines them, checks them against the cell and integrates, so both tests share
+CrystFEL's integration and differ only in who found the orientation.
+
+Why not GLINT's own integration (`integrate: true`): on the round-4 validation of mfx100848724 r51,
+on the 171 frames both indexers indexed (same orientation on 166), CrystFEL's integration merged to
+CC1/2 0.27 and GLINT's to 0.08. Handing GLINT's orientations to CrystFEL gave 0.27. CrystFEL's
+refinement also rejected all 887 frames that only GLINT had indexed, which the strict gate had passed.
+
+GLINT is not bundled with LUTE: `executable` defaults to a GLINT checkout's `lute/glint_launch.sh`,
+and the indexing step needs a GPU node (ampere). If run_functional.py is given `--account=...`, that
+account must also be valid on ampere.

@@ -37,13 +37,24 @@ IndexGLINT:
     images: "{{ work_dir }}/sfx_mfx100848724_r51_glint_peaks/sfx_mfx100848724_r51_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
-    out: "{{ work_dir }}/sfx_mfx100848724_r51_glint.stream"
+    out: "{{ work_dir }}/mfx100848724_r51_orientations.stream"   # not *sfx_mfx100848724_r51_glint*: kept out of the merge
+    tofile: "{{ work_dir }}/mfx100848724_r51_glint.sol"   # orientations for CrystFEL (--indexing=file)
+    lattice: "tPc"
     nbest: 3
     gate: "strict"        # write only frames that pass the strict bar (GLINT --gate)
     device: "auto"
     cell: "79.17 79.17 37.96 90.00 90.00 90.00"
-    integrate: true
-    int_dmin: 2.0
+
+IndexCrystFEL:
+    in_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint_peaks/sfx_mfx100848724_r51_glint.list"
+    out_file: "{{ work_dir }}/sfx_mfx100848724_r51_glint.stream"
+    geometry: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/mfx100848724_356mm_refined.geom"
+    indexing: "file"          # GLINT's orientations; CrystFEL refines, checks the cell, integrates
+    fromfile_input_file: "{{ work_dir }}/mfx100848724_r51_glint.sol"
+    tolerance: "10,10,10,3"
+    peaks: "cxi"
+    int_radius: "3,4,6"
+    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/lyso_tetragonal_p43212.cell"
 
 ConcatenateStreamFiles:
     in_file: "{{ work_dir }}"
