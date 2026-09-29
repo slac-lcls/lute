@@ -7,7 +7,7 @@ here.
 import os
 
 from lute.execution.executor import Executor, MPIExecutor
-from lute.tasks.util.environment import setup_smd2_env
+from lute.tasks.util.environment import setup_smd1_env, setup_smd2_env
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
@@ -148,6 +148,9 @@ SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 SmallDataXESAnalyzer.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
 )
+
+BeamlineSummarizer: Executor = Executor("SummarizeBeamline")
+"""Runs Small Data beamline summary scripts."""
 
 # Geometry
 ##########
