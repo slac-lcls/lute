@@ -1,4 +1,4 @@
-#include "server.hh"
+#include "server/server.hh"
 
 #include <gtest/gtest.h>
 

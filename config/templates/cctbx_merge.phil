@@ -1,15 +1,33 @@
+{%- if dispatch_step_list is defined and dispatch_step_list -%}
+dispatch {
+  step_list = {{ dispatch_step_list }}
+}
+{% endif -%}
 input {
-  path = {{ input_path }}
+  {% for p in input_path -%}
+  path = {{ p }}
+  {% endfor -%}
   experiments_suffix = {{ input_experiments_suffix }}
   reflections_suffix = {{ input_reflections_suffix }}
   parallel_file_load {
     method = {{ input_parallel_file_load_method }}
   }
 }
+mp {
+  method = {{ mp_method }}
+  psana2_mode = {{ mp_psana2_mode }}
+}
 filter {
   algorithm = {{ filter_algorithm }}
   unit_cell {
     algorithm = {{ filter_unit_cell_algorithm }}
+    value {
+      target_unit_cell = {{ filter_unit_cell_value_target_unit_cell if filter_unit_cell_value_target_unit_cell else "Auto" }}
+      relative_length_tolerance = {{ filter_unit_cell_value_relative_length_tolerance }}
+      absolute_angle_tolerance = {{ filter_unit_cell_value_absolute_angle_tolerance }}
+      target_space_group = {{ filter_unit_cell_value_target_space_group if filter_unit_cell_value_target_space_group else "Auto" }}
+    }
+    {%- if filter_unit_cell_algorithm == "cluster" and filter_unit_cell_cluster_covariance_file %}
     cluster {
       covariance {
         file = {{ filter_unit_cell_cluster_covariance_file }}
@@ -17,6 +35,7 @@ filter {
         mahalanobis = {{ filter_unit_cell_cluster_covariance_mahalanobis }}
       }
     }
+    {%- endif %}
   }
   outlier {
     min_corr = {{ filter_outlier_min_corr }}
@@ -30,32 +49,50 @@ select {
 }
 scaling {
   model = {{ scaling_model }}
+  algorithm = {{ scaling_algorithm }}
+  {%- if scaling_unit_cell is defined and scaling_unit_cell %}
+  unit_cell = {{ scaling_unit_cell }}
+  {%- endif %}
+  {%- if scaling_space_group is defined and scaling_space_group %}
+  space_group = {{ scaling_space_group }}
+  {%- endif %}
   resolution_scalar = {{ scaling_resolution_scalar }}
 }
 postrefinement {
   enable = {{ postrefinement_enable }}
   algorithm = {{ postrefinement_algorithm }}
+  target_weighting = {{ postrefinement_target_weighting }}
 }
 merging {
   d_min = {{ merging_d_min }}
+  {%- if merging_d_max is defined and merging_d_max %}
+  d_max = {{ merging_d_max }}
+  {%- endif %}
   merge_anomalous = {{ merging_merge_anomalous }}
   set_average_unit_cell = {{ merging_set_average_unit_cell }}
+  minimum_multiplicity = {{ merging_minimum_multiplicity }}
+  include_multiplicity_column = {{ merging_include_multiplicity_column }}
   error {
     model = {{ merging_error_model }}
+    ev11 {
+      minimizer = {{ merging_error_ev11_minimizer }}
+    }
   }
 }
 statistics {
   n_bins = {{ statistics_n_bins }}
   report_ML = {{ statistics_report_ML }}
   cciso {
-    mtz_file = {{ statistics_cciso_mtz_file }}
+    mtz_file = {{ statistics_cciso_mtz_file if statistics_cciso_mtz_file else "None" }}
     mtz_column_F = {{ statistics_cciso_mtz_column_F }}
   }
 }
 output {
   prefix = {{ output_prefix }}
   output_dir = {{ output_output_dir }}
+  {%- if output_tmp_dir is defined and output_tmp_dir %}
   tmp_dir = {{ output_tmp_dir }}
+  {%- endif %}
   do_timing = {{ output_do_timing }}
   log_level = {{ output_log_level }}
   save_experiments_and_reflections = {{ output_save_experiments_and_reflections }}
@@ -63,4 +100,3 @@ output {
 parallel {
   a2a = {{ parallel_a2a }}
 }
-

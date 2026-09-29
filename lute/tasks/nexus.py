@@ -39,9 +39,15 @@ class ConvertSMDToNexus(Task):
     easily, but there has been no reason to do this yet.
     """
 
-    def __init__(self, *, params: ConvertSMDToNexusParameters, row_ids=None) -> None:
+    def __init__(
+        self,
+        *,
+        params: ConvertSMDToNexusParameters,
+        use_mpi: bool = False,
+        row_ids=None,
+    ) -> None:
         self._task_parameters: ConvertSMDToNexusParameters
-        super().__init__(params=params, row_ids=row_ids)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _pre_run(self) -> None:
         super()._pre_run()

@@ -19,15 +19,18 @@ rapidjson_proj = subproject('rapidjson')
 rapidjson_dep = rapidjson_proj.get_variable('rapidjson_dep')
 rapidjson_inc = rapidjson_proj.get_variable('rapidjson_inc')
 
+maestro_headers = include_directories('src')
+
 liblwmhttp = shared_library(
     'lwmhttp',
     [
         'src/server/handler.cc',
         'src/server/http.cc',
-        'src/server/server.cc'
+        'src/server/server.cc',
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [spdlog_dep, rapidjson_dep],
-    include_directories: spdlog_inc,
+    include_directories: maestro_headers,
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
     version: '1',
@@ -37,6 +40,7 @@ liblwmhttp = shared_library(
 
 lwm_http_dep = declare_dependency(
     link_with: [libspdlog, liblwmhttp],
+    include_directories: maestro_headers,
     dependencies: [spdlog_dep],
 )
 
@@ -44,14 +48,14 @@ liblwm = shared_library(
     'lwm',
     [
         'src/lwm/job.cc',
+        'src/lwm/job_registry.cc',
         'src/lwm/launcher.cc',
         'src/lwm/manager.cc',
-        'src/parallel/threadpool.cc'
     ],
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
     dependencies: [spdlog_dep, lwm_http_dep, rapidjson_dep],
-    include_directories: spdlog_inc,
+    include_directories: maestro_headers,
     version: '1',
     soversion: '1',
     link_args: ['-lpthread'],
@@ -59,6 +63,7 @@ liblwm = shared_library(
 
 lwm_dep = declare_dependency(
     link_with: [liblwm, liblwmhttp],
+    include_directories: maestro_headers,
     dependencies: [lwm_http_dep],
 )
 
@@ -66,6 +71,7 @@ py_mod = py3.extension_module('_maestro',
     ['src/_maestro/maestro.cc'],
     install: true,
     dependencies : [pybind11_dep, lwm_dep, spdlog_dep],
+    include_directories: maestro_headers,
     subdir: 'maestro/_maestro',
     install_rpath: '$ORIGIN',
 )
@@ -93,7 +99,7 @@ test_http = executable(
     ],
     install: get_option('install_tests'),
     install_rpath: '$ORIGIN',
-    include_directories: ['src/server'],
+    include_directories: maestro_headers,
 )
 test('HTTP parsing tests', test_http)
 
@@ -103,7 +109,8 @@ test_server = executable(
         'tests/cpp/test_server.cc',
         'src/server/http.cc',
         'src/server/server.cc',
-        'src/server/handler.cc'
+        'src/server/handler.cc',
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [
         gtest_dep,
@@ -112,7 +119,7 @@ test_server = executable(
     ],
     install: get_option('install_tests'),
     install_rpath: '$ORIGIN',
-    include_directories: ['src/server'],
+    include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
 test('Server logic tests', test_server)
@@ -125,7 +132,8 @@ test_maestro_api = executable(
         'src/server/handler.cc',
         'src/lwm/launcher.cc',
         'src/lwm/job.cc',
-        'src/parallel/threadpool.cc'
+        'src/lwm/job_registry.cc',
+        'src/parallel/threadpool.cc',
     ],
     dependencies: [
         gtest_dep,
@@ -134,7 +142,7 @@ test_maestro_api = executable(
     ],
     install: get_option('install_tests'),
     install_rpath: '$ORIGIN',
-    include_directories: ['src', 'src/server', 'src/lwm', 'src/parallel'],
+    include_directories: maestro_headers,
     link_args: ['-lpthread'],
 )
 test('Maestro REST API tests', test_maestro_api)

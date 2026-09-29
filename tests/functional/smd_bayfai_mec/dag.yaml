@@ -1,0 +1,21 @@
+!LUTE_DAG
+task_name: SmallDataProducer
+slurm_params: "--account=lcls:data --partition=milano --nodes=1 --ntasks-per-node=10"
+next:
+- !param_sweep
+  task_name: BayFAIOptimizer
+  slurm_params: "--account=lcls:data --partition=milano --nodes=1 --ntasks-per-node=20 --exclusive"
+  zip: true
+  param_matrix:
+    detname: ["Epix10kaQuad0", "Epix10kaQuad1", "Epix10kaQuad2", "Epix10kaQuad3"]
+    fixed:
+      - ["rot1", "rot3"]
+      - ["rot1", "rot3"]
+      - ["rot2", "rot3"]
+      - ["rot2", "rot3"]
+    center:
+      - {dist: 0.27, poni1: 0.06, poni2: 0.06, rot1: 0.0, rot2: -0.6, rot3: 0.0}
+      - {dist: 0.27, poni1: 0.08, poni2: -0.04, rot1: 0.0, rot2: -0.6, rot3: 0.0}
+      - {dist: 0.2, poni1: -0.01, poni2: 0.0, rot1: 1.1, rot2: 0.0, rot3: 0.0}
+      - {dist: 0.1, poni1: -0.01, poni2: 0.04, rot1: -0.4, rot2: 0.0, rot3: 0.0}
+  next: []

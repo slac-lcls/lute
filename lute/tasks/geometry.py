@@ -37,9 +37,13 @@ class OptimizeAgBhGeometryExhaustive(Task):
     """Task to perform geometry optimization."""
 
     def __init__(
-        self, *, params: OptimizeAgBhGeometryExhaustiveParameters, use_mpi: bool = True
+        self,
+        *,
+        params: OptimizeAgBhGeometryExhaustiveParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         hv.extension("bokeh")
         pn.extension()
         self._mpi_comm: MPI.Intracomm = MPI.COMM_WORLD

@@ -68,7 +68,6 @@ nav:
               - validators: "source/io/models/validators.md"
               - tests: "source/io/models/tests.md"
               - mpi_tests: "source/io/models/mpi_tests.md"
-          - calib: "source/io/calib.md"
           - config: "source/io/config.md"
           - db: "source/io/db.md"
           - _db:
