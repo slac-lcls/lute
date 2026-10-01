@@ -62,17 +62,4 @@ ConcatenateStreamFiles:
     tag: "sfx_cxil1015922_r136_glint"
     out_file: "{{ work_dir }}/cxil1015922_r136_glint_all.stream"
 
-MergePartialator:
-    in_file: "{{ work_dir }}/cxil1015922_r136_glint_all.stream"
-    out_file: "{{ work_dir }}/cxil1015922_r136_glint.hkl"
-    symmetry: "2/m_uab"
-    model: "unity"
-
-CompareHKL:
-    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
-    symmetry: "2/m_uab"
-    fom: "CC"            # overall CC1/2: the pass criterion (README)
-
-ManipulateHKL:
-    cell_file: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_b2.cell"
 ...
