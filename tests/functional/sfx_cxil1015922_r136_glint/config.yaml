@@ -35,6 +35,7 @@ FindPeaksSFX:
     make_powder_plots: false
 
 IndexGLINT:
+    executable: "/sdf/group/lcls/ds/tools/glint/lute/glint_launch.sh"   # a GLINT checkout; see README
     images: "{{ work_dir }}/sfx_cxil1015922_r136_glint_peaks/sfx_cxil1015922_r136_glint.list"
     peakfinder: "stored"     # reuse FindPeaksSFX's peakfinder8 peaks
     geom: "/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/cxil1015922_r0136_b2.geom"

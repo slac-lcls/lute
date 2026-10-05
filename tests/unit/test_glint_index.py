@@ -14,9 +14,11 @@ from lute.io.models.glint_index import IndexGLINTParameters
 
 HEADER = AnalysisHeader(experiment="test_exp", run=1, work_dir=tempfile.gettempdir())
 XTC: Dict[str, Any] = dict(exp="mfxx49820", run=16, zdist=0.1027, out="o.stream")
+LAUNCHER = "/path/to/glint/lute/glint_launch.sh"
 
 
 def P(**kw: Any) -> IndexGLINTParameters:
+    kw.setdefault("executable", LAUNCHER)
     return IndexGLINTParameters(lute_config=HEADER, **kw)
 
 
@@ -25,6 +27,17 @@ def bad(**kw: Any) -> str:
     with pytest.raises(Exception) as e:
         P(**kw)
     return str(e.value)
+
+
+# GLINT is not bundled with LUTE: no default launcher
+def test_executable_is_required() -> None:
+    with pytest.raises(Exception) as e:
+        IndexGLINTParameters(lute_config=HEADER, peaks="p.stream", out="o.stream")
+    assert "`executable` is required" in str(e.value)
+    assert "`executable` is required" in bad(
+        peaks="p.stream", out="o.stream", executable=""
+    )
+    assert P(peaks="p.stream", out="o.stream").executable == LAUNCHER
 
 
 # Exactly one frame source

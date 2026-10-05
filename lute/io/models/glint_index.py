@@ -13,9 +13,9 @@ that gap -- GPU blind indexing + cross-frame consensus -- and emits the same Cry
 ConcatenateStreamFiles / partialator already consume. For the best MERGE, set `tofile` (GLINT hands
 CrystFEL the refined-merge solution file).
 
-The Executor is `GLINTIndexer` in `lute/managed_tasks.py`. GLINT itself is not bundled with LUTE: the
-`executable` field points at a GLINT checkout's `lute/glint_launch.sh`, which activates a torch
-environment and runs the GLINT CLI.
+The Executor is `GLINTIndexer` in `lute/managed_tasks.py`. GLINT itself is not bundled with LUTE, so
+the `executable` field is required: it names a GLINT checkout's `lute/glint_launch.sh`, which
+activates a torch environment and runs the GLINT CLI.
 """
 
 from typing import Any, Dict, Literal, Optional
@@ -36,8 +36,10 @@ class IndexGLINTParameters(ThirdPartyParameters):
         result_from_params: str = ""
 
     executable: str = Field(
-        "/sdf/home/s/smarches/git/glint/lute/glint_launch.sh",
-        description="Launcher that activates the GLINT GPU (torch) env and runs glint.glint_cli.",
+        "",
+        description="REQUIRED. Path to a GLINT checkout's lute/glint_launch.sh, the launcher that "
+        "activates the GLINT GPU (torch) env and runs glint.glint_cli. GLINT is not bundled with "
+        "LUTE, so there is no default.",
         flag_type="",
     )
     peaks: str = Field(
@@ -365,6 +367,17 @@ class IndexGLINTParameters(ThirdPartyParameters):
             if legacy not in (None, ""):
                 values["tofile"] = legacy
         return values
+
+    @validator("executable", always=True)
+    def _executable_required(cls, executable: str) -> str:
+        """GLINT is not bundled with LUTE, so no launcher path is right for every installation. Fail at
+        config time, naming what to set, rather than when the Executor launches an empty command.
+        """
+        if not executable:
+            raise ValueError(
+                "`executable` is required: the path to a GLINT checkout's lute/glint_launch.sh"
+            )
+        return executable
 
     @validator("exp", always=True)
     def _one_source(cls, exp: Optional[str], values: Dict[str, Any]) -> Optional[str]:
