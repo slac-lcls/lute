@@ -7,10 +7,11 @@ I=0/sigma=0. To merge you must pick one of `integrate: true` (GLINT predicts and
 own reflections, writing real I/sigma) or the `tofile` -> indexamajig handoff. Feeding the default
 stream straight to partialator merges zeros.
 
-Why GLINT in LUTE: none of LUTE's bundled CrystFEL builds (0.10.2 default ... 0.12.0) are compiled
-with FFBIDX, so GPU fast-feedback-style indexing is simply unavailable via indexamajig. GLINT fills
-that gap -- GPU blind indexing + cross-frame consensus -- and emits the same CrystFEL `.stream` that
-ConcatenateStreamFiles / partialator already consume. For the best MERGE, set `tofile` (GLINT hands
+Why GLINT in LUTE: the CrystFEL builds in /sdf/group/lcls/ds/tools/crystfel (0.10.2, LUTE's default,
+to 0.13.0) are compiled without FFBIDX; CrystFEL's GPU fast-feedback indexer is only in the separate
+build under /sdf/group/lcls/ds/tools/crystfel-fast-feedback-indexer. GLINT adds GPU blind indexing
+with cross-frame consensus, and emits the same CrystFEL `.stream` that ConcatenateStreamFiles /
+partialator already consume. For the best MERGE, set `tofile` (GLINT hands
 CrystFEL the refined-merge solution file).
 
 The Executor is `GLINTIndexer` in `lute/managed_tasks.py`. GLINT itself is not bundled with LUTE, so
