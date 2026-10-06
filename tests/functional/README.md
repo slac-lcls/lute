@@ -40,7 +40,7 @@
 
 - Geometries and cells are read from `/sdf/group/lcls/ds/tools/lute/test_utilities/sfx/`. The copies
   committed in each test directory are the source to deploy there.
-- The GLINT tests run GLINT from `/sdf/group/lcls/ds/tools/glint/lute/glint_launch.sh` (`executable`
+- The GLINT tests run GLINT from `/sdf/group/lcls/ds/tools/glint/v0.1.0/lute/glint_launch.sh` (`executable`
   in each config). GLINT is not bundled with LUTE, so `IndexGLINT` has no default `executable`; that
   path needs a GLINT checkout. Its indexing step runs on ampere, so a run_functional.py `--account`
   must be valid there.

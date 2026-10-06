@@ -32,7 +32,7 @@ GLINTIndexer reads the .cxi files FindPeaksSFX writes and reuses their stored pe
 (`peakfinder: stored`), so it indexes exactly the peaks the CrystFEL test does. It runs blind
 (cross-frame consensus). GLINT is not bundled with LUTE, so `executable` has no default: it must
 name a GLINT checkout's `lute/glint_launch.sh`. This config uses
-`/sdf/group/lcls/ds/tools/glint/lute/glint_launch.sh`, which has to be deployed like the files in
-`test_utilities/sfx/` (GLINT `main` from 1 Oct 2026 on has everything these tests use). The
+`/sdf/group/lcls/ds/tools/glint/v0.1.0/lute/glint_launch.sh`, which has to be deployed like the files in
+`test_utilities/sfx/` (GLINT v0.1.0 or later has everything these tests use). The
 indexing step needs a GPU node (ampere). If run_functional.py is given `--account=...`, that
 account must also be valid on ampere.

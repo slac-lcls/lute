@@ -59,7 +59,7 @@ CC1/2 0.27 and GLINT's to 0.08. Handing GLINT's orientations to CrystFEL gave 0.
 refinement also rejected all 887 frames that only GLINT had indexed, which the strict gate had passed.
 
 GLINT is not bundled with LUTE, so `executable` has no default: it must name a GLINT checkout's
-`lute/glint_launch.sh`. This config uses `/sdf/group/lcls/ds/tools/glint/lute/glint_launch.sh`, which has
-to be deployed like the files in `test_utilities/sfx/` (GLINT `main` from 1 Oct 2026 on has
+`lute/glint_launch.sh`. This config uses `/sdf/group/lcls/ds/tools/glint/v0.1.0/lute/glint_launch.sh`, which has
+to be deployed like the files in `test_utilities/sfx/` (GLINT v0.1.0 or later has
 everything these tests use). The indexing step needs a GPU node (ampere). If run_functional.py is
 given `--account=...`, that account must also be valid on ampere.
