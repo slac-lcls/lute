@@ -14,7 +14,7 @@ __author__ = "Gabriel Dorlhiac"
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 from pydantic import (
     BaseModel,
@@ -507,6 +507,53 @@ class ConcatenateStreamFilesParameters(TaskParameters):
         description="Tag identifying the stream files to merge.",
     )
 
+    elog_tag: Optional[str] = Field(
+        "",
+        description=(
+            "eLog tag identifying a set of runs to gather stream files from. "
+            "When set, `stream_files` is auto-resolved by calling "
+            "get_elog_runs_by_tag(experiment, elog_tag) and looking up each "
+            "resolved run's IndexCrystFEL output stream in the LUTE "
+            "database - this is how a non-run-dependent StreamFileConcatenator "
+            "submission (see `--tag` on submit_slurm/launch_slurm) gathers an "
+            "eLog-authoritative file list instead of relying on the "
+            "filename-glob fallback below. Can be populated literally, or via "
+            "`{{ $TAG }}` substitution if the submission set the TAG "
+            "environment variable. Ignored if `stream_files` is set "
+            "explicitly."
+        ),
+    )
+
+    elog_sample: Optional[str] = Field(
+        "",
+        description=(
+            "eLog sample name identifying a set of runs to gather stream files "
+            "from. The sample counterpart of `elog_tag` above, and behaves "
+            "identically: when set, `stream_files` is auto-resolved by calling "
+            "get_elog_runs_by_sample(experiment, elog_sample) and looking up "
+            "each resolved run's IndexCrystFEL output stream in the LUTE "
+            "database. Selects on the `sample` field stored directly on each "
+            "run document (what was physically in the beam) rather than on "
+            "tags attached to eLog entries. Mutually exclusive with "
+            "`elog_tag`. Can be populated literally, or via `{{ $SAMPLE }}` "
+            "substitution if the submission set the SAMPLE environment "
+            "variable (e.g. via --sample on submit_slurm/launch_slurm). "
+            "Ignored if `stream_files` is set explicitly."
+        ),
+    )
+
+    stream_files: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Explicit list of stream files to concatenate. When non-empty, "
+            "this takes precedence over the `in_file`/`tag` directory-glob "
+            "used today. Auto-resolved from `elog_tag`/`elog_sample` when "
+            "either is set and this is left empty; otherwise stays empty and "
+            "the task falls back to its existing glob-based behavior, "
+            "unchanged."
+        ),
+    )
+
     out_file: str = Field(
         "", description="Path to merged output stream file.", is_result=True
     )
@@ -532,6 +579,45 @@ class ConcatenateStreamFilesParameters(TaskParameters):
                 stream_tag: str = Path(stream_file).name.split("_")[-1].split(".")[0]
                 return stream_tag
         return tag
+
+    @validator("stream_files", always=True)
+    def validate_stream_files(
+        cls, stream_files: List[str], values: Dict[str, Any]
+    ) -> List[str]:
+        if not stream_files:
+            elog_tag: Optional[str] = values.get("elog_tag")
+            elog_sample: Optional[str] = values.get("elog_sample")
+            if elog_tag and elog_sample:
+                raise ValueError(
+                    "elog_tag and elog_sample are mutually exclusive run "
+                    "selectors - set one or the other (or set stream_files "
+                    "explicitly)."
+                )
+            if elog_tag:
+                experiment: str = values["lute_config"].experiment
+                work_dir: str = values["lute_config"].work_dir
+                from lute.io.db import gather_tagged_run_results
+
+                return gather_tagged_run_results(
+                    experiment,
+                    elog_tag,
+                    "IndexCrystFEL",
+                    "out_file",
+                    work_dir,
+                )
+            if elog_sample:
+                experiment = values["lute_config"].experiment
+                work_dir = values["lute_config"].work_dir
+                from lute.io.db import gather_sampled_run_results
+
+                return gather_sampled_run_results(
+                    experiment,
+                    elog_sample,
+                    "IndexCrystFEL",
+                    "out_file",
+                    work_dir,
+                )
+        return stream_files
 
     @validator("out_file", always=True)
     def validate_out_file(cls, tag: str, values: Dict[str, Any]) -> str:
@@ -577,42 +663,104 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
             "",
             description="Directory output files will be placed",
         )
-        output_composite_output: bool = Field(
-            True,
+        output_composite_output: Optional[bool] = Field(
+            None,
             description=(
                 "If True, save one set of experiment/reflection files per process, "
                 "where each is a concatenated list of all the successful events "
                 "examined by that process. If False, output a separate "
-                "experiment/reflection file per image (generates a lot of files)."
+                "experiment/reflection file per image (generates a lot of files). "
+                "Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of True) unless explicitly "
+                "set."
             ),
         )
         output_logging_dir: str = Field(
             "", description="Directory output log files will be placed"
         )
-        output_logging_option: str = Field(
-            "suppressed",
+        output_logging_option: Optional[str] = Field(
+            None,
             description=(
                 "Logging verbosity option. One of: normal, suppressed, disabled. "
                 "'suppressed' silences per-image log output (recommended for MPI jobs). "
-                "'normal' writes a log file per MPI rank. 'disabled' turns off logging."
+                "'normal' writes a log file per MPI rank. 'disabled' turns off logging. "
+                "Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of 'suppressed') unless "
+                "explicitly set."
             ),
         )
 
         # Dispatch settings: dispatch_
-        dispatch_index: bool = Field(
-            True,
+        dispatch_index: Optional[bool] = Field(
+            None,
             description=(
                 "Attempt to index images. find_spots also needs to be True for "
-                "this to work"
+                "this to work. Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of True) unless explicitly "
+                "set."
             ),
         )
-        dispatch_refine: bool = Field(
-            False, description="If True, after indexing, refine the experimental models"
-        )
-        dispatch_integrate: bool = Field(
-            True,
+        dispatch_refine: Optional[bool] = Field(
+            None,
             description=(
-                "Integrate indexed images. Ignored if index=False or find_spots=False"
+                "If True, after indexing, refine the experimental models. "
+                "Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of False) unless "
+                "explicitly set."
+            ),
+        )
+        dispatch_integrate: Optional[bool] = Field(
+            None,
+            description=(
+                "Integrate indexed images. Ignored if index=False or "
+                "find_spots=False. Omitted from the rendered phil (falling "
+                "back to dials.stills_process's own default of True) unless "
+                "explicitly set."
+            ),
+        )
+        dispatch_process_percent: Optional[float] = Field(
+            None,
+            description=(
+                "Process only a subsample of the input images. "
+                "dials.stills_process (and cctbx.xfel.process, which wraps it "
+                "unchanged) selects a uniform-stride subset of the full event "
+                "list scaled to this percentage (0-100), NOT the first N "
+                "images -- that is input.max_images instead, which truncates "
+                "to a contiguous prefix and introduces start-of-run bias. "
+                "Confirmed as a genuine, validated top-level phil field via "
+                "`cctbx.xfel.process -c -e2` (it appears as `dispatch.process_percent`); "
+                "previously missing from this model, which silently dropped "
+                "the value as an unrecognized PhilParameters.Config.extra='allow' "
+                "passthrough field with no effect on the rendered phil -- see "
+                "LUTE's own '_sqlite: Unable to parse parameter ... properly!' "
+                "warning for the symptom this field fixes. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default of processing every image) unless explicitly set."
+            ),
+        )
+        dispatch_hit_finder_enable: Optional[bool] = Field(
+            None,
+            description=(
+                "Whether to filter out images that do not have at least "
+                "minimum_number_of_reflections strong spots. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default) unless explicitly set."
+            ),
+        )
+        dispatch_hit_finder_minimum_number_of_reflections: Optional[int] = Field(
+            None,
+            description=(
+                "Minimum number of strong spots for an image to be considered "
+                "a hit and processed further. Omitted from the rendered phil "
+                "unless explicitly set."
+            ),
+        )
+        dispatch_hit_finder_maximum_number_of_reflections: Optional[int] = Field(
+            None,
+            description=(
+                "Maximum number of strong spots for an image to still be "
+                "considered for processing. Omitted from the rendered phil "
+                "unless explicitly set."
             ),
         )
 
@@ -620,6 +768,60 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         mp_method: str = Field(
             "mpi",  # *multiprocessing sge lsf pbs mpi
             description="The multiprocessing method to use",
+        )
+
+        # Radial average parameters: radial_average_
+        radial_average_enable: Optional[bool] = Field(
+            None,
+            description=(
+                "Calculate a radial average of each image, used e.g. to check "
+                "detector distance calibration against known powder ring "
+                "positions. Omitted from the rendered phil unless explicitly "
+                "set."
+            ),
+        )
+        radial_average_two_theta_low: Optional[float] = Field(
+            None,
+            description=(
+                "Low two-theta (degrees) bound for the radial average range. "
+                "Omitted from the rendered phil unless explicitly set."
+            ),
+        )
+        radial_average_two_theta_high: Optional[float] = Field(
+            None,
+            description=(
+                "High two-theta (degrees) bound for the radial average range. "
+                "Omitted from the rendered phil unless explicitly set."
+            ),
+        )
+        radial_average_verbose: Optional[bool] = Field(
+            None,
+            description=(
+                "Verbose output for the radial average calculation. Omitted "
+                "from the rendered phil unless explicitly set."
+            ),
+        )
+        radial_average_output_bins: Optional[bool] = Field(
+            None,
+            description=(
+                "Output the radial average bins. Omitted from the rendered "
+                "phil unless explicitly set."
+            ),
+        )
+        radial_average_show_plots: Optional[bool] = Field(
+            None,
+            description=(
+                "Show plots of the radial average. Omitted from the rendered "
+                "phil unless explicitly set."
+            ),
+        )
+        radial_average_mask: Optional[str] = Field(
+            None,
+            description=(
+                "Path to a mask file used when calculating the radial "
+                "average. Omitted from the rendered phil unless explicitly "
+                "set."
+            ),
         )
 
         # Spotfinding parameters: spotfinder_
@@ -634,41 +836,55 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
                 "conjunction with lookup.gain_map parameter."
             ),
         )
-        spotfinder_threshold_dispersion_sigma_bkgnd: float = Field(
-            6,
+        spotfinder_threshold_dispersion_sigma_bkgnd: Optional[float] = Field(
+            None,
             description=(
                 "The number of standard deviations of the index of dispersion "
                 "(variance / mean) in the local area below which the pixel "
-                "will be classified as background."
+                "will be classified as background. Omitted from the rendered "
+                "phil (falling back to dials.stills_process's own default of "
+                "6) unless explicitly set."
             ),
         )
-        spotfinder_threshold_dispersion_sigma_strong: float = Field(
-            3,
+        spotfinder_threshold_dispersion_sigma_strong: Optional[float] = Field(
+            None,
             description=(
                 "The number of standard deviations above the mean in the local "
-                "area above which the pixel will be classified as strong."
+                "area above which the pixel will be classified as strong. "
+                "Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of 3) unless explicitly "
+                "set."
             ),
         )
-        spotfinder_threshold_dispersion_global_threshold: float = Field(
-            0,
+        spotfinder_threshold_dispersion_global_threshold: Optional[float] = Field(
+            None,
             description=(
                 "The global threshold value. Consider all pixels less than "
-                "this value to be part of the background."
+                "this value to be part of the background. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default of 0) unless explicitly set."
             ),
         )
-        spotfinder_threshold_dispersion_kernel_size: Tuple[int, int] = Field(
-            (6, 6),
+        spotfinder_threshold_dispersion_kernel_size: Optional[Tuple[int, int]] = Field(
+            None,
             description=(
                 "The size of the local area around the spot in which to "
                 "calculate the mean and variance. The kernel is given as a box "
-                "of size (2 * nx + 1, 2 * ny + 1) centred at the pixel."
+                "of size (2 * nx + 1, 2 * ny + 1) centred at the pixel. Omitted "
+                "from the rendered phil (falling back to dials.stills_process's "
+                "own default of (3, 3)) unless explicitly set - note this "
+                "differs from the (6, 6) this field used to hardcode "
+                "unconditionally."
             ),
         )
         spotfinder_filter_min_spot_size: Optional[int] = Field(
-            3,
+            None,
             description=(
                 "The minimum number of contiguous pixels for a spot to be "
-                "accepted by the filtering algorithm."
+                "accepted by the filtering algorithm. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default of 'Auto', an adaptive per-image threshold rather "
+                "than a fixed count) unless explicitly set."
             ),
         )
         spotfinder_filter_d_min: Optional[float] = Field(
@@ -678,24 +894,45 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
                 "accepted by the filtering algorithm."
             ),
         )
+        spotfinder_filter_max_spot_size: Optional[int] = Field(
+            None,
+            description=(
+                "The maximum number of contiguous pixels for a spot to be "
+                "accepted by the filtering algorithm. Omitted from the "
+                "rendered phil unless explicitly set."
+            ),
+        )
+        spotfinder_threshold_algorithm: Optional[str] = Field(
+            None,
+            description=(
+                "Spotfinding threshold algorithm: one of 'dispersion', "
+                "'dispersion_extended', or 'radial_profile'. Omitted from the "
+                "rendered phil (falling back to dials.stills_process's own "
+                "default of dispersion_extended) unless explicitly set."
+            ),
+        )
 
         # Indexing parameters: indexing_
-        indexing_stills_refine_candidates_with_known_symmetry: bool = Field(
-            False,
+        indexing_stills_refine_candidates_with_known_symmetry: Optional[bool] = Field(
+            None,
             description=(
                 "If False, when choosing the best set of candidate basis "
                 "solutions, refine the candidates in the P1 setting. If True, "
                 "after indexing in P1, convert the candidates to the known "
                 "symmetry and apply the corresponding change of basis to the "
-                "indexed reflections."
+                "indexed reflections. Omitted from the rendered phil (falling "
+                "back to dials.stills_process's own default of False) unless "
+                "explicitly set."
             ),
         )
-        indexing_stills_refine_all_candidates: bool = Field(
-            True,
+        indexing_stills_refine_all_candidates: Optional[bool] = Field(
+            None,
             description=(
                 "If False, no attempt is made to refine the model from initial "
                 "basis vector selection. The indexing solution with the best "
-                "RMSD is chosen."
+                "RMSD is chosen. Omitted from the rendered phil (falling back "
+                "to dials.stills_process's own default of True) unless "
+                "explicitly set."
             ),
         )
         indexing_known_symmetry_space_group: Optional[str] = Field(
@@ -704,36 +941,68 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         indexing_known_symmetry_unit_cell: Optional[str] = Field(
             None, description="Target unit cell for indexing."
         )
+        indexing_refinement_protocol_d_min_start: Optional[float] = Field(
+            None,
+            description=(
+                "Resolution (d_min) used for the initial, low-resolution "
+                "indexing refinement macrocycle, before subsequent cycles "
+                "step down toward the full resolution limit. Omitted from "
+                "the rendered phil unless explicitly set."
+            ),
+        )
+        indexing_multiple_lattice_search_max_lattices: Optional[int] = Field(
+            None,
+            description=(
+                "Maximum number of candidate lattices to search for per "
+                "still image, enabling multi-lattice indexing. Omitted from "
+                "the rendered phil unless explicitly set."
+            ),
+        )
 
         # Integration parameters: integration_
-        integration_background_simple_outlier_plane_n_sigma: int = Field(
-            10,
+        integration_lookup_mask: Optional[str] = Field(
+            None, description="The path to the mask file used during integration."
+        )
+        integration_background_simple_outlier_plane_n_sigma: Optional[float] = Field(
+            None,
             description=(
                 "The number of standard deviations above the threshold "
                 "plane to use in rejecting outliers from background "
-                "calculation."
+                "calculation. Omitted from the rendered phil (falling back "
+                "to dials.stills_process's own default of 4.0) unless "
+                "explicitly set."
             ),
         )
-        integration_summation_detector_gain: float = Field(
-            1.0,
+        integration_summation_detector_gain: Optional[float] = Field(
+            None,
             description=(
                 "Multiplier for variances after integration of still images. See "
-                "Leslie 1999."
+                "Leslie 1999. Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of 1) unless explicitly "
+                "set."
             ),
         )
 
         # Profiling parameters: profile_
-        profile_gaussian_rs_centroid_definition: str = Field(
-            "com",
-            description="The centroid to use as beam divergence (centre of mass or s1)",
+        profile_gaussian_rs_centroid_definition: Optional[str] = Field(
+            None,
+            description=(
+                "The centroid to use as beam divergence (centre of mass or "
+                "s1). Omitted from the rendered phil (falling back to "
+                "dials.stills_process's own default of 's1') unless "
+                "explicitly set."
+            ),
         )
 
         # Refinement options: refinement_
         refinement_reflections_outlier_algorithm: Optional[str] = Field(
             None,
             description=(
-                "Outlier rejection algorithm. If auto is selected, the "
-                "algorithm is chosen automatically."
+                "Outlier rejection algorithm: one of 'null', 'auto', 'mcd', "
+                "'tukey', 'sauter_poon'. If auto is selected, the algorithm "
+                "is chosen automatically. Omitted from the rendered phil "
+                "(falling back to dials.stills_process's own default of "
+                "'auto') unless explicitly set."
             ),
         )
 
@@ -757,8 +1026,18 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
         flag_type="",
     )
     cctbx_executable: str = Field(
-        "/sdf/group/lcls/ds/tools/cctbx/psana2/build/bin/dials.stills_process",
-        description="CCTBX indexing program (DIALS).",
+        "/sdf/group/lcls/ds/tools/cctbx/psana2/build/bin/cctbx.xfel.process",
+        description=(
+            "CCTBX indexing program. cctbx.xfel.process wraps dials.stills_process "
+            "unchanged (identical phil scope for dispatch/spotfinder/indexing/"
+            "integration/profile/refinement) and adds two LCLS-specific scopes: "
+            "radial_average (see PhilParameters.radial_average_*) and optional "
+            "MySQL experiment/trial/rungroup database logging, gated entirely on "
+            "the top-level 'experiment_tag' phil parameter. LUTE does not expose "
+            "experiment_tag as a field, so it is always left at its 'None' "
+            "default and no database connection is ever attempted - safe to use "
+            "with no DB dependency."
+        ),
         flag_type="",
     )
     in_file: str = Field(
@@ -772,7 +1051,28 @@ class IndexCCTBXXFELParameters(ThirdPartyParameters):
     )
     data_spec: Optional[Dict[str, Union[str, float, int]]] = Field(
         None,
-        description="Provide a CCTBX specification for data access.",
+        description=(
+            "Provide a CCTBX specification for data access. Keys become "
+            "'key=value' lines in the generated psana locator (.loc) file, "
+            "so any locator parameter the psana2 format reader accepts can "
+            "be passed here. Always required: 'experiment', 'run', "
+            "'detector_address'. Commonly useful LCLS calibration keys "
+            "(all optional, all superseded for detector geometry purposes "
+            "by phil_parameters.input_reference_geometry if that is set): "
+            "'<detector>.detz_offset' (float, mm) - raw detector-to-sample "
+            "distance used by the format reader; irrelevant once "
+            "input_reference_geometry overrides the detector model. "
+            "'wavelength_offset' (float) - fixed correction applied to the "
+            "nominal beamline wavelength. 'spectrum_eV_per_pixel' and "
+            "'spectrum_eV_offset' (floats) - linear single-shot photon "
+            "energy calibration fit by xfel.fee_calibration from FEE "
+            "spectrometer notch scans, applied per-event as "
+            "eV = spectrum_eV_offset + pixel_centroid * "
+            "spectrum_eV_per_pixel; omitting these falls back to one fixed "
+            "wavelength for every shot in the run rather than a true "
+            "per-shot value (a precision refinement, not required for "
+            "valid indexing)."
+        ),
         flag_type="",
     )
     phil_file: str = Field(
