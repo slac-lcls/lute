@@ -30,9 +30,9 @@ here are the source to deploy there (`maybe_lyso.cell` is already in `test_utili
 
 GLINTIndexer reads the .cxi files FindPeaksSFX writes and reuses their stored peakfinder8 peaks
 (`peakfinder: stored`), so it indexes exactly the peaks the CrystFEL test does. It runs blind
-(cross-frame consensus). GLINT is not bundled with LUTE, so `executable` has no default: it must
-name a GLINT checkout's `lute/glint_launch.sh`. This config uses
-`/sdf/group/lcls/ds/tools/glint/v0.1.0/lute/glint_launch.sh`, which has to be deployed like the files in
-`test_utilities/sfx/` (GLINT v0.1.0 or later has everything these tests use). The
-indexing step needs a GPU node (ampere). If run_functional.py is given `--account=...`, that
-account must also be valid on ampere.
+(cross-frame consensus). GLINT is not bundled with LUTE. `GLINTIndexer` (lute/managed_tasks.py) runs
+the release pinned in `lute/io/models/glint_index.py`, `/sdf/group/lcls/ds/tools/glint/v0.1.0`, in
+the conda1 torch environment `ana-4.0.58-py3-minipytorch`; that directory has to exist like the
+files in `test_utilities/sfx/` (GLINT v0.1.0 or later has everything these tests use). The indexing
+step needs a GPU node (ampere). If run_functional.py is given `--account=...`, that account must
+also be valid on ampere.

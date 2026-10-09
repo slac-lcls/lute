@@ -7,7 +7,11 @@ here.
 import os
 
 from lute.execution.executor import Executor, MPIExecutor
-from lute.tasks.util.environment import setup_smd2_env
+from lute.tasks.util.environment import (
+    setup_glint_env,
+    setup_glint_env_ana59,
+    setup_smd2_env,
+)
 from lute.tasks.tasklets import (
     clone_smalldata,
     compare_hkl_fom_summary,
@@ -188,7 +192,19 @@ CrystFELIndexer.add_tasklet(
 )
 
 GLINTIndexer: Executor = Executor("IndexGLINT")
-"""Runs GPU blind indexing (cross-frame consensus) using GLINT. Needs a GPU partition."""
+"""Runs GPU blind indexing (cross-frame consensus) using GLINT. Needs a GPU partition.
+
+GLINT is not bundled with LUTE. This runs the release pinned in lute/io/models/glint_index.py
+(/sdf/group/lcls/ds/tools/glint/<tag>; LUTE_GLINT_ROOT overrides) in the conda1 torch environment
+ana-4.0.58-py3-minipytorch, which also carries psana1 for the raw-xtc source."""
+GLINTIndexer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
+GLINTIndexer.update_environment(setup_glint_env)
+
+GLINTIndexerAna59: Executor = Executor("IndexGLINT")
+"""IndexGLINT in ana-4.0.59-py3-minipytorch (torch 1.11): for detectors whose psana ConfigV the
+default environment cannot read (e.g. Jungfrau ConfigV4). Otherwise identical to GLINTIndexer."""
+GLINTIndexerAna59.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
+GLINTIndexerAna59.update_environment(setup_glint_env_ana59)
 
 StreamFileConcatenator: Executor = Executor("ConcatenateStreamFiles")
 """Concatenate output stream files."""

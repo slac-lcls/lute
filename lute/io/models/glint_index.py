@@ -14,11 +14,17 @@ with cross-frame consensus, and emits the same CrystFEL `.stream` that Concatena
 partialator already consume. For the best MERGE, set `tofile` (GLINT hands
 CrystFEL the refined-merge solution file).
 
-The Executor is `GLINTIndexer` in `lute/managed_tasks.py`. GLINT itself is not bundled with LUTE, so
-the `executable` field is required: it names a GLINT checkout's `lute/glint_launch.sh`, which
-activates a torch environment and runs the GLINT CLI.
+The Executor is `GLINTIndexer` in `lute/managed_tasks.py`. GLINT is not bundled with LUTE: the managed
+Task sources conda1's psconda.sh and puts the torch environment (ana-4.0.58-py3-minipytorch) first on
+PATH, with the pinned GLINT release (`GLINT_ROOT_DEFAULT` below; the LUTE_GLINT_ROOT environment
+variable overrides it for a personal checkout) on PYTHONPATH. `executable` is that environment's
+`python`, and the model picks the program from the frame source: `-m glint.glint_cli` for `peaks` /
+`images`, the raw-xtc reader `experiments/xtc_bridge/glint_xtc.py` for `exp`. The two programs do not
+take the same flags, so the validators below reject, at config time, an option the chosen program
+would not accept.
 """
 
+import os
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import Field, PositiveFloat, PositiveInt, root_validator, validator
@@ -27,6 +33,23 @@ from lute.io.models.base import ThirdPartyParameters
 
 __all__ = ["IndexGLINTParameters"]
 __author__ = "Stefano Marchesini"
+
+GLINT_ROOT_DEFAULT: str = "/sdf/group/lcls/ds/tools/glint/v0.1.0"
+"""The GLINT release LUTE runs: one directory per release tag under tools/glint, never edited."""
+
+GLINT_CLI: str = "-m glint.glint_cli"
+"""Program for the `peaks` / `images` sources (two argv entries; LUTE splits on the space)."""
+
+GLINT_XTC_RELPATH: str = "experiments/xtc_bridge/glint_xtc.py"
+"""Program for the `exp` source, relative to the GLINT root. It puts the root on sys.path itself."""
+
+
+def glint_root() -> str:
+    """Root of the GLINT checkout: LUTE_GLINT_ROOT if set (a personal checkout), else the pinned
+    release. Read at validation time here and at launch time by the managed Task's environment
+    (lute.tasks.util.environment.setup_glint_env), so the program path and PYTHONPATH agree.
+    """
+    return os.environ.get("LUTE_GLINT_ROOT", GLINT_ROOT_DEFAULT)
 
 
 class IndexGLINTParameters(ThirdPartyParameters):
@@ -37,10 +60,17 @@ class IndexGLINTParameters(ThirdPartyParameters):
         result_from_params: str = ""
 
     executable: str = Field(
+        "python",
+        description="Interpreter of the GLINT environment. The GLINTIndexer managed Task puts that "
+        "environment's bin first on PATH, so the bare name resolves there; an absolute path to "
+        "another python is accepted.",
+        flag_type="",
+    )
+    program: str = Field(
         "",
-        description="REQUIRED. Path to a GLINT checkout's lute/glint_launch.sh, the launcher that "
-        "activates the GLINT GPU (torch) env and runs glint.glint_cli. GLINT is not bundled with "
-        "LUTE, so there is no default.",
+        description="Set by the model from the frame source; do not set. `-m glint.glint_cli` for "
+        "`peaks` / `images`; for `exp`, the raw-xtc reader experiments/xtc_bridge/glint_xtc.py under "
+        "the pinned GLINT root (LUTE_GLINT_ROOT overrides it).",
         flag_type="",
     )
     peaks: str = Field(
@@ -59,9 +89,9 @@ class IndexGLINTParameters(ThirdPartyParameters):
     )
     # ---- THIRD frame source: raw xtc, read in-process (psana1) or over envbridge (psana2) --------
     # PeakFinderSFX stays in the DAG and remains the default route; this is for runs where GLINT
-    # should read the xtc itself and no .cxi is wanted. It routes glint_launch.sh to
-    # experiments/xtc_bridge/glint_xtc.py instead of glint.glint_cli -- a different program with a
-    # different flag set, which is why the launcher whitelists rather than forwarding blindly.
+    # should read the xtc itself and no .cxi is wanted. It runs experiments/xtc_bridge/glint_xtc.py
+    # instead of glint.glint_cli -- a different program with a different flag set, which is why the
+    # validators below reject an option the chosen program does not take instead of passing it on.
     #
     # NOTE ON PEAK-FINDING, because this source changes who does it. With `peaks` the peaks come from
     # peakfinder8 upstream; with `images` you can set `peakfinder: stored` and REUSE the .cxi's own
@@ -220,6 +250,13 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="-",
         rename_param="N",
     )
+    max_events: Optional[PositiveInt] = Field(
+        None,
+        description="`exp` only: stop after this many events (glint_xtc.py --max-events). The "
+        "`peaks` / `images` counterpart is `n`.",
+        flag_type="--",
+        rename_param="max-events",
+    )
     out: str = Field(
         "",
         description="Output .stream. Orientation-only (placeholder I/sigma) unless `integrate` is "
@@ -234,9 +271,11 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="cell",
     )
-    mode: str = Field(
-        "auto",
-        description="Front end: auto | sparse (SFX stills) | dense (rotation clouds).",
+    mode: Optional[Literal["auto", "sparse", "dense"]] = Field(
+        None,
+        description="Front end: auto | sparse (SFX stills) | dense (rotation clouds). Unset resolves "
+        "to `auto` on `peaks` / `images`; glint_xtc.py has no such option, so it is rejected "
+        "with `exp`.",
         flag_type="--",
         rename_param="mode",
     )
@@ -252,9 +291,10 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="min-peaks",
     )
-    device: str = Field(
-        "auto",
-        description="auto (GPU if present) | cpu.",
+    device: Optional[Literal["auto", "cpu"]] = Field(
+        None,
+        description="auto (GPU if present) | cpu. Unset resolves to `auto` on `peaks` / `images`; "
+        "not an option of glint_xtc.py, so rejected with `exp`.",
         flag_type="--",
         rename_param="device",
     )
@@ -266,9 +306,10 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="tofile",
     )
-    lattice: str = Field(
-        "aP",
-        description="Bravais lattice code for --tofile (e.g. tPc tetragonal).",
+    lattice: Optional[str] = Field(
+        None,
+        description="Bravais lattice code for --tofile (e.g. tPc tetragonal). Unset resolves to "
+        "`aP` on `peaks` / `images`; not an option of glint_xtc.py, so rejected with `exp`.",
         flag_type="--",
         rename_param="lattice",
     )
@@ -336,16 +377,25 @@ class IndexGLINTParameters(ThirdPartyParameters):
         flag_type="--",
         rename_param="bg-mode",
     )
-    gate: Optional[Literal["none", "strict"]] = Field(
+    gate: Optional[Literal["none", "strict", "floor"]] = Field(
         None,
         description="What a frame must satisfy to be WRITTEN as a crystal (GLINT --gate). Unset = "
         "GLINT default `none`: every registration is written, which with a known `cell` is nearly "
         "every frame -- a known-cell search always returns the cell it was asked for. `strict`: at "
         "least 10 peaks and 25% of the frame's peaks matched (the GLINT paper's scoring bar); a "
         "failing frame is written as unindexed. Not null-calibrated: about 5% of dense frames with "
-        "no lattice still pass. Needs a GLINT checkout that has --gate.",
+        "no lattice still pass. `floor` adds a per-peak-count chance floor from the required "
+        "`floor` field. `peaks` / `images` only: the raw-xtc program has no gate, so `gate` is "
+        "rejected with `exp`.",
         flag_type="--",
         rename_param="gate",
+    )
+    floor: Optional[str] = Field(
+        None,
+        description="With `gate: floor`, a calibration name or `a,b[,c]` coefficients passed as "
+        "--floor. Required for that gate and invalid with the other gate choices.",
+        flag_type="--",
+        rename_param="floor",
     )
 
     # Validators run in field-definition order and see only EARLIER fields in `values`, so each of
@@ -368,17 +418,6 @@ class IndexGLINTParameters(ThirdPartyParameters):
             if legacy not in (None, ""):
                 values["tofile"] = legacy
         return values
-
-    @validator("executable", always=True)
-    def _executable_required(cls, executable: str) -> str:
-        """GLINT is not bundled with LUTE, so no launcher path is right for every installation. Fail at
-        config time, naming what to set, rather than when the Executor launches an empty command.
-        """
-        if not executable:
-            raise ValueError(
-                "`executable` is required: the path to a GLINT checkout's lute/glint_launch.sh"
-            )
-        return executable
 
     @validator("exp", always=True)
     def _one_source(cls, exp: Optional[str], values: Dict[str, Any]) -> Optional[str]:
@@ -419,7 +458,7 @@ class IndexGLINTParameters(ThirdPartyParameters):
 
     @validator("peakfinder", always=True)
     def _peakfinder_for_source(cls, pf: str, values: Dict[str, Any]) -> str:
-        """The valid finders differ per source, so reject the combinations the launcher would mangle.
+        """The valid finders differ per source, so reject the combinations the program would refuse.
 
         `stored` reuses a .cxi's own peakfinder8/Cheetah peak list, which raw xtc does not have.
         `pf8` needs the per-pixel q map only the xtc reader builds. `pf9` is .cxi-only for the same
@@ -446,13 +485,25 @@ class IndexGLINTParameters(ThirdPartyParameters):
             )
         return pf
 
-    @validator("det", "psana", "calib_dir", always=True)
+    @validator(
+        "det",
+        "psana",
+        "calib_dir",
+        "min_pix",
+        "son_min",
+        "thr_high",
+        "thr_low",
+        "pf8_min_snr",
+        "max_events",
+        always=True,
+    )
     def _xtc_only(cls, v: Any, values: Dict[str, Any], field: Any) -> Any:
-        """Reject the xtc-only knobs on the other two sources instead of letting them be dropped.
+        """Reject the xtc-only knobs on the other two sources.
 
-        glint_launch.sh whitelists flags per destination, so one of these set alongside `peaks` would
-        be silently discarded -- and the run would look as though it had honoured a setting the
-        indexer never saw. NOTE `wavelength` is deliberately NOT in this list: it is meaningful on
+        glint.glint_cli has none of these flags, so one of them set alongside `peaks` would end the
+        run at argparse, after the queue wait, instead of here at config time. The peak-finder
+        thresholds are among them: on `peaks` / `images` the finder is peakfinder8 upstream or the
+        .cxi's stored peaks. NOTE `wavelength` is deliberately NOT in this list: it is meaningful on
         all three sources."""
         if v not in (None, "") and not values.get("exp"):
             raise ValueError(
@@ -498,3 +549,69 @@ class IndexGLINTParameters(ThirdPartyParameters):
                 "per-frame images)"
             )
         return image_dir
+
+    @validator("gate", always=True)
+    def _gate_not_on_xtc(
+        cls, gate: Optional[str], values: Dict[str, Any]
+    ) -> Optional[str]:
+        """glint_xtc.py has no write gate. A `gate: strict` that never runs is the failure this field
+        exists to end, so reject it at config time rather than let the run look gated.
+        """
+        if gate is not None and values.get("exp"):
+            raise ValueError(
+                "`gate` applies only to the `peaks` / `images` sources: the raw-xtc program "
+                "(glint_xtc.py) has no gate"
+            )
+        return gate
+
+    @validator("floor", always=True)
+    def _floor_matches_gate(
+        cls, floor: Optional[str], values: Dict[str, Any]
+    ) -> Optional[str]:
+        """Keep the dataset-specific floor paired with the CLI's `--gate floor` mode."""
+        if floor not in (None, "") and values.get("gate") != "floor":
+            raise ValueError("`floor` is used only with `gate: floor`")
+        if values.get("gate") == "floor" and floor in (None, ""):
+            raise ValueError("`gate: floor` requires `floor` (NAME|a,b[,c])")
+        return floor
+
+    @root_validator(skip_on_failure=True)
+    def _program_for_source(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Pick the program from the frame source and settle the flags the two programs disagree on.
+
+        A root validator because `program` is declared first (it has to precede every flag in the
+        argument list) while `exp` is declared later. On `peaks` / `images` the three options with
+        a non-empty default (`mode`, `device`, `lattice`) are filled in here, so the command line is
+        the same one the launcher script used to build; on `exp` they stay unset, and any
+        glint_cli-only option that was set is rejected rather than dropped."""
+        if values.get("exp"):
+            cli_only = [
+                name
+                for name in (
+                    "mode",
+                    "device",
+                    "lattice",
+                    "tofile",
+                    "cascade",
+                    "top_peaks",
+                    "image_dir",
+                    "event_axis",
+                    "n",
+                )
+                if values.get(name) not in (None, "", 0)
+            ]
+            if cli_only:
+                hint = (
+                    " (`max_events` is the frame cap on xtc)" if "n" in cli_only else ""
+                )
+                raise ValueError(
+                    f"{cli_only} are not options of the raw-xtc program (glint_xtc.py); "
+                    f"they apply to `peaks` / `images`{hint}"
+                )
+            values["program"] = f"{glint_root()}/{GLINT_XTC_RELPATH}"
+        else:
+            values["mode"] = values.get("mode") or "auto"
+            values["device"] = values.get("device") or "auto"
+            values["lattice"] = values.get("lattice") or "aP"
+            values["program"] = GLINT_CLI
+        return values

@@ -48,8 +48,9 @@ on the 171 frames both indexers indexed (same orientation on 166), CrystFEL's in
 CC1/2 0.27 and GLINT's to 0.08. Handing GLINT's orientations to CrystFEL gave 0.27. CrystFEL's
 refinement also rejected all 887 frames that only GLINT had indexed, which the strict gate had passed.
 
-GLINT is not bundled with LUTE, so `executable` has no default: it must name a GLINT checkout's
-`lute/glint_launch.sh`. This config uses `/sdf/group/lcls/ds/tools/glint/v0.1.0/lute/glint_launch.sh`, which has
-to be deployed like the files in `test_utilities/sfx/` (GLINT v0.1.0 or later has
-everything these tests use). The indexing step needs a GPU node (ampere). If run_functional.py is
-given `--account=...`, that account must also be valid on ampere.
+GLINT is not bundled with LUTE. `GLINTIndexer` (lute/managed_tasks.py) runs the release pinned in
+`lute/io/models/glint_index.py`, `/sdf/group/lcls/ds/tools/glint/v0.1.0`, in the conda1 torch
+environment `ana-4.0.58-py3-minipytorch`; that directory has to exist like the files in
+`test_utilities/sfx/` (GLINT v0.1.0 or later has everything these tests use). The indexing step needs
+a GPU node (ampere). If run_functional.py is given `--account=...`, that account must also be valid
+on ampere.
