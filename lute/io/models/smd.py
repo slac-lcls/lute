@@ -890,9 +890,7 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
     )
 
     @validator("python_script", always=True)
-    def validate_summary_script(
-        cls, python_script: str, values: Dict[str, Any]
-    ) -> str:
+    def validate_summary_script(cls, python_script: str, values: Dict[str, Any]) -> str:
         task_exp: str = values["lute_config"].experiment
         task_hutch: str = task_exp[:3]
         # Parse the hutch from the script now
@@ -900,10 +898,12 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
         summary_dir, summary_script = os.path.split(python_script)
         script_hutch = summary_script.split("_")[-1].split(".")[0]
         if script_hutch != task_hutch:
-            python_script = os.path.join(summary_dir, f"BeamlineSummaryPlots_{task_hutch}.py")
+            python_script = os.path.join(
+                summary_dir, f"BeamlineSummaryPlots_{task_hutch}.py"
+            )
             if not os.path.exists(python_script):
                 raise FileNotFoundError(
                     f"Summary script for hutch '{task_hutch}' not found at '{python_script}'.",
-                    f"Please ensure the summary script exists for the desired hutch."
+                    f"Please ensure the summary script exists for the desired hutch.",
                 )
         return python_script
