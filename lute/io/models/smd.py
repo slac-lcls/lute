@@ -46,7 +46,6 @@ from pydantic import (
 
 from lute.io.models.base import TaskParameters, ThirdPartyParameters, TemplateConfig
 from lute.io.models.validators import validate_smd_path, template_parameter_validator
-from lute.io.db import read_latest_db_entry
 
 
 class SubmitSMDParameters(ThirdPartyParameters):
@@ -874,19 +873,16 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
         description="Path to the beamline summary Python script",
         flag_type="",
     )
-
     experiment: str = Field(
         os.environ.get("EXPERIMENT", ""),
         description="Experiment Tag.",
         flag_type="--",
     )
-
     run: str = Field(
         os.environ.get("RUN_NUM", ""),
         description="Run Number.",
         flag_type="--",
     )
-
     postElog: bool = Field(
         True,
         description="Whether to post summary plots to the eLog. Requires url and credentials in environment variables.",
@@ -894,28 +890,20 @@ class SummarizeBeamlineParameters(ThirdPartyParameters):
     )
 
     @validator("python_script", always=True)
-    def validate_summary_scripts(
+    def validate_summary_script(
         cls, python_script: str, values: Dict[str, Any]
     ) -> str:
-        if python_script == "":
-            exp: str = values["lute_config"].experiment
-            hutch: str = exp[:3]
-            # Try from producer path
-            producer: Optional[str] = read_latest_db_entry(
-                f"{values['lute_config'].work_dir}", "SubmitSMD", "producer"
-            )
-            if producer:
-                smd_root: str = str(Path(producer).parent)
-            else:
-                # Try from default path
-                smd_root: str = (
-                    f"/sdf/data/lcls/ds/{hutch}/{exp}/results/smalldata_tools"
+        task_exp: str = values["lute_config"].experiment
+        task_hutch: str = task_exp[:3]
+        # Parse the hutch from the script now
+        # Script can be found path/to/run_summaries/BeamlineSummaryPlots_<hutch>.py
+        summary_dir, summary_script = os.path.split(python_script)
+        script_hutch = summary_script.split("_")[-1].split(".")[0]
+        if script_hutch != task_hutch:
+            python_script = os.path.join(summary_dir, f"BeamlineSummaryPlots_{task_hutch}.py")
+            if not os.path.exists(python_script):
+                raise FileNotFoundError(
+                    f"Summary script for hutch '{task_hutch}' not found at '{python_script}'.",
+                    f"Please ensure the summary script exists for the desired hutch."
                 )
-                if not os.path.exists(smd_root):
-                    raise ValueError(
-                        "Could not find smalldata_tools."
-                        "Please provide a valid path to the beamline summary script."
-                    )
-            path = f"{smd_root}/summaries/BeamlineSummaryPlots_{hutch}.py"
-            return path
         return python_script
