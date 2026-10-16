@@ -15,6 +15,10 @@ Classes:
     AnalyzeSmallDataXESParameters(TaskParameters): Parameter model for the
         AnalyzeSmallDataXES Task. Used to determine spatial/temporal overlap
         based on XES difference signal and provide basic XES feedback.
+
+    RunBeamlineSummaryParameters(ThirdPartyParameters): Parameters for running
+        Small Data beamline summary scripts. Used to provide basic feedback on
+        beamline performance and data quality.
 """
 
 __all__ = [
@@ -22,6 +26,7 @@ __all__ = [
     "AnalyzeSmallDataXSSParameters",
     "AnalyzeSmallDataXASParameters",
     "AnalyzeSmallDataXESParameters",
+    "SummarizeBeamlineParameters",
 ]
 __author__ = "Gabriel Dorlhiac"
 
@@ -848,3 +853,57 @@ class AnalyzeSmallDataXESParameters(TaskParameters):
         0,
         description="If non-zero load ROIs in batches. Slower but may help OOM errors.",
     )
+
+
+class SummarizeBeamlineParameters(ThirdPartyParameters):
+    """Parameters for running Small Data beamline summary scripts.
+
+    This task runs the beamline summary scripts that generate summary plots for each run based on the Small Data HDF5 file.
+    """
+
+    class Config(ThirdPartyParameters.Config):
+        """Identical to super-class Config but includes a result."""
+
+        set_result: bool = False
+        """Whether the Executor should mark a specified parameter as a result."""
+
+    executable: str = Field("python", description="Python executable.", flag_type="")
+    python_script: str = Field(
+        "",
+        description="Path to the beamline summary Python script",
+        flag_type="",
+    )
+    experiment: str = Field(
+        os.environ.get("EXPERIMENT", ""),
+        description="Experiment Tag.",
+        flag_type="--",
+    )
+    run: str = Field(
+        os.environ.get("RUN_NUM", ""),
+        description="Run Number.",
+        flag_type="--",
+    )
+    postElog: bool = Field(
+        True,
+        description="Whether to post summary plots to the eLog. Requires url and credentials in environment variables.",
+        flag_type="--",
+    )
+
+    @validator("python_script", always=True)
+    def validate_summary_script(cls, python_script: str, values: Dict[str, Any]) -> str:
+        task_exp: str = values["lute_config"].experiment
+        task_hutch: str = task_exp[:3]
+        # Parse the hutch from the script now
+        # Script can be found path/to/run_summaries/BeamlineSummaryPlots_<hutch>.py
+        summary_dir, summary_script = os.path.split(python_script)
+        script_hutch = summary_script.split("_")[-1].split(".")[0]
+        if script_hutch != task_hutch:
+            python_script = os.path.join(
+                summary_dir, f"BeamlineSummaryPlots_{task_hutch}.py"
+            )
+            if not os.path.exists(python_script):
+                raise FileNotFoundError(
+                    f"Summary script for hutch '{task_hutch}' not found at '{python_script}'.",
+                    f"Please ensure the summary script exists for the desired hutch.",
+                )
+        return python_script
