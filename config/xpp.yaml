@@ -36,8 +36,11 @@ SubmitSMD:
       # default: @db:current # Use the last value for current run, in database
       # default: @db:run:1   # Use the value for run 1, in database. Can choose any run
       #
-      # Can also setup a policy for each parameter
-      # getROIs: @db:current # Use the last value for ROIs for the current run
+      # Can also setup a policy for each parameter, including with nesting
+      # Use the last value for ROIs for the current run
+      # producer_parameters.getROIs: @db:current
+      # Use the run 1 value just for jungfrau
+      # producer_parameters.getROIs.jungfrau: @db:run:1
 
   # Command line arguments
   #map_by: "core"   # MPI resource mapping - take care with changing unless familiar

@@ -256,6 +256,36 @@ What does this mean? Let's unpack under a few situations. Let's assume that we h
 1. We are processing run 20. The group defines a range of `0-40` for included runs, so run 20 falls within it. The default policy is `@db:current`, so for `other_param` and `another`, if there are existing entries for run 20 in the database (i.e., we previously processed run 20), their values we will be taken from there. `ROIs`, on the other hand, is using `@db:run:50`. That means we use the value of `ROIs` recorded for **RUN 50** in the database - even though we are processing run 20.
 2. We are processing run 70, for the first time. In this case, since there are no database values to use, the most general fallback option is always to use the values that are currently defined in the YAML file.
 
+### Handling Nesting
+
+In many cases, parameters are nested (which can be considered a dictionary of dictionaries). In that case, the application of a policy can be done either for the largest outer group, or to individual fields in the nested dictionaries. Nesting is handled by using a dot-delimited path (as is done elsewhere).
+
+For example, a set of parameters such as:
+
+```yaml
+SubmitSMD:
+  producer_parameters:
+    getROIs:
+      jungfrau:
+        - ROI: [[[12, 12]]]
+```
+
+Can be indexed down to the list using `producer_parameters.getROIs.jungfrau`.
+
+It is therefore possible to replace all the parameters, or just a subset:
+
+```yaml
+SubmitSMD:
+  RUN_GROUPS:
+    SAMPLE1:
+      default: @db:current
+      producer_parameters.getROIs.jungfrau: @db:run:10
+    SAMPLE2:
+      producer_parameters: @literal # Replaces everything
+```
+
+**NOTE:** It is not currently possible to index into the individual items of a list. The entire list must be replaced, rather than individual items from it (in the example above, everything underneath jungfrau is a list). Should this become necessary, it may be considered for a future update.
+
 ### Resolving conflicts - overload resolution
 
 When there are possibly conflicting definitions or policies, the following rules are used to determine which is used. The entire `RUN_GROUPS` block can appear in both the global section and for each `Task` configuration. For simplicity, though, the recommendation is that globally, we define the ranges/lists of runs for various group labels. Then per-`Task` we define the policies for the parameters.
