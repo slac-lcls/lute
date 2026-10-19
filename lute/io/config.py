@@ -402,7 +402,7 @@ class RunGroupsPolicyLoader(yaml.SafeLoader):
         """
         if self.peek() == "@":
             return any(
-                self.prefix(len(directive))
+                self.prefix(len(directive)) == directive
                 for directive in RunGroupsPolicyLoader._RUN_GROUP_DIRECTIVES
             )
 
