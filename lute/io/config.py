@@ -19,7 +19,7 @@ __author__ = "Gabriel Dorlhiac"
 import os
 import re
 import warnings
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Tuple, Union
 
 import pprint
 import yaml
@@ -325,6 +325,31 @@ def substitute_variables(
             iterable[param] = _check_str_numeric(iterable[param])
 
 
+class RunGroupsPolicyLoader(yaml.SafeLoader):
+    _RUN_GROUP_DIRECTIVES: ClassVar[Tuple[str, ...]] = (
+        "@db:run:",
+        "@db:current",
+        "@literal",
+    )
+    """The set of prefixes used by the RUN_GROUPS policy adapters."""
+
+    def check_plain(self):
+        """Allow presence of unquoted directives used by RUN_GROUPS.
+
+        Must include support for:
+        - @db:run:NNN
+        - @db:current
+        - @literal
+        """
+        if self.peek() == "@":
+            return any(
+                self.prefix(len(directive))
+                for directive in RunGroupsPolicyLoader._RUN_GROUP_DIRECTIVES
+            )
+
+        return super().check_plain()
+
+
 def parse_config(task_name: str = "test", config_path: str = "") -> TaskParameters:
     """Parse a configuration file and validate the contents.
 
@@ -346,7 +371,9 @@ def parse_config(task_name: str = "test", config_path: str = "") -> TaskParamete
     task_config_name: str = f"{cleaned_task_name}Parameters"
 
     with open(config_path, "r") as f:
-        docs: Iterator[Dict[str, Any]] = yaml.load_all(stream=f, Loader=yaml.FullLoader)
+        docs: Iterator[Dict[str, Any]] = yaml.load_all(
+            stream=f, Loader=RunGroupsPolicyLoader
+        )
         header: Dict[str, Any] = next(docs)
         config: Dict[str, Any] = next(docs)
 
