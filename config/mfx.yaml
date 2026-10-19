@@ -7,95 +7,38 @@ date: "2023/10/25"
 lute_version: 0.3.0      # Do not be change unless need to force older version
 task_timeout: 6000
 work_dir: ""
+
+# Setup RUN_GROUPS once globally - Give you semantic range of runs
+# In the Tasks, you define parameter policies
+# Setting run to 9999 includes all runs. This is the largest LCLS run supported.
+RUN_GROUPS:
+  ALL_RUNS:
+    applies_to:
+      # Bounds are inclusive
+      range: [0, 9999]
+      # Alternatively, your group can use an explicit list
+      # runs: [1, 2, 3, 4]
 ...
 ---
 ###########
-# SFX
-###########
-
-# You must provide det_name and pv_camera_length
-# pv_camera_length is the detector distance
-# It can be a PV, or alternative a float for a fixed offset
-# Example PVs are commented below, ask beamline staff for relevant PV
-# Change outdir to an appropriate directory for CXI files.
-FindPeaksPyAlgos:
-    outdir: "/path/to/cxi_out"
-    det_name: "epix10k2M"
-    event_receiver: "evr0"
-    tag: "lyso"
-    event_logic: false
-    psana_mask: false
-    mask_file: null
-    min_peaks: 10
-    max_peaks: 2048
-    npix_min: 2
-    npix_max: 30
-    amax_thr: 40
-    atot_thr: 180
-    son_min: 10.0
-    peak_rank: 3
-    r0: 3.0
-    dr: 2.0
-    nsigm: 10.0
-    pv_camera_length: "MFX:ROB:CONT:POS:Z"  # MFX epix10k2M
-    #pv_camera_length: "MFX:DET:MMS:04.RBV" # MFX Rayonix
-    #n_events: 20000
-
-# You must provide a geometry file. Cell file is optional but improves results
-# mosflm is fast, you can provide additional methods for improved results at cost of speed
-IndexCrystFEL:
-  #in_file: ""            # Location of a `.lst` file listing CXI files
-  #out_file: ""           # Where to write the output stream file
-  geometry: "/geom.geom"  # Location of a geometry file
-  indexing: "mosflm"      # Indeexing methods - e.g. mosflm,xgandalf
-  int_radius: "3,4,5"     # Integration radii
-  tolerance: "5,5,5,1.5"  # Tolerances
-  multi: True
-  profile: True
-  no_revalidate: True
-  cell_file: "/path/to/cell.cell"
-  peaks: "cxi"
-
-# You must set symmetry
-MergePartialator:
-  #in_file: ""
-  #out_file: ""
-  #model: "unity"
-  #niter: 1
-  symmetry: "4/mmm_uac"
-
-CompareHKL:
-  #in_files: ""
-  #fom: "Rsplit"
-  #nshells: 10
-  #shell_file: ""
-  #cell_file: ""
-  symmetry: "4/mmm_uac"
-
-# Select a different output format if desired. Dimple requires mtz
-#ManipulateHKL:
-  #output_format: "mtz"
-  #out_file: "..."
-
-# You must provide a PDB file to use Dimple.
-DimpleSolve:
-  pdb: "/path/to/pdb/XYZ.pdb"
-
-###########
 # Smalldata
 ###########
-
-ConvertSMDToNexus:
-  convertor_script: "LUTE_LOCATION/third_party_scripts/smd2nx.py"
-  #input: ""
-  geom: "/path/to/geom.expt"
-  #output: ""
-  #flip: true
-
 # Producer will be auto-determined. Set only if you have a separate install
 # Set `directory` if you want to write to a different folder
 # For out of memory issues try setting gather_interval
 SubmitSMD:
+  # Choose RUN_GROUPS policies
+  RUN_GROUPS:
+    ALL_RUNS: # Matches name above
+      # `default` applies to all the parameters
+      default: @literal
+      # Alternatives:
+      # default: @db:current # Use the last value for current run, in database
+      # default: @db:run:1   # Use the value for run 1, in database. Can choose any run
+      #
+      # Can also setup a policy for each parameter
+      # getROIs: @db:current # Use the last value for ROIs for the current run
+
   # Command line arguments
   #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
@@ -222,6 +165,13 @@ SubmitSMD:
     #    save_range: [70, 50]
     #    save_lineout: True
 
+ConvertSMDToNexus:
+  convertor_script: "LUTE_LOCATION/third_party_scripts/smd2nx.py"
+  #input: ""
+  geom: "/path/to/geom.expt"
+  #output: ""
+  #flip: true
+
 # TR-Scattering analysis - produces scan plots (t0/spatial overlap, etc.)
 AnalyzeSmallDataXSS:
   #smd_path: ""             # Include to analyze ONE specified smalldata file
@@ -300,4 +250,76 @@ BayFAI:
     rot3: 0.0
   calibrant: "AgBh"           # Fill this line with calibrant name (AgBh, LaB6...)
   detname: "jungfrau"         # Fill this line with detector name (epix10k2M, jungfrau...)
+
+###########
+# SFX
+###########
+
+# You must provide det_name and pv_camera_length
+# pv_camera_length is the detector distance
+# It can be a PV, or alternative a float for a fixed offset
+# Example PVs are commented below, ask beamline staff for relevant PV
+# Change outdir to an appropriate directory for CXI files.
+FindPeaksPyAlgos:
+    outdir: "/path/to/cxi_out"
+    det_name: "epix10k2M"
+    event_receiver: "evr0"
+    tag: "lyso"
+    event_logic: false
+    psana_mask: false
+    mask_file: null
+    min_peaks: 10
+    max_peaks: 2048
+    npix_min: 2
+    npix_max: 30
+    amax_thr: 40
+    atot_thr: 180
+    son_min: 10.0
+    peak_rank: 3
+    r0: 3.0
+    dr: 2.0
+    nsigm: 10.0
+    pv_camera_length: "MFX:ROB:CONT:POS:Z"  # MFX epix10k2M
+    #pv_camera_length: "MFX:DET:MMS:04.RBV" # MFX Rayonix
+    #n_events: 20000
+
+# You must provide a geometry file. Cell file is optional but improves results
+# mosflm is fast, you can provide additional methods for improved results at cost of speed
+IndexCrystFEL:
+  #in_file: ""            # Location of a `.lst` file listing CXI files
+  #out_file: ""           # Where to write the output stream file
+  geometry: "/geom.geom"  # Location of a geometry file
+  indexing: "mosflm"      # Indeexing methods - e.g. mosflm,xgandalf
+  int_radius: "3,4,5"     # Integration radii
+  tolerance: "5,5,5,1.5"  # Tolerances
+  multi: True
+  profile: True
+  no_revalidate: True
+  cell_file: "/path/to/cell.cell"
+  peaks: "cxi"
+
+# You must set symmetry
+MergePartialator:
+  #in_file: ""
+  #out_file: ""
+  #model: "unity"
+  #niter: 1
+  symmetry: "4/mmm_uac"
+
+CompareHKL:
+  #in_files: ""
+  #fom: "Rsplit"
+  #nshells: 10
+  #shell_file: ""
+  #cell_file: ""
+  symmetry: "4/mmm_uac"
+
+# Select a different output format if desired. Dimple requires mtz
+#ManipulateHKL:
+  #output_format: "mtz"
+  #out_file: "..."
+
+# You must provide a PDB file to use Dimple.
+DimpleSolve:
+  pdb: "/path/to/pdb/XYZ.pdb"
 ...

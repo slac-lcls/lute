@@ -7,16 +7,38 @@ date: "2023/10/25"
 lute_version: 0.3.0      # Do not be change unless need to force older version
 task_timeout: 6000
 work_dir: ""
+
+# Setup RUN_GROUPS once globally - Give you semantic range of runs
+# In the Tasks, you define parameter policies
+# Setting run to 9999 includes all runs. This is the largest LCLS run supported.
+RUN_GROUPS:
+  ALL_RUNS:
+    applies_to:
+      # Bounds are inclusive
+      range: [0, 9999]
+      # Alternatively, your group can use an explicit list
+      # runs: [1, 2, 3, 4]
 ...
 ---
 ###########
 # Smalldata
 ###########
-
 # Producer will be auto-determined. Set only if you have a separate install
 # Set `directory` if you want to write to a different folder
 # For out of memory issues try setting gather_interval
 SubmitSMD:
+  # Choose RUN_GROUPS policies
+  RUN_GROUPS:
+    ALL_RUNS: # Matches name above
+      # `default` applies to all the parameters
+      default: @literal
+      # Alternatives:
+      # default: @db:current # Use the last value for current run, in database
+      # default: @db:run:1   # Use the value for run 1, in database. Can choose any run
+      #
+      # Can also setup a policy for each parameter
+      # getROIs: @db:current # Use the last value for ROIs for the current run
+
   # Command line arguments
   #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
   #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
