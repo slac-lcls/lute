@@ -224,7 +224,8 @@ A 4-tuple describing if and how common-mode correction should be applied.
             )
 
             userMask: Optional[str] = Field(
-                None, description="Path to a numpy array (.npy) mask, 1 for valid pixels."
+                None,
+                description="Path to a numpy array (.npy) mask, 1 for valid pixels.",
             )
 
             azav_kwargs: Dict[str, Any] = Field(
