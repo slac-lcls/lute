@@ -90,6 +90,27 @@ SubmitSMD:
     #    npts: 512
     #    int_units: "2th_deg"
     #    return2d: False
+    #getAzIntLCLSGeomParams:
+    #  Epix10kaQuad0:   # Change to detector name
+    #    poni_file: "{{ work_dir }}/geom/r0000_epix10kaquad0.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
+    #  Epix10kaQuad1:
+    #    poni_file: "{{ work_dir }}/geom/r0000_epix10kaquad1.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
+    #  Epix10kaQuad2:   # Change to detector name
+    #    poni_file: "{{ work_dir }}/geom/r0000_epix10kaquad2.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
+    #  Epix10kaQuad3:   # Change to detector name
+    #    poni_file: "{{ work_dir }}/geom/r0000_epix10kaquad3.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
     #getPhotonsParams:
     #  jungfrau1M:
     #    ADU_per_photon: 9.5

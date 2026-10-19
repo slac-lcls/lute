@@ -59,7 +59,7 @@ class BayFAIParameters(TaskParameters):
         )
 
         max_rings: int = Field(
-            default=6,
+            default=8,
             description="Maximum number of rings to search for Bragg peaks.",
         )
 
