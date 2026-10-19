@@ -19,7 +19,7 @@ __author__ = "Gabriel Dorlhiac"
 import os
 import re
 import warnings
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import pprint
 import yaml
@@ -55,16 +55,46 @@ def _check_str_numeric(string: str) -> Union[str, int, float]:
         return string
 
 
-def _is_run_in_group(current_run: int, applies_to: Dict[str, Any]) -> bool:
-    """Check if current_run matches the applies_to rule for run group parameter rules."""
-    if "range" in applies_to:
+def _run_group_specificity(
+    current_run: int, applies_to: Dict[str, Any]
+) -> Optional[Tuple[int, int]]:
+    """Determine whether, and how specifically, a run matches a group's rule.
+
+    Lower values are more specific. A match via an explicit `runs` list always
+    beats a match via a `range`.
+
+    NOTE: Within definitions of each type (i.e., a range or list of runs), the more
+    specific definition wins. I.e., a shorter list of runs, or narrower range.
+
+    Args:
+        current_run (int): The run to check.
+
+        applies_to (Dict[str, Any]): The group's `applies_to` rule. May contain
+            `runs` (a list of runs) and/or `range` (an inclusive [min, max]).
+
+    Returns:
+        specificity (Optional[Tuple[int, int]]): `None` if the run does not match.
+            `(0, len(runs))` for a list match, `(1, r_max - r_min)` for a range
+            match.
+
+    Raises:
+        ValueError: If `range` is not a two-element sequence.
+    """
+    runs: Optional[List[int]] = applies_to.get("runs")
+    if runs is not None and current_run in runs:
+        return (0, len(runs))
+
+    run_range: Optional[List[int]] = applies_to.get("range")
+    if run_range is not None:
+        if len(run_range) != 2:
+            raise ValueError(f"RUN_GROUPS `range` must be [min, max], got: {run_range}")
         r_min: int
         r_max: int
-        r_min, r_max = applies_to["range"]
-        return r_min <= current_run <= r_max
-    elif "runs" in applies_to:
-        return current_run in applies_to["runs"]
-    return False
+        r_min, r_max = sorted(int(r) for r in run_range)
+        if r_min <= current_run <= r_max:
+            return (1, r_max - r_min)
+
+    return None
 
 
 def resolve_run_group_directives(
@@ -97,6 +127,10 @@ def resolve_run_group_directives(
         updated_config (Dict[str, Any]): Parameter configuration after directive
             resolution.
     """
+    # Always need to remove RUN_GROUPS so its not processed by pydantic
+    task_groups: Dict[str, Any] = task_config.pop("RUN_GROUPS", None) or {}
+    global_groups = global_groups or {}
+
     # This shouldn't happen, but if the run is not set, just leave YAML unmodified.
     if current_run is None:
         return task_config
@@ -105,30 +139,55 @@ def resolve_run_group_directives(
     except (ValueError, TypeError):
         return task_config
 
-    # In addition to the global RUN_GROUPS, you can override settings per-Task
-    task_groups: Dict[str, Any] = task_config.pop("RUN_GROUPS", {})
     if not global_groups and not task_groups:
         return task_config
 
-    # Use Task-RUN_GROUP if exists
-    active_policy: Optional[Dict[str, Any]] = None
-
+    # Task-level listed first so they win over global
     all_group_names: List[str] = list(task_groups.keys()) + [
         g for g in global_groups if g not in task_groups
     ]
-    for group_name in all_group_names:
-        task_grp: Dict[str, Any] = task_groups.get(group_name, {})
-        global_grp: Dict[str, Any] = global_groups.get(group_name, {})
 
+    # Construct candidate definitions and policies in order of specificity
+    # - Task groups trump global groups (ranges and policies, including default)
+    # - More specific ranges/lists trump less-specific ranges
+    candidates: List[Tuple[Tuple[int, int], int, str, Dict[str, Any]]] = []
+    for order, group_name in enumerate(all_group_names):
+        task_grp: Dict[str, Any] = task_groups.get(group_name) or {}
+        global_grp: Dict[str, Any] = global_groups.get(group_name) or {}
+
+        # A task-level redifnition of the range/list is not recommended but
+        # always overrides the global one
         applies_to: Dict[str, Any] = task_grp.get(
             "applies_to", global_grp.get("applies_to", {})
         )
-        if applies_to and _is_run_in_group(current_run_int, applies_to):
-            active_policy = {**global_grp, **task_grp}
-            break
+        if not applies_to:
+            continue
+        specificity: Optional[Tuple[int, int]] = _run_group_specificity(
+            current_run_int, applies_to
+        )
+        if specificity is not None:
+            candidates.append(
+                (specificity, order, group_name, {**global_grp, **task_grp})
+            )
 
-    if not active_policy:
+    if not candidates:
         return task_config
+
+    # Always use most specific group
+    # If there are still ties, then definition order is used
+    candidates.sort(key=lambda candidate: (candidate[0], candidate[1]))
+    best_specificity: Tuple[int, int]
+    active_name: str
+    active_policy: Dict[str, Any]
+    best_specificity, _, active_name, active_policy = candidates[0]
+    tied: List[str] = [
+        candidate[2] for candidate in candidates if candidate[0] == best_specificity
+    ]
+    if len(tied) > 1:
+        warnings.warn(
+            f"Run {current_run_int} matches RUN_GROUPS {tied} with equal specificity. "
+            f"Using '{active_name}'."
+        )
 
     default_directive: str = active_policy.get("default", "@literal")
     for param_name, literal_val in list(task_config.items()):
@@ -160,6 +219,7 @@ def resolve_run_group_directives(
                         f"No DB entry found for {task_name}.{param_name} (run {target_run}). "
                         f"Falling back to YAML literal: {literal_val}"
                     )
+
     return task_config
 
 
