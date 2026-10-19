@@ -16,6 +16,7 @@ Exceptions:
 __all__ = ["parse_config"]
 __author__ = "Gabriel Dorlhiac"
 
+import copy
 import os
 import re
 import warnings
@@ -95,6 +96,32 @@ def _run_group_specificity(
             return (1, r_max - r_min)
 
     return None
+
+
+_MISSING: Any = object()
+
+
+def _get_nested(data: Any, path: List[str]) -> Any:
+    """Return the value a `path` for nested dicts, or the _MISSING sentinel."""
+    current: Any = data
+    for key in path:
+        if not isinstance(current, dict) or key not in current:
+            return _MISSING
+        current = current[key]
+    return current
+
+
+def _set_nested(data: Dict[str, Any], path: List[str], value: Any) -> None:
+    """Set the value at `path` in a set of nested dicts.
+
+    NOTE: Any intermediate dictionaries are created as necessary.
+    """
+    current: Dict[str, Any] = data
+    for key in path[:-1]:
+        if not isinstance(current.get(key), dict):
+            current[key] = {}
+        current = current[key]
+    current[path[-1]] = value
 
 
 def resolve_run_group_directives(
@@ -190,35 +217,67 @@ def resolve_run_group_directives(
         )
 
     default_directive: str = active_policy.get("default", "@literal")
-    for param_name, literal_val in list(task_config.items()):
-        directive: str = active_policy.get(param_name, default_directive)
-        if isinstance(directive, str) and directive.startswith("@db:"):
-            target_run: Optional[int] = None
-            if directive == "@db:current":
-                target_run = current_run_int
-            elif directive.startswith("@db:run:"):
-                try:
-                    target_run = int(directive.split(":")[-1])
-                except ValueError:
-                    warnings.warn(f"Invalid run directive format: '{directive}'")
-                    continue
-            if target_run is not None:
-                # If doing parameter sweeps, need to remove the suffix identifier from
-                # the Task name
-                db_task_name: str = re.sub(r"_\d+$", "", task_name)
-                db_val: Optional[Any] = read_latest_db_entry(
-                    db_dir=work_dir,
-                    task_name=db_task_name,
-                    param=param_name,
-                    for_run=target_run,
-                )
-                if db_val is not None:
-                    task_config[param_name] = db_val
-                else:
-                    warnings.warn(
-                        f"No DB entry found for {task_name}.{param_name} (run {target_run}). "
-                        f"Falling back to YAML literal: {literal_val}"
-                    )
+    # Map parameters to the directives handling nesting.
+    # Nesting is done with dot-delimiters (like elsewhere)
+    targets: Dict[str, str] = {name: default_directive for name in task_config}
+    # Directive *should* be a string. But we double check below
+    directive: str
+    for key, directive in active_policy.items():
+        if key not in ("applies_to", "default"):
+            targets[key] = directive
+
+    # Keep the values so when @literal is used, the values can be applied
+    yaml_literals: Dict[str, Any] = copy.deepcopy(task_config)
+    # Handle the parameter sweep suffix
+    db_task_name: str = re.sub(r"_\d+$", "", task_name)
+    db_cache: Dict[Tuple[str, int], Any] = {}
+
+    for param_path in sorted(targets, key=lambda p: p.count(".")):
+        directive = targets[param_path]
+        path: List[str] = param_path.split(".")
+        literal_val: Any = _get_nested(yaml_literals, path)
+
+        if not isinstance(directive, str) or not directive.startswith("@db:"):
+            # @literal -- restore the YAML value (no-op unless a parent was replaced)
+            if literal_val is not _MISSING and len(path) > 1:
+                _set_nested(task_config, path, copy.deepcopy(literal_val))
+
+            continue
+
+        target_run: Optional[int] = None
+        if directive == "@db:current":
+            target_run = current_run_int
+        elif directive.startswith("@db:run:"):
+            try:
+                target_run = int(directive.split(":")[-1])
+            except ValueError:
+                warnings.warn(f"Invalid run directive format: '{directive}'")
+                continue
+        if target_run is None:
+            warnings.warn(f"Unrecognized directive: '{directive}'")
+            continue
+
+        # Walk down the path to get the requested nested value
+        cache_key: Tuple[str, int] = (path[0], target_run)
+        if cache_key not in db_cache:
+            db_cache[cache_key] = read_latest_db_entry(
+                db_dir=work_dir,
+                task_name=db_task_name,
+                param=path[0],
+                for_run=target_run,
+            )
+        db_val: Any = _get_nested({path[0]: db_cache[cache_key]}, path)
+
+        if db_val is not _MISSING and db_val is not None:
+            _set_nested(task_config, path, copy.deepcopy(db_val))
+        else:
+            fallback: str = (
+                "<not set in YAML>" if literal_val is _MISSING else f"{literal_val}"
+            )
+            warnings.warn(
+                f"No DB entry found for {task_name}.{param_path} (Run: {target_run}). "
+                f"Fallbacking back to the YAML literal: {fallback}."
+            )
 
     return task_config
 

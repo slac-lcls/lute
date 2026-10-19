@@ -563,3 +563,111 @@ class TestRunGroupPrecedence:
             "MyTask", task_config, {}, "/tmp", None
         )
         assert "RUN_GROUPS" not in res
+
+
+# fmt: off
+def _smd_config() -> Dict[str, Any]:
+    return {
+        "producer": "/path/to/producer.py",
+        "producer_parameters": {
+            "detnames": ["epix10k2M"],
+            "getROIs": {
+                "epix10k2M": [
+                    {
+                        "ROI": [[0, 10], [0, 10]],
+                    },
+                ],
+            },
+            "getAzIntParams": {
+                "epix10k2M": {
+                    "eBeam": 9.5,
+                },
+            },
+        },
+    }
+
+
+_DB_PRODUCER_PARAMS: Dict[str, Any] = {
+    "detnames": ["epix10k2M"],
+    "getROIs": {
+        "epix10k2M": [
+            {
+                "ROI": [[5, 50], [5, 50]],
+            },
+        ],
+        "jungfrau1M": [
+            {
+                "ROI": [[1, 2], [3, 4]],
+            },
+        ],
+    },
+    "getAzIntParams": {
+        "epix10k2M": {
+            "eBeam": 18.0,
+        },
+    },
+}
+# fmt: on
+
+
+def _mock_db(
+    db_dir: str, task_name: str, param: str, for_run: int
+) -> Optional[Dict[str, Any]]:
+    if param == "producer_parameters":
+        return copy.deepcopy(_DB_PRODUCER_PARAMS)
+    return None
+
+
+def _groups(policy: Dict[str, Any]) -> Dict[str, Any]:
+    return {"ALL": {"applies_to": {"range": [0, 9999]}, **policy}}
+
+
+class TestRunGroupNestedPolicies:
+    def test_whole_top_level_dict_from_db(self):
+        """A top-level policy replaces the entire nested dict."""
+        with patch("lute.io.config.read_latest_db_entry", side_effect=_mock_db):
+            res: Dict[str, Any] = resolve_run_group_directives(
+                "SubmitSMD",
+                _smd_config(),
+                _groups({"producer_parameters": "@db:current"}),
+                "/tmp",
+                10,
+            )
+
+        assert res["producer_parameters"] == _DB_PRODUCER_PARAMS
+
+    def test_nested_dict_from_db(self):
+        """A dotted path replaces only that nested entry."""
+        with patch("lute.io.config.read_latest_db_entry", side_effect=_mock_db) as m:
+            res: Dict[str, Any] = resolve_run_group_directives(
+                "SubmitSMD",
+                _smd_config(),
+                _groups({"producer_parameters.getROIs": "@db:current"}),
+                "/tmp",
+                10,
+            )
+            m.assert_called_once_with(
+                db_dir="/tmp",
+                task_name="SubmitSMD",
+                param="producer_parameters",
+                for_run=10,
+            )
+
+        params: Dict[str, Any] = res["producer_parameters"]
+        assert params["getROIs"] == _DB_PRODUCER_PARAMS["getROIs"]
+        assert params["getAzIntParams"] == {"epix10k2M": {"eBeam": 9.5}}  # untouched
+
+    def test_single_nested_item_from_db(self):
+        """Deeper paths work too, e.g. one detector's parameters."""
+        with patch("lute.io.config.read_latest_db_entry", side_effect=_mock_db):
+            res: Dict[str, Any] = resolve_run_group_directives(
+                "SubmitSMD",
+                _smd_config(),
+                _groups({"producer_parameters.getAzIntParams.epix10k2M": "@db:run:5"}),
+                "/tmp",
+                10,
+            )
+
+        params: Dict[str, Any] = res["producer_parameters"]
+        assert params["getAzIntParams"]["epix10k2M"] == {"eBeam": 18.0}
+        assert params["getROIs"] == {"epix10k2M": [{"ROI": [[0, 10], [0, 10]]}]}
