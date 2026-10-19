@@ -246,6 +246,4 @@ SubmitSMD:
         return2d: true
 ```
 
-Your `smalldata_tools` clone must include PR #274. Older producers don't look for this function and silently skip it.
-
 The azimuthal profiles are then saved per event in the smalldata HDF5 file, under `<detname>/lclsgeom_azav` (with the radial axis stored in `UserDataCfg`).
