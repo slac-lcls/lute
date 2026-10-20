@@ -1,15 +1,21 @@
 #!/bin/bash
 
+SLURM_CONSTRAINT="OS_VER:9.6"
+
 # Need to capture partition and account for SLURM
 while [[ $# -gt 0 ]]
 do
     case "$1" in
-        --partition=*)
-            PARTITION="${1#*=}"
-            shift
-            ;;
         --account=*)
             ACCOUNT="${1#*=}"
+            shift
+            ;;
+        --constraint=*)
+            SLURM_CONSTRAINT="${1#*=}"
+            shift
+            ;;
+        --partition=*)
+            PARTITION="${1#*=}"
             shift
             ;;
         *)
@@ -57,9 +63,9 @@ else
 fi
 
 CMD="${@}"
-CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT}"
+CMD="${CMD} --partition=${PARTITION} --account=${ACCOUNT} --constraint=${SLURM_CONSTRAINT}"
 echo $CMD
-SLURM_ARGS="--partition=${PARTITION} --account=${ACCOUNT} --ntasks=1"
+SLURM_ARGS="--partition=${PARTITION} --account=${ACCOUNT} --constraint=${SLURM_CONSTRAINT} --ntasks=1"
 echo "Running ${CMD} with ${SLURM_ARGS}"
 sbatch $SLURM_ARGS --wrap "${CMD}"
 export KRB5CCNAME="FILE:${KERB_CACHE_PATH}"

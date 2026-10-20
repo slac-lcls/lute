@@ -939,6 +939,9 @@ if __name__ == "__main__":
                 if "--account=" in arg:
                     sed_pattern = f"s|--account=[^[:space:]]*|{arg}|g"
                     inplace_sed(wf_file, sed_pattern)
+                elif "--constraint=" in arg:
+                    sed_pattern = f"s|--constraint=[^[:space:]]*|{arg}|g"
+                    inplace_sed(wf_file, sed_pattern)
 
             # Retrieve the experiment and run from each test YAML
             experiment: str = parse_yaml_value(config_file, "experiment")
