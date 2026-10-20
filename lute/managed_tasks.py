@@ -5,6 +5,7 @@ here.
 """
 
 import os
+from typing import Dict
 
 from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.util.environment import setup_smd2_env
@@ -136,18 +137,22 @@ SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 SmallDataXSSAnalyzer.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
 )
+psana2_vars: Dict[str, str] = {"PS_PARALLEL": "mpi"}
+SmallDataXSSAnalyzer.update_environment(psana2_vars)
 
 SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 """Process XAS results from a Small Data HDF5 file."""
 SmallDataXASAnalyzer.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
 )
+SmallDataXASAnalyzer.update_environment(psana2_vars)
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
 SmallDataXESAnalyzer.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
 )
+SmallDataXESAnalyzer.update_environment(psana2_vars)
 
 # Geometry
 ##########
@@ -232,18 +237,21 @@ DimpleSolver.add_tasklet(
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFX.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+PeakFinderSFX.update_environment(psana2_vars)
 
 PeakFinderSFXXpp: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFXXpp.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_cpu.sh"
 )
+PeakFinderSFXXpp.update_environment(psana2_vars)
 
 PeakFinderSFXXppGpu: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFXXppGpu.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_gpu.sh"
 )
+PeakFinderSFXXppGpu.update_environment(psana2_vars)
 
 SHELXCRunner: Executor = Executor("RunSHELXC")
 """Runs CCP4 SHELXC - needed for crystallographic phasing."""
@@ -262,6 +270,7 @@ Xtc1Reader.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
 Xtc2Writer: MPIExecutor = MPIExecutor("WriteXtc2")
 """Write XTC2 files from XTC1 data received from to Xtc1Reader."""
 Xtc2Writer.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+Xtc2Writer.update_environment(psana2_vars)
 
 # Cheetah
 #########
@@ -292,5 +301,6 @@ BayFAIOptimizer2.update_environment(
         "PS_SRV_NODES": "0",
         "PS_EB_NODES": "1",
         "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+        "PS_PARALLEL": "mpi",
     }
 )
