@@ -216,9 +216,15 @@ class AnalyzeSmallData(Task):
                     f"Extracted PyFAI azimuthal integration data for {detname}."
                 )
             except Exception:
-                logger.error("No azimuthal integration data found.")
-                self._mpi_comm.Barrier()
-                sys.exit(-1)
+                try:
+                    self._extract_az_int_lclsgeom(detname)
+                    logger.debug(
+                        f"Extracted LCLS geometry azimuthal integration data for {detname}."
+                    )
+                except Exception:
+                    logger.error("No azimuthal integration data found.")
+                    self._mpi_comm.Barrier()
+                    sys.exit(-1)
 
     def _extract_az_int_smd_internal(self, detname: str) -> None:
         """Extract stored data from SmallData's azimuthal integration algorithm.
@@ -245,6 +251,19 @@ class AnalyzeSmallData(Task):
         ]  # 3D
         self._q_vals = self._smd_h5[f"{detname}/pyfai_q"][()][0]
         self._phi_vals = self._smd_h5[f"{detname}/pyfai_az"][()][0]
+
+    def _extract_az_int_lclsgeom(self, detname: str) -> None:
+        """Extract stored data from LCLS PyFAI's azimuthal integration algorithm.
+
+        Args:
+            detname (str): The detector name to extract data for.
+        """
+
+        self._az_int = self._smd_h5[f"{detname}/lclsgeom_azav"][
+            self._start_idx : self._stop_idx
+        ]  # 3D
+        self._q_vals = self._smd_h5[f"{detname}/lclsgeom_q"][()][0]
+        self._phi_vals = self._smd_h5[f"{detname}/lclsgeom_az"][()][0]
 
     def _setup_std_filters(self) -> None:
         """Setup the individual standard event filters.
