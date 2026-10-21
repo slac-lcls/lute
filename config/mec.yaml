@@ -167,6 +167,20 @@ BayFAI:
     rot1: 0.0
     rot2: -0.6
     rot3: 0.0
+  bounds:
+    dist: [-0.01, 0.01]
+    poni1: [-0.01, 0.01]
+    poni2: [-0.01, 0.01]
+    rot1: [-0.1, 0.1]
+    rot2: [-0.1, 0.1]
+    rot3: [-0.1, 0.1]
+  resolutions:
+    dist: 0.001
+    poni1: 0.0005
+    poni2: 0.0005
+    rot1: 0.01
+    rot2: 0.01
+    rot3: 0.01
   calibrant: "CeO2"           # Fill this line with calibrant name (CeO2, LaB6...)
   detname: "Epix10kaQuad0"
 ...
