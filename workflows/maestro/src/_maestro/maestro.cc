@@ -69,24 +69,49 @@ PYBIND11_MODULE(_maestro, m, py::mod_gil_not_used()) {
     .value("PythonLauncherType", LWM::LauncherType::PythonLauncherType)
     .value("SlurmLauncherType", LWM::LauncherType::SlurmLauncherType);
 
+  py::classh<LWM::LaunchContext>(m, "LaunchContext")
+    .def(py::init<>())
+    .def(py::init<
+           std::string,
+           std::map<std::string, std::string>,
+           std::vector<std::string>,
+           std::map<std::string, std::string>
+         >(),
+         py::arg("workflow_id"),
+         py::arg("env"),
+         py::arg("extra_launch_args"),
+         py::arg("labels"))
+    .def_readwrite("workflow_id", &LWM::LaunchContext::workflow_id)
+    .def_readwrite("env", &LWM::LaunchContext::env)
+    .def_readwrite("extra_launch_args", &LWM::LaunchContext::extra_launch_args)
+    .def_readwrite("labels", &LWM::LaunchContext::labels);
+
   py::class_<LWM::ManagerParameters>(m, "ManagerParameters")
     .def(py::init<
-         unsigned,            // The number of manager threads
-         unsigned,            // The number of HTTP server threads
-         bool,                // Whether to print logs immediately or only after JobStep ends
-         std::string,         // HTTP server ip (0.0.0.0 for all interfaces)
-         std::uint16_t,       // HTTP server port
-         LWM::LauncherType,   // JobStep launching mechanism (e.g. Python or SLURM)
-         bool,                // Whether the experiment/workflow is LCLS2
-         std::string>()       // The run type.
-     )
+           unsigned,            // The number of manager threads
+           unsigned,            // The number of HTTP server threads
+           bool,                // Whether to print logs immediately or only after JobStep ends
+           std::string,         // HTTP server ip (0.0.0.0 for all interfaces)
+           std::uint16_t,       // HTTP server port
+           LWM::LauncherType,   // JobStep launching mechanism (e.g. Python or SLURM)
+           LWM::LaunchContext,  // Additional job context, like env vars, and extra command-line args
+           std::string          // The run type.
+         >(),
+         py::arg("num_manager_threads"),
+         py::arg("num_server_threads"),
+         py::arg("unbuffered_logs"),
+         py::arg("host"),
+         py::arg("port"),
+         py::arg("launch_type"),
+         py::arg("context"),
+         py::arg("run_type"))
     .def_readwrite("num_manager_threads", &LWM::ManagerParameters::num_manager_threads)
-    .def_readwrite("config_file", &LWM::ManagerParameters::num_server_threads)
-    .def_readwrite("debug", &LWM::ManagerParameters::unbuffered_logs)
+    .def_readwrite("num_server_threads", &LWM::ManagerParameters::num_server_threads)
+    .def_readwrite("unbuffered_logs", &LWM::ManagerParameters::unbuffered_logs)
     .def_readwrite("host", &LWM::ManagerParameters::host)
     .def_readwrite("port", &LWM::ManagerParameters::port)
     .def_readwrite("launch_type", &LWM::ManagerParameters::launch_type)
-    .def_readwrite("is_daq2", &LWM::ManagerParameters::is_daq2)
+    .def_readwrite("context", &LWM::ManagerParameters::ctx)
     .def_readwrite("run_type", &LWM::ManagerParameters::run_type);
 
   m.def("run_workflow", &run_workflow, "Run a LUTE workflow using maestro.");
