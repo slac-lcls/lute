@@ -45,28 +45,17 @@ namespace LWM {
 
   void JobRegistry::cancel_all() {
     std::lock_guard<std::mutex> lock(m_registry_mut);
-    if (m_active_jobs.empty()) {
-      return;
-    }
-
     for (const auto& [name, jobid] : m_active_jobs) {
-      auto kill_func = m_cancel_funcs[jobid];
-      kill_func(jobid);
+      auto kill_func_it { m_cancel_funcs.find(jobid) };
+      if (kill_func_it != m_cancel_funcs.end()) {
+        kill_func_it->second(jobid);
+      }
     }
-
-    std::string cancel_cmd = "scancel";
-    for (const auto& pair : m_active_jobs) {
-      cancel_cmd += " " + pair.second;
-    }
-    // We use std::system here as a quick way to fire and forget the scancel
-    // Since we are likely in a signal handler or exiting, we don't want to get
-    // too fancy
-    int ret = std::system(cancel_cmd.c_str());
-    (void)ret;
     m_active_jobs.clear();
   }
 
   void JobRegistry::cancel_one(const std::string& jobid) {
+    std::lock_guard<std::mutex> lock(m_registry_mut);
     if (m_cancel_funcs.count(jobid)) {
       auto kill_func = m_cancel_funcs[jobid];
 
