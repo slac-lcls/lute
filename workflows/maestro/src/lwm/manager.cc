@@ -121,18 +121,20 @@ namespace LWM {
   }
 
   void Manager::recurse_workflow(const WfDefinition& wf, MaybeJobFutures_t wait_for=std::nullopt) {
-    auto launch_func = [&](const JobStep &job,
-                           bool is_daq2,
+    auto launch_func = [&](const JobStep& job,
+                           const LaunchContext& ctx,
+                           const std::string& job_key,
                            MaybeJobFutures_t wait_for = std::nullopt) -> JobReturn {
       // Wrap the launch function in a lambda to avoid making Launcher::launch_task
       // a static function
-      return m_launcher->launch_task(job, is_daq2, wait_for);
+      return m_launcher->launch_task(job, ctx, job_key, wait_for);
     };
 
     for (const auto& step : wf) {
       auto next_wait_for = std::shared_future<JobReturn>(m_job_pool.enqueue(launch_func,
                                                                             step,
-                                                                            m_params.is_daq2,
+                                                                            m_params.ctx,
+                                                                            /*TODO: GET JOB_KEY*/"1",
                                                                             wait_for));
       m_all_futures->push_back(next_wait_for);
       if (!step.next.empty()) {

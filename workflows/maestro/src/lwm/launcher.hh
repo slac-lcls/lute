@@ -42,12 +42,15 @@ namespace LWM {
 
     virtual ~Launcher() = default;
 
+
     virtual JobReturn launch_task(const JobStep& job,
-                                  bool is_daq2,
+                                  const LaunchContext& ctx,
+                                  const std::string& job_key,
                                   MaybeJobFutures_t wait_for = std::nullopt) = 0;
 
     virtual JobReturn operator()(const JobStep& job,
-                                 bool is_daq2,
+                                 const LaunchContext& ctx,
+                                 const std::string& job_key,
                                  MaybeJobFutures_t wait_for = std::nullopt) = 0;
 
     virtual std::map<std::pair<std::string,HTTP::METHOD>, std::shared_ptr<HTTP::Handler>>
@@ -114,6 +117,7 @@ namespace LWM {
     std::map<std::string, std::queue<std::string>> m_rpc_queues;
 
     void update_running_splits(JobStepSplits* splits, std::string& managed_task_name);
+
     // Should be protected behind the m_status_mut as well.
     std::map<std::string,JobStepSplits*> m_splits_map;
     void remove_running_splits(std::string& managed_task_name);
@@ -155,7 +159,7 @@ namespace LWM {
         return std::dynamic_pointer_cast<spdlog::logger>(logger);
       }
     }();
-    bool m_unbuffered_logs{false};
+    bool m_unbuffered_logs { false };
   };
 
   /**
@@ -182,7 +186,7 @@ namespace LWM {
         return spdlog::stdout_color_mt("LWM:JsonTasksHandler");
       }
     }();
-    bool m_unbuffered_logs{false};
+    bool m_unbuffered_logs { false };
   };
 
   /**
@@ -209,7 +213,7 @@ namespace LWM {
         return spdlog::stdout_color_mt("LWM:JsonRpcHandler");
       }
     }();
-    bool m_unbuffered_logs{false};
+    bool m_unbuffered_logs { false };
   };
 
   /**
@@ -244,11 +248,13 @@ namespace LWM {
     }
 
     JobReturn launch_task(const JobStep& job,
-                          bool is_daq2,
+                          const LaunchContext& ctx,
+                          const std::string& job_key,
                           MaybeJobFutures_t wait_for = std::nullopt) final;
 
     JobReturn operator()(const JobStep& job,
-                         bool is_daq2,
+                         const LaunchContext& ctx,
+                         const std::string& job_key,
                          MaybeJobFutures_t wait_for = std::nullopt) final;
 
     // This is currently Linux/Unix only... will need to update if cross-platform needed
@@ -263,7 +269,8 @@ namespace LWM {
 
   protected:
     // Sub-class must override `prepare_parameter_str`
-    virtual std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) = 0;
+    virtual std::string prepare_launch_cmd(const JobStep& job,
+                                           const LaunchContext& ctx) = 0;
 
     // This is currently Linux/Unix only... will need to update if cross-platform needed
     std::tuple<std::string, int, pid_t>
@@ -307,7 +314,7 @@ namespace LWM {
     virtual void cancel_subprocess(const std::string& jobid) final;
 
   protected:
-    std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) final;
+    std::string prepare_launch_cmd(const JobStep& job, const LaunchContext& ctx) final;
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:PythonLauncher")) {
@@ -346,7 +353,7 @@ namespace LWM {
   protected:
     void update_log(std::string& log, std::string& jobid) override;
 
-    std::string prepare_launch_cmd(const JobStep& job, bool is_daq2) final;
+    std::string prepare_launch_cmd(const JobStep& job, const LaunchContext& ctx) final;
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:SlurmLauncher")) {

@@ -224,8 +224,8 @@ namespace LWM {
         JobRegistry::set_last_update_time(jobid, ts);
       }
 
-      if (rpc_data.find("target") != rpc_data.end()
-          && rpc_data.find("message") != rpc_data.end()) {
+      if (rpc_data.find("target") != rpc_data.end() &&
+          rpc_data.find("message") != rpc_data.end()) {
         std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
         m_status_handler->m_rpc_queues[rpc_data["target"]].push(rpc_data["message"]);
 
@@ -262,14 +262,15 @@ namespace LWM {
 
       if (!task_name.empty()) {
         std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
-        if (m_status_handler->m_rpc_queues.find(task_name) != m_status_handler->m_rpc_queues.end()
-            && !m_status_handler->m_rpc_queues[task_name].empty()) {
+        if (m_status_handler->m_rpc_queues.find(task_name) != m_status_handler->m_rpc_queues.end() &&
+            !m_status_handler->m_rpc_queues[task_name].empty()) {
           std::string msg = m_status_handler->m_rpc_queues[task_name].front();
           m_status_handler->m_rpc_queues[task_name].pop();
 
           HTTP::Response response(HTTP::CODE::OK);
           response.set_header("Content-Type", "application/json");
           response.set_content("{ \"message\": \"" + msg + "\" }");
+
           return response;
         }
       }
@@ -531,7 +532,8 @@ namespace LWM {
   }
 
   JobReturn SubprocessLauncher::launch_task(const JobStep& job,
-                                            bool is_daq2,
+                                            const LaunchContext& ctx,
+                                            const std::string& job_key,
                                             MaybeJobFutures_t wait_for) {
     JobStepSplits splits;
     std::string managed_task_name = job.managed_task_name;
@@ -540,7 +542,7 @@ namespace LWM {
     std::string reason;
     std::string log, status;
     if (can_task_run(job, wait_for, reason)) { // This will block on futures as needed
-      std::string launch_cmd = prepare_launch_cmd(job, is_daq2);
+      std::string launch_cmd = prepare_launch_cmd(job, ctx);
       logger()->info("Will launch {} with: {}", managed_task_name, launch_cmd);
 
       if (launch_cmd.empty()) {
@@ -634,7 +636,7 @@ namespace LWM {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         // ... Need to do the status check ... //
         {
-          std::lock_guard<std::mutex>(m_status_handler->m_status_mut);
+          std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
           for (auto& pair : m_status_handler->m_status_map) {
             if (pair.first == managed_task_name) {
               status = pair.second;
@@ -712,8 +714,11 @@ namespace LWM {
     return JobReturn(managed_task_name, status, log, splits);
   }
 
-  JobReturn SubprocessLauncher::operator()(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
-    return launch_task(job, is_daq2, wait_for);
+  JobReturn SubprocessLauncher::operator()(const JobStep& job,
+                                           const LaunchContext& ctx,
+                                           const std::string& job_key,
+                                           MaybeJobFutures_t wait_for) {
+    return launch_task(job, ctx, job_key, wait_for);
   }
 
   bool SlurmLauncher::is_subprocess_running(const std::string& jobid) {
@@ -887,7 +892,8 @@ namespace LWM {
     return std::nullopt;
   }
 
-  std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
+  std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job,
+                                                const LaunchContext& ctx) {
     //if (job.parameters.executable_subdir == "launch_")
     std::string executable =
       job.parameters.lute_location + "/" + job.parameters.executable_subdir
@@ -900,8 +906,8 @@ namespace LWM {
     if (job.parameters.debug) {
       param_str += " --debug";
     }
-    if (is_daq2) {
-      param_str += " --psana2";
+    for (const auto& arg : ctx.extra_launch_args) {
+      param_str += " " + arg;
     }
 
     std::string slurm_params = job.extra_parameters;
@@ -1011,7 +1017,8 @@ namespace LWM {
     (void)ret;
   }
 
-  std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
+  std::string PythonLauncher::prepare_launch_cmd(const JobStep& job,
+                                                 const LaunchContext& ctx) {
     std::string executable = "python ";
 
     bool debug = job.parameters.debug;
@@ -1021,7 +1028,9 @@ namespace LWM {
     if (job.parameters.executable_subdir == "launch_scripts") {
       script_location = job.parameters.lute_location + "/run_task.py ";
     } else {
-      script_location = job.parameters.lute_location + "/" + job.parameters.executable_subdir + "/run_task ";
+      script_location =
+        job.parameters.lute_location + "/" +
+        job.parameters.executable_subdir + "/run_task ";
     }
 
     executable += script_location;
