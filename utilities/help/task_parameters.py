@@ -8,6 +8,7 @@ from typing_extensions import TypedDict, TypeVar
 import pprint
 
 import lute.io.models
+from lute.execution.executor import BaseExecutor
 from lute.io.models.base import TaskParameters
 from lute import managed_tasks
 
@@ -288,9 +289,7 @@ def main() -> None:
         managed_task_map: Dict[str, List[str]] = {}
         for key in dir(managed_tasks):
             obj: Any = getattr(managed_tasks, key)
-            if hasattr(managed_tasks, "BaseExecutor") and isinstance(
-                obj, managed_tasks.BaseExecutor
-            ):
+            if isinstance(obj, BaseExecutor):
                 task_name = obj._analysis_desc.task_result.task_name
                 if task_name in managed_task_map:
                     managed_task_map[task_name].append(key)
@@ -308,8 +307,9 @@ def main() -> None:
                 task_list_msg = f"{task_list_msg}\n\n- {task_name}\n"
                 task_list_msg = f"{task_list_msg}  Current Managed Tasks:"
                 if task_name in managed_task_map:
-                    for mgd_task in managed_task_map[task_name]:
-                        task_list_msg = f"{task_list_msg} {mgd_task},"
+                    task_list_msg = (
+                        f"{task_list_msg} {', '.join(managed_task_map[task_name])}"
+                    )
                 params_obj: TaskParameters = getattr(lute.io.models, key)
                 parameter_schema = cast(ModelSchema, params_obj.schema())
                 if "description" in parameter_schema:
