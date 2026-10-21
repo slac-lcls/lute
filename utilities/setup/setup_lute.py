@@ -17,7 +17,7 @@ from krtc import KerberosTicket  # type: ignore
 logging.basicConfig(level=logging.INFO)
 logger: logging.Logger = logging.getLogger(__name__)
 
-
+SLURM_CONSTRAINT = "OS_VER:9.6"
 DEFAULT_CONFIG = {
     "MEC": {
         "SmallDataProducer": {
@@ -377,11 +377,12 @@ def update_dag_params(
                 params = (
                     f"--account={account} --partition={partition} "
                     f"--ntasks-per-node={cfg['ntasks_per_node']} "
-                    f"--nodes={cfg['nodes']}"
+                    f"--nodes={cfg['nodes']} "
+                    f"--constraint={SLURM_CONSTRAINT}"
                 )
             else:
                 params = (
-                    f"--account={account} --partition={partition} {extra_slurm_params}"
+                    f"--account={account} --partition={partition} --constraint={SLURM_CONSTRAINT} {extra_slurm_params}"
                 )
             result.append(f"{indent}slurm_params: '{params}'\n")
         else:
