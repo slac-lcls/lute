@@ -24,38 +24,38 @@ namespace LWM {
      * Number of threads for the manager. This should probably match the number
      * of Managed Task's that will run concurrently.
      */
-    unsigned num_manager_threads{2};
+    unsigned num_manager_threads { 2 };
     /**
      * Number of threads for the server process. This probably doesn't need to be
      * very high unless you expect a lot of HTTP traffic.
      */
-    unsigned num_server_threads{2};
+    unsigned num_server_threads { 2 };
     /**
      * Whether to print logs immediately or only at the end of each JobStep by
      * pulling them from the log file.
      */
-    bool unbuffered_logs{false};
+    bool unbuffered_logs { false };
 
     /**
      * HTTP server host IP (usually 0.0.0.0)
      */
-    std::string host{"0.0.0.0"};
+    std::string host { "0.0.0.0" };
     /**
      * HTTP server port.
      */
-    std::uint16_t port{8080};
+    std::uint16_t port { 8080 };
     /**
      * What kind of job launching to employ (SLURM, Python, etc.)
      */
-    LauncherType launch_type{LauncherType::PythonLauncherType};
+    LauncherType launch_type { LauncherType::PythonLauncherType };
     /**
-     * Whether the experiment/workflow is LCLS2. This affects the base environment used.
+     * Additional job context, including environment variables, and command-line args.
      */
-    bool is_daq2{false};
+    LaunchContext ctx {};
     /**
      * What the run type is for this experiment run.
      */
-    std::string run_type{""};
+    std::string run_type { "" }; // TODO: Should probably go in ctx.labels
   };
 
   class Manager {
