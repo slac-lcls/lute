@@ -2,6 +2,7 @@
 #define LWM_JOB_HH
 
 #include <chrono>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -61,6 +62,13 @@ namespace LWM {
         running_point; ///< Time JobStep reports it is running
     std::chrono::time_point<std::chrono::steady_clock>
         end_point; ///< Time JobStep completes
+  };
+
+  struct LaunchContext {
+    std::string workflow_id {};                    ///< Identifier, for multi-DAG management
+    std::map<std::string, std::string> env {};     ///< Any required environment variables (EXPERIMENT, RUN_NUM)
+    std::vector<std::string> extra_launch_args {}; ///< Additional launch args (--psana2)
+    std::map<std::string, std::string> labels {};  ///< Space for additional unit labels
   };
 
   class JobReturn {
