@@ -32,6 +32,7 @@ def setup_smd2_env() -> Dict[str, str]:
     """
     # partition: str = ...
     psana_vars: Dict[str, str] = {}
+    psana_vars["PS_PARALLEL"] = "mpi"
     exp: Optional[str] = os.getenv("EXPERIMENT")
     run: Optional[str] = os.getenv("RUN_NUM")
     if exp and run:
