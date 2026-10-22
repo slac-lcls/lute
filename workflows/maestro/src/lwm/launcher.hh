@@ -112,15 +112,15 @@ namespace LWM {
 
   private:
     std::mutex m_status_mut;
-    std::map<std::string, std::string> m_status_map;
-    std::map<std::string, std::map<std::string, std::string>> m_metadata_map;
-    std::map<std::string, std::queue<std::string>> m_rpc_queues;
+    std::map<JobIdentifier, std::string> m_status_map;
+    std::map<JobIdentifier, std::map<std::string, std::string>> m_metadata_map;
+    std::map<JobIdentifier, std::queue<std::string>> m_rpc_queues;
 
-    void update_running_splits(JobStepSplits* splits, std::string& managed_task_name);
+    void update_running_splits(JobStepSplits* splits, const JobIdentifier& job_id);
 
     // Should be protected behind the m_status_mut as well.
-    std::map<std::string,JobStepSplits*> m_splits_map;
-    void remove_running_splits(std::string& managed_task_name);
+    std::map<JobIdentifier,JobStepSplits*> m_splits_map;
+    void remove_running_splits(const JobIdentifier& job_id);
   };
 
   /**
@@ -142,7 +142,7 @@ namespace LWM {
 
   private:
     std::mutex m_log_mut;
-    std::map<std::string, std::string> m_log_map;
+    std::map<JobIdentifier, std::string> m_log_map;
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:JsonLogHandler")) {
@@ -258,8 +258,9 @@ namespace LWM {
                          MaybeJobFutures_t wait_for = std::nullopt) final;
 
     // This is currently Linux/Unix only... will need to update if cross-platform needed
-    virtual std::optional<std::string>
-    add_job_to_registry(std::string& managed_task_name,
+    virtual std::optional<JobIdentifier>
+    add_job_to_registry(const std::string& job_key,
+                        const std::string& managed_task_name,
                         std::string& log,
                         pid_t subproc_pid);
 
@@ -276,7 +277,8 @@ namespace LWM {
     std::tuple<std::string, int, pid_t>
     run_subprocess_log(const std::string& cmd, bool return_output = false);
 
-    virtual void update_log(std::string& log, std::string& jobid) {}
+    virtual void update_log(std::string& log,
+                            const JobIdentifier& job_id) {}
 
     std::shared_ptr<JsonStatusHandler> m_status_handler = std::make_shared<JsonStatusHandler>();
     std::shared_ptr<JsonLogHandler> m_log_handler = std::make_shared<JsonLogHandler>(m_unbuffered_logs);
@@ -341,17 +343,17 @@ namespace LWM {
       : SubprocessLauncher(unbuffered_logs)
     {}
 
-    std::optional<std::string>
-    add_job_to_registry(std::string& managed_task_name,
-                        std::string& log,
-                        pid_t subproc_pid) final;
+    std::optional<JobIdentifier> add_job_to_registry(const std::string& job_key,
+                                                     const std::string& managed_task_name,
+                                                     std::string& log,
+                                                     pid_t subproc_pid) final;
 
     virtual bool is_subprocess_running(const std::string& jobid) final;
 
     virtual void cancel_subprocess(const std::string& jobid) final;
 
   protected:
-    void update_log(std::string& log, std::string& jobid) override;
+    void update_log(std::string& log, const JobIdentifier& job_Id) override;
 
     std::string prepare_launch_cmd(const JobStep& job, const LaunchContext& ctx) final;
 

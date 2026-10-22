@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,38 @@ namespace LWM {
     std::string executable_subdir;
     std::string config_file;
     bool debug;
+  };
+
+  /**
+   * A unique identifier for a JobStep within a workflow.
+   *
+   * The JobIdentifier consists of a unique job_key for the JobStep within the DAG,
+   * which is generally provided by maestro. Optionally, the identifier tracks a
+   * name (e.g. managed Task name) provided by the Executor. There is also a Launcher
+   * ID -- this maps the maestro identifiers to physical system resources (process IDs).
+   * as well as a name for JobStep (e.g. managed Task name).
+   */
+  struct JobIdentifier {
+    std::string job_key;                  ///< Unique identifier across all DAGs (from maestro)
+    std::optional<std::string> name;      ///< A step name from the Executor (no uniqueness guarantee)
+    std::string launch_id;                ///< Identifier used by the Launcher to map onto system (pid, etc.)
+
+    inline bool operator<(const JobIdentifier& other) const {
+      if (job_key != other.job_key) {
+        return job_key < other.job_key;
+      }
+
+      // Fallback on other possibilities??
+
+      if (name.has_value() && other.name.has_value()) {
+        auto my_name { *name };
+        auto o_name { *(other.name) };
+
+        return my_name < o_name;
+      }
+
+      return launch_id < other.launch_id;
+    }
   };
 
   class JobStep {

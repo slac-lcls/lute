@@ -97,18 +97,37 @@ def main():
     if manager_port is None:
         raise RuntimeError("Cannot bind a port!")
     os.environ["LUTE_MANAGER_URL"] = f"{manager_host}:{manager_port}"
-    # fmt: off
-    manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
-        num_concurrent_steps,                    # Manager threads
-        args.num_server_threads,                 # Server threads
-        args.unbuffered,                         # Unbuffered logs
-        "0.0.0.0",                               # Server IP
-        manager_port,                            # Server port
-        _maestro.LauncherType.SlurmLauncherType, # Launch mechanism
-        is_daq2,                                 # Is daq2?
-        run_type,                                # Run type
+
+    launch_env: Dict[str, str] = {"LUTE_MANAGER_URL": f"{manager_host}:{manager_port}"}
+
+    # Setup extra arguments
+    extra_launch_args: List[str] = []
+    if is_daq2:
+        extra_launch_args.append("--psana2")
+    else:
+        extra_launch_args.append("--psana1")
+
+    launch_labels: Dict[str, str] = {
+        "run_type": run_type,
+    }
+
+    launch_ctx: _maestro.LaunchContext = _maestro.LaunchContext(
+        workflow_id="1",
+        env=launch_env,
+        extra_launch_args=extra_launch_args,
+        labels=launch_labels,
     )
-    # fmt: on
+
+    manager_params: _maestro.ManagerParameters = _maestro.ManagerParameters(
+        num_manager_threads=num_concurrent_steps,
+        num_server_threads=args.num_server_threads,
+        unbuffered_logs=args.unbuffered,
+        host="0.0.0.0",
+        port=manager_port,
+        launch_type=_maestro.LauncherType.SlurmLauncherType,
+        context=launch_ctx,
+        run_type=run_type,
+    )
 
     status: str = _maestro.run_workflow(wf_defn, manager_params)
     if status == "FAILED":
