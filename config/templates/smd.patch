@@ -1,8 +1,8 @@
 diff --git a/lcls1_producers/smd_producer.py b/lcls1_producers/smd_producer.py
-index 4c2fe87..dcdf7d4 100755
+index 951e1be..5dfb8bc 100755
 --- a/lcls1_producers/smd_producer.py
 +++ b/lcls1_producers/smd_producer.py
-@@ -654,7 +654,7 @@ for evt_num, evt in enumerate(ds.events()):
+@@ -662,7 +662,7 @@ for evt_num, evt in enumerate(ds.events()):
  
      #the ARP will pass run & exp via the enviroment, if I see that info, the post updates
      if ( (evt_num<100 and evt_num%10==0) or (evt_num<1000 and evt_num%100==0) or (evt_num%1000==0)):
@@ -11,7 +11,7 @@ index 4c2fe87..dcdf7d4 100755
              if ds.size == 1:
                  requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Current Event</b>", "value": evt_num+1}])
              elif ds.rank == 0:
-@@ -703,7 +703,7 @@ if ds.rank==0:
+@@ -711,7 +711,7 @@ if ds.rank==0:
  
  #finishing up here....
  logger.debug('rank {0} on {1} is finished'.format(ds.rank, hostname))
@@ -21,7 +21,7 @@ index 4c2fe87..dcdf7d4 100755
          if ds.rank == 0:
              requests.post(os.environ["JID_UPDATE_COUNTERS"], json=[{"key": "<b>Last Event</b>", "value": "~ %d cores * %d evts"%(ds.size,evt_num)},{"key": "<b>Duration</b>", "value": "%f min"%(prod_time)}])
 diff --git a/lcls2_producers/smd_producer.py b/lcls2_producers/smd_producer.py
-index bb6c679..985132b 100755
+index 6c15fdc..17d2465 100755
 --- a/lcls2_producers/smd_producer.py
 +++ b/lcls2_producers/smd_producer.py
 @@ -54,6 +54,7 @@ def define_dets(run, det_list):
@@ -32,7 +32,7 @@ index bb6c679..985132b 100755
      rois_args = []  # special implementation as a list to support multiple ROIs.
      dimgs_args = {}
      wfs_int_args = {}
-@@ -68,6 +69,8 @@ def define_dets(run, det_list):
+@@ -69,6 +70,8 @@ def define_dets(run, det_list):
      pressio_compression_args = {}
  
      # Get the functions arguments from the production config
@@ -41,7 +41,7 @@ index bb6c679..985132b 100755
      if "getROIs" in dir(config):
          rois_args = config.getROIs(run)
      if "getDetImages" in dir(config):
-@@ -100,6 +103,8 @@ def define_dets(run, det_list):
+@@ -103,6 +106,8 @@ def define_dets(run, det_list):
  
          # Common mode (default: None)
          common_mode = None
@@ -50,7 +50,7 @@ index bb6c679..985132b 100755
  
          if not havedet:
              continue
-@@ -1057,7 +1062,7 @@ logger.debug("rank {0} on {1} is finished".format(rank, hostname))
+@@ -1145,7 +1150,7 @@ logger.debug("rank {0} on {1} is finished".format(rank, hostname))
  #        cmd = ['timestamp_sort_h5', h5_f_name, h5_f_name]
  
  if ds.unique_user_rank():
@@ -60,10 +60,10 @@ index bb6c679..985132b 100755
              os.environ["JID_UPDATE_COUNTERS"],
              json=[
 diff --git a/smalldata_tools/lcls2/DetObject.py b/smalldata_tools/lcls2/DetObject.py
-index 6a8a79b..ae5bbbc 100644
+index f24bf26..8102eca 100644
 --- a/smalldata_tools/lcls2/DetObject.py
 +++ b/smalldata_tools/lcls2/DetObject.py
-@@ -489,9 +489,17 @@ class Epix100Object(TiledCameraObject):
+@@ -490,9 +490,17 @@ class Epix100Object(TiledCameraObject):
              30,
          ]  # Jacob (norm), Jacob, def, def(ami-like), mine, mine (norm), mine (norm-bank), none, raw, calib
          self.common_mode = kwargs.get("common_mode", self._common_mode_list[0])
@@ -83,7 +83,7 @@ index 6a8a79b..ae5bbbc 100644
              print(
                  "Common mode %d is not an option for as Epix detector, please choose from: "
                  % self.common_mode,
-@@ -527,9 +535,13 @@ class Epix100Object(TiledCameraObject):
+@@ -528,9 +536,13 @@ class Epix100Object(TiledCameraObject):
          mbits = 0  # do not apply mask (would set pixels to zero)
          # mbits=1 #set bad pixels to 0
  
