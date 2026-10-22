@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from lute.io.config import RunGroupsPolicyLoader
+
 
 def load_base_config(config_path: str) -> List[Dict[str, Any]]:
     """Load the base configuration YAML file.
@@ -29,7 +31,9 @@ def load_base_config(config_path: str) -> List[Dict[str, Any]]:
     """
     with open(config_path, "r") as f:
         # Load all YAML documents - AnalysisHeader then the TaskParameters
-        configs: List[Dict[str, Any]] = list(yaml.safe_load_all(f))
+        configs: List[Dict[str, Any]] = list(
+            yaml.load_all(stream=f, Loader=RunGroupsPolicyLoader)
+        )
 
     return configs
 
