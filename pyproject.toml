@@ -14,6 +14,10 @@ dependencies = [
     "requests",
     "zmq",
     "jinja2",
+    "kerberos",
+    "lcls-krtc",
+    "mpi4py",
+    "textual",
 ]
 authors = [
     { name = "psrel", email = "psrel@slac.stanford.edu" },
@@ -60,17 +64,23 @@ before-build = [
     "pip install 'meson>=1.10.1' meson-python ninja numpy pybind11 setuptools",
     "ccache -z",
 ]
+
+# NOTE: SET THE `environment` per-platform!
+#       DO NOT SET IN YAMLs for GitHub CI - will just overwrite, not combine!
+
 [tool.cibuildwheel.linux]
+# Need to provide kerberos and MPI (for musl) since the test venv will need them
 before-all = [
     """
     if command -v apt-get >/dev/null; then
-        apt-get update && apt-get install -y ccache
+        apt-get update
+        apt-get install -y ccache libkrb5-dev libopenmpi-dev
     elif command -v dnf >/dev/null; then
-        dnf install -y ccache
+        dnf install -y ccache krb5-devel openmpi-devel
     elif command -v yum >/dev/null; then
-        yum install -y ccache
+        yum install -y ccache krb5-devel openmpi-devel
     elif command -v apk >/dev/null; then
-        apk add ccache
+        apk add ccache krb5-dev openmpi-dev
     fi
     """,
 ]

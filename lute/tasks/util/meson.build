@@ -3,8 +3,6 @@ py_sources = [
     'geometry.py',
     'html.py',
     '__init__.py',
-    'xtc_pull.py',
-    'xtc_push.py',
 ]
 
 py3.install_sources(

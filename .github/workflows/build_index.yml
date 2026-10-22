@@ -1,0 +1,52 @@
+name: Build Simple Package Index
+on:
+  release:
+    types: [published, created, edited]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update_index:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'slac-lcls/lute' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1                 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run build_index.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python utilities/wheels/build_index.py
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
+        with:
+          ref: gh-pages
+          path: gh-pages-dir
+
+      - name: Update index files in wheels/
+        run: |
+          mkdir -p gh-pages-dir/wheels
+          # Copy generated index files to the wheels directory on gh-pages
+          cp -r wheels/* gh-pages-dir/wheels/
+
+      - name: Commit and push changes
+        working-directory: gh-pages-dir
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "<>"
+          git add wheels
+          git commit -m "Update static PEP 503 package index [skip ci]" || echo "No changes to commit"
+          git push origin gh-pages

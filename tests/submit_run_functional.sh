@@ -59,16 +59,27 @@ run_functional.py [-h] [-a] [--git_pr_id GIT_PR_ID] [--git_tag GIT_TAG] [--no_de
 EOF
 }
 
+SLURM_ACCOUNT="lcls:data"
+SLURM_CONSTRAINT="OS_VER:9.6"
+
 while [[ $# -gt 0 ]]
 do
     flag="$1"
 
     case $flag in
+        --account=*)
+            SLURM_ACCOUNT="${1#*=}"
+            shift
+            ;;
+        --constraint=*)
+            SLURM_CONSTRAINT="${1#*=}"
+            shift
+            ;;
         -h|--help)
             usage
             exit
             ;;
-        -r|--run_dir)
+        --run_dir)
             POS+=("$1")
             POS+=("$2")
             RUN_DIR="$2"
@@ -103,7 +114,7 @@ source /sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh
 echo "Sourced latest psconda.sh"
 CMD="python -B ${TEST_SCRIPT_PATH}/run_functional.py ${@}"
 echo $CMD
-SLURM_ARGS="--partition=milano --account=lcls:data --ntasks=1"
+SLURM_ARGS="--account=${SLURM_ACCOUNT} --constraint=${SLURM_CONSTRAINT} --ntasks=1 --partition=milano"
 echo "Running ${CMD} with ${SLURM_ARGS}"
 sbatch $SLURM_ARGS --wrap "${CMD}"
 export KRB5CCNAME="FILE:${KERB_CACHE_PATH}"

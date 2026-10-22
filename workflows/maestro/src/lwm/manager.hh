@@ -1,10 +1,10 @@
 #ifndef LWM_MANAGER_HH
 #define LWM_MANAGER_HH
 
-#include "job.hh"
-#include "launcher.hh"
-#include "../parallel/threadpool.hh"
-#include "../server/server.hh"
+#include "lwm/job.hh"
+#include "lwm/launcher.hh"
+#include "parallel/threadpool.hh"
+#include "server/server.hh"
 
 #include "spdlog/sinks/stdout_color_sinks.h"
 

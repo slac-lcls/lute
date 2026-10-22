@@ -12,7 +12,7 @@ title: "MFX Lysozyme — full scale+merge r0036"
 experiment: mfx101624926
 run: 36
 date: "2024/10/16"
-lute_version: 0.1
+lute_version: 0.3.0
 task_timeout: 7200
 work_dir: /sdf/data/lcls/ds/mfx/mfx101624926/scratch
 ---

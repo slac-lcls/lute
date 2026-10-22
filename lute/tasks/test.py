@@ -12,9 +12,17 @@ Classes:
         database access.
 """
 
-__all__ = ["Test", "TestSocket", "TestWriteOutput", "TestReadOutput", "TestRequest"]
+__all__ = [
+    "Test",
+    "TestSocket",
+    "TestWriteOutput",
+    "TestReadOutput",
+    "TestRequest",
+    "TestUnresponsive",
+]
 __author__ = "Gabriel Dorlhiac"
 
+import os
 import time
 from typing import List, cast
 
@@ -26,6 +34,7 @@ from lute.io.models.tests import (
     TestSocketParameters,
     TestWriteOutputParameters,
     TestReadOutputParameters,
+    TestUnresponsiveParameters,
 )
 from lute.tasks.dataclasses import TaskStatus
 from lute.execution.ipc import Message
@@ -34,8 +43,10 @@ from lute.execution.ipc import Message
 class Test(Task):
     """Simple test Task to ensure subprocess and pipe-based IPC work."""
 
-    def __init__(self, *, params: TestParameters) -> None:
-        super().__init__(params=params)
+    def __init__(
+        self, *, params: TestParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestParameters, self._task_parameters)
@@ -55,8 +66,10 @@ class Test(Task):
 class TestSocket(Task):
     """Simple test Task to ensure basic IPC over Unix sockets works."""
 
-    def __init__(self, *, params: TestSocketParameters) -> None:
-        super().__init__(params=params)
+    def __init__(
+        self, *, params: TestSocketParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestSocketParameters, self._task_parameters)
@@ -78,8 +91,10 @@ class TestSocket(Task):
 class TestWriteOutput(Task):
     """Simple test Task to write output other Tasks depend on."""
 
-    def __init__(self, *, params: TestWriteOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(
+        self, *, params: TestWriteOutputParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestWriteOutputParameters, self._task_parameters)
@@ -108,8 +123,10 @@ class TestReadOutput(Task):
     Its pydantic model relies on a database access to retrieve the output file.
     """
 
-    def __init__(self, *, params: TestReadOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(
+        self, *, params: TestReadOutputParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _run(self) -> None:
         self._task_parameters = cast(TestReadOutputParameters, self._task_parameters)
@@ -128,8 +145,10 @@ class TestReadOutput(Task):
 class TestRequest(Task):
     """Simple test Task to try to send requests to and from via workflow manager."""
 
-    def __init__(self, *, params: TestReadOutputParameters) -> None:
-        super().__init__(params=params)
+    def __init__(
+        self, *, params: TestReadOutputParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _parse_response(self, resp: Message) -> None:
         running_managed_tasks: List[str] = []
@@ -175,3 +194,35 @@ class TestRequest(Task):
         self._result.summary = "Was able to request via workflow manager.."
         self._result.payload = "This Task produces no output."
         self._result.task_status = TaskStatus.COMPLETED
+
+
+class TestUnresponsive(Task):
+    """Simple test Task to check unresponsive Task cancellation."""
+
+    def __init__(
+        self, *, params: TestUnresponsiveParameters, use_mpi: bool = False, row_ids=None
+    ) -> None:
+        self._task_parameters: TestUnresponsiveParameters
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
+
+    def _run(self) -> None:
+        # Get the cancellation time (default is 900 s)
+        # Hopefully someone set it so we don't wait 900 s...
+        kill_time: float = float(os.getenv("LUTE_NO_HEARTBEAT_KILL", 900.0))
+        wait_time: float = kill_time + 30.0
+        msg: Message = Message(
+            contents=(
+                "TestUnresponsive has started! Going quiet! "
+                f"You should kill me after {kill_time} s. I will wait {wait_time} s."
+            )
+        )
+        self._report_to_executor(msg)
+        time.sleep(wait_time)
+
+        msg = Message(contents="If you get this, you didn't kill me! Why?!")
+        self._report_to_executor(msg)
+
+    def _post_run(self) -> None:
+        self._result.summary = "TestUnresponsive Finished."
+        self._result.task_status = TaskStatus.COMPLETED
+        time.sleep(0.1)

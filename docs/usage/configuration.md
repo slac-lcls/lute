@@ -1,6 +1,8 @@
 # Task Configuration
 ## Preparing a Configuration YAML
-All `Task`s are parameterized through a single configuration YAML file - even third party code which requires its own configuration files is managed through this YAML file. The basic structure is split into two documents, a brief header section which contains information that is applicable across all `Task`s, such as the experiment name, run numbers and the working directory, followed by per `Task` parameters:
+All `Task`s are parameterized through a single configuration YAML file - even third party code which requires its own configuration files is managed through this YAML file. By default all parameters are taken from this YAML document, and when the `Task` is completed (whether successful or not) the parameters and results are written to a database. Submissions are generally done on a run-by-run basis, however, because the database stores parameter sets, there are mechanisms to use historic data to repopulate the YAML, or to manage parameterizing `Task`s for multiple runs at a time. These more advanced mechanisms are described in the following sections on `RUN_GROUPS` and `lute_cfg` following a general overview of the YAML structure.
+
+The basic structure is split into two documents, a brief header section which contains information that is applicable across all `Task`s, such as the experiment name, run numbers and the working directory, followed by per `Task` parameters:
 ```yaml
 %YAML 1.3
 ---
@@ -8,7 +10,7 @@ title: "Some title."
 experiment: "MYEXP123"
 # run: 12 # Does not need to be provided
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
@@ -34,12 +36,12 @@ The actual analysis parameters are defined in the second document. As these vary
 
 **Some things to consider and possible points of confusion:**
 
-- While we will be submitting **managed** `Task`s, the parameters are defined at the `Task` level. I.e. the **managed** `Task` and `Task` itself have different names, and the names in the YAML refer to the latter. This is because a single `Task` can be run using different `Executor` configurations, but using the same parameters. The list of **managed** `Task`s is in `lute/managed_tasks.py`. A table is also provided below for some routines of interest..
+- While we will be submitting **managed** `Task`s, the parameters are defined at the `Task` level. I.e. the **managed** `Task` and `Task` itself have different names, and the names in the YAML refer to the latter. This is because a single `Task` can be run using different `Executor` configurations, but using the same parameters. The list of **managed** `Task`s is in `lute/managed_tasks.py`. A (non-exhaustive) set is also provided in the tables below for some routines of interest..
 
+**Crystallography**
 
 | **Managed** `Task`       | The `Task` it Runs       | `Task` Description                                             |
 |:------------------------:|:------------------------:|:--------------------------------------------------------------:|
-| `SmallDataProducer`      | `SubmitSMD`              | Smalldata production                                           |
 | `CrystFELIndexer`        | `IndexCrystFEL`          | Crystallographic indexing                                      |
 | `PartialatorMerger`      | `MergePartialator`       | Crystallographic merging                                       |
 | `HKLComparer`            | `CompareHKL`             | Crystallographic figures of merit                              |
@@ -49,6 +51,23 @@ The actual analysis parameters are defined in the second document. As these vary
 | `PeakFinderPsocake`      | `FindPeaksPsocake`       | Peak finding with psocake algorithm.                           |
 | `StreamFileConcatenator` | `ConcatenateStreamFiles` | Stream file concatenation.                                     |
 
+**General Reduction and HDF5 Production**
+
+| **Managed** `Task`       | The `Task` it Runs       | `Task` Description                                             |
+|:------------------------:|:------------------------:|:--------------------------------------------------------------:|
+| `SmallDataProducer`      | `SubmitSMD`              | Smalldata production (LCLS1)                                   |
+| `SmallDataProducer2`     | `SubmitSMD`              | Smalldata production (LCLS2)                                   |
+| `SmallDataProducer2Test` | `SubmitSMD`              | Smalldata production (LCLS2 Test Environment)                  |
+| `SmallDataProducerXpp`   | `SubmitSMD`              | Smalldata production (GPU Utilities Environment)               |
+
+**Geometry and Conversion Utilites**
+
+| **Managed** `Task`       | The `Task` it Runs       | `Task` Description                                             |
+|:------------------------:|:------------------------:|:--------------------------------------------------------------:|
+| `BayFAIOptimizer`        | `BayFAI`                 | Geometry optimization with BayFAI (LCLS1)                      |
+| `BayFAIOptimizer2`       | `BayFAI`                 | Geometry optimization with BayFAI (LCLS2)                      |
+| `Xtc1Reader`             | `ReadXtc1`               | Read XTC1 datasets to convert to XTC2 (use with `Xtc2Writer`)  |
+| `Xtc2Writer`             | `WriteXtc2`              | Write XTC2 datasets received from `Xtc1Reader`                 |
 
 ### How do I know what parameters are available, and what they do?
 A summary of `Task` parameters is available through the `lute_help` program.
@@ -124,6 +143,205 @@ Task List
 
 **NOTE:** Associated **managed** `Task`s are provided under each `Task` name. These will be the names passed to submission scripts.
 
+## `RUN_GROUPS`: Managing and reprocessing sets of runs
+
+By default, any parameters that are not declared with default values by the `Task` parameter model, are filled with the values found in the YAML file. When beginning processing for an experiment this is generally what you want - you declare the values you want to use. However, over time, you may need to reprocess old runs, or want to try changing some values, but not others.
+
+On its own, YAML does not support complex conditional logic or control structures. The database that LUTE uses, though, maintains all the necessary information to allow using previous parameter sets - it just needs to be accessible during configuration. The `lute_cfg` tool described in the next section shows how you can recreate an entire YAML file, but often you only want to access certain parameters, not all of them. This is where `RUN_GROUPS` come in.
+
+### Creating Semantic Ranges with `RUN_GROUPS`
+
+`RUN_GROUPS` are essentially semantic labels attached to some set or range of experiment runs. Once defined, they can then be referred to in order to define parameter policies for the entire set of runs at a time.
+
+To declare a group, you can define a label in the first global configuration document of the YAML file under the `RUN_GROUPS` key:
+
+```yaml
+%YAML 1.3
+---
+title: "LUTE Task Configuration"
+experiment: "FAKEEXPERIMENT"
+run: "{{ $RUN }}"
+work_dir: "/my/fake/work/directory"
+
+# Setup RUN_GROUPS once globally - Give you semantic range of runs
+RUN_GROUPS:
+  DARK_RUNS:
+    applies_to:
+      range: [0, 40]
+...
+---
+SubmitSMD:
+  # My parameters....
+...
+```
+
+In this case, we have defined a group called `DARK_RUNS`. It applies to the range of runs `0-40`. These are inclusive of the bounds (i.e., it is a closed set).
+
+The groups can be configured  either using a range as above, or by providing a specific list of individual runs. For example, we declare two groups below, using these two mechanisms:
+
+```yaml
+%YAML 1.3
+---
+title: "LUTE Task Configuration"
+experiment: "FAKEEXPERIMENT2"
+run: "{{ $RUN }}"
+work_dir: "/my/fake/work/directory"
+
+RUN_GROUPS:
+  SAMPLE1:
+    applies_to:
+      range: [0, 40]
+  SAMPLE2:
+    applies_to:
+      runs: [4, 13, 50]
+...
+---
+SubmitSMD:
+  # My parameters....
+...
+```
+
+Here we defined two different groups:
+
+- `SAMPLE1`: Includes all runs in the range `0-40`
+- `SAMPLE2`: Includes, specifically, runs `4`, `13`, and `50`
+
+When a run is defined in two groups, the more specific, i.e., a list of runs instead of a range, will win.
+
+The `RUN_GROUPS` field can also appear under the individual `Task` configuration blocks. However, while the run range, or list or list of runs, can be defined in this `Task` block, the intention is that the global section defines the applicability. In the `Task` section, the policies to apply to the group are defined as discussed in the next section.
+
+### Applying policies to `RUN_GROUPS`
+
+At this point, we have defined a label that applies to a group of runs, but this doesn't help us yet with configuration. This is where `Task` definitions of policies come in.
+
+As previously mentioned, the `RUN_GROUPS` header can appear both in the global section, and under each `Task`. Globally, we define the applicability of the label to a set of runs. In each `Task`, we define how we want to fill in the parameters for that label.
+
+In particular, there are three policies that can be used by using special directives:
+
+- `@db:current` : Use the most recent parameter value that **was stored in the database FOR THIS RUN**. I.e. if I have previously processed run 15, and am now processing run 15 again, use the value that was logged in the database, not whatever may be present in the YAML file. This allows you to go back and reprocess datasets after having changed the values in the file.
+- `@db:run:NNN` : Use the most recent parameter value that **was stored in the database for RUN NNN**. I.e., if I specify `@db:run:15`, regardless of which run I am currently processing, I will use the value that was logged in the database for RUN 15. That is instead of using the value that was stored for this run, or the value that is currently in the YAML file.
+- `@literal` : Use the value from the YAML value as it is literally written. This is implicitly also the final global fallback. In the event that no database entries are found, you will eventually fallback to using the literal values from the YAML file.
+
+These directives appear underneath the `Task` configuration and can be applied to all the parameters using the `default` field, and then overridden for specific parameters by name.
+
+It is most helpful to view some examples. In the following case, we have again defined one group globally, we then set the default policy to be to use the database value for the run being processed, except for the parameter `ROIs`.
+
+```yaml
+%YAML 1.3
+---
+title: "LUTE Task Configuration"
+experiment: "FAKEEXPERIMENT2"
+run: "{{ $RUN }}"
+work_dir: "/my/fake/work/directory"
+
+RUN_GROUPS:
+  SAMPLE1:
+    applies_to:
+      range: [0, 40]
+...
+---
+SubmitSMD:
+  RUN_GROUPS:
+    SAMPLE1:
+      default: @db:current
+      ROIs: @db:run:50
+  ROIs: [[[1, 2], [157, 487], [294, 598]]]
+  other_param: 10
+  another: "string_value"
+...
+```
+
+What does this mean? Let's unpack under a few situations. Let's assume that we have processed runs 0 through 60 at least once.
+
+1. We are processing run 20. The group defines a range of `0-40` for included runs, so run 20 falls within it. The default policy is `@db:current`, so for `other_param` and `another`, if there are existing entries for run 20 in the database (i.e., we previously processed run 20), their values we will be taken from there. `ROIs`, on the other hand, is using `@db:run:50`. That means we use the value of `ROIs` recorded for **RUN 50** in the database - even though we are processing run 20.
+2. We are processing run 70, for the first time. In this case, since there are no database values to use, the most general fallback option is always to use the values that are currently defined in the YAML file.
+
+### Handling Nesting
+
+In many cases, parameters are nested (which can be considered a dictionary of dictionaries). In that case, the application of a policy can be done either for the largest outer group, or to individual fields in the nested dictionaries. Nesting is handled by using a dot-delimited path (as is done elsewhere).
+
+For example, a set of parameters such as:
+
+```yaml
+SubmitSMD:
+  producer_parameters:
+    getROIs:
+      jungfrau:
+        - ROI: [[[12, 12]]]
+```
+
+Can be indexed down to the list using `producer_parameters.getROIs.jungfrau`.
+
+It is therefore possible to replace all the parameters, or just a subset:
+
+```yaml
+SubmitSMD:
+  RUN_GROUPS:
+    SAMPLE1:
+      default: @db:current
+      producer_parameters.getROIs.jungfrau: @db:run:10
+    SAMPLE2:
+      producer_parameters: @literal # Replaces everything
+```
+
+**NOTE:** It is not currently possible to index into the individual items of a list. The entire list must be replaced, rather than individual items from it (in the example above, everything underneath jungfrau is a list). Should this become necessary, it may be considered for a future update.
+
+### Resolving conflicts - overload resolution
+
+When there are possibly conflicting definitions or policies, the following rules are used to determine which is used. The entire `RUN_GROUPS` block can appear in both the global section and for each `Task` configuration. For simplicity, though, the recommendation is that globally, we define the ranges/lists of runs for various group labels. Then per-`Task` we define the policies for the parameters.
+
+More specifically, though, the following rules are used:
+
+1. For every `Task`, the set of `RUN_GROUPS` that apply to it is the union of the global set, and the set under its configuration block.
+    - **NOTE:** If a particular group is defined only under one `Task`, that definition is NOT seen by other `Task`s. Again, for this reason, we recommend that you always define the run group ranges globally.
+2. If a range/list of runs is defined for a `RUN_GROUP` both globally, and at the `Task` level, the `Task` level takes precedence. I.e., a `Task` can override the range of runs that the group applies to.
+3. If a default parameter policy appears both globally and at the `Task` level, the `Task` level takes precedence.
+    - **NOTE:** This is only really applicable for default policies, as a per-parameter policy does not make sense at a global level. There are no global parameters.
+4. If two groups define overlapping or conflicting ranges/lists of runs, the more specific group wins:
+    - If one group defines a range, and another group a list which includes a run (or multiple runs) from the range, the group defined by a list takes precedence.
+    - If two groups define overlapping ranges, the group with the narrower range takes precedence.
+
+### Final Example with All Features
+
+The following shows an example using all the policies and features for completeness:
+
+```yaml
+%YAML 1.3
+---
+
+RUN_GROUPS:
+  SAMPLE1:
+    applies_to:
+      range: [0, 40]
+  SAMPLE2:
+    applies_to:
+      runs: [39, 50, 60]
+  SAMPLE3:
+    applies_to:
+      range: [5, 9]
+...
+---
+Task1:
+  RUN_GROUPS:
+    SAMPLE1:
+      default: @db:current
+      param_x: @db:run:39
+    SAMPLE2:
+      default: @db:run:39
+      param_y: @literal
+    SAMPLE3:
+      default: @db:run:5
+  param_x: "abcd"
+  param_y: 10
+...
+```
+
+Assuming we have processed runs 0 through runs 60 (inclusive), if we go back and now reprocess the runs, the following parameter sets will be chosen:
+
+- Runs 5-9 (inclusive): `SAMPLE3` is the applicable group. Only a default policy is provided, so for both `param_x` and `param_y`, the database value from run 5 will be used (based on the `@db:run:5` policy).
+- Runs 10-38 (inclusive): `SAMPLE1` is the applicable group. We have both a default policy and a specific one, so for `param_y`, the value from the database for each individual run will be used (based on `@db:current`). For `param_x`, regardless of run, the database value from run 39 will be used.
+- Run 39: `SAMPLE2` is the applicable group. We have both a default policy and a specific one, so for `param_x`, the value from the database for run 39 will be used (based on `@db:run:39`). For `param_y`, the value in the YAML file (`10`) will be used.
+
 ## Restoring a Configuration YAML from a Previous Run (`lute_cfg`)
 
 The LUTE database holds a record of all parameters used for all `Task`s that have been run. It also contains information about the version of the code that was used each time any of those `Task`s was run. E.g., this may be important in the case of `Task`s, like `smalldata_tools` (`SubmitSMD`) that are run on top of checked-out repositories containing Python code that can be modified between executions.
@@ -171,7 +389,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/scratch/users/d/dorlhiac"
 ...
@@ -249,7 +467,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/data/lcls/ds/exp/experiment/scratch"
 ...
@@ -274,7 +492,7 @@ title: "Configuration to Test YAML Substitution"
 experiment: "TestYAMLSubs"
 run: 12
 date: "2024/05/01"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/sdf/data/lcls/ds/exp/experiment/scratch"
 ...

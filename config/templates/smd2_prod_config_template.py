@@ -1,32 +1,4 @@
-{%- macro step_parameters(dict_name, detector, data, add_to_ret=True) %}
-{%- if data is mapping %}
-{%- for param_name, param_value in data.items() %}
-        {% if param_value is none -%}
-        {{ dict_name }}["{{ param_name }}"] = None
-        {% else -%}
-        {{ dict_name }}["{{ param_name }}"] = {{ param_value | pprint }}
-        {% endif %}
-{%- endfor %}
-        {% if add_to_ret -%}
-        ret_dict["{{ detector }}"] = {{ dict_name }}
-        {% endif %}
-{%- else %}
-        # Create list of dicts for {{ detector }}
-        {{ dict_name }}s = []
-
-{%- for data_dict in data %}
-        # Create a dict for this set
-        {{ dict_name }} = {}
-
-{{- step_parameters(dict_name, detector, data_dict, False) }}
-        {{ dict_name }}s.append({{ dict_name }})
-
-{%- endfor %}
-
-        # Add list of dicts for {{ detector }} to total dictionary
-        ret_dict["{{ detector }}"] = {{ dict_name }}s
-{%- endif %}
-{%- endmacro -%}
+{%- from "macros.jinja" import step_parameters, step_value -%}
 import numpy as np
 
 {%- if detnames is defined and detnames %}
@@ -42,7 +14,7 @@ xdetectors = {{ xdetectors }}
 integrating_detectors = {{ integrating_detectors }}
 {% endif %}
 
-{%- if IntgParams is defined and IntgParams %}
+{%- if get_intg is defined and get_intg %}
 def get_intg(run):
     """
     Returns
@@ -72,13 +44,25 @@ def get_intg(run):
     return intg_main, intg_addl
 {% endif %}
 
+{%- if getDetParams is defined and getDetParams %}
+def get_det_params(run):
+    ret_dict = {}
+
+    if run > 0:
+        det_params_dict = {}
+{% for detector, params in getDetParams.items() %}
+{{- step_parameters("det_params_dict", detector, params) }}
+{% endfor %}
+    return ret_dict
+{% endif %}
+
 {%- if getROIs is defined and getROIs %}
 def getROIs(run):
     ret_dict = {}
 
     if run > 0:
-        roi_dict = {}
 {% for detector, params in getROIs.items() %}
+        roi_dict = {}
 {{- step_parameters("roi_dict", detector, params) }}
 {% endfor %}
     return ret_dict
@@ -105,19 +89,15 @@ def get_droplet2photon(run):
     ret_dict = {}
 
     if run > 0:
-        d2p_dict = {}
 {% for detector, params in getDroplet2Photons.items() %}
-        d2p_dict["droplet"] = {
-            "threshold": {{ params["droplet"]["threshold"] }},
-            "thresholdLow": {{ params["droplet"]["thresholdLow"] }},
-            "thresADU": {{ params["droplet"]["thresADU"] }},
-            "useRms": {{ params["droplet"]["useRms"] }},
-        }
+        d2p_dict = {}
+        droplet_dict = {}
+{{- step_parameters("droplet_dict", detector, params["droplet"], False) }}
+        d2p_dict["droplet"] = droplet_dict
         d2p_dict["d2p"] = {
-            "aduspphot": 20,
+            "aduspphot": {{ params["aduspphot"] }},
             "cputime": {{ params["cputime"] }},
         }
-        ret_dict["{{ detector }}"] = {{ params }}
         d2p_dict["nData"] = None
         d2p_dict["get_photon_img"] = False
 
@@ -137,9 +117,15 @@ def get_droplet(run):
         run=int(run)
     ret_dict = {}
     if run>0:
-        droplet_dict = {}
 {% for detector, params in getDropletParams.items() %}
-{{- step_parameters("droplet_dict", detector, params) }}
+        droplet_dict = {}
+        {%- if 'userMask' in params and params['userMask'] %}
+        droplet_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("droplet_dict", detector, params, False, skip_keys=["userMask"]) }}
+        {% else %}
+        {{- step_parameters("droplet_dict", detector, params, False) }}
+        {% endif %}
+        ret_dict["{{ detector }}"] = droplet_dict
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -150,14 +136,15 @@ def get_azav(run):
         run=int(run)
     ret_dict = {}
     if run>0:
-        az_dict = {}
 {% for detector, params in getAzIntParams.items() %}
-        {%- if 'userMask' in params %}
+        az_dict = {}
+        {%- if 'userMask' in params and params['userMask'] %}
         az_dict['userMask'] = np.load("{{ params['userMask'] }}")
-        {{- step_parameters("az_dict", detector, params|rejectattr("userMask")) }}
+        {{- step_parameters("az_dict", detector, params, False, ["userMask"]) }}
         {% else %}
-        {{- step_parameters("az_dict", detector, params) }}
+        {{- step_parameters("az_dict", detector, params, False) }}
         {% endif %}
+        ret_dict["{{ detector }}"] = az_dict
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -168,9 +155,15 @@ def get_azav_pyfai(run):
         run=int(run)
     ret_dict = {}
     if run>0:
-        az_dict = {}
 {% for detector, params in getAzIntPyFAIParams.items() %}
-        {{- step_parameters("az_dict", detector, params) }}
+        az_dict = {}
+        {%- if 'userMask' in params and params['userMask'] %}
+        az_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("az_dict", detector, params, False, skip_keys=["userMask"]) }}
+        {% else %}
+        {{- step_parameters("az_dict", detector, params, False) }}
+        {% endif %}
+        ret_dict["{{ detector }}"] = az_dict
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -184,8 +177,13 @@ def get_polynomial_correction(run):
 def get_sum_algos(run):
     ret_dict = {}
     if run > 0:
-{% for detector, params in detSumAlgos.items() %}
-        ret_dict['{{ detector }}'] = {{ params }}
+{%- if 'all' in detSumAlgos %}
+{%- for det in detnames %}
+{{- step_value(det, detSumAlgos['all']) }}
+{% endfor %}
+{%- endif %}
+{% for detector, params in detSumAlgos.items() if detector != 'all' %}
+{{- step_value(detector, params) }}
 {% endfor %}
     return ret_dict
 {% endif %}
@@ -196,8 +194,8 @@ def get_pressio_compression(run):
         run=int(run)
     ret_dict = {}
     if run>0:
-        pressio_dict = {}
 {% for detector, params in getPressioCompression.items() %}
+        pressio_dict = {}
         {%- if 'compressor_id' in params %}
         compressor_id = "{{ params['compressor_id'] }}"
         {%- if 'compressor_args' in params and 'abs_error_bound' in params['compressor_args'] %}
@@ -225,15 +223,21 @@ def get_pressio_compression(run):
 # epicsPV = ['las_fs14_controller_time']
 # epicsOncePV = ['m0c0_vset', ('TMO:PRO2:MPOD:01:M2:C3:VoltageMeasure', 'MyAlias'),
 #               'IM4K4:PPM:SPM:VOLT_RBV', "FOO:BAR:BAZ", ("X:Y:Z", "MCBTest"), "A:B:C"]
-{%- if epicsPV is defined %}
+# epicsArchFilePV = [('ABCD', 'BCDEF'), ('JFDLKSFJ', 'SJKLFS')]
+{%- if epicsPV is defined and epicsPV %}
 epicsPV = {{ epicsPV }}
 {% else %}
 epicsPV = []
 {% endif %}
-{%- if epicsOncePV is defined %}
+{%- if epicsOncePV is defined and epicsOncePV %}
 epicsOncePV = {{ epicsOncePV }}
 {% else %}
 epicsOncePV = []
+{% endif %}
+{%- if epicsArchFilePV is defined and epicsArchFilePV %}
+epicsArchFilePV = {{ epicsArchFilePV }}
+{% else %}
+epicsArchFilePV = []
 {% endif %}
 
 ##########################################################

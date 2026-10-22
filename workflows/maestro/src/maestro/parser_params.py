@@ -4,7 +4,7 @@ This module provides utilities for expanding parameter matrices into
 individual parameter combinations and generating task instances.
 """
 
-__all__ = ["expand_param_matrix"]
+__all__ = ["expand_param_matrix", "zip_param_matrix"]
 __author__ = "Gabriel Dorlhiac"
 
 import itertools
@@ -43,6 +43,46 @@ def expand_param_matrix(param_matrix: Dict[str, List[Any]]) -> List[Dict[str, An
     # Generate all combinations using itertools.product
     combinations = []
     for values in itertools.product(*param_value_lists):
+        combination = dict(zip(param_names, values))
+        combinations.append(combination)
+
+    return combinations
+
+
+def zip_param_matrix(param_matrix: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+    """Expand a parameter matrix by zipping values element-wise.
+
+    Unlike `expand_param_matrix`, which takes the Cartesian product of all
+    parameter value lists, this pairs up values positionally. Use this when
+    parameters are correlated (e.g. one Task instance per detector, where
+    `detname`, `center`, and `fixed` all vary together) rather than
+    independent sweep axes.
+
+    Args:
+        param_matrix (Dict[str, List[Any]]): Dictionary mapping parameter names
+            to lists of values. All lists must be the same length.
+
+    Returns:
+        param_combos (List[Dict[str, Any]]): List of dictionaries, each representing
+            one parameter combination.
+
+    Example:
+        >>> param_matrix = {"detname": ["Quad0", "Quad1"], "dist": [0.28, 0.19]}
+        >>> param_combos = zip_param_matrix(param_matrix)
+        >>> param_combos
+        [{"detname": "Quad0", "dist": 0.28},
+         {"detname": "Quad1", "dist": 0.19}]
+    """
+    if not param_matrix:
+        return [{}]
+
+    # Get parameter names and their value lists
+    param_names = list(param_matrix.keys())
+    param_value_lists = [param_matrix[name] for name in param_names]
+
+    # Generate all combinations by zipping element-wise
+    combinations = []
+    for values in zip(*param_value_lists):
         combination = dict(zip(param_names, values))
         combinations.append(combination)
 
@@ -95,15 +135,21 @@ def generate_task_names(
     return [f"{base_task_name}_{idx}" for idx in range(num_combinations)]
 
 
-def validate_param_matrix(param_matrix: Dict[str, Any]) -> None:
+def validate_param_matrix(
+    param_matrix: Dict[str, Any], require_equal_length: bool = False
+) -> None:
     """Validate that a parameter matrix is well-formed.
 
     Args:
         param_matrix (Dict[str, Any]): The parameter matrix to validate.
 
+        require_equal_length (bool): If True, additionally require that every
+            parameter's value list has the same length.
+
     Raises:
         ValueError: If the parameter matrix is invalid. E.g. no dictionary provided
-            or lists aren't given for one or more parameters in the dictionary.
+            or lists aren't given for one or more parameters in the dictionary, or
+            the value lists have differing lengths when zipping.
     """
     if not isinstance(param_matrix, dict):
         raise ValueError(f"param_matrix must be a dictionary, got {type(param_matrix)}")
@@ -115,6 +161,15 @@ def validate_param_matrix(param_matrix: Dict[str, Any]) -> None:
             )
         if not values:
             raise ValueError(f"Parameter '{param_name}' has an empty value list")
+
+    if require_equal_length and param_matrix:
+        lengths = {len(values) for values in param_matrix.values()}
+        if len(lengths) > 1:
+            raise ValueError(
+                "All parameter value lists must be the same length for a "
+                f"zipped param_matrix, got lengths: "
+                f"{ {name: len(values) for name, values in param_matrix.items()} }"
+            )
 
 
 def get_sweep_metadata(

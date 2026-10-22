@@ -4,9 +4,23 @@ title: "Parameter Generation"
 experiment: "xpptut15"
 run: 670
 date: "2026/01/28"
-lute_version: 0.2.0
+lute_version: 0.3.0
 task_timeout: 600
 work_dir: "/tmp"
+
+# Setup RUN_GROUPS once globally - Give you semantic range of runs
+# In the Tasks, you define parameter policies
+# Setting run to 9999 includes all runs. This is the largest LCLS run supported.
+RUN_GROUPS:
+  ALL_RUNS:
+    applies_to:
+      # Bounds are inclusive
+      range: [0, 9999]
+      # Alternatively, your group can use an explicit list
+      # runs: [1, 2, 3, 4]
+
+    # `default` applies to all the parameters
+    default: @literal
 ...
 ---
 Test:

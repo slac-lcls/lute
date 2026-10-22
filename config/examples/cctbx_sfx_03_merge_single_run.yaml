@@ -12,7 +12,7 @@ title: "MFX Lysozyme — merging single run r0037"
 experiment: mfx101624926
 run: 37
 date: "2024/10/16"
-lute_version: 0.1
+lute_version: 0.3.0
 task_timeout: 3600
 work_dir: /sdf/data/lcls/ds/mfx/mfx101624926/scratch
 ---

@@ -1,7 +1,7 @@
 #ifndef HTTP_HANDLER_HH
 #define HTTP_HANDLER_HH
 
-#include "http.hh"
+#include "server/http.hh"
 
 #include <map>
 #include <stdexcept>

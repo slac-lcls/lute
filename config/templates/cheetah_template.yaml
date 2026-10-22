@@ -1,13 +1,4 @@
-{%- macro step_pydantic_model(data) %}
-{%- for field, sub_fields in data.items() %}
-{%- if sub_fields is mapping %}
-{{ field }}:
-{{- step_pydantic_model(sub_fields)|indent(loop.depth*2, True) }}
-{%- else %}
-{{ field }}: {{ sub_fields | tojson }}
-{%- endif %}
-{%- endfor %}
-{%- endmacro -%}
+{%- from "macros.jinja" import step_pydantic_model -%}
 
 {%- if data_retrieval_layer is defined and data_retrieval_layer %}
 om:

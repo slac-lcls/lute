@@ -39,16 +39,16 @@ def sum_diff(
     return diff0 + diff1
 
 
-def laser_on_mean(
+def sum_laser_on(
     laser_on0: npt.NDArray[np.float64], laser_on1: npt.NDArray[np.float64]
 ) -> npt.NDArray[np.float64]:
-    return laser_on0.sum(axis=0) + laser_on1.sum(axis=0)
+    return laser_on0 + laser_on1
 
 
-def laser_off_mean(
+def sum_laser_off(
     laser_off0: npt.NDArray[np.float64], laser_off1: npt.NDArray[np.float64]
 ) -> npt.NDArray[np.float64]:
-    return laser_off0.sum(axis=0) + laser_off1.sum(axis=0)
+    return laser_off0 + laser_off1
 
 
 def sum_tjump(
@@ -61,9 +61,13 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
     """Task to analyze XSS profiles stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXSSParameters, use_mpi: bool = True
+        self,
+        *,
+        params: AnalyzeSmallDataXSSParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
         self._task_parameters = cast(
             AnalyzeSmallDataXSSParameters, self._task_parameters
         )
@@ -86,8 +90,8 @@ class AnalyzeSmallDataXSS(AnalyzeSmallData):
 
         if self._mpi_size > 1:
             diff = self._mpi_comm.reduce(diff, op=sum_diff)
-            laser_on = self._mpi_comm.reduce(laser_on, op=laser_on_mean)
-            laser_off = self._mpi_comm.reduce(laser_off, op=laser_off_mean)
+            laser_on = self._mpi_comm.reduce(laser_on, op=sum_laser_on)
+            laser_off = self._mpi_comm.reduce(laser_off, op=sum_laser_off)
             tjumps = self._mpi_comm.reduce(tjumps, op=sum_tjump)
             processed_tjumps = self._mpi_comm.reduce(processed_tjumps, op=sum_tjump)
         if (
@@ -125,9 +129,13 @@ class AnalyzeSmallDataXAS(AnalyzeSmallData):
     """Task to analyze XAS data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXASParameters, use_mpi: bool = True
+        self,
+        *,
+        params: AnalyzeSmallDataXASParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _pre_run(self) -> None:
         # Currently scattering data is extracted as standard since its used
@@ -210,9 +218,13 @@ class AnalyzeSmallDataXES(AnalyzeSmallData):
     """Task to analyze XES data stored in a SmallData HDF5 file."""
 
     def __init__(
-        self, *, params: AnalyzeSmallDataXESParameters, use_mpi: bool = True
+        self,
+        *,
+        params: AnalyzeSmallDataXESParameters,
+        use_mpi: bool = True,
+        row_ids=None,
     ) -> None:
-        super().__init__(params=params, use_mpi=use_mpi)
+        super().__init__(params=params, use_mpi=use_mpi, row_ids=row_ids)
 
     def _pre_run(self) -> None:
         # Currently scattering data is extracted as standard since its used

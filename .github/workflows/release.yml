@@ -24,11 +24,11 @@ jobs:
         # os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
 
       # Cache pip (for speedup)
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9                        # v6
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
@@ -37,7 +37,7 @@ jobs:
 
       # Cache ccache (for speedup)
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9                        # v6
         with:
           path: .ccache
           key: ${{ runner.os }}-ccache-${{ github.ref }}
@@ -47,7 +47,7 @@ jobs:
 
       - name: Build wheels
         # Check pyproject.toml for supported versions and additional config
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@294735312765b09d24a2fbec22660ce817587d55                    # v4.1.0
         env:
           CIBW_TEST_REQUIRES: "pytest"
           # Include the C++ test suite binaries
@@ -67,7 +67,7 @@ jobs:
             zip -d "$whl" "*test_http" "*test_server" "*test_maestro_api" "*activate_installation"
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a              # v7.0.1
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
@@ -77,10 +77,10 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0                     # v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1                 # v6
         with:
           python-version: "3.11" # Shouldn't matter
 
@@ -96,7 +96,7 @@ jobs:
           python -m pip install build
           python -m build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a              # v7.0.1
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
@@ -112,7 +112,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Gather build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c            # v8
         with:
           pattern: cibw-*
           path: dist
@@ -120,10 +120,10 @@ jobs:
 
       # This will publish to PyPI as `psrel`. Only this workflow is linked to the PyPI account
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b          # v1.14.0
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b          # v3.0.1
         with:
           files: dist/*
           generate_release_notes: true

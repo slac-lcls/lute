@@ -5,6 +5,7 @@ here.
 """
 
 import os
+from typing import Dict
 
 from lute.execution.executor import Executor, MPIExecutor
 from lute.tasks.util.environment import setup_smd2_env
@@ -19,38 +20,58 @@ from lute.tasks.tasklets import (
 #######
 Tester: Executor = Executor("Test")
 """Runs a basic test of a first-party Task."""
+Tester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 BinaryTester: Executor = Executor("TestBinary")
 """Runs a basic test of a multi-threaded third-party Task."""
+BinaryTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 BinaryErrTester = Executor("TestBinaryErr")
 """Runs a test of a third-party task that fails."""
+BinaryErrTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 SocketTester: Executor = Executor("TestSocket")
 """Runs a test of socket-based communication."""
+SocketTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 WriteTester: Executor = Executor("TestWriteOutput")
 """Runs a test to confirm database writing."""
+WriteTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 ReadTester: Executor = Executor("TestReadOutput")
 """Runs a test to confirm database reading."""
+ReadTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 MultiNodeCommunicationTester: MPIExecutor = MPIExecutor("TestMultiNodeCommunication")
 """Runs a test to confirm communication works between multiple nodes."""
+MultiNodeCommunicationTester.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
 
 RequestTester: Executor = Executor("TestRequest")
 """Runs a test whether requests go from Task to Executor to Workflow manager."""
+RequestTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+
+UnresponsiveTester: Executor = Executor("TestUnresponsive")
+"""Runs a test to see if unresponsive jobs are killed."""
+RequestTester.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 
 # SmallData-related
 ###################
 SmallDataProducer: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS1 smalldata HDF5 file."""
+SmallDataProducer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 SmallDataProducer.add_tasklet(
     clone_smalldata,
     ["{{ producer }}", f"{os.getenv('LUTE_PATH')}/config/templates/smd.patch"],
     when="before",
     set_result=False,
     set_summary=False,
+)
+SmallDataProducer.update_environment(
+    {
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+    }
 )
 
 SmallDataProducer2: Executor = Executor("SubmitSMD")
@@ -65,7 +86,9 @@ SmallDataProducer2.add_tasklet(
     set_result=False,
     set_summary=False,
 )
-SmallDataProducer2.update_environment(setup_smd2_env)
+smd2_env = setup_smd2_env()
+smd2_env["PYTHONPATH"] = "/sdf/group/lcls/ds/tools/LCLSGeom/src"
+SmallDataProducer2.update_environment(smd2_env)
 
 SmallDataProducer2Test: Executor = Executor("SubmitSMD")
 """Runs the production of a LCLS2 smalldata HDF5 file using the test environment."""
@@ -111,17 +134,33 @@ SmallDataProducerXpp.update_environment(setup_smd2_env)
 
 SmallDataXSSAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXSS")
 """Process scattering results from a Small Data HDF5 file."""
+SmallDataXSSAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
+psana2_vars: Dict[str, str] = {"PS_PARALLEL": "mpi"}
+SmallDataXSSAnalyzer.update_environment(psana2_vars)
 
 SmallDataXASAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXAS")
 """Process XAS results from a Small Data HDF5 file."""
+SmallDataXASAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
+SmallDataXASAnalyzer.update_environment(psana2_vars)
 
 SmallDataXESAnalyzer: MPIExecutor = MPIExecutor("AnalyzeSmallDataXES")
 """Process XES results from a Small Data HDF5 file."""
+SmallDataXESAnalyzer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh"
+)
+SmallDataXESAnalyzer.update_environment(psana2_vars)
 
 # Geometry
 ##########
 AgBhGeometryOptimizer: MPIExecutor = MPIExecutor("OptimizeAgBhGeometryExhaustive")
 """Run an exhaustive grid search for center/distance based on Ag Bh run."""
+AgBhGeometryOptimizer.shell_source(
+    "/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh"
+)
 
 # SFX
 #####
@@ -197,18 +236,22 @@ DimpleSolver.add_tasklet(
 
 PeakFinderSFX: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
+PeakFinderSFX.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+PeakFinderSFX.update_environment(psana2_vars)
 
 PeakFinderSFXXpp: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFXXpp.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_cpu.sh"
 )
+PeakFinderSFXXpp.update_environment(psana2_vars)
 
 PeakFinderSFXXppGpu: MPIExecutor = MPIExecutor("FindPeaksSFX")
 """Performs Bragg peak finding using the PyAlgos or Peakfinder8 algorithm."""
 PeakFinderSFXXppGpu.shell_source(
     "/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/xpp_drp_gpu.sh"
 )
+PeakFinderSFXXppGpu.update_environment(psana2_vars)
 
 SHELXCRunner: Executor = Executor("RunSHELXC")
 """Runs CCP4 SHELXC - needed for crystallographic phasing."""
@@ -216,11 +259,18 @@ SHELXCRunner.shell_source("/sdf/group/lcls/ds/tools/ccp4-8.0/bin/ccp4.setup-sh")
 
 PeakFinderPsocake: Executor = Executor("FindPeaksPsocake")
 """Performs Bragg peak finding using psocake - *DEPRECATED*."""
+PeakFinderPsocake.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 
 # XTC
 #####
-Xtc1to2Converter: Executor = Executor("ConvertXtc1to2")
-"""Converts Xtc1 files to Xtc2 to use in psana2"""
+Xtc1Reader: MPIExecutor = MPIExecutor("ReadXtc1")
+"""Read XTC1 file and send to Xtc2Writer for conversion."""
+Xtc1Reader.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
+
+Xtc2Writer: MPIExecutor = MPIExecutor("WriteXtc2")
+"""Write XTC2 files from XTC1 data received from to Xtc1Reader."""
+Xtc2Writer.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
+Xtc2Writer.update_environment(psana2_vars)
 
 # Cheetah
 #########
@@ -231,23 +281,26 @@ CheetahRunner.shell_source("/sdf/group/lcls/ds/tools/om/setup-om.sh")
 # BayFAI
 #######
 BayFAIOptimizer: MPIExecutor = MPIExecutor("BayFAI")
-"""Optimize LCLS detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+"""Optimize LCLS-I detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer.shell_source("/sdf/group/lcls/ds/ana/sw/conda1/manage/bin/psconda.sh")
 BayFAIOptimizer.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
-        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
     }
 )
 
 BayFAIOptimizer2: MPIExecutor = MPIExecutor("BayFAI")
-"""Optimize LCLS2 detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+"""Optimize LCLS-II detector geometry using BayFAI: PyFAI coupled with Bayesian Optimization."""
+BayFAIOptimizer2.shell_source("/sdf/group/lcls/ds/ana/sw/conda2/manage/bin/psconda.sh")
 BayFAIOptimizer2.update_environment(
     {
         "NUMEXPR_MAX_THREADS": "16",
         "NUMEXPR_NUM_THREADS": "16",
         "PS_SRV_NODES": "0",
         "PS_EB_NODES": "1",
-        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom",
+        "PYTHONPATH": "/sdf/group/lcls/ds/tools/LCLSGeom/src",
+        "PS_PARALLEL": "mpi",
     }
 )

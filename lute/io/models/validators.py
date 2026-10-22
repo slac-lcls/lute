@@ -11,7 +11,7 @@ __author__ = ["Gabriel Dorlhiac"]
 import os
 from typing import Dict, Any, Optional
 
-from pydantic import validator
+from pydantic import validator, BaseModel
 
 from lute.io.db import read_latest_db_entry
 
@@ -37,7 +37,11 @@ def template_parameter_validator(template_params_name: str):
     ) -> None:
         if template_params is not None:
             for param, value in template_params:
-                values[param] = value
+                if isinstance(value, BaseModel):
+                    # Simplify Jinja templating by converting to dicts
+                    values[param] = value.dict()
+                elif value is not None:
+                    values[param] = value
         return None
 
     return validator(template_params_name, always=True, allow_reuse=True)(

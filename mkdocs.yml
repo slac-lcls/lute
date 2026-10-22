@@ -12,7 +12,7 @@ nav:
       - Task Documentation:
           - Using smalldata_tools: "usage/tasks/smalldata_tools.md"
           - Converting XTC1 to XTC2: "usage/tasks/xtc1_to_xtc2_conversion.md"
-          - Running BayFAI: "usage/tasks/bayfai.md"
+          - Running BayFAI: "usage/tasks/bayfai/bayfai.md"
   - Developer Documentation:
       - Architecture and Execution Model: "development/architecture.md"
       - Creating a new Task:
@@ -42,7 +42,6 @@ nav:
           - dataclasses: "source/tasks/dataclasses.md"
           - bayfai: "source/tasks/bayfai.md"
           - _bayfai: "source/tasks/_bayfai.md"
-          - _bayfai2: "source/tasks/_bayfai2.md"
           - geometry: "source/tasks/geometry.md"
           - _geometry: "source/tasks/_geometry.md"
           - sfx_find_peaks: "source/tasks/sfx_find_peaks.md"
@@ -68,7 +67,6 @@ nav:
               - validators: "source/io/models/validators.md"
               - tests: "source/io/models/tests.md"
               - mpi_tests: "source/io/models/mpi_tests.md"
-          - calib: "source/io/calib.md"
           - config: "source/io/config.md"
           - db: "source/io/db.md"
           - _db:

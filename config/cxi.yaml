@@ -4,21 +4,52 @@ title: "LUTE Task Configuration" # Include experiment description if desired
 experiment: "{{ $EXPERIMENT }}"
 #run: "{{ $RUN_NUM }}"
 date: "2023/10/25"
-lute_version: 0.2.0      # Do not be change unless need to force older version
+lute_version: 0.3.0      # Do not be change unless need to force older version
 task_timeout: 6000
 work_dir: ""
+
+# Setup RUN_GROUPS once globally - Give you semantic range of runs
+# In the Tasks, you define parameter policies
+# Setting run to 9999 includes all runs. This is the largest LCLS run supported.
+RUN_GROUPS:
+  ALL_RUNS:
+    applies_to:
+      # Bounds are inclusive
+      range: [0, 9999]
+      # Alternatively, your group can use an explicit list
+      # runs: [1, 2, 3, 4]
 ...
 ---
 ###########
 # Smalldata
 ###########
-
 # Producer will be auto-determined. Set only if you have a separate install
 # Set `directory` if you want to write to a different folder
 # For out of memory issues try setting gather_interval
 SubmitSMD:
+  # Choose RUN_GROUPS policies
+  RUN_GROUPS:
+    ALL_RUNS: # Matches name above
+      # `default` applies to all the parameters
+      default: @literal
+      # Alternatives:
+      # default: @db:current # Use the last value for current run, in database
+      # default: @db:run:1   # Use the value for run 1, in database. Can choose any run
+      #
+      # Can also setup a policy for each parameter, including with nesting
+      # Use the last value for ROIs for the current run
+      # producer_parameters.getROIs: @db:current
+      # Use the run 1 value just for jungfrau
+      # producer_parameters.getROIs.jungfrau: @db:run:1
+
   # Command line arguments
-  #producer: "/path/to/smalldata_tools/producers/smd_producer.py"
+  #map_by: "core"   # MPI resource mapping - take care with changing unless familiar
+  #bind_to: "core"  # MPI resource binding - take care with changing unless familiar
+  # LCLS1 (psana1)
+  producer: "{{ work_dir }}/smalldata_tools/lcls1_producers/smd_producer.py"
+  lute_template_cfg:
+    template_name: "smd1_prod_config_template.py"
+    output_path: "{{ work_dir }}/smalldata_tools/lcls1_producers/prod_config_cxi.py"
   #run: 99
   #experiment: ""
   #stn: 0
@@ -45,83 +76,86 @@ SubmitSMD:
   # detector. This detector MUST MATCH one of the detectors in `detnames`.
   # In the future this will be automated. If you have multiple detectors you can
   # add them with their own set of parameters.
-  detnames: ["jungfrau4M"]
-  #epicsPV: []
-  #ttCalib: []
-  # Provide detector image sum algorithms.
-  # If detSumAlgos is not defined, it will default to calib, calib_dropped and
-  # calib_dropped_square for every detector. You can add processing algorithms for
-  # single detectors (e.g. epix10k2M or Rayonix) as below, or add algorithms which
-  # will apply to every detector defined in detnames by placing them under "all"
-  detSumAlgos:
-    all:
-      - "calib"
-      - "calib_dropped"
-      - "calib_dropped_square"
-      - "calib_thresADU1"
-      - "calib_max"
-  #getROIs:
-  #  jungfrau1M:   # Change to detector name
-  #    ROIs: [[[1, 2], [157, 487], [294, 598]]]
-  #    writeArea: True   # Whether to save ROI, if False, save sum but not img.
-  #    thresADU: None
-  #getAzIntParams:
-  #  Rayonix:
-  #    eBeam: 18
-  #    center: [87526.79161840, 92773.3296889500]
-  #    dis_to_sam: 80.0
-  #    tx: 0
-  #    ty: 0
-  #getAzIntPyFAIParams:
-  #  Rayonix:
-  #    pix_size: 176e-6
-  #    ai_kwargs:
-  #      dist: 1
-  #      poni1: 960 * 1.76e-4
-  #      poni2: 960 * 1.76e-4
-  #    npts: 512
-  #    int_units: "2th_deg"
-  #    return2d: False
-  #getPhotonsParams:
-  #  jungfrau1M:
-  #    ADU_per_photon: 9.5
-  #    thresADU: 0.8
-  #getDropletParams:
-  #  epix_1:
-  #    threshold: 5
-  #    thresholdLow: 5
-  #    thresADU: 60
-  #    useRms: True
-  #    nData: 1e5
-  #getDroplet2Photons:
-  #  epix_alc1:
-  #    droplet:
-  #      threshold: 10
-  #      thresholdLow: 3
-  #      thresADU: 10
-  #      useRms: True
-  #    d2p:
-  #      aduspphot: 162
-  #      mask: np.load('path_to_mask.npy')
-  #      cputime: True
-  #    nData: 3e4
-  #getSvdParams:
-  #  acq_0:
-  #    basis_file: None
-  #    n_pulse: 1
-  #    delay: None
-  #    return_reconstructed: True
-  #getAutocorrParams:
-  #  epix_2:
-  #    mask: "/sdf/home/e/example/dataAna/mask_epix.npy"
-  #    thresAdu: [72.0, 1.0e6]
-  #    save_range: [70, 50]
-  #    save_lineout: True
+  producer_parameters:
+    detnames: ["jungfrau4M"]
+    #epicsPV: []
+    #epicsOncePV: []
+    #ttCalib: []
+    # Provide detector image sum algorithms.
+    # If detSumAlgos is not defined, it will default to calib, calib_dropped and
+    # calib_dropped_square for every detector. You can add processing algorithms for
+    # single detectors (e.g. epix10k2M or Rayonix) as below, or add algorithms which
+    # will apply to every detector defined in detnames by placing them under "all"
+    detSumAlgos:
+      all:
+        - "calib"
+        - "calib_dropped"
+        - "calib_dropped_square"
+        - "calib_thresADU1"
+        - "calib_max"
+    #getROIs:
+    #  jungfrau1M:   # Change to detector name
+    #    ROIs: [[[1, 2], [157, 487], [294, 598]]]
+    #    writeArea: True   # Whether to save ROI, if False, save sum but not img.
+    #    thresADU: None
+    #getAzIntParams:
+    #  Rayonix:
+    #    eBeam: 18
+    #    center: [87526.79161840, 92773.3296889500]
+    #    dis_to_sam: 80.0
+    #    tx: 0
+    #    ty: 0
+    #getAzIntPyFAIParams:
+    #  Rayonix:
+    #    pix_size: 176e-6
+    #    ai_kwargs:
+    #      dist: 1
+    #      poni1: 960 * 1.76e-4
+    #      poni2: 960 * 1.76e-4
+    #    npts: 512
+    #    int_units: "2th_deg"
+    #    return2d: False
+    #getPhotonsParams:
+    #  jungfrau1M:
+    #    ADU_per_photon: 9.5
+    #    thresADU: 0.8
+    #getDropletParams:
+    #  epix_1:
+    #    threshold: 5
+    #    thresholdLow: 5
+    #    thresADU: 60
+    #    useRms: True
+    #    nData: 1e5
+    #getDroplet2Photons:
+    #  epix_alc1:
+    #    droplet:
+    #      threshold: 10
+    #      thresholdLow: 3
+    #      thresADU: 10
+    #      useRms: True
+    #    d2p:
+    #      aduspphot: 162
+    #      mask: np.load('path_to_mask.npy')
+    #      cputime: True
+    #    nData: 3e4
+    #getSvdParams:
+    #  acq_0:
+    #    basis_file: None
+    #    n_pulse: 1
+    #    delay: None
+    #    return_reconstructed: True
+    #getAutocorrParams:
+    #  epix_2:
+    #    mask: "/sdf/home/e/example/dataAna/mask_epix.npy"
+    #    thresAdu: [72.0, 1.0e6]
+    #    save_range: [70, 50]
+    #    save_lineout: True
 
 ###########
 # BayFAI
 ###########
 BayFAI:
+  parallelized: "dist"
   fixed:
   - "rot1"
   - "rot2"
