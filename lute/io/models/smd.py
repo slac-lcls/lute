@@ -159,6 +159,12 @@ A 4-tuple describing if and how common-mode correction should be applied.
                 dist: float = Field(description="Detector distance.")
                 poni1: float = Field(description="First poni.")
                 poni2: float = Field(description="Second poni.")
+                rot1: float = Field(0, description="First rotation in rad.")
+                rot2: float = Field(0, description="Second rotation in rad.")
+                rot3: float = Field(0, description="Third rotation in rad.")
+                wavelength: Optional[float] = Field(
+                    None, description="Wavelength in m. Required for q_A^-1 units."
+                )
 
             poni_file: Optional[str] = Field(
                 None,
