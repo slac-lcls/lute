@@ -650,10 +650,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#azimuthal-integration-getazintparams-and-getazintpyfaiparams" class="md-nav__link">
+  <a href="#azimuthal-integration-getazintparams-getazintpyfaiparams-and-getazintlclsgeomparams" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Azimuthal integration: getAzIntParams and getAzIntPyFAIParams
+        Azimuthal integration: getAzIntParams, getAzIntPyFAIParams and getAzIntLCLSGeomParams
       
     </span>
   </a>
@@ -3280,10 +3280,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#azimuthal-integration-getazintparams-and-getazintpyfaiparams" class="md-nav__link">
+  <a href="#azimuthal-integration-getazintparams-getazintpyfaiparams-and-getazintlclsgeomparams" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Azimuthal integration: getAzIntParams and getAzIntPyFAIParams
+        Azimuthal integration: getAzIntParams, getAzIntPyFAIParams and getAzIntLCLSGeomParams
       
     </span>
   </a>
@@ -3532,6 +3532,13 @@ to the producer.</p>
     #    npts: 512
     #    int_units: &quot;2th_deg&quot;
     #    return2d: False
+    #getAzIntLCLSGeomParams:
+    #  jungfrau:
+    #    poni_file: &quot;path/to/geometry/params.poni&quot;
+    #    npts: 512
+    #    npts_az: 36
+    #    int_units: &quot;q_A^-1&quot;
+    #    return2d: True
     #getPhotonsParams:
     #  jungfrau1M:
     #    ADU_per_photon: 9.5
@@ -3657,8 +3664,9 @@ to the producer.</p>
 <li><code>calcPars</code>: Whether to output some summary statistics (mean, max, etc.) along with the ROI.</li>
 <li><code>writeArea</code>: A boolean indicating whether to write out the area, or just the sum of the ROI.</li>
 </ul>
-<h4 id="azimuthal-integration-getazintparams-and-getazintpyfaiparams">Azimuthal integration: <code>getAzIntParams</code> and <code>getAzIntPyFAIParams</code></h4>
-<p>Two algorithms for azimuthal integration are provided, the home grown implementation via <code>getAzIntParams</code> and the PyFAI implementation using <code>getAzIntPyFAIParams</code>. The two can be run simultaneously if really needed.</p>
+<h4 id="azimuthal-integration-getazintparams-getazintpyfaiparams-and-getazintlclsgeomparams">Azimuthal integration: <code>getAzIntParams</code>, <code>getAzIntPyFAIParams</code> and <code>getAzIntLCLSGeomParams</code></h4>
+<p>Three algorithms for azimuthal integration are provided: the home grown implementation via <code>getAzIntParams</code>, the PyFAI implementation on the assembled image via <code>getAzIntPyFAIParams</code>, and the PyFAI implementation on the LCLSGeom detector via <code>getAzIntLCLSGeomParams</code>. They can be run simultaneously if really needed.</p>
+<p>Use <code>getAzIntLCLSGeomParams</code> with the <code>.poni</code> file produced by BayFAI. That file is defined relative to the LCLSGeom metrology, and <code>getAzIntLCLSGeomParams</code> rebuilds the same detector, so the geometry stays consistent. Pixels are also mapped once at initialization instead of assembling an image at every event. See <a href="../bayfai/bayfai/#to-go-further-azimuthal-integration-after-bayfai">To go further: Azimuthal Integration after BayFAI</a> for the full parameter list.</p>
 <pre><code class="language-yaml">  #getAzIntParams:
   #  jungfrau:
   #    eBeam: 18
@@ -3684,6 +3692,13 @@ to the producer.</p>
   #    npts: 512
   #    int_units: &quot;2th_deg&quot;
   #    return2d: False
+  #getAzIntLCLSGeomParams:
+  #  jungfrau:
+  #    poni_file: &quot;/path/to/lute_output/geom/r0012_jungfrau.poni&quot;
+  #    npts: 512
+  #    npts_az: 36
+  #    int_units: &quot;q_A^-1&quot;   # Requires a wavelength in the .poni file
+  #    return2d: True
 </code></pre>
 <h4 id="compression-verification">Compression Verification</h4>
 <p>Via libpressio (if using the <code>SmallDataProducerSpack</code> <strong>managed</strong> <code>Task</code> with the spack environment) a simple compression/decompression operation is provided. This will compress and immediately decompress the data before performing any other operations. The purpose of this is to provide a method for verifying whether the compression has any effect on the resultant output data. The configuration is as follows:</p>

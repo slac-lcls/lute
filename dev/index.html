@@ -3087,6 +3087,9 @@
 <li><code>sfx</code> : Perform end-to-end SFX analysis with molecular replacement.</li>
 <li><code>smd</code> : Run managed <code>smalldata_tools</code> and downstream analysis/summaries.</li>
 </ul>
+<p><strong>Shortcut:</strong> <a href="usage/tasks/bayfai/bayfai/">Running BayFAI</a>
+<strong>Shortcut:</strong> <a href="usage/tasks/smalldata_tools/">Running smalldata_tools</a>
+<strong>Shortcut:</strong> <a href="usage/tasks/xtc1_to_xtc2_conversion/">Converting xtc1 to xtc2</a></p>
 <p>Providing SLURM arguments is not required, but <strong>highly recommended</strong>. The setup script will prompt for sensible defaults for <code>--partition</code>, <code>--account</code>, <code>--nodes</code>, and <code>--ntasks</code> if they are not provided. For <code>--partition</code> and <code>--account</code>, workflow-specific defaults are selected based on the experiment; for <code>--nodes</code> and <code>--ntasks</code>, the default is 1. Press enter (or any key) to accept each default, or press <code>Ctrl-C</code> to exit and pass the arguments manually.</p>
 <p>The <code>setup_lute</code> script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at <code>/sdf/data/lcls/ds/&lt;hutch&gt;/&lt;experiment&gt;/results/lute_output/&lt;hutch&gt;_lute.yaml</code>. You will want to modify this configuration prior to running. See <a href="/#basic-usage">Basic Usage</a> below for more information.</p>
 <h4 id="locally-or-otherwise">Locally or otherwise</h4>

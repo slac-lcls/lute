@@ -5016,8 +5016,7 @@ run : int
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  94</span>
-<span class="normal">  95</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">  95</span>
 <span class="normal">  96</span>
 <span class="normal">  97</span>
 <span class="normal">  98</span>
@@ -6681,7 +6680,13 @@ run : int
 <span class="normal">1756</span>
 <span class="normal">1757</span>
 <span class="normal">1758</span>
-<span class="normal">1759</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIOpt</span><span class="p">:</span>
+<span class="normal">1759</span>
+<span class="normal">1760</span>
+<span class="normal">1761</span>
+<span class="normal">1762</span>
+<span class="normal">1763</span>
+<span class="normal">1764</span>
+<span class="normal">1765</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIOpt</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Class to run BayFAI optimization on a powder image.</span>
 
@@ -6906,6 +6911,11 @@ run : int
         <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">out_file</span><span class="p">)</span>
         <span class="n">poni_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"r</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="si">:</span><span class="s2">0&gt;4</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">detname</span><span class="si">}</span><span class="s2">.poni"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gr</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">poni_file</span><span class="p">)</span>
+        <span class="n">pyfai_to_image_poni</span><span class="p">(</span>
+            <span class="n">detector</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">,</span>
+            <span class="n">in_file</span><span class="o">=</span><span class="n">poni_file</span><span class="p">,</span>
+            <span class="n">out_file</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"r</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="si">:</span><span class="s2">0&gt;4</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">detname</span><span class="si">}</span><span class="s2">_image.poni"</span><span class="p">),</span>
+        <span class="p">)</span>
         <span class="n">PyFAIToPsana</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
             <span class="n">in_file</span><span class="o">=</span><span class="n">poni_file</span><span class="p">,</span>
             <span class="n">detector</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">,</span>
@@ -8382,8 +8392,7 @@ run : int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">240</span>
-<span class="normal">241</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">241</span>
 <span class="normal">242</span>
 <span class="normal">243</span>
 <span class="normal">244</span>
@@ -8401,7 +8410,8 @@ run : int
 <span class="normal">256</span>
 <span class="normal">257</span>
 <span class="normal">258</span>
-<span class="normal">259</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">assemble_image</span><span class="p">(</span>
+<span class="normal">259</span>
+<span class="normal">260</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">assemble_image</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">powder</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -8472,13 +8482,7 @@ seed : optional, int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">763</span>
-<span class="normal">764</span>
-<span class="normal">765</span>
-<span class="normal">766</span>
-<span class="normal">767</span>
-<span class="normal">768</span>
-<span class="normal">769</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">769</span>
 <span class="normal">770</span>
 <span class="normal">771</span>
 <span class="normal">772</span>
@@ -8617,7 +8621,13 @@ seed : optional, int
 <span class="normal">905</span>
 <span class="normal">906</span>
 <span class="normal">907</span>
-<span class="normal">908</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@ignore_warnings</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">ConvergenceWarning</span><span class="p">)</span>
+<span class="normal">908</span>
+<span class="normal">909</span>
+<span class="normal">910</span>
+<span class="normal">911</span>
+<span class="normal">912</span>
+<span class="normal">913</span>
+<span class="normal">914</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@ignore_warnings</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="n">ConvergenceWarning</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">bayes_opt_rank</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">value</span><span class="p">,</span>
@@ -8814,13 +8824,7 @@ seed : optional, int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 910</span>
-<span class="normal"> 911</span>
-<span class="normal"> 912</span>
-<span class="normal"> 913</span>
-<span class="normal"> 914</span>
-<span class="normal"> 915</span>
-<span class="normal"> 916</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 916</span>
 <span class="normal"> 917</span>
 <span class="normal"> 918</span>
 <span class="normal"> 919</span>
@@ -8928,7 +8932,13 @@ seed : optional, int
 <span class="normal">1021</span>
 <span class="normal">1022</span>
 <span class="normal">1023</span>
-<span class="normal">1024</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">bayfai_opt</span><span class="p">(</span>
+<span class="normal">1024</span>
+<span class="normal">1025</span>
+<span class="normal">1026</span>
+<span class="normal">1027</span>
+<span class="normal">1028</span>
+<span class="normal">1029</span>
+<span class="normal">1030</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">bayfai_opt</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">center</span><span class="p">,</span>
     <span class="n">bounds</span><span class="p">,</span>
@@ -9071,8 +9081,7 @@ seed : optional, int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">287</span>
-<span class="normal">288</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">288</span>
 <span class="normal">289</span>
 <span class="normal">290</span>
 <span class="normal">291</span>
@@ -9087,7 +9096,8 @@ seed : optional, int
 <span class="normal">300</span>
 <span class="normal">301</span>
 <span class="normal">302</span>
-<span class="normal">303</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_detector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pyFAI</span><span class="o">.</span><span class="n">detectors</span><span class="o">.</span><span class="n">Detector</span><span class="p">:</span>
+<span class="normal">303</span>
+<span class="normal">304</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_detector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pyFAI</span><span class="o">.</span><span class="n">detectors</span><span class="o">.</span><span class="n">Detector</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Read the metrology data and build a pyFAI detector object.</span>
 
@@ -9129,13 +9139,7 @@ seed : optional, int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1503</span>
-<span class="normal">1504</span>
-<span class="normal">1505</span>
-<span class="normal">1506</span>
-<span class="normal">1507</span>
-<span class="normal">1508</span>
-<span class="normal">1509</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1509</span>
 <span class="normal">1510</span>
 <span class="normal">1511</span>
 <span class="normal">1512</span>
@@ -9246,7 +9250,13 @@ seed : optional, int
 <span class="normal">1617</span>
 <span class="normal">1618</span>
 <span class="normal">1619</span>
-<span class="normal">1620</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_diagnostics_panel</span><span class="p">(</span>
+<span class="normal">1620</span>
+<span class="normal">1621</span>
+<span class="normal">1622</span>
+<span class="normal">1623</span>
+<span class="normal">1624</span>
+<span class="normal">1625</span>
+<span class="normal">1626</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_diagnostics_panel</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">plot</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
 <span class="p">):</span>
@@ -9386,13 +9396,7 @@ seed : optional, int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1374</span>
-<span class="normal">1375</span>
-<span class="normal">1376</span>
-<span class="normal">1377</span>
-<span class="normal">1378</span>
-<span class="normal">1379</span>
-<span class="normal">1380</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1380</span>
 <span class="normal">1381</span>
 <span class="normal">1382</span>
 <span class="normal">1383</span>
@@ -9513,7 +9517,13 @@ seed : optional, int
 <span class="normal">1498</span>
 <span class="normal">1499</span>
 <span class="normal">1500</span>
-<span class="normal">1501</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_interactive_powder</span><span class="p">(</span>
+<span class="normal">1501</span>
+<span class="normal">1502</span>
+<span class="normal">1503</span>
+<span class="normal">1504</span>
+<span class="normal">1505</span>
+<span class="normal">1506</span>
+<span class="normal">1507</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_interactive_powder</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
@@ -9677,13 +9687,7 @@ X_norm : np.ndarray
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span>
-<span class="normal">437</span>
-<span class="normal">438</span>
-<span class="normal">439</span>
-<span class="normal">440</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">440</span>
 <span class="normal">441</span>
 <span class="normal">442</span>
 <span class="normal">443</span>
@@ -9724,7 +9728,13 @@ X_norm : np.ndarray
 <span class="normal">478</span>
 <span class="normal">479</span>
 <span class="normal">480</span>
-<span class="normal">481</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_search_space</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_search_space</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Discretize the search space for the free parameters.</span>
 
@@ -9797,13 +9807,7 @@ X_norm : np.ndarray
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1622</span>
-<span class="normal">1623</span>
-<span class="normal">1624</span>
-<span class="normal">1625</span>
-<span class="normal">1626</span>
-<span class="normal">1627</span>
-<span class="normal">1628</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1628</span>
 <span class="normal">1629</span>
 <span class="normal">1630</span>
 <span class="normal">1631</span>
@@ -9934,7 +9938,13 @@ X_norm : np.ndarray
 <span class="normal">1756</span>
 <span class="normal">1757</span>
 <span class="normal">1758</span>
-<span class="normal">1759</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_summary_plot</span><span class="p">(</span>
+<span class="normal">1759</span>
+<span class="normal">1760</span>
+<span class="normal">1761</span>
+<span class="normal">1762</span>
+<span class="normal">1763</span>
+<span class="normal">1764</span>
+<span class="normal">1765</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_summary_plot</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">plot</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
 <span class="p">):</span>
@@ -10101,13 +10111,7 @@ wavelength : float, optional
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">337</span>
 <span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
@@ -10150,7 +10154,13 @@ wavelength : float, optional
 <span class="normal">377</span>
 <span class="normal">378</span>
 <span class="normal">379</span>
-<span class="normal">380</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">define_calibrant</span><span class="p">(</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">define_calibrant</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">calibrant_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">h5</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -10232,13 +10242,7 @@ res : dict
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">406</span>
-<span class="normal">407</span>
-<span class="normal">408</span>
-<span class="normal">409</span>
-<span class="normal">410</span>
-<span class="normal">411</span>
-<span class="normal">412</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">412</span>
 <span class="normal">413</span>
 <span class="normal">414</span>
 <span class="normal">415</span>
@@ -10258,7 +10262,13 @@ res : dict
 <span class="normal">429</span>
 <span class="normal">430</span>
 <span class="normal">431</span>
-<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distribute_parallelized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">distribute_parallelized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Distribute the parallelized parameter across MPI ranks around</span>
 <span class="sd">    the center value and desired resolutions.</span>
@@ -10319,13 +10329,7 @@ is_min : bool
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">617</span>
-<span class="normal">618</span>
-<span class="normal">619</span>
-<span class="normal">620</span>
-<span class="normal">621</span>
-<span class="normal">622</span>
-<span class="normal">623</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">623</span>
 <span class="normal">624</span>
 <span class="normal">625</span>
 <span class="normal">626</span>
@@ -10403,7 +10407,13 @@ is_min : bool
 <span class="normal">698</span>
 <span class="normal">699</span>
 <span class="normal">700</span>
-<span class="normal">701</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">estimate_uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">refinement</span><span class="p">,</span> <span class="n">rel_eps</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">abs_eps</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
+<span class="normal">701</span>
+<span class="normal">702</span>
+<span class="normal">703</span>
+<span class="normal">704</span>
+<span class="normal">705</span>
+<span class="normal">706</span>
+<span class="normal">707</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">estimate_uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">refinement</span><span class="p">,</span> <span class="n">rel_eps</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">abs_eps</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Estimate parameter uncertainties from the Hessian matrix.</span>
 
@@ -10522,13 +10532,7 @@ pts_per_deg : int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">526</span>
-<span class="normal">527</span>
-<span class="normal">528</span>
-<span class="normal">529</span>
-<span class="normal">530</span>
-<span class="normal">531</span>
-<span class="normal">532</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">532</span>
 <span class="normal">533</span>
 <span class="normal">534</span>
 <span class="normal">535</span>
@@ -10561,7 +10565,13 @@ pts_per_deg : int
 <span class="normal">562</span>
 <span class="normal">563</span>
 <span class="normal">564</span>
-<span class="normal">565</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">extract_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">max_rings</span><span class="p">,</span> <span class="n">pts_per_deg</span><span class="p">):</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">extract_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">max_rings</span><span class="p">,</span> <span class="n">pts_per_deg</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Extract data points for a given sampled geometry.</span>
 
@@ -10629,8 +10639,7 @@ pts_per_deg : int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
-<span class="normal">179</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
@@ -10661,7 +10670,8 @@ pts_per_deg : int
 <span class="normal">207</span>
 <span class="normal">208</span>
 <span class="normal">209</span>
-<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">extract_powder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">powder_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
+<span class="normal">210</span>
+<span class="normal">211</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">extract_powder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">powder_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Extract a powder image from smalldata analysis.</span>
 
@@ -10723,8 +10733,7 @@ Imin : float, optional
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">261</span>
-<span class="normal">262</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">262</span>
 <span class="normal">263</span>
 <span class="normal">264</span>
 <span class="normal">265</span>
@@ -10747,7 +10756,8 @@ Imin : float, optional
 <span class="normal">282</span>
 <span class="normal">283</span>
 <span class="normal">284</span>
-<span class="normal">285</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_powder</span><span class="p">(</span>
+<span class="normal">285</span>
+<span class="normal">286</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_powder</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">powder_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -10812,13 +10822,7 @@ params : list
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span>
-<span class="normal">709</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">709</span>
 <span class="normal">710</span>
 <span class="normal">711</span>
 <span class="normal">712</span>
@@ -10870,7 +10874,13 @@ params : list
 <span class="normal">758</span>
 <span class="normal">759</span>
 <span class="normal">760</span>
-<span class="normal">761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">gradient_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">resolutions</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="normal">761</span>
+<span class="normal">762</span>
+<span class="normal">763</span>
+<span class="normal">764</span>
+<span class="normal">765</span>
+<span class="normal">766</span>
+<span class="normal">767</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">gradient_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">resolutions</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Run gradient descent refinement on the given sample parameters using pyFAI.</span>
 
@@ -10959,13 +10969,7 @@ ax : plt.Axes, optional
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1065</span>
-<span class="normal">1066</span>
-<span class="normal">1067</span>
-<span class="normal">1068</span>
-<span class="normal">1069</span>
-<span class="normal">1070</span>
-<span class="normal">1071</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1071</span>
 <span class="normal">1072</span>
 <span class="normal">1073</span>
 <span class="normal">1074</span>
@@ -11008,7 +11012,13 @@ ax : plt.Axes, optional
 <span class="normal">1111</span>
 <span class="normal">1112</span>
 <span class="normal">1113</span>
-<span class="normal">1114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_2d_integration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result2d</span><span class="p">,</span> <span class="n">calibrant</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">1114</span>
+<span class="normal">1115</span>
+<span class="normal">1116</span>
+<span class="normal">1117</span>
+<span class="normal">1118</span>
+<span class="normal">1119</span>
+<span class="normal">1120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_2d_integration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result2d</span><span class="p">,</span> <span class="n">calibrant</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the 2D azimuthal integration (cake plot) of a powder image.</span>
 
@@ -11085,13 +11095,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1116</span>
-<span class="normal">1117</span>
-<span class="normal">1118</span>
-<span class="normal">1119</span>
-<span class="normal">1120</span>
-<span class="normal">1121</span>
-<span class="normal">1122</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1122</span>
 <span class="normal">1123</span>
 <span class="normal">1124</span>
 <span class="normal">1125</span>
@@ -11120,7 +11124,13 @@ ax : plt.Axes
 <span class="normal">1148</span>
 <span class="normal">1149</span>
 <span class="normal">1150</span>
-<span class="normal">1151</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_bo_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+<span class="normal">1151</span>
+<span class="normal">1152</span>
+<span class="normal">1153</span>
+<span class="normal">1154</span>
+<span class="normal">1155</span>
+<span class="normal">1156</span>
+<span class="normal">1157</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_bo_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the Bayesian Optimization history across all ranks</span>
 
@@ -11189,13 +11199,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1208</span>
-<span class="normal">1209</span>
-<span class="normal">1210</span>
-<span class="normal">1211</span>
-<span class="normal">1212</span>
-<span class="normal">1213</span>
-<span class="normal">1214</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1214</span>
 <span class="normal">1215</span>
 <span class="normal">1216</span>
 <span class="normal">1217</span>
@@ -11252,7 +11256,13 @@ ax : plt.Axes
 <span class="normal">1268</span>
 <span class="normal">1269</span>
 <span class="normal">1270</span>
-<span class="normal">1271</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_intensity_hist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">powder</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+<span class="normal">1271</span>
+<span class="normal">1272</span>
+<span class="normal">1273</span>
+<span class="normal">1274</span>
+<span class="normal">1275</span>
+<span class="normal">1276</span>
+<span class="normal">1277</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_intensity_hist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">powder</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot histogram of pixel intensities in the powder image</span>
 
@@ -11341,13 +11351,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1273</span>
-<span class="normal">1274</span>
-<span class="normal">1275</span>
-<span class="normal">1276</span>
-<span class="normal">1277</span>
-<span class="normal">1278</span>
-<span class="normal">1279</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1279</span>
 <span class="normal">1280</span>
 <span class="normal">1281</span>
 <span class="normal">1282</span>
@@ -11440,7 +11444,13 @@ ax : plt.Axes
 <span class="normal">1369</span>
 <span class="normal">1370</span>
 <span class="normal">1371</span>
-<span class="normal">1372</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_powder_and_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">1372</span>
+<span class="normal">1373</span>
+<span class="normal">1374</span>
+<span class="normal">1375</span>
+<span class="normal">1376</span>
+<span class="normal">1377</span>
+<span class="normal">1378</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_powder_and_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the powder image with calibrated overlapping 2θ rings.</span>
 
@@ -11569,13 +11579,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1026</span>
-<span class="normal">1027</span>
-<span class="normal">1028</span>
-<span class="normal">1029</span>
-<span class="normal">1030</span>
-<span class="normal">1031</span>
-<span class="normal">1032</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1032</span>
 <span class="normal">1033</span>
 <span class="normal">1034</span>
 <span class="normal">1035</span>
@@ -11606,7 +11610,13 @@ ax : plt.Axes
 <span class="normal">1060</span>
 <span class="normal">1061</span>
 <span class="normal">1062</span>
-<span class="normal">1063</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_radial_integration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result1d</span><span class="p">,</span> <span class="n">calibrant</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal">1063</span>
+<span class="normal">1064</span>
+<span class="normal">1065</span>
+<span class="normal">1066</span>
+<span class="normal">1067</span>
+<span class="normal">1068</span>
+<span class="normal">1069</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_radial_integration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result1d</span><span class="p">,</span> <span class="n">calibrant</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the radial integration of a powder image</span>
 
@@ -11669,13 +11679,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1177</span>
-<span class="normal">1178</span>
-<span class="normal">1179</span>
-<span class="normal">1180</span>
-<span class="normal">1181</span>
-<span class="normal">1182</span>
-<span class="normal">1183</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1183</span>
 <span class="normal">1184</span>
 <span class="normal">1185</span>
 <span class="normal">1186</span>
@@ -11698,7 +11702,13 @@ ax : plt.Axes
 <span class="normal">1203</span>
 <span class="normal">1204</span>
 <span class="normal">1205</span>
-<span class="normal">1206</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_residual_distance_scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+<span class="normal">1206</span>
+<span class="normal">1207</span>
+<span class="normal">1208</span>
+<span class="normal">1209</span>
+<span class="normal">1210</span>
+<span class="normal">1211</span>
+<span class="normal">1212</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_residual_distance_scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the residual scan over distance</span>
 
@@ -11753,13 +11763,7 @@ ax : plt.Axes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1153</span>
-<span class="normal">1154</span>
-<span class="normal">1155</span>
-<span class="normal">1156</span>
-<span class="normal">1157</span>
-<span class="normal">1158</span>
-<span class="normal">1159</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1159</span>
 <span class="normal">1160</span>
 <span class="normal">1161</span>
 <span class="normal">1162</span>
@@ -11775,7 +11779,13 @@ ax : plt.Axes
 <span class="normal">1172</span>
 <span class="normal">1173</span>
 <span class="normal">1174</span>
-<span class="normal">1175</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_score_distance_scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+<span class="normal">1175</span>
+<span class="normal">1176</span>
+<span class="normal">1177</span>
+<span class="normal">1178</span>
+<span class="normal">1179</span>
+<span class="normal">1180</span>
+<span class="normal">1181</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_score_distance_scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Plot the score scan over distance</span>
 
@@ -11827,8 +11837,7 @@ Imin : float, optional
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">212</span>
-<span class="normal">213</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">213</span>
 <span class="normal">214</span>
 <span class="normal">215</span>
 <span class="normal">216</span>
@@ -11853,7 +11862,8 @@ Imin : float, optional
 <span class="normal">235</span>
 <span class="normal">236</span>
 <span class="normal">237</span>
-<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess_powder</span><span class="p">(</span>
+<span class="normal">238</span>
+<span class="normal">239</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">preprocess_powder</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">powder</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">],</span>
@@ -11918,13 +11928,7 @@ prior : bool
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span>
-<span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span>
-<span class="normal">489</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">489</span>
 <span class="normal">490</span>
 <span class="normal">491</span>
 <span class="normal">492</span>
@@ -11959,7 +11963,13 @@ prior : bool
 <span class="normal">521</span>
 <span class="normal">522</span>
 <span class="normal">523</span>
-<span class="normal">524</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sample_initial_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">X_norm</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">prior</span><span class="p">):</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">sample_initial_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">X_norm</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">,</span> <span class="n">prior</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Sample initial points from the search space.</span>
 
@@ -12033,13 +12043,7 @@ max_rings : int
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">567</span>
-<span class="normal">568</span>
-<span class="normal">569</span>
-<span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span>
-<span class="normal">573</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">573</span>
 <span class="normal">574</span>
 <span class="normal">575</span>
 <span class="normal">576</span>
@@ -12081,7 +12085,13 @@ max_rings : int
 <span class="normal">612</span>
 <span class="normal">613</span>
 <span class="normal">614</span>
-<span class="normal">615</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">max_rings</span><span class="p">,</span> <span class="n">pts_per_deg</span><span class="p">):</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">Imin</span><span class="p">,</span> <span class="n">max_rings</span><span class="p">,</span> <span class="n">pts_per_deg</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Evaluate score at a given sampled geometry based on the residual between predicted and observed Bragg peak positions.</span>
 
@@ -12158,13 +12168,7 @@ fixed : list
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">382</span>
-<span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">388</span>
 <span class="normal">389</span>
 <span class="normal">390</span>
 <span class="normal">391</span>
@@ -12180,7 +12184,13 @@ fixed : list
 <span class="normal">401</span>
 <span class="normal">402</span>
 <span class="normal">403</span>
-<span class="normal">404</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_search_space</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parallelized</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">fixed</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_search_space</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parallelized</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">fixed</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Define the search space for the free parameters.</span>
 
@@ -12246,8 +12256,7 @@ wavelength : float, optional
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">135</span>
-<span class="normal">136</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">136</span>
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span>
@@ -12287,7 +12296,8 @@ wavelength : float, optional
 <span class="normal">173</span>
 <span class="normal">174</span>
 <span class="normal">175</span>
-<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span>
+<span class="normal">176</span>
+<span class="normal">177</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">h5</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -12356,8 +12366,7 @@ out_file : str
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">305</span>
-<span class="normal">306</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">306</span>
 <span class="normal">307</span>
 <span class="normal">308</span>
 <span class="normal">309</span>
@@ -12380,7 +12389,13 @@ out_file : str
 <span class="normal">326</span>
 <span class="normal">327</span>
 <span class="normal">328</span>
-<span class="normal">329</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pyFAI</span><span class="o">.</span><span class="n">detectors</span><span class="o">.</span><span class="n">Detector</span><span class="p">:</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_geometry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">detname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pyFAI</span><span class="o">.</span><span class="n">detectors</span><span class="o">.</span><span class="n">Detector</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Update the geometry and write a new .poni, .geom and .data file</span>
 
@@ -12394,6 +12409,11 @@ out_file : str
     <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">out_file</span><span class="p">)</span>
     <span class="n">poni_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"r</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="si">:</span><span class="s2">0&gt;4</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">detname</span><span class="si">}</span><span class="s2">.poni"</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">gr</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">poni_file</span><span class="p">)</span>
+    <span class="n">pyfai_to_image_poni</span><span class="p">(</span>
+        <span class="n">detector</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">,</span>
+        <span class="n">in_file</span><span class="o">=</span><span class="n">poni_file</span><span class="p">,</span>
+        <span class="n">out_file</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"r</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="si">:</span><span class="s2">0&gt;4</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">detname</span><span class="si">}</span><span class="s2">_image.poni"</span><span class="p">),</span>
+    <span class="p">)</span>
     <span class="n">PyFAIToPsana</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
         <span class="n">in_file</span><span class="o">=</span><span class="n">poni_file</span><span class="p">,</span>
         <span class="n">detector</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">,</span>
@@ -12446,8 +12466,7 @@ wavelength : float
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>lute/tasks/_bayfai.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">59</span>
-<span class="normal">60</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
@@ -12478,7 +12497,8 @@ wavelength : float
 <span class="normal">88</span>
 <span class="normal">89</span>
 <span class="normal">90</span>
-<span class="normal">91</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_build_ai</span><span class="p">(</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_build_ai</span><span class="p">(</span>
     <span class="n">detector</span><span class="p">:</span> <span class="n">pyFAI</span><span class="o">.</span><span class="n">detectors</span><span class="o">.</span><span class="n">Detector</span><span class="p">,</span>
     <span class="n">params</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
     <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
