@@ -34,6 +34,10 @@ Functions:
                          auth: Optional[Union[HTTPBasicAuth, Dict]] = None)
         Return a list of runs with a specific tag.
 
+    get_elog_runs_by_sample(exp: str, sample_name: str,
+                            auth: Optional[Union[HTTPBasicAuth, Dict]] = None)
+        Return a list of runs associated with a specific sample.
+
     get_elog_params_by_run(exp: str, params: List[str], runs: Optional[List[int]])
         Retrieve the requested parameters by run. If no run is provided, retrieve
         the requested parameters for all runs.
@@ -43,6 +47,7 @@ __all__ = [
     "post_elog_message",
     "post_elog_run_table",
     "get_elog_runs_by_tag",
+    "get_elog_runs_by_sample",
     "post_elog_run_status",
     "get_elog_params_by_run",
 ]
@@ -510,6 +515,62 @@ def get_elog_runs_by_tag(
         tagged_runs = []
 
     return tagged_runs
+
+
+def get_elog_runs_by_sample(
+    exp: str, sample_name: str, auth: Optional[Union[HTTPBasicAuth, Dict]] = None
+) -> List[int]:
+    """Retrieve run numbers associated with a specified sample.
+
+    Unlike tags - which live on eLog entries and reach runs only transitively -
+    a sample is a first-class document with a single ObjectId stored directly on
+    each run document. A run therefore has at most ONE sample, and only if that
+    sample was the experiment's active/current one when the run was started (or
+    it was assigned retroactively via the `change_sample_for_run` endpoint).
+
+    Args:
+        exp (str): Experiment name.
+
+        sample_name (str): The name of the sample to retrieve runs for. Note
+            the eLog spells this query parameter `sampleName` (camelCase),
+            unlike the snake_case `sample_name` used by the sample mutation
+            endpoints.
+
+        auth (Optional[HTTPBasicAuth | Dict]): Accepted for signature parity
+            with `get_elog_runs_by_tag`. Unused - `elog_http_request` resolves
+            the appropriate authorization itself.
+
+    Returns:
+        runs (List[int]): Run numbers associated with `sample_name`, in the
+            order returned by the eLog. An empty list means no runs carry the
+            sample - which is indistinguishable from an unknown sample name, an
+            unstamped experiment, or an auth/network failure.
+    """
+    endpoint: str = f"{exp}/ws/runs"
+    # `includeParams` defaults to True server-side and drags every DAQ
+    # parameter of every run into the response - only run numbers are needed.
+    params: Dict[str, Any] = {
+        "params": {"sampleName": sample_name, "includeParams": "false"}
+    }
+
+    if not sample_name or sample_name == "All Samples":
+        # The eLog treats both of these as "no filter" and returns every run.
+        logger.warning(
+            "Sample name '%s' is treated as no filter by the eLog - all runs "
+            "of '%s' will be returned.",
+            sample_name,
+            exp,
+        )
+
+    status_code, resp_msg, sample_runs = elog_http_request(
+        exp=exp, endpoint=endpoint, request_type="GET", **params
+    )
+
+    if not sample_runs:
+        return []
+
+    # The endpoint returns full run documents, not bare run numbers.
+    return [run["num"] for run in sample_runs if "num" in run]
 
 
 def get_elog_params_by_run(

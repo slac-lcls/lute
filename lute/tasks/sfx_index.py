@@ -29,10 +29,19 @@ class ConcatenateStreamFiles(Task):
         self._task_parameters = cast(
             ConcatenateStreamFilesParameters, self._task_parameters
         )
-        stream_file_path: Path = Path(self._task_parameters.in_file)
-        stream_file_list: List[Path] = list(
-            stream_file_path.rglob(f"*{self._task_parameters.tag}*.stream")
-        )
+        stream_file_list: List[Path]
+        if self._task_parameters.stream_files:
+            # eLog-tag-resolved, explicit file list - takes precedence when
+            # present (see `elog_tag` on ConcatenateStreamFilesParameters).
+            stream_file_list = [
+                Path(stream_file) for stream_file in self._task_parameters.stream_files
+            ]
+        else:
+            # Pre-existing filename-glob behavior, unchanged.
+            stream_file_path: Path = Path(self._task_parameters.in_file)
+            stream_file_list = list(
+                stream_file_path.rglob(f"*{self._task_parameters.tag}*.stream")
+            )
 
         processed_file_list = [str(stream_file) for stream_file in stream_file_list]
 

@@ -65,6 +65,29 @@ def main():
 
     args, extra_args = parser.parse_known_args()
 
+    if args.tag and args.sample:
+        parser.error(
+            "--tag and --sample are mutually exclusive run selectors - pass "
+            "one or the other. (--tag selects runs via tags on eLog entries; "
+            "--sample via the `sample` field on each run document.)"
+        )
+
+    if args.tag:
+        from launch_scripts.tagged_launch import run_tagged_workflow
+
+        bin_dir: str = os.path.dirname(os.path.realpath(sys.argv[0]))
+        lute_location: str = os.path.abspath(f"{bin_dir}/..")
+        run_tagged_workflow(args, extra_args, bin_dir, lute_location)
+        return
+
+    if args.sample:
+        from launch_scripts.tagged_launch import run_sampled_workflow
+
+        bin_dir: str = os.path.dirname(os.path.realpath(sys.argv[0]))
+        lute_location: str = os.path.abspath(f"{bin_dir}/..")
+        run_sampled_workflow(args, extra_args, bin_dir, lute_location)
+        return
+
     launch_info = setup_launch_env(args)
     experiment = launch_info["experiment"]
     run_num = launch_info["run_num"]
