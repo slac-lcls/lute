@@ -30,6 +30,10 @@ The example starting points are:
 - `sfx` : Perform end-to-end SFX analysis with molecular replacement.
 - `smd` : Run managed `smalldata_tools` and downstream analysis/summaries.
 
+**Shortcut:** [Running BayFAI](usage/tasks/bayfai/bayfai.md)
+**Shortcut:** [Running smalldata_tools](usage/tasks/smalldata_tools.md)
+**Shortcut:** [Converting xtc1 to xtc2](usage/tasks/xtc1_to_xtc2_conversion.md)
+
 Providing SLURM arguments is not required, but **highly recommended**. The setup script will prompt for sensible defaults for `--partition`, `--account`, `--nodes`, and `--ntasks` if they are not provided. For `--partition` and `--account`, workflow-specific defaults are selected based on the experiment; for `--nodes` and `--ntasks`, the default is 1. Press enter (or any key) to accept each default, or press `Ctrl-C` to exit and pass the arguments manually.
 
 The `setup_lute` script will create the eLog job for your selected workflow. Results will be presented back to you in the eLog. The script will also produce a configuration file which will live at `/sdf/data/lcls/ds/<hutch>/<experiment>/results/lute_output/<hutch>_lute.yaml`. You will want to modify this configuration prior to running. See [Basic Usage](/#basic-usage) below for more information.

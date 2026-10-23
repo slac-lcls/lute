@@ -168,6 +168,25 @@ def get_azav_pyfai(run):
     return ret_dict
 {% endif %}
 
+{%- if getAzIntLCLSGeomParams is defined and getAzIntLCLSGeomParams %}
+def get_azav_lclsgeom(run):
+    if isinstance(run,str):
+        run=int(run)
+    ret_dict = {}
+    if run>0:
+{% for detector, params in getAzIntLCLSGeomParams.items() %}
+        az_dict = {}
+        {%- if 'userMask' in params and params['userMask'] %}
+        az_dict['userMask'] = np.load("{{ params['userMask'] }}")
+        {{- step_parameters("az_dict", detector, params, False, skip_keys=["userMask"]) }}
+        {% else %}
+        {{- step_parameters("az_dict", detector, params, False) }}
+        {% endif %}
+        ret_dict["{{ detector }}"] = az_dict
+{% endfor %}
+    return ret_dict
+{% endif %}
+
 {%- if getPolynomialCorrection is defined and getWfIntegrate %}
 def get_polynomial_correction(run):
     ...

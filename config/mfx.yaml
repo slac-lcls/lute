@@ -131,6 +131,12 @@ SubmitSMD:
     #    npts: 512
     #    int_units: "2th_deg"
     #    return2d: False
+    #getAzIntLCLSGeomParams:
+    #  jungfrau:
+    #    poni_file: "{{ work_dir }}/geom/r0000_jungfrau.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
     #getPhotonsParams:
     #  jungfrau1M:
     #    ADU_per_photon: 9.5

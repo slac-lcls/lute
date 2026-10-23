@@ -44,6 +44,7 @@ from mpi4py import MPI
 
 from LCLSGeom.manager import get_geometry  # type: ignore
 from LCLSGeom.converter import PsanaToPyFAI, PyFAIToPsana, PyFAIToCrystFEL  # type: ignore
+from LCLSGeom.utils.pyfai_utils import pyfai_to_image_poni  # type: ignore
 
 pyFAI.use_opencl = False
 
@@ -316,6 +317,11 @@ class BayFAIOpt:
         path = os.path.dirname(out_file)
         poni_file = os.path.join(path, f"r{self.run:0>4}_{detname}.poni")
         self.gr.save(poni_file)
+        pyfai_to_image_poni(
+            detector=self.detector,
+            in_file=poni_file,
+            out_file=os.path.join(path, f"r{self.run:0>4}_{detname}_image.poni"),
+        )
         PyFAIToPsana.convert(
             in_file=poni_file,
             detector=self.detector,

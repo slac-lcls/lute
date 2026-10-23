@@ -101,9 +101,6 @@ BayFAI:
   calibrant: "LaB6"           # Fill this line with calibrant name (CeO2, LaB6...)
   detname: "Epix10kaQuad0"
   wavelength: 1.3656642888421956e-10
-  bayfai_params:
-    Imin: 95
-    pts_per_deg: 4.0
 
 # For example, for Epix10kaQuad1, you would set
 # BayFAI:

@@ -134,6 +134,12 @@ SubmitSMD:
     #    npts: 512
     #    int_units: "2th_deg"
     #    return2d: False
+    #getAzIntLCLSGeomParams:
+    #  epix10k2M:
+    #    poni_file: "{{ work_dir }}/geom/r0000_ePix10k2M.poni"
+    #    npts: 512
+    #    int_units: "q_A^-1"
+    #    return2d: False
     #getPhotonsParams:
     #  jungfrau1M:
     #    ADU_per_photon: 9.5

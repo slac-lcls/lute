@@ -159,6 +159,12 @@ A 4-tuple describing if and how common-mode correction should be applied.
                 dist: float = Field(description="Detector distance.")
                 poni1: float = Field(description="First poni.")
                 poni2: float = Field(description="Second poni.")
+                rot1: float = Field(0, description="First rotation in rad.")
+                rot2: float = Field(0, description="Second rotation in rad.")
+                rot3: float = Field(0, description="Third rotation in rad.")
+                wavelength: Optional[float] = Field(
+                    None, description="Wavelength in m. Required for q_A^-1 units."
+                )
 
             poni_file: Optional[str] = Field(
                 None,
@@ -177,6 +183,59 @@ A 4-tuple describing if and how common-mode correction should be applied.
 
             return2d: bool = Field(
                 False, description="Whether to return the 2D q/phi integration."
+            )
+
+        class AzIntLCLSGeomParams(BaseModel):
+            class AiKwargs(BaseModel):
+                dist: float = Field(description="Detector distance in m.")
+                poni1: float = Field(description="First poni in m.")
+                poni2: float = Field(description="Second poni in m.")
+                rot1: float = Field(0, description="First rotation in rad.")
+                rot2: float = Field(0, description="Second rotation in rad.")
+                rot3: float = Field(0, description="Third rotation in rad.")
+                wavelength: Optional[float] = Field(
+                    None, description="Wavelength in m. Required for q_A^-1 units."
+                )
+
+            poni_file: Optional[str] = Field(
+                None,
+                description=(
+                    "Path to a poni file fitted against the LCLSGeom template "
+                    "metrology (e.g. from BayFAI). Must provide poni_file or ai_kwargs."
+                ),
+            )
+
+            ai_kwargs: Optional[AiKwargs] = Field(
+                None, description="Integration parameters if not using a poni file."
+            )
+
+            npts: int = Field(256, description="Number of radial bins.")
+
+            npts_az: int = Field(360, description="Number of phi bins (2D only).")
+
+            int_units: str = Field(
+                "2th_deg", description="Radial units: q_A^-1, 2th_deg or r_mm."
+            )
+
+            return2d: bool = Field(
+                False, description="Whether to return the 2D q/phi integration."
+            )
+
+            polarization_factor: float = Field(
+                -1, description="Polarization factor (-1 is vertical)."
+            )
+
+            thres: Optional[float] = Field(
+                None, description="Pixels below this intensity are set to 0."
+            )
+
+            userMask: Optional[str] = Field(
+                None,
+                description="Path to a numpy array (.npy) mask, 1 for valid pixels.",
+            )
+
+            azav_kwargs: Dict[str, Any] = Field(
+                {}, description="Extra arguments passed to integrate1d/integrate2d."
             )
 
         class PhotonParams(BaseModel):
@@ -395,6 +454,14 @@ A 4-tuple describing if and how common-mode correction should be applied.
         getAzIntPyFAIParams: Optional[Dict[str, AzIntPyFAIParams]] = Field(
             None,
             description="Dictionary of azimuthal integration with PyFAI parameters.",
+        )
+
+        getAzIntLCLSGeomParams: Optional[Dict[str, AzIntLCLSGeomParams]] = Field(
+            None,
+            description=(
+                "Dictionary of azimuthal integration with PyFAI on the LCLSGeom "
+                "detector, by detector. Use this with BayFAI poni files."
+            ),
         )
 
         getPhotonParams: Optional[Dict[str, PhotonParams]] = Field(

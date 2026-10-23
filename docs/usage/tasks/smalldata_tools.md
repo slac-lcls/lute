@@ -202,6 +202,13 @@ SubmitSMD:
     #    npts: 512
     #    int_units: "2th_deg"
     #    return2d: False
+    #getAzIntLCLSGeomParams:
+    #  jungfrau:
+    #    poni_file: "path/to/geometry/params.poni"
+    #    npts: 512
+    #    npts_az: 36
+    #    int_units: "q_A^-1"
+    #    return2d: True
     #getPhotonsParams:
     #  jungfrau1M:
     #    ADU_per_photon: 9.5
@@ -344,9 +351,11 @@ Note that under each detector there is a **list** of dictionaries because multip
 - `calcPars`: Whether to output some summary statistics (mean, max, etc.) along with the ROI.
 - `writeArea`: A boolean indicating whether to write out the area, or just the sum of the ROI.
 
-#### Azimuthal integration: `getAzIntParams` and `getAzIntPyFAIParams`
+#### Azimuthal integration: `getAzIntParams`, `getAzIntPyFAIParams` and `getAzIntLCLSGeomParams`
 
-Two algorithms for azimuthal integration are provided, the home grown implementation via `getAzIntParams` and the PyFAI implementation using `getAzIntPyFAIParams`. The two can be run simultaneously if really needed.
+Three algorithms for azimuthal integration are provided: the home grown implementation via `getAzIntParams`, the PyFAI implementation on the assembled image via `getAzIntPyFAIParams`, and the PyFAI implementation on the LCLSGeom detector via `getAzIntLCLSGeomParams`. They can be run simultaneously if really needed.
+
+Use `getAzIntLCLSGeomParams` with the `.poni` file produced by BayFAI. That file is defined relative to the LCLSGeom metrology, and `getAzIntLCLSGeomParams` rebuilds the same detector, so the geometry stays consistent. Pixels are also mapped once at initialization instead of assembling an image at every event. See [To go further: Azimuthal Integration after BayFAI](bayfai/bayfai.md#to-go-further-azimuthal-integration-after-bayfai) for the full parameter list.
 
 ```yaml
   #getAzIntParams:
@@ -374,6 +383,13 @@ Two algorithms for azimuthal integration are provided, the home grown implementa
   #    npts: 512
   #    int_units: "2th_deg"
   #    return2d: False
+  #getAzIntLCLSGeomParams:
+  #  jungfrau:
+  #    poni_file: "/path/to/lute_output/geom/r0012_jungfrau.poni"
+  #    npts: 512
+  #    npts_az: 36
+  #    int_units: "q_A^-1"   # Requires a wavelength in the .poni file
+  #    return2d: True
 ```
 
 #### Compression Verification
