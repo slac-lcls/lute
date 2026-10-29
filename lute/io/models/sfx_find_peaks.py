@@ -2,9 +2,15 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
+import pydantic
 
 from lute.io.models.base import ThirdPartyParameters, TaskParameters, TemplateConfig
+
+pydantic_ver: int = int(pydantic.version.VERSION[0])
+if pydantic_ver > 1:
+    from pydantic.v1 import BaseModel, Field, PositiveInt, validator, root_validator  # type: ignore
+else:
+    from pydantic import BaseModel, Field, PositiveInt, validator, root_validator
 
 
 class SZCompressorParameters(BaseModel):
