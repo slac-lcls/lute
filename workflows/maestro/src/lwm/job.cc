@@ -38,4 +38,22 @@ namespace LWM {
 
     return true;
   }
+
+  bool JobIdentifier::compatible(const JobIdentifier& id_a, const JobIdentifier& id_b) {
+    if (!id_a.job_key.empty() && !id_b.job_key.empty() && id_a.job_key != id_b.job_key) {
+      return false;
+    }
+
+    if (id_a.name && id_b.name && *(id_a.name) != *(id_b.name)) {
+      return false;
+    }
+
+    if (!id_a.launch_id.empty() &&
+        !id_b.launch_id.empty() &&
+        id_a.launch_id != id_b.launch_id) {
+      return false;
+    }
+
+    return true;
+  }
 } // namespace LWM

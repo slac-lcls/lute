@@ -2,6 +2,7 @@
 #define LWM_JOB_HH
 
 #include <chrono>
+#include <concepts>
 #include <iterator>
 #include <map>
 #include <optional>
@@ -56,6 +57,10 @@ namespace LWM {
     /**
      * Check for partially filled JobIdentifier matches.
      *
+     * @note This routine is one-directional! It requires that the stored value have
+     *       every field for lookup. Adding fields over time will not match! See the
+     *       symmetric implementations below (`compatible`).
+     *
      * @param[in] partial A partially filled JobIdentifier.
      * @param[in] full A completely filled JobIdentifier.
      * @returns true if the fully filled `full` matches on every key that is
@@ -69,12 +74,21 @@ namespace LWM {
      * @note The routine currently handles map, and set inputs.
      *
      * @tparam Map The container of identifiers, supporting maps or sets.
+     * @tparam Pred A predicate for comparisons, with signature Pred(id, id) -> bool.
      * @param[in] id_map The JobIdentifiers to check for matches against.
      * @param[in] partial The (potentially) partial JobIdentifier to match.
+     * @param[in] pred The matching/lookup predicate for field comparisons. Defaults
+     *            to JobIdentifier::matches. See notes there on ordering and partial
+     *            JobIdentifiers.
      * @returns A vector of iterators to the found matches.
      */
-    template <typename Map>
-    static inline auto find_matching(Map& id_map, const JobIdentifier& partial) {
+    template <typename Map, typename Pred = decltype(&matches)>
+    requires requires(Pred pred, const JobIdentifier& id_a, const JobIdentifier& id_b) {
+      { pred(id_a, id_b) } -> std::convertible_to<bool>;
+    }
+    static inline auto find_matching(Map& id_map,
+                                     const JobIdentifier& partial,
+                                     Pred&& pred = &matches) {
       using ItType = decltype(id_map.begin());
       using ObjType = std::iter_reference_t<ItType>;
 
@@ -93,7 +107,7 @@ namespace LWM {
           const auto& job_id { key_for(it) };
           if (job_id.job_key != partial.job_key) {
             break;
-          } else if (matches(partial, job_id)) {
+          } else if (pred(partial, job_id)) {
             out.push_back(it);
           }
 
@@ -101,7 +115,7 @@ namespace LWM {
         }
       } else {
         for (auto it = id_map.begin(); it != id_map.end(); ++it) {
-          if (matches(partial, key_for(it))) {
+          if (pred(partial, key_for(it))) {
             out.push_back(it);
           }
         }
@@ -109,6 +123,18 @@ namespace LWM {
 
       return out;
     }
+
+    /**
+     * Check if every set field matches between two JobIdentifiers.
+     *
+     * @note This doesn't use ordering, and allows either of side of the comparison
+     *       to be more complete than the other.
+     *
+     * @param[in] id_a First JobIdentifier.
+     * @param[in] id_b Second JobIdentifier.
+     * @returns true if all fields, set in BOTH JobIdentifiers, agree. Otherwise, false.
+     */
+    static bool compatible(const JobIdentifier& id_a, const JobIdentifier& id_b);
   };
 
   class JobStep {

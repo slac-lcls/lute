@@ -82,8 +82,8 @@ namespace LWM {
 
   void JsonStatusHandler::remove_running_splits(const JobIdentifier& job_id) {
     std::lock_guard<std::mutex> lock(m_status_mut);
-    if (m_splits_map.find(job_id) != m_splits_map.end()) {
-      m_splits_map.erase(job_id);
+    for (auto it : JobIdentifier::find_matching(m_splits_map, job_id, &JobIdentifier::compatible)) {
+      m_splits_map.erase(it);
     }
   }
 
@@ -111,8 +111,11 @@ namespace LWM {
       if (status_plus_data.count("status")) {
         auto job_status { status_plus_data["status"] };
         m_status_map[job_id] = job_status;
-        if (job_status == "STARTED" && m_splits_map.count(job_id)) {
-          m_splits_map[job_id]->running_point = std::chrono::steady_clock::now();
+        if (job_status == "STARTED") {
+          auto now { std::chrono::steady_clock::now() };
+          for (auto it : JobIdentifier::find_matching(m_splits_map, job_id, &JobIdentifier::compatible)) {
+            it->second->running_point = now;
+          }
         }
       }
 
