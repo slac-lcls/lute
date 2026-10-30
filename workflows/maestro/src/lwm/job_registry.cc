@@ -94,9 +94,13 @@ namespace LWM {
   std::set<JobIdentifier> JobRegistry::job_ids_from_name(const std::string& name) {
     std::set<JobIdentifier> job_ids;
 
-    for (const auto& job_id : m_active_jobs) {
-      if (job_id.name.has_value() && *(job_id.name) == name) {
-        job_ids.insert(job_id);
+    JobIdentifier partial;
+    partial.name = name;
+
+    {
+      std::lock_guard<std::mutex> lock(m_registry_mut);
+      for (auto& match : JobIdentifier::find_matching(m_active_jobs, partial)) {
+        job_ids.insert(*match);
       }
     }
 
@@ -110,10 +114,12 @@ namespace LWM {
 
   void JobRegistry::set_last_update_time_by_launch(const std::string& launch_id,
                                                    TimePoint update_time) {
-    std::lock_guard<std::mutex> lock(m_registry_mut);
-    for (const auto& job_id : m_active_jobs) {
-      if (job_id.launch_id == launch_id) {
-        m_last_updated[job_id] = update_time;
+    JobIdentifier partial;
+    partial.launch_id = launch_id;
+    {
+      std::lock_guard<std::mutex> lock(m_registry_mut);
+      for (auto& match : JobIdentifier::find_matching(m_active_jobs, partial)) {
+        m_last_updated[*match] = update_time;
       }
     }
   }

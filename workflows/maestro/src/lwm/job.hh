@@ -2,9 +2,12 @@
 #define LWM_JOB_HH
 
 #include <chrono>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 namespace LWM {
@@ -44,20 +47,67 @@ namespace LWM {
     std::string launch_id;                ///< Identifier used by the Launcher to map onto system (pid, etc.)
 
     inline bool operator<(const JobIdentifier& other) const {
-      if (job_key != other.job_key) {
-        return job_key < other.job_key;
+      // Use a full lexical ordering - std::nullopt sorts first in this case.
+      return
+        std::tie(job_key, name, launch_id) <
+        std::tie(other.job_key, other.name, other.launch_id);
+    }
+
+    /**
+     * Check for partially filled JobIdentifier matches.
+     *
+     * @param[in] partial A partially filled JobIdentifier.
+     * @param[in] full A completely filled JobIdentifier.
+     * @returns true if the fully filled `full` matches on every key that is
+     *          present for the partially filled `partial`. Otherwise false.
+     */
+    static bool matches(const JobIdentifier& partial, const JobIdentifier& full);
+
+    /**
+     * Construct a vector of iterators that match a partial JobIdentifier.
+     *
+     * @note The routine currently handles map, and set inputs.
+     *
+     * @tparam Map The container of identifiers, supporting maps or sets.
+     * @param[in] id_map The JobIdentifiers to check for matches against.
+     * @param[in] partial The (potentially) partial JobIdentifier to match.
+     * @returns A vector of iterators to the found matches.
+     */
+    template <typename Map>
+    static inline auto find_matching(Map& id_map, const JobIdentifier& partial) {
+      using ItType = decltype(id_map.begin());
+      using ObjType = std::iter_reference_t<ItType>;
+
+      auto key_for = [](ItType it) -> const JobIdentifier& {
+        if constexpr (std::is_same_v<ObjType, const JobIdentifier&>) {
+          return *it;
+        } else {
+          return it->first;
+        }
+      };
+
+      std::vector<ItType> out;
+      if (!partial.job_key.empty()) {
+        auto it { id_map.lower_bound(JobIdentifier { partial.job_key }) };
+        while (it != id_map.end()) {
+          const auto& job_id { key_for(it) };
+          if (job_id.job_key != partial.job_key) {
+            break;
+          } else if (matches(partial, job_id)) {
+            out.push_back(it);
+          }
+
+          ++it;
+        }
+      } else {
+        for (auto it = id_map.begin(); it != id_map.end(); ++it) {
+          if (matches(partial, key_for(it))) {
+            out.push_back(it);
+          }
+        }
       }
 
-      // Fallback on other possibilities??
-
-      if (name.has_value() && other.name.has_value()) {
-        auto my_name { *name };
-        auto o_name { *(other.name) };
-
-        return my_name < o_name;
-      }
-
-      return launch_id < other.launch_id;
+      return out;
     }
   };
 
