@@ -151,7 +151,7 @@ namespace LWM {
 
         if (log.find("managed_task") != log.end()) {
           std::string job_key { log["mtask_job_key"] };
-          std::string task_name { log["managed_task_name"] };
+          std::string task_name { log["managed_task"] };
 
           std::string msg {
             "\n\t" + BOLD + GREEN + "[Logs from **" + task_name + "**]" + RESET + "\n"
