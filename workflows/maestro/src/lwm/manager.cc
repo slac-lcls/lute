@@ -3,6 +3,7 @@
 #include "lwm/job.hh"
 #include "lwm/job_registry.hh"
 #include "lwm/launcher.hh"
+#include "util/uuid.hh"
 
 #include "spdlog/cfg/env.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -13,6 +14,12 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace {
+  inline std::string make_workflow_id() {
+    return "lute_wf_" + LWM::uuid_v7();
+  }
+}
 
 namespace LWM {
   Manager::Manager(const ManagerParameters& params)
@@ -28,28 +35,35 @@ namespace LWM {
     }())
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
+
+    m_logger->info("Running workflows with {}",
+                   m_params.launch_type == LauncherType::SlurmLauncherType
+                     ? "SlurmLauncher"
+                     : "PythonLauncher");
+
     switch (params.launch_type) {
     case LauncherType::PythonLauncherType: {
       m_launcher = std::move(std::make_unique<PythonLauncher>(params.unbuffered_logs));
-      msg += "PythonLauncher";
       break;
     }
     case LauncherType::SlurmLauncherType: {
       m_launcher = std::move(std::make_unique<SlurmLauncher>(params.unbuffered_logs));
-      msg += "SlurmLauncher.";
       break;
     }
     }
     m_all_futures =
         std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
+
     if (m_launcher->use_server()) {
       auto request_handlers = m_launcher->get_request_handlers();
       for (auto [route_method_pair, handler] : request_handlers) {
         m_server.add_request_handler(route_method_pair.first,
                                      route_method_pair.second, handler);
       }
+    }
+
+    if (m_params.ctx.workflow_id.empty()) {
+      m_params.ctx.workflow_id = make_workflow_id();
     }
   }
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
@@ -58,28 +72,35 @@ namespace LWM {
     , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
+
+    m_logger->info("Running workflows with {}",
+                   launch_type == LauncherType::SlurmLauncherType
+                     ? "SlurmLauncher"
+                     : "PythonLauncher");
+
     switch (launch_type) {
     case LauncherType::PythonLauncherType: {
       m_launcher = std::move(std::make_unique<PythonLauncher>());
-      msg += "PythonLauncher";
       break;
     }
     case LauncherType::SlurmLauncherType: {
       m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      msg += "SlurmLauncher.";
       break;
     }
     }
     m_all_futures =
         std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
+
     if (m_launcher->use_server()) {
       auto request_handlers = m_launcher->get_request_handlers();
       for (auto [route_method_pair, handler] : request_handlers) {
         m_server.add_request_handler(route_method_pair.first,
                                      route_method_pair.second, handler);
       }
+    }
+
+    if (m_params.ctx.workflow_id.empty()) {
+      m_params.ctx.workflow_id = make_workflow_id();
     }
   }
 
@@ -91,16 +112,19 @@ namespace LWM {
     , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
+
+    m_logger->info("Running workflows with {}",
+                   launch_type == LauncherType::SlurmLauncherType
+                     ? "SlurmLauncher"
+                     : "PythonLauncher");
+
     switch (launch_type) {
     case LauncherType::PythonLauncherType: {
       m_launcher = std::move(std::make_unique<PythonLauncher>());
-      msg += "PythonLauncher";
       break;
     }
     case LauncherType::SlurmLauncherType: {
       m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      msg += "SlurmLauncher.";
       break;
     }
     }
@@ -113,7 +137,10 @@ namespace LWM {
     }
 
     m_all_futures = std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
+
+    if (m_params.ctx.workflow_id.empty()) {
+      m_params.ctx.workflow_id = make_workflow_id();
+    }
   }
 
   void Manager::queue_workflow(const WfDefinition& wf_defn) {

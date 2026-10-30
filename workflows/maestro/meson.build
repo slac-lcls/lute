@@ -51,6 +51,7 @@ liblwm = shared_library(
         'src/lwm/job_registry.cc',
         'src/lwm/launcher.cc',
         'src/lwm/manager.cc',
+        'src/util/uuid.cc',
     ],
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
