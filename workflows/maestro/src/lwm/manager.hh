@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -65,7 +66,7 @@ namespace LWM {
     Manager(const std::string& host, std::uint16_t port, LauncherType launch_type);
     Manager(WfDefinition wf_defn, LauncherType launcher_type);
 
-    void queue_workflow(const WfDefinition& wf_defn);
+    std::string queue_workflow(const WfDefinition& wf_defn, LaunchContext ctx);
     std::string run_workflow();
 
   private:
@@ -75,9 +76,11 @@ namespace LWM {
     std::unique_ptr<Launcher> m_launcher;
     ThreadPool m_job_pool;
 
-    std::vector<WfDefinition> m_workflows;
+    std::vector<std::pair<WfDefinition, LaunchContext>> m_workflows;
 
-    void recurse_workflow(const WfDefinition& wf, MaybeJobFutures_t wait_for);
+    void recurse_workflow(const WfDefinition& wf,
+                          const LaunchContext& ctx,
+                          MaybeJobFutures_t wait_for);
     std::shared_ptr<std::vector<std::shared_future<JobReturn>>> m_all_futures;
 
     std::shared_ptr<spdlog::logger> m_logger;

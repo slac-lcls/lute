@@ -25,7 +25,7 @@ std::string run_workflow(LWM::WfDefinition wf_defn,
                          LWM::ManagerParameters manager_params) {
   std::signal(SIGINT, signal_handler);
   LWM::Manager manager = LWM::Manager(manager_params);
-  manager.queue_workflow(wf_defn);
+  manager.queue_workflow(wf_defn, manager_params.ctx);
 
   std::string status = manager.run_workflow();
   std::signal(SIGINT, SIG_DFL);
