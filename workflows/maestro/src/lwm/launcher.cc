@@ -303,7 +303,7 @@ namespace LWM {
           std::string full_msg { "{" };
 
           for (const auto& job_id : job_ids) {
-            auto queue_it { m_status_handler->m_rpc_queues.begin() };
+            auto queue_it { m_status_handler->m_rpc_queues.find(job_id) };
 
             if (queue_it != m_status_handler->m_rpc_queues.end() &&
                 !queue_it->second.empty()) {
