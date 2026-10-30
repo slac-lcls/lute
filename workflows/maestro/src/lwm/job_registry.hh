@@ -71,7 +71,7 @@ namespace LWM {
      * @returns The job_id for a given key.
      * @throws JobNotRegistered if the job_key is not registered as active.
      */
-    static const JobIdentifier& job_id_from_key(const std::string& job_key);
+    static JobIdentifier job_id_from_key(const std::string& job_key);
     static std::set<JobIdentifier> job_ids_from_name(const std::string& name);
 
     /**

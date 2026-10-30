@@ -80,7 +80,7 @@ namespace LWM {
     throw std::runtime_error("Could not find last update time for job: " + job_id.job_key);
   }
 
-  const JobIdentifier& JobRegistry::job_id_from_key(const std::string& job_key) {
+  JobIdentifier JobRegistry::job_id_from_key(const std::string& job_key) {
     std::lock_guard<std::mutex> lock(m_registry_mut);
     for (const auto& job_id : m_active_jobs) {
       if (job_id.job_key == job_key) {
