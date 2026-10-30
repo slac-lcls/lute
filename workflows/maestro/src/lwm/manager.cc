@@ -37,7 +37,7 @@ namespace LWM {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
 
     m_logger->info("Running workflows with {}",
-                   m_params.launch_type == LauncherType::SlurmLauncherType
+                   params.launch_type == LauncherType::SlurmLauncherType
                      ? "SlurmLauncher"
                      : "PythonLauncher");
 
@@ -66,82 +66,18 @@ namespace LWM {
       m_params.ctx.workflow_id = make_workflow_id();
     }
   }
+
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
-    : m_server(HTTP::Server("0.0.0.0", 8080))
-    , m_job_pool(5)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
+    : Manager(ManagerParameters(5, 2, false, "0.0.0.0", 8080, launch_type))
   {
-    spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-
-    m_logger->info("Running workflows with {}",
-                   launch_type == LauncherType::SlurmLauncherType
-                     ? "SlurmLauncher"
-                     : "PythonLauncher");
-
-    switch (launch_type) {
-    case LauncherType::PythonLauncherType: {
-      m_launcher = std::move(std::make_unique<PythonLauncher>());
-      break;
-    }
-    case LauncherType::SlurmLauncherType: {
-      m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      break;
-    }
-    }
-    m_all_futures =
-        std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-
-    if (m_launcher->use_server()) {
-      auto request_handlers = m_launcher->get_request_handlers();
-      for (auto [route_method_pair, handler] : request_handlers) {
-        m_server.add_request_handler(route_method_pair.first,
-                                     route_method_pair.second, handler);
-      }
-    }
-
-    if (m_params.ctx.workflow_id.empty()) {
-      m_params.ctx.workflow_id = make_workflow_id();
-    }
+    queue_workflow(wf_defn);
   }
 
-  Manager::Manager(const std::string& host, std::uint16_t port, LauncherType launch_type)
-    : m_host(host)
-    , m_port(port)
-    , m_server(HTTP::Server(m_host, m_port))
-    , m_job_pool(2)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
-  {
-    spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-
-    m_logger->info("Running workflows with {}",
-                   launch_type == LauncherType::SlurmLauncherType
-                     ? "SlurmLauncher"
-                     : "PythonLauncher");
-
-    switch (launch_type) {
-    case LauncherType::PythonLauncherType: {
-      m_launcher = std::move(std::make_unique<PythonLauncher>());
-      break;
-    }
-    case LauncherType::SlurmLauncherType: {
-      m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      break;
-    }
-    }
-
-    if (m_launcher->use_server()) {
-      auto request_handlers = m_launcher->get_request_handlers();
-      for (auto [route_method_pair, handler] : request_handlers) {
-        m_server.add_request_handler(route_method_pair.first, route_method_pair.second, handler);
-      }
-    }
-
-    m_all_futures = std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-
-    if (m_params.ctx.workflow_id.empty()) {
-      m_params.ctx.workflow_id = make_workflow_id();
-    }
-  }
+  Manager::Manager(const std::string& host,
+                   std::uint16_t port,
+                   LauncherType launch_type)
+    : Manager(ManagerParameters(5, 2, false, host, port, launch_type))
+  {}
 
   void Manager::queue_workflow(const WfDefinition& wf_defn) {
     m_workflows.push_back(wf_defn);

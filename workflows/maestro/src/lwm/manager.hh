@@ -69,8 +69,6 @@ namespace LWM {
     std::string run_workflow();
 
   private:
-    std::string m_host;
-    std::uint16_t m_port;
     ManagerParameters m_params;
 
     HTTP::Server m_server;
