@@ -87,28 +87,39 @@ namespace LWM {
 
   void Manager::recurse_workflow(const WfDefinition& wf,
                                  const LaunchContext& ctx,
-                                 MaybeJobFutures_t wait_for=std::nullopt) {
+                                 std::string job_key_prefix,
+                                 MaybeJobFutures_t wait_for) {
+    // Wrapper launch in lambda (instead of static func)
     auto launch_func = [&](const JobStep& job,
                            const LaunchContext& ctx_,
                            const std::string& job_key,
                            MaybeJobFutures_t wait_for = std::nullopt) -> JobReturn {
-      // Wrap the launch function in a lambda to avoid making Launcher::launch_task
-      // a static function
       return m_launcher->launch_task(job, ctx_, job_key, wait_for);
     };
 
+    int step_count { 0 };
     for (const auto& step : wf) {
+      std::string new_prefix;
+      if (job_key_prefix.empty()) {
+        new_prefix = std::to_string(step_count);
+      } else {
+        new_prefix = job_key_prefix + "." + std::to_string(step_count);
+      }
+
+      std::string job_key { ctx.workflow_id + "/" + new_prefix };
       auto next_wait_for = std::shared_future<JobReturn>(m_job_pool.enqueue(launch_func,
                                                                             step,
                                                                             ctx,
-                                                                            /*TODO: GET JOB_KEY*/"1",
+                                                                            job_key,
                                                                             wait_for));
       m_all_futures->push_back(next_wait_for);
       if (!step.next.empty()) {
         recurse_workflow(step.next,
                          ctx,
+                         new_prefix,
                          std::optional<decltype(next_wait_for)>(next_wait_for));
       }
+      ++step_count;
     }
   }
 
@@ -117,7 +128,7 @@ namespace LWM {
     m_logger->info("Beginning workflow.");
     // m_workflows = Vector of Parallel JobSteps
     for (const auto& [wf, ctx] : m_workflows) {
-      recurse_workflow(wf, ctx, std::nullopt);
+      recurse_workflow(wf, ctx);
       // wf = vector of JobSteps
     }
     int n_complete{0};

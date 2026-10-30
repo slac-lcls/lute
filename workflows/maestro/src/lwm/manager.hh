@@ -80,7 +80,8 @@ namespace LWM {
 
     void recurse_workflow(const WfDefinition& wf,
                           const LaunchContext& ctx,
-                          MaybeJobFutures_t wait_for);
+                          std::string job_key_prefix = "",
+                          MaybeJobFutures_t wait_for = std::nullopt);
     std::shared_ptr<std::vector<std::shared_future<JobReturn>>> m_all_futures;
 
     std::shared_ptr<spdlog::logger> m_logger;
