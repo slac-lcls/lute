@@ -702,10 +702,10 @@ namespace LWM {
         // ... Need to do the status check ... //
         {
           std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
-          for (const auto& [job_id, rec_status] : m_status_handler->m_status_map) {
-            if (job_id.name.has_value() && *(job_id.name) == managed_task_name) {
-              status = rec_status;
-            }
+          for (auto it : JobIdentifier::find_matching(m_status_handler->m_status_map,
+                                                      job_id,
+                                                      &JobIdentifier::compatible)) {
+            status = it->second;
           }
         }
         logger()->trace(managed_task_name + "'s current status is " + status);
