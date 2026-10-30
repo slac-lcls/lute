@@ -1,5 +1,6 @@
 #include "lwm/launcher.hh"
 
+#include "lwm/environment.hh"
 #include "lwm/job.hh"
 #include "lwm/job_registry.hh"
 
@@ -438,7 +439,9 @@ namespace LWM {
 
   // This is currently Linux/Unix only... will need to update if cross-platform needed
   std::tuple<std::string, int, pid_t>
-  SubprocessLauncher::run_subprocess_log(const std::string& cmd, bool return_output) {
+  SubprocessLauncher::run_subprocess_log(const std::string& cmd,
+                                         bool return_output,
+                                         std::vector<std::string> env) {
     std::string final_cmd { cmd };
     std::unique_ptr<ScopedTempFile> tmp_file;
 
@@ -470,6 +473,15 @@ namespace LWM {
       return std::make_tuple(err_result, ret, -1);
     }
 
+    std::vector<const char*> envp;
+    if (!env.empty()) {
+      envp.reserve(env.size() + 1);
+      for (const auto& launch_key_val : env) {
+        envp.push_back(launch_key_val.data());
+      }
+      envp.push_back(nullptr);
+    }
+
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -483,7 +495,11 @@ namespace LWM {
     } else if (pid == 0) {
       close(err_pipes[0]);
 
-      execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
+      if (!envp.empty()) {
+        execle("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr, envp.data());
+      } else {
+        execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
+      }
 
       int err { errno };
       ssize_t ignored { write(err_pipes[1], &err, sizeof(err)) };
@@ -603,7 +619,13 @@ namespace LWM {
     std::string reason;
     std::string log, status;
     if (can_task_run(job, wait_for, reason)) { // This will block on futures as needed
-      std::string launch_cmd = prepare_launch_cmd(job, ctx);
+      // Preforms any requisite modifications of ctx.env. Also adds LUTE_JOB_KEY
+      auto [launch_cmd, ctx_env] = prepare_launch_cmd(job, ctx, job_key);
+      // After preparing the env variables from the context, decide whether to merge
+      // with the current maestro environment
+      // The LaunchContext may provide an entire environment, or just some variables
+      // therefore, the env_policy determines whether we merge, replace, or ignore
+      auto launch_env = setup_environment(ctx_env, ctx.env_policy);
       logger()->info("Will launch {} with: {}", managed_task_name, launch_cmd);
 
       if (launch_cmd.empty()) {
@@ -631,8 +653,12 @@ namespace LWM {
       bool return_output { use_submit_log_output() };
       int ret_status;
       pid_t subproc_pid;
+      // Passing launch_env here will use `execle` - other calls to run_subprocess_log
+      // do not pass an env, in which case it uses execl, and the maestro env is therefore
+      // inherited.
       std::tie(log, ret_status, subproc_pid) = run_subprocess_log(launch_cmd,
-                                                                  return_output);
+                                                                  return_output,
+                                                                  launch_env);
       if (ret_status != 0) {
         m_logger->error("Error submitting job for {}. Could not launch or track subprocess",
                         job.managed_task_name);
@@ -960,8 +986,9 @@ namespace LWM {
     return std::nullopt;
   }
 
-  std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job,
-                                                const LaunchContext& ctx) {
+  SubprocessLaunchData SlurmLauncher::prepare_launch_cmd(const JobStep& job,
+                                                         const LaunchContext& ctx,
+                                                         const std::string& job_key) {
     std::string executable =
       job.parameters.lute_location + "/" + job.parameters.executable_subdir
       + "/submit_slurm";
@@ -982,7 +1009,16 @@ namespace LWM {
 
     param_str += " " + slurm_params;
 
-    return executable + " " + param_str;
+    std::string launch_cmd { executable + " " + param_str };
+
+    std::vector<std::string> env;
+    for (const auto& [key, val] : ctx.env) {
+      auto combined { key + "=" + val };
+      env.push_back(key + "=" + val);
+    }
+    env.push_back("LUTE_JOB_KEY=" + job_key);
+
+    return { launch_cmd, env };
   }
 
   void SlurmLauncher::update_log(std::string& log,
@@ -1086,8 +1122,9 @@ namespace LWM {
     (void)ret;
   }
 
-  std::string PythonLauncher::prepare_launch_cmd(const JobStep& job,
-                                                 const LaunchContext& ctx) {
+  SubprocessLaunchData PythonLauncher::prepare_launch_cmd(const JobStep& job,
+                                                          const LaunchContext& ctx,
+                                                          const std::string& job_key) {
     std::string executable = "python ";
 
     bool debug = job.parameters.debug;
@@ -1108,7 +1145,15 @@ namespace LWM {
     std::string param_str =
         "--taskname " + job.managed_task_name + " --config " + config_file;
 
-    return executable + " " + param_str;
+    std::string launch_cmd { executable + " " + param_str };
+
+    std::vector<std::string> env;
+    for (const auto& [key, val] : ctx.env) {
+      env.push_back(key + "=" + val);
+    }
+    env.push_back("LUTE_JOB_KEY=" + job_key);
+
+    return { launch_cmd, env };
   }
 
 } //namespace LWM

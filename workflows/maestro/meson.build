@@ -47,6 +47,7 @@ lwm_http_dep = declare_dependency(
 liblwm = shared_library(
     'lwm',
     [
+        'src/lwm/environment.cc',
         'src/lwm/job.cc',
         'src/lwm/job_registry.cc',
         'src/lwm/launcher.cc',
@@ -131,6 +132,7 @@ test_maestro_api = executable(
         'tests/cpp/test_maestro_api.cc',
         'src/server/http.cc',
         'src/server/handler.cc',
+        'src/lwm/environment.cc',
         'src/lwm/launcher.cc',
         'src/lwm/job.cc',
         'src/lwm/job_registry.cc',

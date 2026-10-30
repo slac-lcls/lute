@@ -173,11 +173,25 @@ namespace LWM {
         end_point; ///< Time JobStep completes
   };
 
+  /**
+   * Selector for the behaviour of environment variables passed via LaunchContext.
+   *
+   * When steps are launched by maestro, the LaunchContext env field can be used
+   * to either fully replace the current maestro environment, merge with it, or
+   * simply ignore it (in which case the current maestro env is used).
+   */
+  enum class LaunchEnvPolicy {
+    CTX_REPLACE, ///< Launched steps use only the environment provided in LaunchContext
+    CTX_MERGE,   ///< Launched steps use the LaunchContext env merged with the maestro env (Context vals replace)
+    CTX_IGNORE   ///< Launched steps use only the maestro env. The LaunchContext env is ignored
+  };
+
   struct LaunchContext {
-    std::string workflow_id {};                    ///< Identifier, for multi-DAG management
-    std::map<std::string, std::string> env {};     ///< Any required environment variables (EXPERIMENT, RUN_NUM)
-    std::vector<std::string> extra_launch_args {}; ///< Additional launch args (--psana2)
-    std::map<std::string, std::string> labels {};  ///< Space for additional unit labels
+    std::string workflow_id {};                                ///< Identifier, for multi-DAG management
+    LaunchEnvPolicy env_policy { LaunchEnvPolicy::CTX_MERGE }; ///< Behaviour for env.
+    std::map<std::string, std::string> env {};                 ///< Any environment variables (e.g. EXPERIMENT)
+    std::vector<std::string> extra_launch_args {};             ///< Additional launch args (e.g. --psana2)
+    std::map<std::string, std::string> labels {};              ///< Space for additional unit labels
   };
 
   class JobReturn {

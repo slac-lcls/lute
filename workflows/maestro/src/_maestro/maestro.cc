@@ -69,19 +69,27 @@ PYBIND11_MODULE(_maestro, m, py::mod_gil_not_used()) {
     .value("PythonLauncherType", LWM::LauncherType::PythonLauncherType)
     .value("SlurmLauncherType", LWM::LauncherType::SlurmLauncherType);
 
+  py::enum_<LWM::LaunchEnvPolicy>(m, "LaunchEnvPolicy")
+    .value("CTX_REPLACE", LWM::LaunchEnvPolicy::CTX_REPLACE)
+    .value("CTX_MERGE", LWM::LaunchEnvPolicy::CTX_MERGE)
+    .value("CTX_IGNORE", LWM::LaunchEnvPolicy::CTX_IGNORE);
+
   py::classh<LWM::LaunchContext>(m, "LaunchContext")
     .def(py::init<>())
     .def(py::init<
            std::string,
+           LWM::LaunchEnvPolicy,
            std::map<std::string, std::string>,
            std::vector<std::string>,
            std::map<std::string, std::string>
          >(),
          py::arg("workflow_id"),
+         py::arg("env_policy"),
          py::arg("env"),
          py::arg("extra_launch_args"),
          py::arg("labels"))
     .def_readwrite("workflow_id", &LWM::LaunchContext::workflow_id)
+    .def_readwrite("env_policy", &LWM::LaunchContext::env_policy)
     .def_readwrite("env", &LWM::LaunchContext::env)
     .def_readwrite("extra_launch_args", &LWM::LaunchContext::extra_launch_args)
     .def_readwrite("labels", &LWM::LaunchContext::labels);

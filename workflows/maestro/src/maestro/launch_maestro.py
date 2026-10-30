@@ -111,8 +111,11 @@ def main():
         "run_type": run_type,
     }
 
+    env_policy: _maestro.LaunchEnvPolicy = _maestro.LaunchEnvPolicy.CTX_MERGE
+
     launch_ctx: _maestro.LaunchContext = _maestro.LaunchContext(
-        workflow_id="1",
+        workflow_id="",  # Left empty, will be generated
+        env_policy=env_policy,
         env=launch_env,
         extra_launch_args=extra_launch_args,
         labels=launch_labels,

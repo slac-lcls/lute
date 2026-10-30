@@ -217,6 +217,14 @@ namespace LWM {
   };
 
   /**
+   * The complete set of information to launch the subprocess.
+   *
+   * A pair of a launch command, and a vector of environment variables.
+   * Environment variables are formatted as KEY=VALUE.
+   */
+  using SubprocessLaunchData = std::pair<std::string, std::vector<std::string>>;
+
+  /**
    * Launcher implementation which runs the job it is passed via a subprocess
    * using popen (or another subprocess mechanism with pipes).
    *
@@ -270,12 +278,15 @@ namespace LWM {
 
   protected:
     // Sub-class must override `prepare_parameter_str`
-    virtual std::string prepare_launch_cmd(const JobStep& job,
-                                           const LaunchContext& ctx) = 0;
+    virtual SubprocessLaunchData prepare_launch_cmd(const JobStep& job,
+                                                    const LaunchContext& ctx,
+                                                    const std::string& job_key) = 0;
 
     // This is currently Linux/Unix only... will need to update if cross-platform needed
     std::tuple<std::string, int, pid_t>
-    run_subprocess_log(const std::string& cmd, bool return_output = false);
+    run_subprocess_log(const std::string& cmd,
+                       bool return_output = false,
+                       std::vector<std::string> env = {});
 
     virtual void update_log(std::string& log,
                             const JobIdentifier& job_id) {}
@@ -316,7 +327,9 @@ namespace LWM {
     virtual void cancel_subprocess(const std::string& jobid) final;
 
   protected:
-    std::string prepare_launch_cmd(const JobStep& job, const LaunchContext& ctx) final;
+    SubprocessLaunchData prepare_launch_cmd(const JobStep& job,
+                                            const LaunchContext& ctx,
+                                            const std::string& job_key) final;
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:PythonLauncher")) {
@@ -355,7 +368,9 @@ namespace LWM {
   protected:
     void update_log(std::string& log, const JobIdentifier& job_Id) override;
 
-    std::string prepare_launch_cmd(const JobStep& job, const LaunchContext& ctx) final;
+    SubprocessLaunchData prepare_launch_cmd(const JobStep& job,
+                                            const LaunchContext& ctx,
+                                            const std::string& job_key) final;
 
     std::shared_ptr<spdlog::logger> m_logger = [] {
       if (auto tmp = spdlog::get("LWM:SlurmLauncher")) {
