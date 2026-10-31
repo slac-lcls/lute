@@ -233,6 +233,10 @@ class BaseExecutor(ABC):
             adapter = requests.adapters.HTTPAdapter(max_retries=retries)
             self._lute_maestro_session.mount("http://", adapter)
 
+        # Our main JobKey - it includes a DAG/workflow ID then our JobStep identifier
+        # This is only used by maestro.
+        self._job_key: Optional[str] = os.getenv("LUTE_JOB_KEY")
+
         # We also will send the manager a jobid in addition to our name.
         # If using SLURM this is the SLURM_JOBID
         # If using straight Python launching the process ID
@@ -280,8 +284,17 @@ class BaseExecutor(ABC):
             logger.error(f"Unable to send an HTTP request of type {method}")
             return
 
-        # Include a job id here so it doesn't need to be remembered at each call site
-        tagged_json_data: Dict[str, str] = {"orig_job_id": self._job_id}
+        # Include a job key, and our launch id id here so it doesn't need
+        # to be remembered at each call site
+        # -- job_key <- Unique identifier created by maestro for the managed
+        #               Task within the DAG.
+        # -- job_id  <- launch ID, like a SLURM job ID. If a DAG JobStep is
+        #               relaunched, this will change, but the job_key wont.
+        tagged_json_data: Dict[str, str] = {
+            "orig_job_id": self._job_id,
+        }
+        if self._job_key is not None:
+            tagged_json_data["mtask_job_key"] = self._job_key
         if json_data is not None:
             tagged_json_data.update(json_data)
 

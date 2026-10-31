@@ -1,5 +1,6 @@
 #include "lwm/launcher.hh"
 
+#include "lwm/environment.hh"
 #include "lwm/job.hh"
 #include "lwm/job_registry.hh"
 
@@ -75,15 +76,15 @@ namespace LWM {
   std::atomic<bool> s_interrupted { false };
 
   void JsonStatusHandler::update_running_splits(JobStepSplits* splits,
-                                                std::string& managed_task_name) {
+                                                const JobIdentifier& job_id) {
     std::lock_guard<std::mutex> lock(m_status_mut);
-    m_splits_map[managed_task_name] = splits;
+    m_splits_map[job_id] = splits;
   }
 
-  void JsonStatusHandler::remove_running_splits(std::string& managed_task_name) {
+  void JsonStatusHandler::remove_running_splits(const JobIdentifier& job_id) {
     std::lock_guard<std::mutex> lock(m_status_mut);
-    if (m_splits_map.find(managed_task_name) != m_splits_map.end()) {
-      m_splits_map.erase(managed_task_name);
+    for (auto it : JobIdentifier::find_matching(m_splits_map, job_id, &JobIdentifier::compatible)) {
+      m_splits_map.erase(it);
     }
   }
 
@@ -93,25 +94,36 @@ namespace LWM {
 
     // Check for JobID and update the most recent time stamp
     if (status_plus_data.count("orig_job_id")) {
-      std::string jobid { status_plus_data["orig_job_id"] };
+      std::string launch_id { status_plus_data["orig_job_id"] };
       auto ts { std::chrono::steady_clock::now() };
-      JobRegistry::set_last_update_time(jobid, ts);
+      JobRegistry::set_last_update_time_by_launch(launch_id, ts);
     }
 
-    if (status_plus_data.count("managed_task")) {
+    // TODO: Need to establish use of JOB_KEY for the APIs
+    if (status_plus_data.count("mtask_job_key") &&
+        status_plus_data.count("managed_task")) {
+
       std::lock_guard<std::mutex> lock(m_status_mut);
-      std::string task_name = status_plus_data["managed_task"];
+      std::string job_key { status_plus_data["mtask_job_key"] };
+      std::string task_name { status_plus_data["managed_task"] };
+
+      JobIdentifier job_id { job_key, task_name };
+
       if (status_plus_data.count("status")) {
-        m_status_map[task_name] = status_plus_data["status"];
-        if (status_plus_data["status"] == "STARTED" && m_splits_map.count(task_name)) {
-          m_splits_map[status_plus_data["managed_task"]]->running_point = std::chrono::steady_clock::now();
+        auto job_status { status_plus_data["status"] };
+        m_status_map[job_id] = job_status;
+        if (job_status == "STARTED") {
+          auto now { std::chrono::steady_clock::now() };
+          for (auto it : JobIdentifier::find_matching(m_splits_map, job_id, &JobIdentifier::compatible)) {
+            it->second->running_point = now;
+          }
         }
       }
 
       // Store additional fields as metadata
       for (auto const& [key, val] : status_plus_data) {
-        if (key != "managed_task" && key != "status") {
-          m_metadata_map[task_name][key] = val;
+        if (key != "mtask_job_key" && key != "managed_task" && key != "status") {
+          m_metadata_map[job_id][key] = val;
         }
       }
     }
@@ -136,15 +148,17 @@ namespace LWM {
       {
         // Check for JobID and update the most recent time stamp
         if (log.count("orig_job_id")) {
-          std::string jobid { log["orig_job_id"] };
+          std::string launch_id { log["orig_job_id"] };
           auto ts { std::chrono::steady_clock::now() };
-          JobRegistry::set_last_update_time(jobid, ts);
+          JobRegistry::set_last_update_time_by_launch(launch_id, ts);
         }
-        //  std::lock_guard<std::mutex> lock(m_log_mut);
-        //  m_log_map[log["managed_task"]] = log["message"];
+
         if (log.find("managed_task") != log.end()) {
+          std::string job_key { log["mtask_job_key"] };
+          std::string task_name { log["managed_task"] };
+
           std::string msg {
-            "\n\t" + BOLD + GREEN + "[Logs from **" + log["managed_task"] + "**]" + RESET + "\n"
+            "\n\t" + BOLD + GREEN + "[Logs from **" + task_name + "**]" + RESET + "\n"
           };
 
           std::string raw_log;
@@ -185,17 +199,24 @@ namespace LWM {
       // I kinda regret how I set this up now... but will recombine
       // stuff into a single map to do the JSON string conversion
       // TODO: Probably need to restructure all this key/val handling to be smarter...
-      for (const auto& [managed_task_name, status] : m_status_handler->m_status_map) {
+      for (const auto& [job_id, status] : m_status_handler->m_status_map) {
         if (!first) {
           json_res += ", ";
         }
+
+        const std::string& managed_task_name {
+          job_id.name.has_value() ? *(job_id.name) : ""
+        };
+
         std::map<std::string, std::string> json_map;
         json_map["name"] = managed_task_name;
         json_map["status"] = status;
-        if (m_status_handler->m_metadata_map.count(managed_task_name)) {
-          const auto& task_meta = m_status_handler->m_metadata_map[managed_task_name];
+
+        if (m_status_handler->m_metadata_map.count(job_id)) {
+          const auto& task_meta = m_status_handler->m_metadata_map[job_id];
           json_map.insert(task_meta.begin(), task_meta.end());
         }
+
         try {
           json_res += to_json_str(json_map);
           first = false;
@@ -204,11 +225,14 @@ namespace LWM {
         }
       }
     }
+
     json_res += "] }";
     m_logger->debug("Created response: {}", json_res);
+
     HTTP::Response response(HTTP::CODE::OK);
     response.set_header("Content-Type", "application/json");
     response.set_content(json_res);
+
     return response;
   }
 
@@ -219,20 +243,36 @@ namespace LWM {
 
       // Check for JobID and update the most recent time stamp
       if (rpc_data.count("orig_job_id")) {
-        std::string jobid { rpc_data["orig_job_id"] };
+        const std::string& launch_id { rpc_data["orig_job_id"] };
         auto ts { std::chrono::steady_clock::now() };
-        JobRegistry::set_last_update_time(jobid, ts);
+        JobRegistry::set_last_update_time_by_launch(launch_id, ts);
       }
 
-      if (rpc_data.find("target") != rpc_data.end()
-          && rpc_data.find("message") != rpc_data.end()) {
-        std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
-        m_status_handler->m_rpc_queues[rpc_data["target"]].push(rpc_data["message"]);
+      auto tgt_key_it { rpc_data.find("target_key") };
+      auto tgt_msg_it { rpc_data.find("message") };
+      if (tgt_key_it != rpc_data.end() && tgt_msg_it != rpc_data.end()) {
+        const auto& tgt_key { tgt_key_it->second };
+        const auto& tgt_msg { tgt_msg_it->second };
 
-        HTTP::Response response(HTTP::CODE::OK);
-        response.set_content("Message queued.");
-        return response;
+        try {
+          auto job_id { JobRegistry::job_id_from_key(tgt_key) };
+          {
+            std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+            m_status_handler->m_rpc_queues[job_id].push(tgt_msg);
+          }
+
+          HTTP::Response response(HTTP::CODE::OK);
+          response.set_content("Message queued.");
+
+          return response;
+        } catch (const JobNotRegistered& e) {
+          HTTP::Response response(HTTP::CODE::BadRequest);
+          response.set_content(e.what());
+
+          return response;
+        }
       }
+
       return HTTP::Response(HTTP::CODE::BadRequest);
     } else if (request.method() == HTTP::METHOD::GET) {
       // Basic query param parsing for ?task=...
@@ -254,22 +294,39 @@ namespace LWM {
 
         // Check for JobID and update the most recent time stamp
         if (rpc_data.count("orig_job_id")) {
-          std::string jobid { rpc_data["orig_job_id"] };
+          const std::string& launch_id { rpc_data["orig_job_id"] };
           auto ts { std::chrono::steady_clock::now() };
-          JobRegistry::set_last_update_time(jobid, ts);
+          JobRegistry::set_last_update_time_by_launch(launch_id, ts);
         }
       }
 
       if (!task_name.empty()) {
         std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
-        if (m_status_handler->m_rpc_queues.find(task_name) != m_status_handler->m_rpc_queues.end()
-            && !m_status_handler->m_rpc_queues[task_name].empty()) {
-          std::string msg = m_status_handler->m_rpc_queues[task_name].front();
-          m_status_handler->m_rpc_queues[task_name].pop();
+        auto job_ids { JobRegistry::job_ids_from_name(task_name) };
+        if (!job_ids.empty()) {
+          std::string full_msg { "{" };
+
+          for (const auto& job_id : job_ids) {
+            auto queue_it { m_status_handler->m_rpc_queues.find(job_id) };
+
+            if (queue_it != m_status_handler->m_rpc_queues.end() &&
+                !queue_it->second.empty()) {
+              std::string msg { queue_it->second.front() };
+              queue_it->second.pop();
+              if (full_msg != "{") {
+                full_msg += ", ";
+              }
+
+              full_msg += std::string( " \"message_" + job_id.job_key +"\": \"" + msg + "\"");
+            }
+          }
+
+          full_msg += "}";
 
           HTTP::Response response(HTTP::CODE::OK);
           response.set_header("Content-Type", "application/json");
-          response.set_content("{ \"message\": \"" + msg + "\" }");
+          response.set_content(full_msg);
+
           return response;
         }
       }
@@ -277,8 +334,10 @@ namespace LWM {
       HTTP::Response response(HTTP::CODE::OK);
       response.set_header("Content-Type", "application/json");
       response.set_content("{ \"message\": null }");
+
       return response;
     }
+
     return HTTP::Response(HTTP::CODE::MethodNotAllowed);
   }
 
@@ -380,7 +439,9 @@ namespace LWM {
 
   // This is currently Linux/Unix only... will need to update if cross-platform needed
   std::tuple<std::string, int, pid_t>
-  SubprocessLauncher::run_subprocess_log(const std::string& cmd, bool return_output) {
+  SubprocessLauncher::run_subprocess_log(const std::string& cmd,
+                                         bool return_output,
+                                         std::vector<std::string> env) {
     std::string final_cmd { cmd };
     std::unique_ptr<ScopedTempFile> tmp_file;
 
@@ -412,6 +473,15 @@ namespace LWM {
       return std::make_tuple(err_result, ret, -1);
     }
 
+    std::vector<const char*> envp;
+    if (!env.empty()) {
+      envp.reserve(env.size() + 1);
+      for (const auto& launch_key_val : env) {
+        envp.push_back(launch_key_val.data());
+      }
+      envp.push_back(nullptr);
+    }
+
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -425,7 +495,11 @@ namespace LWM {
     } else if (pid == 0) {
       close(err_pipes[0]);
 
-      execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
+      if (!envp.empty()) {
+        execle("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr, envp.data());
+      } else {
+        execl("/bin/sh", "sh", "-c", final_cmd.c_str(), nullptr);
+      }
 
       int err { errno };
       ssize_t ignored { write(err_pipes[1], &err, sizeof(err)) };
@@ -494,8 +568,9 @@ namespace LWM {
   }
 
   // This is currently Linux/Unix only... will need to update if cross-platform needed
-  std::optional<std::string>
-  SubprocessLauncher::add_job_to_registry(std::string& managed_task_name,
+  std::optional<JobIdentifier>
+  SubprocessLauncher::add_job_to_registry(const std::string& job_key,
+                                          const std::string& managed_task_name,
                                           std::string& log,
                                           pid_t subproc_pid) {
     if (subproc_pid <= 0) {
@@ -504,14 +579,14 @@ namespace LWM {
       return std::nullopt;
     }
 
-    std::string jobid { std::to_string(subproc_pid) };
+    std::string launch_id { std::to_string(subproc_pid) };
 
-    auto status_func = [&](const std::string& jobid) {
-      return is_subprocess_running(jobid);
+    auto status_func = [&](const JobIdentifier& job_id) {
+      return is_subprocess_running(job_id.launch_id);
     };
 
-    auto cancel_func = [&](const std::string& jobid) {
-      return cancel_subprocess(jobid);
+    auto cancel_func = [&](const JobIdentifier& job_id) {
+      return cancel_subprocess(job_id.launch_id);
     };
 
     // Currently, actually, we're not getting a logfile anymore for PythonLauncher
@@ -519,28 +594,38 @@ namespace LWM {
     //       a log file even for the PythonLauncher...
     // Just put some placeholder here for now.
 
-    std::string logfile { "/tmp/lute_fake_log_" + jobid + ".log" };
+    std::string logfile { "/tmp/lute_fake_log_" + launch_id + ".log" };
 
-    JobRegistry::register_job(managed_task_name,
-                              jobid,
+    JobIdentifier job_id { job_key, managed_task_name, launch_id };
+
+    JobRegistry::register_job(job_id,
                               logfile,
                               status_func,
                               cancel_func);
 
-    return std::make_optional(jobid);
+    return std::make_optional(job_id);
   }
 
   JobReturn SubprocessLauncher::launch_task(const JobStep& job,
-                                            bool is_daq2,
+                                            const LaunchContext& ctx,
+                                            const std::string& job_key,
                                             MaybeJobFutures_t wait_for) {
     JobStepSplits splits;
     std::string managed_task_name = job.managed_task_name;
     logger()->debug("Preparing to run: {}", managed_task_name);
 
+    JobIdentifier job_id { job_key }; // Will fill in after launch
+
     std::string reason;
     std::string log, status;
     if (can_task_run(job, wait_for, reason)) { // This will block on futures as needed
-      std::string launch_cmd = prepare_launch_cmd(job, is_daq2);
+      // Preforms any requisite modifications of ctx.env. Also adds LUTE_JOB_KEY
+      auto [launch_cmd, ctx_env] = prepare_launch_cmd(job, ctx, job_key);
+      // After preparing the env variables from the context, decide whether to merge
+      // with the current maestro environment
+      // The LaunchContext may provide an entire environment, or just some variables
+      // therefore, the env_policy determines whether we merge, replace, or ignore
+      auto launch_env = setup_environment(ctx_env, ctx.env_policy);
       logger()->info("Will launch {} with: {}", managed_task_name, launch_cmd);
 
       if (launch_cmd.empty()) {
@@ -550,7 +635,7 @@ namespace LWM {
         throw std::runtime_error(err_msg.c_str());
       }
 
-      m_status_handler->update_running_splits(&splits, managed_task_name);
+      m_status_handler->update_running_splits(&splits, job_id);
       splits.launch_point = std::chrono::steady_clock::now();
 
       // If desired by the subclasses of SubprocessLauncher:
@@ -568,8 +653,12 @@ namespace LWM {
       bool return_output { use_submit_log_output() };
       int ret_status;
       pid_t subproc_pid;
+      // Passing launch_env here will use `execle` - other calls to run_subprocess_log
+      // do not pass an env, in which case it uses execl, and the maestro env is therefore
+      // inherited.
       std::tie(log, ret_status, subproc_pid) = run_subprocess_log(launch_cmd,
-                                                                  return_output);
+                                                                  return_output,
+                                                                  launch_env);
       if (ret_status != 0) {
         m_logger->error("Error submitting job for {}. Could not launch or track subprocess",
                         job.managed_task_name);
@@ -580,18 +669,22 @@ namespace LWM {
         return JobReturn(managed_task_name, status, log, splits);
       }
 
-      auto jobid_opt = this->add_job_to_registry(managed_task_name, log, subproc_pid);
-      if (!jobid_opt.has_value()) {
+      auto job_id_opt {
+        this->add_job_to_registry(job_key, managed_task_name, log, subproc_pid)
+      };
+      if (!job_id_opt.has_value()) {
         status = "SUBPROCESS_NOT_REGISTERED";
 
         splits.end_point = std::chrono::steady_clock::now();
         return JobReturn(managed_task_name, status, log, splits);
       }
 
-      std::string jobid { *jobid_opt };
-      std::string logfile = JobRegistry::get_log_file_for(jobid);
+      // NOTE: Now we updated with the name + launch_id components
+      job_id = *job_id_opt;
+      std::string logfile { JobRegistry::get_log_file_for(job_id) };
+
       logger()->info("Will begin monitoring {}. Individual log file will be at: {}. {}",
-                     jobid,
+                     job_id.launch_id,
                      logfile,
                      this->m_unbuffered_logs
                      ? "Will stream logs in real time, too."
@@ -634,11 +727,11 @@ namespace LWM {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         // ... Need to do the status check ... //
         {
-          std::lock_guard<std::mutex>(m_status_handler->m_status_mut);
-          for (auto& pair : m_status_handler->m_status_map) {
-            if (pair.first == managed_task_name) {
-              status = pair.second;
-            }
+          std::lock_guard<std::mutex> lock(m_status_handler->m_status_mut);
+          for (auto it : JobIdentifier::find_matching(m_status_handler->m_status_map,
+                                                      job_id,
+                                                      &JobIdentifier::compatible)) {
+            status = it->second;
           }
         }
         logger()->trace(managed_task_name + "'s current status is " + status);
@@ -646,7 +739,7 @@ namespace LWM {
         {
           // Check last update time and ping directly if too long
           using namespace std::literals;
-          auto update_pt { JobRegistry::get_last_update_time(jobid) };
+          auto update_pt { JobRegistry::get_last_update_time(job_id) };
           auto now = std::chrono::steady_clock::now();
           const std::chrono::duration<double> elapsed_dur { (now - update_pt) / 1ms };
           const double elapsed { elapsed_dur.count() / 1e3 };
@@ -661,14 +754,14 @@ namespace LWM {
 
           if (unresponsive_checks_remaining == 0 && // No status checks left and
               elapsed > unresponsive_remainder_s) { // we used up any left-over secs
-            JobRegistry::cancel_one(jobid);
+            JobRegistry::cancel_one(job_id);
             status = "CANCELLED";
             break;
           }
 
           if (elapsed > heartbeat_ttl_s) {
             // Check status....
-            bool is_running = this->is_subprocess_running(jobid);
+            bool is_running = this->is_subprocess_running(job_id.launch_id);
             if (!is_running) {
               status = "UNRESPONSIVE";
               logger()->error("Job exited unexpectedly! No indication of why! Marked failed!");
@@ -686,20 +779,20 @@ namespace LWM {
               logger()->warn("We haven't heard from {} (Job '{}') in more than {} seconds! "
                              "Job will be killed in {} seconds if still unresponsive!",
                              managed_task_name,
-                             jobid,
+                             job_id.launch_id,
                              heartbeat_ttl_s,
                              secs_remaining);
 
               // Update the status, so we dont use the fallback pinging too much
               // Because of the unresponsive_checks_remaining counter we'll know when
               // to kill the job still.
-              JobRegistry::set_last_update_time(jobid, now);
+              JobRegistry::set_last_update_time(job_id, now);
             }
           }
         }
       }
-      update_log(log, jobid);
-      JobRegistry::unregister_job(managed_task_name);
+      update_log(log, job_id);
+      JobRegistry::unregister_job(job_id);
     } else {
       // TODO: Need to change this to update the message to acocunt for trigger
       // rule and explain why not running
@@ -708,12 +801,16 @@ namespace LWM {
       status = "UPSTREAM_FAILED";
     }
     splits.end_point = std::chrono::steady_clock::now();
-    m_status_handler->remove_running_splits(managed_task_name);
+    m_status_handler->remove_running_splits(job_id);
+
     return JobReturn(managed_task_name, status, log, splits);
   }
 
-  JobReturn SubprocessLauncher::operator()(const JobStep& job, bool is_daq2, MaybeJobFutures_t wait_for) {
-    return launch_task(job, is_daq2, wait_for);
+  JobReturn SubprocessLauncher::operator()(const JobStep& job,
+                                           const LaunchContext& ctx,
+                                           const std::string& job_key,
+                                           MaybeJobFutures_t wait_for) {
+    return launch_task(job, ctx, job_key, wait_for);
   }
 
   bool SlurmLauncher::is_subprocess_running(const std::string& jobid) {
@@ -803,19 +900,20 @@ namespace LWM {
     (void)ret;
   }
 
-  std::optional<std::string>
-  SlurmLauncher::add_job_to_registry(std::string& managed_task_name,
+  std::optional<JobIdentifier>
+  SlurmLauncher::add_job_to_registry(const std::string& job_key,
+                                     const std::string& managed_task_name,
                                      std::string& log,
                                      pid_t subproc_pid) {
     (void)subproc_pid; // Not used by SLURM, since it has a separate SLURM job ID
-    std::regex jobid_regex(R"(Submitted batch job ([0-9]{0,100}))");
-    std::smatch jobid_match;
-    std::string jobid { "" };
-    if (std::regex_search(log, jobid_match, jobid_regex)) {
-      jobid = jobid_match[1].str();
+    std::regex launch_id_regex(R"(Submitted batch job ([0-9]{0,100}))");
+    std::smatch launch_id_match;
+    std::string launch_id { "" };
+    if (std::regex_search(log, launch_id_match, launch_id_regex)) {
+      launch_id = launch_id_match[1].str();
 
-      if (jobid.empty()) {
-        logger()->error("Determined SLURM jobid was empty!");
+      if (launch_id.empty()) {
+        logger()->error("Determined SLURM launch_id was empty!");
 
         return std::nullopt;
       }
@@ -825,7 +923,7 @@ namespace LWM {
       bool found_logfile { false };
 
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
-      std::string get_logfile_cmd { "sacct -j " + jobid + " -o StdOut%200" };
+      std::string get_logfile_cmd { "sacct -j " + launch_id + " -o StdOut%200" };
       m_logger->debug("Retrieving log file path with: {}", get_logfile_cmd);
       auto [slurm_info, ret_code, subproc_pid] =
         run_subprocess_log(get_logfile_cmd, true);
@@ -861,34 +959,36 @@ namespace LWM {
 
       std::size_t pos = logfile_path.find("%J");
       if (pos != std::string::npos) {
-        logfile_path.replace(pos, 2, jobid);
+        logfile_path.replace(pos, 2, launch_id);
       } else {
         logger()->error("Log file path is in unexpected format! {}", logfile_path);
         return std::nullopt;
       }
 
-      auto status_func = [&](const std::string& job_id) {
-        return is_subprocess_running(job_id);
+      auto status_func = [&](const JobIdentifier& job_id) {
+        return is_subprocess_running(job_id.launch_id);
       };
 
-      auto cancel_func = [&](const std::string& job_id) {
-        cancel_subprocess(job_id);
+      auto cancel_func = [&](const JobIdentifier& job_id) {
+        cancel_subprocess(job_id.launch_id);
       };
 
-      JobRegistry::register_job(managed_task_name,
-                                jobid,
+      JobIdentifier job_id { job_key, managed_task_name, launch_id };
+
+      JobRegistry::register_job(job_id,
                                 logfile_path,
                                 status_func,
                                 cancel_func);
 
-      return std::make_optional(jobid);
+      return std::make_optional(job_id);
     }
 
     return std::nullopt;
   }
 
-  std::string SlurmLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
-    //if (job.parameters.executable_subdir == "launch_")
+  SubprocessLaunchData SlurmLauncher::prepare_launch_cmd(const JobStep& job,
+                                                         const LaunchContext& ctx,
+                                                         const std::string& job_key) {
     std::string executable =
       job.parameters.lute_location + "/" + job.parameters.executable_subdir
       + "/submit_slurm";
@@ -900,19 +1000,30 @@ namespace LWM {
     if (job.parameters.debug) {
       param_str += " --debug";
     }
-    if (is_daq2) {
-      param_str += " --psana2";
+
+    for (const auto& arg : ctx.extra_launch_args) {
+      param_str += " " + arg;
     }
 
     std::string slurm_params = job.extra_parameters;
 
     param_str += " " + slurm_params;
 
-    return executable + " " + param_str;
+    std::string launch_cmd { executable + " " + param_str };
+
+    std::vector<std::string> env;
+    for (const auto& [key, val] : ctx.env) {
+      auto combined { key + "=" + val };
+      env.push_back(key + "=" + val);
+    }
+    env.push_back("LUTE_JOB_KEY=" + job_key);
+
+    return { launch_cmd, env };
   }
 
-  void SlurmLauncher::update_log(std::string& log, std::string& jobid) {
-    if (jobid.empty()) {
+  void SlurmLauncher::update_log(std::string& log,
+                                 const JobIdentifier& job_id) {
+    if (job_id.launch_id.empty()) {
       logger()->error("Trying to get information for an empty SLURM jobid! Skipping!");
 
       return;
@@ -921,7 +1032,7 @@ namespace LWM {
     // The `log` should likely contain the submit log from sbatch right now.
     // We'll fetch the actual logfile and *append* so we get both!
     std::string mtask_log;
-    std::string logfile_path = JobRegistry::get_log_file_for(jobid);
+    std::string logfile_path = JobRegistry::get_log_file_for(job_id);
 
     std::string get_slurm_log_cmd { "cat " + logfile_path };
     logger()->debug("Attempting to grab output from log file using: {}",
@@ -1011,7 +1122,9 @@ namespace LWM {
     (void)ret;
   }
 
-  std::string PythonLauncher::prepare_launch_cmd(const JobStep& job, bool is_daq2) {
+  SubprocessLaunchData PythonLauncher::prepare_launch_cmd(const JobStep& job,
+                                                          const LaunchContext& ctx,
+                                                          const std::string& job_key) {
     std::string executable = "python ";
 
     bool debug = job.parameters.debug;
@@ -1021,7 +1134,9 @@ namespace LWM {
     if (job.parameters.executable_subdir == "launch_scripts") {
       script_location = job.parameters.lute_location + "/run_task.py ";
     } else {
-      script_location = job.parameters.lute_location + "/" + job.parameters.executable_subdir + "/run_task ";
+      script_location =
+        job.parameters.lute_location + "/" +
+        job.parameters.executable_subdir + "/run_task ";
     }
 
     executable += script_location;
@@ -1030,7 +1145,15 @@ namespace LWM {
     std::string param_str =
         "--taskname " + job.managed_task_name + " --config " + config_file;
 
-    return executable + " " + param_str;
+    std::string launch_cmd { executable + " " + param_str };
+
+    std::vector<std::string> env;
+    for (const auto& [key, val] : ctx.env) {
+      env.push_back(key + "=" + val);
+    }
+    env.push_back("LUTE_JOB_KEY=" + job_key);
+
+    return { launch_cmd, env };
   }
 
 } //namespace LWM

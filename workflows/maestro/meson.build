@@ -47,10 +47,12 @@ lwm_http_dep = declare_dependency(
 liblwm = shared_library(
     'lwm',
     [
+        'src/lwm/environment.cc',
         'src/lwm/job.cc',
         'src/lwm/job_registry.cc',
         'src/lwm/launcher.cc',
         'src/lwm/manager.cc',
+        'src/util/uuid.cc',
     ],
     install: true,
     install_dir: py3.get_install_dir() / 'maestro/_maestro',
@@ -130,6 +132,7 @@ test_maestro_api = executable(
         'tests/cpp/test_maestro_api.cc',
         'src/server/http.cc',
         'src/server/handler.cc',
+        'src/lwm/environment.cc',
         'src/lwm/launcher.cc',
         'src/lwm/job.cc',
         'src/lwm/job_registry.cc',

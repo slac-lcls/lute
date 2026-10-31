@@ -2,7 +2,13 @@
 #define LWM_JOB_HH
 
 #include <chrono>
+#include <concepts>
+#include <iterator>
+#include <map>
+#include <optional>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 namespace LWM {
@@ -25,6 +31,110 @@ namespace LWM {
     std::string executable_subdir;
     std::string config_file;
     bool debug;
+  };
+
+  /**
+   * A unique identifier for a JobStep within a workflow.
+   *
+   * The JobIdentifier consists of a unique job_key for the JobStep within the DAG,
+   * which is generally provided by maestro. Optionally, the identifier tracks a
+   * name (e.g. managed Task name) provided by the Executor. There is also a Launcher
+   * ID -- this maps the maestro identifiers to physical system resources (process IDs).
+   * as well as a name for JobStep (e.g. managed Task name).
+   */
+  struct JobIdentifier {
+    std::string job_key;                  ///< Unique identifier across all DAGs (from maestro)
+    std::optional<std::string> name;      ///< A step name from the Executor (no uniqueness guarantee)
+    std::string launch_id;                ///< Identifier used by the Launcher to map onto system (pid, etc.)
+
+    inline bool operator<(const JobIdentifier& other) const {
+      // Use a full lexical ordering - std::nullopt sorts first in this case.
+      return
+        std::tie(job_key, name, launch_id) <
+        std::tie(other.job_key, other.name, other.launch_id);
+    }
+
+    /**
+     * Check for partially filled JobIdentifier matches.
+     *
+     * @note This routine is one-directional! It requires that the stored value have
+     *       every field for lookup. Adding fields over time will not match! See the
+     *       symmetric implementations below (`compatible`).
+     *
+     * @param[in] partial A partially filled JobIdentifier.
+     * @param[in] full A completely filled JobIdentifier.
+     * @returns true if the fully filled `full` matches on every key that is
+     *          present for the partially filled `partial`. Otherwise false.
+     */
+    static bool matches(const JobIdentifier& partial, const JobIdentifier& full);
+
+    /**
+     * Construct a vector of iterators that match a partial JobIdentifier.
+     *
+     * @note The routine currently handles map, and set inputs.
+     *
+     * @tparam Map The container of identifiers, supporting maps or sets.
+     * @tparam Pred A predicate for comparisons, with signature Pred(id, id) -> bool.
+     * @param[in] id_map The JobIdentifiers to check for matches against.
+     * @param[in] partial The (potentially) partial JobIdentifier to match.
+     * @param[in] pred The matching/lookup predicate for field comparisons. Defaults
+     *            to JobIdentifier::matches. See notes there on ordering and partial
+     *            JobIdentifiers.
+     * @returns A vector of iterators to the found matches.
+     */
+    template <typename Map, typename Pred = decltype(&matches)>
+    requires requires(Pred pred, const JobIdentifier& id_a, const JobIdentifier& id_b) {
+      { pred(id_a, id_b) } -> std::convertible_to<bool>;
+    }
+    static inline auto find_matching(Map& id_map,
+                                     const JobIdentifier& partial,
+                                     Pred&& pred = &matches) {
+      using ItType = decltype(id_map.begin());
+      using ObjType = std::iter_reference_t<ItType>;
+
+      auto key_for = [](ItType it) -> const JobIdentifier& {
+        if constexpr (std::is_same_v<ObjType, const JobIdentifier&>) {
+          return *it;
+        } else {
+          return it->first;
+        }
+      };
+
+      std::vector<ItType> out;
+      if (!partial.job_key.empty()) {
+        auto it { id_map.lower_bound(JobIdentifier { partial.job_key }) };
+        while (it != id_map.end()) {
+          const auto& job_id { key_for(it) };
+          if (job_id.job_key != partial.job_key) {
+            break;
+          } else if (pred(partial, job_id)) {
+            out.push_back(it);
+          }
+
+          ++it;
+        }
+      } else {
+        for (auto it = id_map.begin(); it != id_map.end(); ++it) {
+          if (pred(partial, key_for(it))) {
+            out.push_back(it);
+          }
+        }
+      }
+
+      return out;
+    }
+
+    /**
+     * Check if every set field matches between two JobIdentifiers.
+     *
+     * @note This doesn't use ordering, and allows either of side of the comparison
+     *       to be more complete than the other.
+     *
+     * @param[in] id_a First JobIdentifier.
+     * @param[in] id_b Second JobIdentifier.
+     * @returns true if all fields, set in BOTH JobIdentifiers, agree. Otherwise, false.
+     */
+    static bool compatible(const JobIdentifier& id_a, const JobIdentifier& id_b);
   };
 
   class JobStep {
@@ -61,6 +171,27 @@ namespace LWM {
         running_point; ///< Time JobStep reports it is running
     std::chrono::time_point<std::chrono::steady_clock>
         end_point; ///< Time JobStep completes
+  };
+
+  /**
+   * Selector for the behaviour of environment variables passed via LaunchContext.
+   *
+   * When steps are launched by maestro, the LaunchContext env field can be used
+   * to either fully replace the current maestro environment, merge with it, or
+   * simply ignore it (in which case the current maestro env is used).
+   */
+  enum class LaunchEnvPolicy {
+    CTX_REPLACE, ///< Launched steps use only the environment provided in LaunchContext
+    CTX_MERGE,   ///< Launched steps use the LaunchContext env merged with the maestro env (Context vals replace)
+    CTX_IGNORE   ///< Launched steps use only the maestro env. The LaunchContext env is ignored
+  };
+
+  struct LaunchContext {
+    std::string workflow_id {};                                ///< Identifier, for multi-DAG management
+    LaunchEnvPolicy env_policy { LaunchEnvPolicy::CTX_MERGE }; ///< Behaviour for env.
+    std::map<std::string, std::string> env {};                 ///< Any environment variables (e.g. EXPERIMENT)
+    std::vector<std::string> extra_launch_args {};             ///< Additional launch args (e.g. --psana2)
+    std::map<std::string, std::string> labels {};              ///< Space for additional unit labels
   };
 
   class JobReturn {
