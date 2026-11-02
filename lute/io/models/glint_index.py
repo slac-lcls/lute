@@ -24,15 +24,21 @@ take the same flags, so the validators below reject, at config time, an option t
 would not accept.
 """
 
+__all__ = ["IndexGLINTParameters"]
+__author__ = "Stefano Marchesini"
+
 import os
 from typing import Any, Dict, Literal, Optional
 
-from pydantic import Field, PositiveFloat, PositiveInt, root_validator, validator
+import pydantic
 
 from lute.io.models.base import ThirdPartyParameters
 
-__all__ = ["IndexGLINTParameters"]
-__author__ = "Stefano Marchesini"
+pydantic_ver: int = int(pydantic.version.VERSION[0])
+if pydantic_ver > 1:
+    from pydantic.v1 import Field, PositiveFloat, PositiveInt, root_validator, validator  # type: ignore
+else:
+    from pydantic import Field, PositiveFloat, PositiveInt, root_validator, validator
 
 GLINT_ROOT_DEFAULT: str = "/sdf/group/lcls/ds/tools/glint/v0.1.0"
 """The GLINT release LUTE runs: one directory per release tag under tools/glint, never edited."""
