@@ -985,7 +985,7 @@ def _add_version(
         enum_val >>= 1
     if version_specifier is not None and version_specifier > enum_val_sum:
         # Want hard error? Or just warning?
-        logger.warn(
+        logger.warning(
             f"Combination version specifier value of {version_specifier} is invalid! "
             f"The max expected value (combo of all known enumerators) is {enum_val_sum}. "
             "We will continue. But the version information will be unusable upon retrieval!"
