@@ -9,17 +9,19 @@ Classes:
 __all__ = ["BayFAI"]
 __author__ = "Louis Conreux"
 
+import os
+import logging
+import time
+from typing import Union
+
+import panel as pn  # type: ignore
+
 from lute.tasks._bayfai import BayFAIOpt
 from lute.io.models.bayfai import BayFAIParameters
 
 from lute.tasks.task import Task
 from lute.tasks.dataclasses import TaskStatus, ElogSummaryPlots
 from lute.execution.logging import get_logger
-
-import os
-import logging
-import panel as pn  # type: ignore
-import time  # type: ignore
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -92,7 +94,7 @@ class BayFAI(Task):
             diagnostics_plot = optimizer.create_diagnostics_panel()
             _ = optimizer.create_summary_plot(plot=plot)
             pn.extension("matplotlib", "bokeh")
-            plots = pn.Row(
+            plots: Union[pn.Row, pn.Tabs] = pn.Row(
                 pn.pane.Matplotlib(diagnostics_plot, sizing_mode="fixed"),
                 powder_plot,
             )
