@@ -22,4 +22,49 @@ namespace LWM {
       throw std::runtime_error("Unrecognized TriggerRule.");
     }
   }
+
+  bool JobIdentifier::same_dag(const JobIdentifier& id_a, const JobIdentifier& id_b) {
+    if (!id_a.job_key.empty() && !id_b.job_key.empty()) {
+      const std::string wf_id_a { id_a.job_key.substr(0, id_a.job_key.find('/')) };
+      const std::string wf_id_b { id_b.job_key.substr(0, id_b.job_key.find('/')) };
+
+      return wf_id_a == wf_id_b;
+    }
+
+    return false;
+  }
+
+  bool JobIdentifier::matches(const JobIdentifier& partial, const JobIdentifier& full) {
+    if (!partial.job_key.empty() && partial.job_key != full.job_key) {
+      return false;
+    }
+
+    if (partial.name && full.name != partial.name) {
+      return false;
+    }
+
+    if (!partial.launch_id.empty() && partial.launch_id != full.launch_id) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool JobIdentifier::compatible(const JobIdentifier& id_a, const JobIdentifier& id_b) {
+    if (!id_a.job_key.empty() && !id_b.job_key.empty() && id_a.job_key != id_b.job_key) {
+      return false;
+    }
+
+    if (id_a.name && id_b.name && *(id_a.name) != *(id_b.name)) {
+      return false;
+    }
+
+    if (!id_a.launch_id.empty() &&
+        !id_b.launch_id.empty() &&
+        id_a.launch_id != id_b.launch_id) {
+      return false;
+    }
+
+    return true;
+  }
 } // namespace LWM

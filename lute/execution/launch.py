@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import uuid
-from typing import cast, Any, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 import requests
 
@@ -47,6 +47,9 @@ class EnvLaunchInfo(TypedDict):
     authorization: str
     arp_job_id: str
     kerb_file: Optional[str]
+
+
+class NoKerberosError(Exception): ...
 
 
 def request_arp_token(exp: str, lifetime: int = 300) -> str:
@@ -143,7 +146,9 @@ def get_base_launch_parser(description: str) -> argparse.ArgumentParser:
     return parser
 
 
-def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
+def setup_launch_env(
+    args: argparse.Namespace, add_to_env: bool = True
+) -> EnvLaunchInfo:
     """Setup experiment, run, and authorization information.
 
     Checks environment variables first (ARP submission), then falls back to
@@ -151,6 +156,9 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
 
     Args:
         args (argparse.Namespace): The arguments parsed via command-line.
+
+        add_to_env (bool): If True, add any determined environment variables direclty
+            back to os.environ. Otherwise, only return information.
 
     Returns:
         env_cmd_vars (EnvLaunchInfo): A dictionary of variables which will
@@ -181,34 +189,40 @@ def setup_launch_env(args: argparse.Namespace) -> EnvLaunchInfo:
             )
             sys.exit(-1)
 
+        assert isinstance(args.experiment, str)
+        assert isinstance(args.run, str)
+
         experiment = args.experiment
         run_num = args.run
-        assert isinstance(experiment, str)
-        assert isinstance(run_num, str)
-        os.environ["EXPERIMENT"] = experiment
-        os.environ["RUN_NUM"] = run_num
 
         try:
             from kerberos import GSSError  # type: ignore
 
-            jid_authorization = request_arp_token(experiment)
-            os.environ["Authorization"] = jid_authorization
-        except (ImportError, GSSError):
+            try:
+                jid_authorization = request_arp_token(experiment)
+            except GSSError:
+                raise NoKerberosError
+        except (ImportError, NoKerberosError):
             logger.warning(
                 "Unable to use Kerberos and request JWTs. "
                 "eLog and other integrations may not work!"
             )
             jid_authorization = ""
 
-        if arp_job_id is None:
-            arp_job_id = uuid.uuid4().hex[:24]
-            os.environ["ARP_JOB_ID"] = arp_job_id
+    if arp_job_id is None:
+        arp_job_id = uuid.uuid4().hex[:24]
+
+    if add_to_env:
+        os.environ["EXPERIMENT"] = experiment
+        os.environ["RUN_NUM"] = run_num
+        os.environ["Authorization"] = jid_authorization
+        os.environ["ARP_JOB_ID"] = arp_job_id
 
     return {
         "experiment": experiment,
         "run_num": run_num,
         "authorization": jid_authorization,
-        "arp_job_id": cast(str, arp_job_id),
+        "arp_job_id": arp_job_id,
         "kerb_file": cache_file,
     }
 

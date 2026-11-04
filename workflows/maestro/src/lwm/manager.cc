@@ -3,6 +3,7 @@
 #include "lwm/job.hh"
 #include "lwm/job_registry.hh"
 #include "lwm/launcher.hh"
+#include "util/uuid.hh"
 
 #include "spdlog/cfg/env.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -13,6 +14,12 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace {
+  inline std::string make_workflow_id() {
+    return "lute_wf_" + LWM::uuid_v7();
+  }
+}
 
 namespace LWM {
   Manager::Manager(const ManagerParameters& params)
@@ -28,22 +35,25 @@ namespace LWM {
     }())
   {
     spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
+
+    m_logger->info("Running workflows with {}",
+                   params.launch_type == LauncherType::SlurmLauncherType
+                     ? "SlurmLauncher"
+                     : "PythonLauncher");
+
     switch (params.launch_type) {
     case LauncherType::PythonLauncherType: {
       m_launcher = std::move(std::make_unique<PythonLauncher>(params.unbuffered_logs));
-      msg += "PythonLauncher";
       break;
     }
     case LauncherType::SlurmLauncherType: {
       m_launcher = std::move(std::make_unique<SlurmLauncher>(params.unbuffered_logs));
-      msg += "SlurmLauncher.";
       break;
     }
     }
     m_all_futures =
         std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
+
     if (m_launcher->use_server()) {
       auto request_handlers = m_launcher->get_request_handlers();
       for (auto [route_method_pair, handler] : request_handlers) {
@@ -52,92 +62,64 @@ namespace LWM {
       }
     }
   }
+
   Manager::Manager(WfDefinition wf_defn, LauncherType launch_type)
-    : m_server(HTTP::Server("0.0.0.0", 8080))
-    , m_job_pool(5)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
+    : Manager(ManagerParameters(5, 2, false, "0.0.0.0", 8080, launch_type))
   {
-    spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
-    switch (launch_type) {
-    case LauncherType::PythonLauncherType: {
-      m_launcher = std::move(std::make_unique<PythonLauncher>());
-      msg += "PythonLauncher";
-      break;
-    }
-    case LauncherType::SlurmLauncherType: {
-      m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      msg += "SlurmLauncher.";
-      break;
-    }
-    }
-    m_all_futures =
-        std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
-    if (m_launcher->use_server()) {
-      auto request_handlers = m_launcher->get_request_handlers();
-      for (auto [route_method_pair, handler] : request_handlers) {
-        m_server.add_request_handler(route_method_pair.first,
-                                     route_method_pair.second, handler);
-      }
-    }
+    queue_workflow(wf_defn, m_params.ctx);
   }
 
-  Manager::Manager(const std::string& host, std::uint16_t port, LauncherType launch_type)
-    : m_host(host)
-    , m_port(port)
-    , m_server(HTTP::Server(m_host, m_port))
-    , m_job_pool(2)
-    , m_logger(spdlog::stdout_color_mt("LWM:Manager"))
-  {
-    spdlog::cfg::load_env_levels("LUTE_MAESTRO_LOG_LEVEL");
-    std::string msg{"Running workflows with "};
-    switch (launch_type) {
-    case LauncherType::PythonLauncherType: {
-      m_launcher = std::move(std::make_unique<PythonLauncher>());
-      msg += "PythonLauncher";
-      break;
-    }
-    case LauncherType::SlurmLauncherType: {
-      m_launcher = std::move(std::make_unique<SlurmLauncher>());
-      msg += "SlurmLauncher.";
-      break;
-    }
+  Manager::Manager(const std::string& host,
+                   std::uint16_t port,
+                   LauncherType launch_type)
+    : Manager(ManagerParameters(5, 2, false, host, port, launch_type))
+  {}
+
+  std::string Manager::queue_workflow(const WfDefinition& wf_defn, LaunchContext ctx) {
+    if (ctx.workflow_id.empty()) {
+      ctx.workflow_id = make_workflow_id();
     }
 
-    if (m_launcher->use_server()) {
-      auto request_handlers = m_launcher->get_request_handlers();
-      for (auto [route_method_pair, handler] : request_handlers) {
-        m_server.add_request_handler(route_method_pair.first, route_method_pair.second, handler);
-      }
-    }
+    m_workflows.push_back({wf_defn, ctx});
 
-    m_all_futures = std::make_shared<std::vector<std::shared_future<JobReturn>>>();
-    m_logger->info(msg);
+    return ctx.workflow_id;
   }
 
-  void Manager::queue_workflow(const WfDefinition& wf_defn) {
-    m_workflows.push_back(wf_defn);
-  }
-
-  void Manager::recurse_workflow(const WfDefinition& wf, MaybeJobFutures_t wait_for=std::nullopt) {
-    auto launch_func = [&](const JobStep &job,
-                           bool is_daq2,
+  void Manager::recurse_workflow(const WfDefinition& wf,
+                                 const LaunchContext& ctx,
+                                 std::string job_key_prefix,
+                                 MaybeJobFutures_t wait_for) {
+    // Wrapper launch in lambda (instead of static func)
+    auto launch_func = [&](const JobStep& job,
+                           const LaunchContext& ctx_,
+                           const std::string& job_key,
                            MaybeJobFutures_t wait_for = std::nullopt) -> JobReturn {
-      // Wrap the launch function in a lambda to avoid making Launcher::launch_task
-      // a static function
-      return m_launcher->launch_task(job, is_daq2, wait_for);
+      return m_launcher->launch_task(job, ctx_, job_key, wait_for);
     };
 
+    int step_count { 0 };
     for (const auto& step : wf) {
+      std::string new_prefix;
+      if (job_key_prefix.empty()) {
+        new_prefix = std::to_string(step_count);
+      } else {
+        new_prefix = job_key_prefix + "." + std::to_string(step_count);
+      }
+
+      std::string job_key { ctx.workflow_id + "/" + new_prefix };
       auto next_wait_for = std::shared_future<JobReturn>(m_job_pool.enqueue(launch_func,
                                                                             step,
-                                                                            m_params.is_daq2,
+                                                                            ctx,
+                                                                            job_key,
                                                                             wait_for));
       m_all_futures->push_back(next_wait_for);
       if (!step.next.empty()) {
-        recurse_workflow(step.next, std::optional<decltype(next_wait_for)>(next_wait_for));
+        recurse_workflow(step.next,
+                         ctx,
+                         new_prefix,
+                         std::optional<decltype(next_wait_for)>(next_wait_for));
       }
+      ++step_count;
     }
   }
 
@@ -145,8 +127,8 @@ namespace LWM {
     m_server.start();
     m_logger->info("Beginning workflow.");
     // m_workflows = Vector of Parallel JobSteps
-    for (const auto& wf : m_workflows) {
-      recurse_workflow(wf, std::nullopt);
+    for (const auto& [wf, ctx] : m_workflows) {
+      recurse_workflow(wf, ctx);
       // wf = vector of JobSteps
     }
     int n_complete{0};
