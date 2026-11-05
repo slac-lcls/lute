@@ -56,6 +56,37 @@ def get_parser() -> argparse.ArgumentParser:
 
     # Optional Arguments
     optional_args.add_argument(
+        "--tag",
+        type=str,
+        default=None,
+        required=False,
+        help=(
+            "Submit against every run tagged with this eLog tag. If -r/--run "
+            "is NOT also given, submits once per resolved run (for a "
+            "run-dependent Task, e.g. indexing). If -r/--run IS also given, "
+            "submits once as usual but also exports TAG into the "
+            "environment (for a non-run-dependent Task, e.g. merging, whose "
+            "own parameter validator is responsible for resolving the tag "
+            "into the runs it should aggregate)."
+        ),
+    )
+
+    optional_args.add_argument(
+        "--sample",
+        type=str,
+        default=None,
+        required=False,
+        help=(
+            "Submit against every run associated with this eLog sample. "
+            "Behaves exactly like --tag - submitting once per resolved run "
+            "without -r/--run, or once with SAMPLE exported when -r/--run is "
+            "also given - but selects runs by the `sample` field stored on "
+            "each run document (what was physically in the beam) rather than "
+            "by tags on eLog entries. Mutually exclusive with --tag."
+        ),
+    )
+
+    optional_args.add_argument(
         "-d", "--debug", help="Run in debug mode.", action="store_true"
     )
 
@@ -288,26 +319,20 @@ def fill_in_batch_script(
     return batch_script
 
 
-def main() -> None:
-    """Parse LUTE and SLURM command-line arguments and submit a batch job."""
-    parser: argparse.ArgumentParser = get_parser()
+def _submit_batch_script(taskname: str, batch_script: str, debug: bool, slurm_args: List[str]) -> None:
+    """Write a batch script to a temp file, sbatch it, and clean up.
 
-    args, slurm_args = parse_arguments(parser)
-
-    bin_subdir: str = prepare_environment_variables(parser=parser, args=args)
-
-    batch_script: str = fill_in_batch_script(
-        args=args, slurm_args=slurm_args, bin_subdir=bin_subdir
-    )
-
-    # Write temporary file
-    temp_filename: str = f"submit_{args.taskname}_{secrets.token_hex(4)}.sh"
+    Extracted from `main()` so it can be called once (plain single-run
+    submission) or in a loop (one call per resolved run in a --tag,
+    non-run-dependent submission), unchanged either way.
+    """
+    temp_filename: str = f"submit_{taskname}_{secrets.token_hex(4)}.sh"
     with open(temp_filename, "w") as f:
         f.write(batch_script)
 
-    print(f"Submitting task {args.taskname}")
-    if args.debug:
-        print(f"Running {args.taskname} with SLURM arguments: {slurm_args}")
+    print(f"Submitting task {taskname}")
+    if debug:
+        print(f"Running {taskname} with SLURM arguments: {slurm_args}")
         print(f"Full script:\n{batch_script}")
 
     try:
@@ -322,6 +347,101 @@ def main() -> None:
     finally:
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+
+def main() -> None:
+    """Parse LUTE and SLURM command-line arguments and submit a batch job."""
+    parser: argparse.ArgumentParser = get_parser()
+
+    args, slurm_args = parse_arguments(parser)
+
+    if args.tag and args.sample:
+        parser.error(
+            "--tag and --sample are mutually exclusive run selectors - pass "
+            "one or the other. (--tag selects runs via tags on eLog entries; "
+            "--sample via the `sample` field on each run document.)"
+        )
+
+    if args.tag and not args.run:
+        # Run-dependent case: no explicit -r, resolve every run tagged
+        # `args.tag` and submit once per run, reusing the existing
+        # single-run functions completely unmodified in a loop.
+        experiment: Optional[str] = os.getenv("EXPERIMENT") or args.experiment
+        if experiment is None:
+            parser.error(
+                "--tag without -r/--run requires -e/--experiment (or the "
+                "EXPERIMENT env var) to resolve which runs carry the tag."
+            )
+
+        from lute.io.elog import get_elog_runs_by_tag
+
+        runs: List[int] = sorted(get_elog_runs_by_tag(experiment, args.tag))
+        if not runs:
+            parser.error(
+                f"No runs found for tag '{args.tag}' in experiment "
+                f"'{experiment}'."
+            )
+
+        os.environ["TAG"] = args.tag
+        for run in runs:
+            os.environ["RUN_NUM"] = str(run)
+            bin_subdir: str = prepare_environment_variables(parser=parser, args=args)
+            batch_script: str = fill_in_batch_script(
+                args=args, slurm_args=slurm_args, bin_subdir=bin_subdir
+            )
+            _submit_batch_script(args.taskname, batch_script, args.debug, slurm_args)
+        return
+
+    if args.sample and not args.run:
+        # Sample counterpart of the --tag run-dependent case above: no explicit
+        # -r, so resolve every run associated with `args.sample` and submit
+        # once per run, reusing the same unmodified single-run functions.
+        sample_experiment: Optional[str] = os.getenv("EXPERIMENT") or args.experiment
+        if sample_experiment is None:
+            parser.error(
+                "--sample without -r/--run requires -e/--experiment (or the "
+                "EXPERIMENT env var) to resolve which runs carry the sample."
+            )
+
+        from lute.io.elog import get_elog_runs_by_sample
+
+        sample_runs: List[int] = sorted(
+            get_elog_runs_by_sample(sample_experiment, args.sample)
+        )
+        if not sample_runs:
+            parser.error(
+                f"No runs found for sample '{args.sample}' in experiment "
+                f"'{sample_experiment}'."
+            )
+
+        os.environ["SAMPLE"] = args.sample
+        for run in sample_runs:
+            os.environ["RUN_NUM"] = str(run)
+            bin_subdir = prepare_environment_variables(parser=parser, args=args)
+            batch_script = fill_in_batch_script(
+                args=args, slurm_args=slurm_args, bin_subdir=bin_subdir
+            )
+            _submit_batch_script(args.taskname, batch_script, args.debug, slurm_args)
+        return
+
+    if args.tag:
+        # Non-run-dependent case: -r given alongside --tag. Submit once, as
+        # usual, but export TAG so the Task's own parameter validator can
+        # resolve which runs to aggregate (e.g. MergeCCTBXXFELParameters).
+        os.environ["TAG"] = args.tag
+
+    if args.sample:
+        # Same, for --sample: -r given alongside it, so submit once and export
+        # SAMPLE for the Task's validator to resolve.
+        os.environ["SAMPLE"] = args.sample
+
+    bin_subdir = prepare_environment_variables(parser=parser, args=args)
+
+    batch_script = fill_in_batch_script(
+        args=args, slurm_args=slurm_args, bin_subdir=bin_subdir
+    )
+
+    _submit_batch_script(args.taskname, batch_script, args.debug, slurm_args)
 
 
 if __name__ == "__main__":
