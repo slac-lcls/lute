@@ -16,3 +16,4 @@ from .nexus import *
 from .xtc import *
 from .cheetah import *
 from .bayfai import *
+from .indexer_cpu import *

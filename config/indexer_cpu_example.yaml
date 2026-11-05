@@ -1,0 +1,88 @@
+# Example YAML configuration for IndexerCPU task
+# This demonstrates how to use the CPU-based crystal lattice indexer in LUTE
+
+# Configuration header
+title: "LUTE IndexerCPU Example Configuration"
+experiment: "mfxl1040523"  # Replace with your experiment name
+run: 123  # Replace with your run number
+date: "2024/04/27"
+lute_version: 0.2
+task_timeout: 3600  # 1 hour timeout
+work_dir: ""  # Leave empty to use default: /sdf/data/lcls/ds/{hutch}/{experiment}/scratch
+
+# Task definitions
+IndexerCPU:
+  # Input/Output
+  q_path: "/path/to/your/Q_vectors.npy"  # Path to .npy file with Q vectors (N, 3)
+  
+  # Unit cell parameters (a, b, c, alpha, beta, gamma)
+  # Lengths in Angstroms, angles in degrees
+  unit_cell: [78.9, 78.9, 38.1, 90.0, 90.0, 90.0]  # Example: tetragonal lysozyme
+  
+  save_prefix: ""  # Leave empty to auto-generate: {work_dir}/{exp}_r{run:04d}_indexed
+  
+  # Optimization strategy
+  # Try different parameter combinations until one passes acceptance test
+  n_tries: 6
+  
+  # Objective functions (one per try)
+  # Options: 'mse_symm_trimmed_auto' (robust), 'mse_symm' (fast), 'mse_small_n' (small datasets)
+  obj:
+    - "mse_symm_trimmed_auto"
+    - "mse_symm_trimmed_auto"
+    - "mse_symm_trimmed_auto"
+    - "mse_symm_trimmed_auto"
+    - "mse_symm"
+    - "mse_symm"
+  
+  # Trimming fractions (kappa) for robust fitting
+  # Higher values = use more peaks (less trimming)
+  # Lower values = use fewer best peaks (more trimming, more robust to outliers)
+  kappas: [0.93, 0.90, 0.30, 0.78, 0.54, 0.60]
+  
+  # Differential evolution strategies
+  # Options: 'best1bin', 'randtobest1bin', 'best2bin', 'rand1bin', etc.
+  strategies:
+    - "best1bin"
+    - "best1bin"
+    - "randtobest1bin"
+    - "best1bin"
+    - "best1bin"
+    - "randtobest1bin"
+  
+  # Acceptance criteria
+  delta: 0.25  # CrystFEL-style check: max deviation from integer Miller indices
+  
+  # Differential evolution parameters
+  tol: 0.03  # Convergence tolerance
+  maxiter: 1500  # Maximum iterations
+  popsize: 24  # Population size multiplier
+  polish: false  # Apply final scipy.optimize polish (usually not needed)
+  updating: "deferred"  # 'deferred' (faster) or 'immediate'
+  workers: 1  # Number of parallel workers (set to -1 to use all available cores)
+  
+  # Advanced parameters (usually don't need to change)
+  init_mode: "random"
+  niche_radius_deg: 3.2
+  elite_per_niche: 3
+  immigrants_frac: 0.10
+  jitter_floor_deg: 1.0
+  jitter_scale: 0.8
+  callback_every: 250  # How often to run refinement callback during optimization
+
+# Example minimal configuration:
+# IndexerCPU_minimal:
+#   q_path: "/path/to/Q.npy"
+#   unit_cell: [78.9, 78.9, 38.1, 90.0, 90.0, 90.0]
+#   # All other parameters will use sensible defaults
+
+# Notes:
+# 1. The indexer will try n_tries different parameter combinations
+# 2. It stops at the first one that passes the acceptance test (delta criterion)
+# 3. Output files:
+#    - {save_prefix}_U.npy: 3x3 rotation matrix (orientation)
+#    - {save_prefix}_H.npy: (3, N) Miller indices for all N peaks
+#    - {save_prefix}_attempts.txt: Log of all attempts
+# 4. For small datasets (< 25 peaks), consider using obj: "mse_small_n"
+# 5. For very large datasets (> 80 peaks), the algorithm automatically uses
+#    optimized refinement strategies

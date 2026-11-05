@@ -121,4 +121,9 @@ def import_task(task_name: str) -> Type[Task]:
 
         return TestRequest
 
+    if task_name == "IndexerCPU":
+        from .indexer_cpu import IndexerCPU
+
+        return IndexerCPU
+
     raise TaskNotFoundError

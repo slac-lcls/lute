@@ -329,3 +329,8 @@ BayFAIOptimizer2.update_environment(
         "PS_PARALLEL": "mpi",
     }
 )
+
+# Indexing
+#######
+IndexerCPU: Executor = Executor("IndexerCPU")
+"""Runs CPU-based crystal lattice indexing using differential evolution."""
