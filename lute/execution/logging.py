@@ -106,7 +106,12 @@ def get_logger(name: str, is_task: bool = True) -> logging.Logger:
     logger.propagate = False
     handler: logging.Handler
     if is_task:
-        handler = SocketCommunicatorHandler()
+        try:
+            handler = SocketCommunicatorHandler()
+        except BaseException:
+            # No executor running (e.g. standalone script) — fall back to stdout.
+            # BaseException is needed to catch SystemExit from ipc.py's sys.exit(-1).
+            handler = logging.StreamHandler()
     else:
         handler = logging.StreamHandler()
     formatter: ColorFormatter = ColorFormatter(is_task=is_task)

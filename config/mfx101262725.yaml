@@ -1,0 +1,43 @@
+%YAML 1.3
+---
+title: "mfx101262725 — T-Jump XSS thermometry"
+experiment: "mfx101262725"
+run: "535"
+date: "2026/05/21"
+lute_version: 0.2.0
+task_timeout: 6000
+work_dir: "/sdf/data/lcls/ds/mfx/mfx101262725/results/lute"
+...
+---
+AnalyzeSmallDataXSS:
+  # smd_path is auto-detected from experiment/run as:
+  # /sdf/data/lcls/ds/mfx/mfx101262725/hdf5/smalldata/mfx101262725_Run0535.h5
+  # Uncomment and set explicitly if auto-detection fails:
+  #smd_path: "/sdf/data/lcls/ds/mfx/mfx101262725/hdf5/smalldata/mfx101262725_Run0535.h5"
+
+  xss_detname: "jungfrau"
+  ipm_var: "MfxDg2BmMon/totalIntensityJoules"
+
+  # T-jump event codes (201–212 are standard MFX T-jump codes).
+  # Remove any that are unused in this run.
+  xss_event_codes: [201, 202, 203, 204, 205, 206, 207, 209, 210, 211, 212]
+
+  # Path to simulated I(Q,T) .npz file (keys: q, curves, temps).
+  # Required for thermometry — set to null to skip.
+  sim_path: "/sdf/data/lcls/ds/mfx/mfxx1001621/results/martina_mfx/new_project_temperature/temperature_with_electromagnetic/changing_simulations/paper_prep/lute/sim_curves.npz"
+
+  scan_var:
+    - "lxt"
+    - "lens_v"
+    - "lens_h"
+
+  analysis_parameters:
+    min_Iscat: 10.0
+    min_ipm: 500.0
+    q_norm: [0.9, 3.5]
+    median_filter_size: 12
+    water_qs: [1.0, 1.93]
+    water_ratio: 1.25
+    water_sigma: 2.0
+    num_intensity_bins: 20
+...
