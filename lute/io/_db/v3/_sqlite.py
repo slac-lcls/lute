@@ -46,9 +46,13 @@ else:
 logger: logging.Logger = logging.getLogger(__name__)
 
 # Should be used on every connection
+# The rollback journal is kept on disk and synced (DELETE, FULL), so a process
+# killed, or a node failing, during a write leaves a journal which the next
+# connection uses to roll back. With MEMORY/OFF, part of the uncommitted
+# transaction could stay in the file.
 PRAGMAS: str = """
-PRAGMA journal_mode = MEMORY;
-PRAGMA synchronous = OFF;
+PRAGMA journal_mode = DELETE;
+PRAGMA synchronous = FULL;
 PRAGMA foreign_keys = ON;
 PRAGMA ignore_check_constraints = OFF;
 PRAGMA auto_vacuum = NONE;

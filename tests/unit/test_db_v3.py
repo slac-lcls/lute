@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import shutil
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -178,6 +179,42 @@ def test_failed_migration_leaves_file_intact(tmp_path, v3_db_dir, monkeypatch):
     n_valid = con.execute("SELECT SUM(valid_flag) FROM results").fetchone()[0]
     con.close()
     assert n_valid == 4  # 5 executions, 1 failed
+
+
+def _killed_migration(con):
+    con.execute("UPDATE results SET valid_flag = 0")
+    # A small cache makes SQLite write pages to the file before the commit
+    con.execute("PRAGMA cache_size = -64")
+    con.execute("CREATE TABLE big (x TEXT)")
+    rows = (("y" * 1000,) for _ in range(5000))
+    con.executemany("INSERT INTO big VALUES (?)", rows)
+    os.kill(os.getpid(), signal.SIGKILL)  # The job is killed mid-migration
+
+
+def test_killed_migration_leaves_file_intact(tmp_path, v3_db_dir, monkeypatch):
+    """The journal on disk lets the next connection undo a killed migration."""
+    db_path = str(tmp_path / "lute.db")
+    shutil.copy(os.path.join(v3_db_dir, "lute.db"), db_path)
+    monkeypatch.setattr(
+        versioning,
+        "MIGRATIONS",
+        versioning.MIGRATIONS + [(300, 301, _killed_migration)],
+    )
+    ctx = multiprocessing.get_context("fork")
+    proc = ctx.Process(target=open_db, args=(db_path,))
+    proc.start()
+    proc.join(timeout=120)
+    assert proc.exitcode == -signal.SIGKILL
+
+    con = sqlite3.connect(db_path)  # Rolls back from lute.db-journal
+    try:
+        assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        n_valid = con.execute("SELECT SUM(valid_flag) FROM results").fetchone()[0]
+    finally:
+        con.close()
+    assert n_valid == 4
+    assert _user_version(db_path) == 300
+    assert "big" not in _tables(db_path)
 
 
 def test_missing_migration_raises(tmp_path, monkeypatch):

@@ -144,7 +144,9 @@ def open_db(db_path: str, timeout: float = 60.0) -> sqlite3.Connection:
 
     Raises:
         DatabaseError: If the file was written by v1/v2 or by a newer LUTE, or
-            if a migration failed. A failed migration leaves the file unchanged.
+            if a migration failed. A failed migration leaves the file unchanged,
+            including when the process is killed: the next connection rolls
+            the migration back from the journal on disk.
     """
     con: sqlite3.Connection = sqlite3.connect(db_path, timeout=timeout)
     try:
