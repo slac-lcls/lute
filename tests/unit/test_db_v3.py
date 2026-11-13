@@ -224,6 +224,32 @@ def test_concurrent_openers_migrate_once(tmp_path):
     con.close()
 
 
+def test_opener_racing_a_migration(tmp_path, monkeypatch):
+    """Another process migrates right after this one read the old version.
+
+    This opener reads 0 (new file), then another one creates the tables and
+    commits before this one checks anything. It must not mistake the result for
+    a v1/v2 file (version 0 with tables), and must find it already migrated.
+    """
+    db_path = str(tmp_path / "lute.db")
+    real_get_user_version = versioning.get_user_version
+    raced = []
+
+    def stale_then_migrated(con):
+        user_version = real_get_user_version(con)
+        if not raced:
+            raced.append(True)
+            open_db(db_path).close()  # The other process migrates and commits
+        return user_version
+
+    monkeypatch.setattr(versioning, "get_user_version", stale_then_migrated)
+    con = open_db(db_path)
+    con.close()
+
+    assert raced
+    assert _user_version(db_path) == 300
+
+
 def test_v3_refuses_v2_file(v2_db_dir):
     db_path = os.path.join(v2_db_dir, "lute.db")
     with pytest.raises(DatabaseError, match="LUTE_DB_SPEC_VERSION=2"):

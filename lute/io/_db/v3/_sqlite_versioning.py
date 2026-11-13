@@ -149,9 +149,12 @@ def open_db(db_path: str, timeout: float = 60.0) -> sqlite3.Connection:
     con: sqlite3.Connection = sqlite3.connect(db_path, timeout=timeout)
     try:
         con.executescript(PRAGMAS)
-        user_version: int = get_user_version(con)
-        if user_version != latest_user_version():
-            _check_version(con, user_version, db_path)
+        # Fast path, without the lock: the version only increases, so a file
+        # read at the latest version stays at it. Anything else is checked by
+        # `_migrate` under the write lock, as another process may be migrating
+        # the file right now (checking here could mix a stale version with its
+        # newly created tables).
+        if get_user_version(con) != latest_user_version():
             _migrate(con, db_path)
     except BaseException:
         con.close()
