@@ -252,3 +252,117 @@ def test_v2_refuses_v3_file(v3_db_dir):
 
     with pytest.raises(DatabaseError, match="LUTE_DB_SPEC_VERSION=3"):
         read_latest_db_entry(v3_db_dir, "TestWriteOutput", "outfile_name")
+
+
+# Atomic writes: one execution is written entirely or not at all
+
+
+def _described(work_dir, run=36):
+    from lute.io.models.base import AnalysisHeader
+    from lute.io.models.tests import TestWriteOutputParameters
+    from lute.tasks.dataclasses import DescribedAnalysis, TaskResult, TaskStatus
+
+    params = TestWriteOutputParameters(
+        lute_config=AnalysisHeader(experiment="mfxtest", run=run, work_dir=work_dir)
+    )
+    # `add_execution` deletes these from the Config class after each write
+    params.Config.version_specifier = None
+    params.Config.task_version = None
+    return DescribedAnalysis(
+        task_result=TaskResult(
+            task_name="TestWriteOutput",
+            task_status=TaskStatus.COMPLETED,
+            summary="",
+            payload="",
+        ),
+        task_parameters=params,
+        task_env={"LUTE_TEST": "1"},
+        executor_name="Executor",
+        poll_interval=0.05,
+        communicator_desc=["PipeCommunicator: pipe"],
+    )
+
+
+def _row_counts(db_path):
+    con = sqlite3.connect(db_path)
+    try:
+        tables = [
+            r[0]
+            for r in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+                " AND name NOT LIKE 'sqlite_%'"
+            )
+        ]
+        count = 'SELECT COUNT(*) FROM "{}"'
+        return {t: con.execute(count.format(t)).fetchone()[0] for t in tables}
+    finally:
+        con.close()
+
+
+def _fail_env_vars(monkeypatch, error):
+    """Make the last step of an execution write (environment variables) fail."""
+    import lute.io._db.v3._sqlite as backend
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(backend, "_add_env_vars", fail)
+
+
+def test_failed_write_leaves_db_unchanged(tmp_path, monkeypatch):
+    from lute.io._db.v3 import api
+
+    db_path = str(tmp_path / "lute.db")
+    open_db(db_path).close()
+    before = _row_counts(db_path)
+
+    # `executions`, `parameters`, `config`... are written before it fails
+    _fail_env_vars(monkeypatch, sqlite3.OperationalError("database is locked"))
+    api.record_analysis_db(_described(str(tmp_path)))  # Logged, not raised
+
+    assert _row_counts(db_path) == before
+    assert before["executions"] == 0
+
+
+def test_unexpected_error_rolls_back_and_raises(tmp_path, monkeypatch):
+    from lute.io._db.v3 import api
+
+    db_path = str(tmp_path / "lute.db")
+    open_db(db_path).close()
+    before = _row_counts(db_path)
+
+    _fail_env_vars(monkeypatch, RuntimeError("boom"))
+    with pytest.raises(RuntimeError, match="boom"):
+        api.record_analysis_db(_described(str(tmp_path)))
+
+    assert _row_counts(db_path) == before
+
+
+def test_failed_update_keeps_placeholder(tmp_path, monkeypatch):
+    from lute.io._db.v3 import api
+
+    db_path = str(tmp_path / "lute.db")
+    desc = _described(str(tmp_path))
+    row_ids = api.record_parameters_db(desc.task_parameters)  # Task side
+    assert row_ids is not None
+    before = _row_counts(db_path)
+
+    _fail_env_vars(monkeypatch, sqlite3.OperationalError("database is locked"))
+    api.update_analysis_db(desc, row_ids)  # Executor side
+
+    assert _row_counts(db_path) == before
+    assert before["executions"] == 0
+
+
+def test_successful_write_after_failure(tmp_path, monkeypatch):
+    """A failed write does not leave the connection or the file locked."""
+    from lute.io._db.v3 import api
+
+    _fail_env_vars(monkeypatch, sqlite3.OperationalError("database is locked"))
+    api.record_analysis_db(_described(str(tmp_path)))
+    monkeypatch.undo()
+
+    api.record_analysis_db(_described(str(tmp_path)))
+    counts = _row_counts(str(tmp_path / "lute.db"))
+    assert counts["executions"] == 1
+    assert counts["environment"] == 1

@@ -2,7 +2,11 @@
 
 Functions should be used only by the higher-level database module.
 
-This contains the implementation for the v0.2 database specification.
+This contains the implementation for the v0.3 database specification.
+
+None of these functions commit: the caller owns the transaction (see
+`common_sqlite.write_transaction`), so that one execution is written entirely
+or not at all.
 """
 
 from typing import List
@@ -636,20 +640,18 @@ def _insert_maybe_ignore_return_id(
         f'SELECT id FROM "{table}" WHERE {match_clause} ORDER BY id DESC LIMIT 1'
     )
 
-    with con:
-        con.executescript(PRAGMAS)
-        # Insert or ignore
-        con.execute(insert_query, entries)
-        # Get the row
-        cur: sqlite3.Cursor = con.execute(select_query, entries)
-        row: Optional[Tuple[int]] = cur.fetchone()
+    # Insert or ignore
+    con.execute(insert_query, entries)
+    # Get the row
+    cur: sqlite3.Cursor = con.execute(select_query, entries)
+    row: Optional[Tuple[int]] = cur.fetchone()
 
-        if row:
-            if table == "executions":
-                logger.debug(f"Selecting {table} row: {row[0]}")
-            return row[0]
-        else:
-            raise DatabaseError(f"Failed to insert or find a row for {table}.")
+    if row:
+        if table == "executions":
+            logger.debug(f"Selecting {table} row: {row[0]}")
+        return row[0]
+    else:
+        raise DatabaseError(f"Failed to insert or find a row for {table}.")
 
 
 def _insert_pow2_id_return_id(
@@ -679,44 +681,42 @@ def _insert_pow2_id_return_id(
 
     select_max_id_query: str = f"SELECT MAX(id) FROM {table}"
 
-    with con:
-        con.executescript(PRAGMAS)
-        # Try to get the row
-        cur: sqlite3.Cursor = con.execute(select_query, entries)
-        row: Optional[Tuple[int]] = cur.fetchone()
+    # Try to get the row
+    cur: sqlite3.Cursor = con.execute(select_query, entries)
+    row: Optional[Tuple[int]] = cur.fetchone()
+    if row:
+        # Entry already exists, so just return it
+        return row[0]
+    else:
+        # Otherwise, get last row_id and enter new row with next power of 2 id
+        cur = con.execute(select_max_id_query)
+        row = cur.fetchone()
         if row:
-            # Entry already exists, so just return it
-            return row[0]
-        else:
-            # Otherwise, get last row_id and enter new row with next power of 2 id
-            cur = con.execute(select_max_id_query)
-            row = cur.fetchone()
-            if row:
-                max_id: Optional[int] = row[0]
-                new_id: int
-                if max_id is None:
-                    # This is the very first entry
-                    new_id = 1
-                else:
-                    new_id = max_id * 2
-                keys = list(entries.keys())
-                # Add id to keys/entries
-                keys.append("id")
-                entries["id"] = new_id
-                # Reconstruct query
-                keys_clause: str = f'({",".join(keys)})'
-                values_clause: str = f'({",".join(f":{key}" for key in keys)})'
-                insert_query: str = (
-                    f'INSERT INTO "{table}" {keys_clause} VALUES {values_clause}'
-                )
-                con.execute(insert_query, entries)
-                # Assuming successful, we don't need to query again since we specified id
-                # Will throw error if there is some other issue
-                return new_id
+            max_id: Optional[int] = row[0]
+            new_id: int
+            if max_id is None:
+                # This is the very first entry
+                new_id = 1
             else:
-                raise DatabaseError(
-                    f"Failed to insert or find a row (with ID = power of 2) for {table}."
-                )
+                new_id = max_id * 2
+            keys = list(entries.keys())
+            # Add id to keys/entries
+            keys.append("id")
+            entries["id"] = new_id
+            # Reconstruct query
+            keys_clause: str = f'({",".join(keys)})'
+            values_clause: str = f'({",".join(f":{key}" for key in keys)})'
+            insert_query: str = (
+                f'INSERT INTO "{table}" {keys_clause} VALUES {values_clause}'
+            )
+            con.execute(insert_query, entries)
+            # Assuming successful, we don't need to query again since we specified id
+            # Will throw error if there is some other issue
+            return new_id
+        else:
+            raise DatabaseError(
+                f"Failed to insert or find a row (with ID = power of 2) for {table}."
+            )
 
 
 def _update_row(
@@ -742,9 +742,7 @@ def _update_row(
     update_query: str = f'UPDATE "{table}" SET {set_clause} WHERE {where_clause}'
     entries["id"] = row_id
 
-    with con:
-        con.executescript(PRAGMAS)
-        con.execute(update_query, entries)
+    con.execute(update_query, entries)
 
 
 @overload
@@ -1366,20 +1364,18 @@ def select_param_from_db(
         ORDER BY e.timestamp DESC
         LIMIT 1
         """
-    with con:
-        con.executescript(PRAGMAS)
 
-        cur: sqlite3.Cursor = con.execute(join_query, safe_condition)
-        row: Any = cur.fetchone()
+    cur: sqlite3.Cursor = con.execute(join_query, safe_condition)
+    row: Any = cur.fetchone()
 
-        if not row:
-            return None
+    if not row:
+        return None
 
-        try:
-            return json.loads(row[0])
-        except (TypeError, json.JSONDecodeError):
-            # For straight strings just return. Hopefully only strings
-            return row[0]
+    try:
+        return json.loads(row[0])
+    except (TypeError, json.JSONDecodeError):
+        # For straight strings just return. Hopefully only strings
+        return row[0]
 
 
 def executions_summary(

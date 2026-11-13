@@ -6,7 +6,8 @@ __all__: List[str] = []
 __author__ = "Gabriel Dorlhiac"
 
 import sqlite3
-from typing import Any, Dict, List, Optional, Tuple
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 
 class DatabaseError(Exception):
@@ -182,3 +183,27 @@ def execute_in_transaction(con: sqlite3.Connection, script: str) -> None:
             statement = ""
     if statement.strip():
         raise DatabaseError(f"Incomplete SQL statement: {statement.strip()}")
+
+
+@contextmanager
+def write_transaction(con: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
+    """Run a block of writes as one transaction.
+
+    The write lock is taken at the start (`BEGIN IMMEDIATE`), so concurrent
+    writers wait for each other instead of interleaving. The block is committed
+    if it completes, and rolled back entirely on any exception, which is then
+    re-raised.
+
+    Args:
+        con (sqlite3.Connection): Database connection, not in a transaction.
+
+    Yields:
+        con (sqlite3.Connection): The same connection.
+    """
+    con.execute("BEGIN IMMEDIATE")
+    try:
+        yield con
+    except BaseException:
+        con.rollback()
+        raise
+    con.commit()

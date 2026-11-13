@@ -60,6 +60,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
             after Task completion.
     """
     import sqlite3
+    from lute.io._db.common_sqlite import write_transaction
     from ._sqlite import add_execution
     from ._sqlite_versioning import open_db
 
@@ -82,11 +83,14 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
 
     db_path: str = f"{work_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
-    with con:
-        try:
+    try:
+        # One transaction: the execution is written entirely or not at all
+        with write_transaction(con):
             add_execution(con=con, cfg=cfg)
-        except sqlite3.OperationalError as err:
-            logger.error(f"Database storage error: {err}")
+    except sqlite3.OperationalError as err:
+        logger.error(f"Database storage error: {err}")
+    finally:
+        con.close()
 
     db_stat: os.stat_result = os.stat(db_path)
     db_perms: str = oct(stat.S_IMODE(db_stat.st_mode))
@@ -110,6 +114,7 @@ def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
         params (TaskParameters): The TaskParameters object - fully validated.
     """
     import sqlite3
+    from lute.io._db.common_sqlite import write_transaction
     from ._sqlite import add_placeholder_execution
     from ._sqlite_versioning import open_db
 
@@ -132,14 +137,15 @@ def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
 
     db_path: str = f"{work_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
-    with con:
-        try:
-            row_ids: Optional[RowIds] = add_placeholder_execution(
-                con=con, params=params
-            )
-        except sqlite3.OperationalError as err:
-            logger.error(f"Database storage error: {err}")
-            row_ids = None
+    row_ids: Optional[RowIds]
+    try:
+        with write_transaction(con):
+            row_ids = add_placeholder_execution(con=con, params=params)
+    except sqlite3.OperationalError as err:
+        logger.error(f"Database storage error: {err}")
+        row_ids = None
+    finally:
+        con.close()
     try:
         os.chmod(db_path, 0o664)
     except Exception:
@@ -150,6 +156,7 @@ def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
 
 def update_analysis_db(cfg: DescribedAnalysis, row_ids: RowIds) -> None:
     import sqlite3
+    from lute.io._db.common_sqlite import write_transaction
     from ._sqlite import update_execution
     from ._sqlite_versioning import open_db
 
@@ -158,11 +165,13 @@ def update_analysis_db(cfg: DescribedAnalysis, row_ids: RowIds) -> None:
     del cfg.task_parameters.lute_config.work_dir
     db_path: str = f"{db_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
-    with con:
-        try:
+    try:
+        with write_transaction(con):
             update_execution(con=con, cfg=cfg, row_ids=row_ids)
-        except sqlite3.OperationalError as err:
-            logger.error(f"Database storage error: {err}")
+    except sqlite3.OperationalError as err:
+        logger.error(f"Database storage error: {err}")
+    finally:
+        con.close()
     try:
         os.chmod(db_path, 0o664)
     except Exception:
