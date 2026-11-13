@@ -1,4 +1,7 @@
-"""Schema versioning and migrations for the v3 database specification.
+"""Schema versioning and migrations for the v3 database specification (SQLite).
+
+This is part of the SQLite backend: like `_sqlite`, it is only imported inside
+the functions of `api`, which stays independent of the backend.
 
 The schema version of a database file is stored in `PRAGMA user_version`. v3
 files start at `V3_BASE_USER_VERSION` (300) and every later schema change within

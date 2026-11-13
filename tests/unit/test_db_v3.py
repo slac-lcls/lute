@@ -7,10 +7,10 @@ import sys
 
 import pytest
 
-import lute.io._db.v3._versioning as versioning
+import lute.io._db.v3._sqlite_versioning as versioning
 from lute.io._db.common_sqlite import DatabaseError, get_user_version
 from lute.io._db.v3._sqlite import create_tables
-from lute.io._db.v3._versioning import open_db
+from lute.io._db.v3._sqlite_versioning import open_db
 from lute.io.db import import_function
 
 from test_db_v2 import BASELINE_LATEST
@@ -71,6 +71,24 @@ def test_env_var_selects_v3():
         check=True,
     ).stdout.split()
     assert out[-2:] == ["3", "lute.io._db.v3.api"]
+
+
+@pytest.mark.parametrize("version", ["v2", "v3"])
+def test_api_import_does_not_load_backend(version):
+    """The API layer only imports the backend inside its functions."""
+    code = (
+        "import sys;"
+        f"import lute.io._db.{version}.api;"
+        "print(sorted(m for m in sys.modules"
+        f" if m.startswith('lute.io._db.{version}._')))"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert out[-1] == "[]"
 
 
 # Versioning and migrations (step 2)

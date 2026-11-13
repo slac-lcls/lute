@@ -33,8 +33,6 @@ from lute.execution.logging import get_logger
 from lute.io.parameters import RowIds, TaskParameters
 from lute.tasks.dataclasses import DescribedAnalysis
 
-from ._versioning import open_db
-
 if __debug__:
     logging.basicConfig(level=logging.DEBUG)
 else:
@@ -63,6 +61,7 @@ def record_analysis_db(cfg: DescribedAnalysis) -> None:
     """
     import sqlite3
     from ._sqlite import add_execution
+    from ._sqlite_versioning import open_db
 
     from lute.io.models.base import TaskParameters
 
@@ -112,6 +111,7 @@ def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
     """
     import sqlite3
     from ._sqlite import add_placeholder_execution
+    from ._sqlite_versioning import open_db
 
     from lute.io.models.base import TaskParameters
 
@@ -151,6 +151,7 @@ def record_parameters_db(params: TaskParameters) -> Optional[RowIds]:
 def update_analysis_db(cfg: DescribedAnalysis, row_ids: RowIds) -> None:
     import sqlite3
     from ._sqlite import update_execution
+    from ._sqlite_versioning import open_db
 
     assert cfg.task_parameters is not None
     db_dir: str = cfg.task_parameters.lute_config.work_dir
@@ -199,6 +200,7 @@ def read_latest_db_entry(
     """
     import sqlite3
     from ._sqlite import select_param_from_db
+    from ._sqlite_versioning import open_db
 
     db_path: str = f"{db_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
@@ -253,6 +255,7 @@ def get_executions_summary(
     """
     import sqlite3
     from ._sqlite import executions_summary
+    from ._sqlite_versioning import open_db
 
     db_path: str = f"{db_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
@@ -284,6 +287,7 @@ def get_task_parameters_summary(
     """
     import sqlite3
     from ._sqlite import task_parameters_summary
+    from ._sqlite_versioning import open_db
 
     db_path: str = f"{db_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
@@ -310,6 +314,7 @@ def get_task_parameters_defn_and_params(
     """
     import sqlite3
     from ._sqlite import get_task_parameters_definition_and_params
+    from ._sqlite_versioning import open_db
 
     db_path: str = f"{db_dir}/lute.db"
     con: sqlite3.Connection = open_db(db_path)
