@@ -113,7 +113,7 @@ BayFAI:
   detname: "jungfrau"
   bayfai_params:
     n_samples: 20
-    n_iterations: 80
+    n_iterations: 40
     pts_per_deg: 1.0
     max_rings: 10
     Imin: 90
@@ -124,7 +124,7 @@ Overriding defaults will affect significantly convergence and/or compute time.
 | Hyperparameter | Default | Description |
 |---|---|---|
 | `n_samples` | `20` | Number of initial random samples used to initialize the Gaussian Process. |
-| `n_iterations` | `80` | Number of BO iterations. Increase it for a larger search space. |
+| `n_iterations` | `40` | Number of BO iterations. Increase it for a larger search space. |
 | `max_rings` | `8` | Maximum number of calibrant rings used to extract Bragg peaks. |
 | `pts_per_deg` | `2.0` | Number of control points extracted per azimuthal degree along each ring. |
 | `Imin` | `95` | Intensity percentile threshold for peak detection. Lower it for weak rings. |

@@ -61,7 +61,7 @@ class BayFAIParameters(TaskParameters):
         )
 
         n_iterations: int = Field(
-            default=80,
+            default=40,
             description="Number of iterations of Bayesian Optimization",
         )
 
