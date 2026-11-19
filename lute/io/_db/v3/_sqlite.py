@@ -99,9 +99,12 @@ def _create_config_table(con: sqlite3.Connection) -> None:
     The `config` table holds information from the AnalysisHeader which is often
     shared between many executions of many `Task`s.
 
+    The header's `experiment` and `run` are not stored here: they identify the
+    unit the execution processed (`units`, `execution_units`).
+
     This table contains constraints:
     - The combination of all columns
-      (title, experiment, run, date, lute_version, task_timeout) must be unique.
+      (title, date, lute_version, task_timeout) must be unique.
       Multiple executions can reference the same row of this table.
 
     Args:
@@ -111,12 +114,10 @@ def _create_config_table(con: sqlite3.Connection) -> None:
     CREATE TABLE IF NOT EXISTS config (
         id integer PRIMARY KEY,
         title TEXT,
-        experiment TEXT,
-        run TEXT,
         date TEXT,
         lute_version TEXT,
         task_timeout real,
-        UNIQUE(title, experiment, run, date, lute_version, task_timeout)
+        UNIQUE(title, date, lute_version, task_timeout)
     );
     """
     con.execute(query)
@@ -475,6 +476,219 @@ def _create_version_specifiers_table(con: sqlite3.Connection) -> None:
         con.execute(insert_query, (vs.value, vs.name))
 
 
+# (name, is_identity). Identity kinds make up a unit's key, e.g.
+# `experiment=mfx101624926;run=36`. Other kinds are metadata attached to units.
+LABEL_KINDS: Tuple[Tuple[str, bool], ...] = (
+    ("experiment", True),
+    ("run", True),
+    ("elog_sample", False),
+    ("elog_tag", False),
+)
+
+
+def _create_label_kinds_table(con: sqlite3.Connection) -> None:
+    """Setup the `label_kinds` table.
+
+    The `label_kinds` table holds the types of metadata which can be attached to
+    a unit, e.g. `experiment`, `run`, `elog_sample`, `elog_tag`.
+
+    This table contains constraints:
+    - The name must be unique.
+    - `is_identity` is 0 or 1. Identity kinds (`experiment`, `run`) make up the
+      key of a unit.
+
+    This function will also insert all the kinds defined in `LABEL_KINDS`.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    create_query: str = """
+    CREATE TABLE IF NOT EXISTS label_kinds (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        is_identity INTEGER NOT NULL DEFAULT 0 CHECK (is_identity IN (0, 1))
+    );
+    """
+    insert_query: str = (
+        "INSERT OR IGNORE INTO label_kinds (name, is_identity) VALUES (?, ?)"
+    )
+    con.execute(create_query)
+    for name, is_identity in LABEL_KINDS:
+        con.execute(insert_query, (name, int(is_identity)))
+
+
+def _create_labels_table(con: sqlite3.Connection) -> None:
+    """Setup the `labels` table.
+
+    The `labels` table holds one (kind, value) pair per row, e.g.
+    (`elog_sample`, `Lyso`). Labels are shared by all units which have them.
+
+    This table contains constraints:
+    - The combination (kind_id, value) must be unique.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS labels (
+        id INTEGER PRIMARY KEY,
+        kind_id INTEGER NOT NULL,
+        value TEXT NOT NULL,
+        UNIQUE (kind_id, value),
+        FOREIGN KEY (kind_id) REFERENCES label_kinds (id)
+    );
+    """
+    con.execute(query)
+
+
+def _create_units_table(con: sqlite3.Connection) -> None:
+    """Setup the `units` table.
+
+    The `units` table holds the things LUTE processes. Currently one unit is one
+    (experiment, run). The `key` is built from the unit's identity labels in a
+    fixed order, e.g. `experiment=mfx101624926;run=36`.
+
+    This table contains constraints:
+    - The key must be unique.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS units (
+        id INTEGER PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE
+    );
+    """
+    con.execute(query)
+
+
+def _create_unit_labels_table(con: sqlite3.Connection) -> None:
+    """Setup the `unit_labels` table.
+
+    The `unit_labels` table records which labels each unit has.
+
+    This table contains constraints:
+    - The combination (unit_id, label_id) must be unique.
+
+    An index on `label_id` (to find units by label) is setup in the function
+    `_setup_triggers_and_indices`.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS unit_labels (
+        unit_id INTEGER NOT NULL,
+        label_id INTEGER NOT NULL,
+        PRIMARY KEY (unit_id, label_id),
+        FOREIGN KEY (unit_id) REFERENCES units (id),
+        FOREIGN KEY (label_id) REFERENCES labels (id)
+    );
+    """
+    con.execute(query)
+
+
+def _create_run_groups_table(con: sqlite3.Connection) -> None:
+    """Setup the `run_groups` table.
+
+    The `run_groups` table holds named sets of units, e.g. `lyso`. (`groups` is
+    an SQL keyword.)
+
+    This table contains constraints:
+    - The name must be unique.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS run_groups (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    con.execute(query)
+
+
+def _create_group_members_table(con: sqlite3.Connection) -> None:
+    """Setup the `group_members` table.
+
+    The `group_members` table records which units are currently in each group.
+    Changing a group does not change which units past executions processed;
+    that is recorded in `execution_units`.
+
+    This table contains constraints:
+    - The combination (group_id, unit_id) must be unique.
+
+    An index on `unit_id` is setup in the function `_setup_triggers_and_indices`.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS group_members (
+        group_id INTEGER NOT NULL,
+        unit_id INTEGER NOT NULL,
+        PRIMARY KEY (group_id, unit_id),
+        FOREIGN KEY (group_id) REFERENCES run_groups (id),
+        FOREIGN KEY (unit_id) REFERENCES units (id)
+    );
+    """
+    con.execute(query)
+
+
+def _create_execution_units_table(con: sqlite3.Connection) -> None:
+    """Setup the `execution_units` table.
+
+    The `execution_units` table records which units each execution processed.
+    It is the source of truth for "which runs was this made from": a per-run
+    Task has one row, a merge has one row per run it merged.
+
+    This table contains constraints:
+    - The combination (execution_id, unit_id) must be unique.
+
+    An index on `unit_id` is setup in the function `_setup_triggers_and_indices`.
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS execution_units (
+        execution_id INTEGER NOT NULL,
+        unit_id INTEGER NOT NULL,
+        PRIMARY KEY (execution_id, unit_id),
+        FOREIGN KEY (execution_id) REFERENCES executions (id),
+        FOREIGN KEY (unit_id) REFERENCES units (id)
+    );
+    """
+    con.execute(query)
+
+
+def _create_execution_groups_table(con: sqlite3.Connection) -> None:
+    """Setup the `execution_groups` table.
+
+    The `execution_groups` table records which group an execution was launched
+    under, if any.
+
+    This table contains constraints:
+    - An execution is launched under at most one group (execution_id is the
+      primary key).
+
+    Args:
+        con (sqlite3.Connection): A connection to the database.
+    """
+    query: str = """
+    CREATE TABLE IF NOT EXISTS execution_groups (
+        execution_id INTEGER PRIMARY KEY,
+        group_id INTEGER NOT NULL,
+        FOREIGN KEY (execution_id) REFERENCES executions (id),
+        FOREIGN KEY (group_id) REFERENCES run_groups (id)
+    );
+    """
+    con.execute(query)
+
+
 def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
     """Setup the trigger constraints and unique indices.
 
@@ -487,11 +701,22 @@ def _setup_triggers_and_indices(con: sqlite3.Connection) -> None:
     It also sets up a unique index on the `environment` table:
     - index = (execution_id, name)
 
+    And indices for the lookups done through units and groups:
+    - parameters (execution_id)
+    - execution_units (unit_id)
+    - unit_labels (label_id)
+    - group_members (unit_id)
+
     Args:
         con (sqlite3.Connection): A connection to the database.
     """
     query: str = """
     CREATE UNIQUE INDEX IF NOT EXISTS environment_index_0 ON environment (execution_id, name);
+
+    CREATE INDEX IF NOT EXISTS parameters_index_0 ON parameters (execution_id);
+    CREATE INDEX IF NOT EXISTS execution_units_index_0 ON execution_units (unit_id);
+    CREATE INDEX IF NOT EXISTS unit_labels_index_0 ON unit_labels (label_id);
+    CREATE INDEX IF NOT EXISTS group_members_index_0 ON group_members (unit_id);
 
     CREATE TRIGGER IF NOT EXISTS check_schema_update
     BEFORE UPDATE ON schema
@@ -591,6 +816,17 @@ def create_tables(con: sqlite3.Connection) -> None:
         _create_parameters_table(con)
 
         _create_environment_table(con)
+
+        _create_label_kinds_table(con)
+        _create_labels_table(con)
+        _create_units_table(con)
+        _create_unit_labels_table(con)
+
+        _create_run_groups_table(con)
+        _create_group_members_table(con)
+
+        _create_execution_units_table(con)
+        _create_execution_groups_table(con)
 
         _setup_triggers_and_indices(con)
 
@@ -979,20 +1215,59 @@ def _add_version(
     return task_version_id
 
 
+def _get_unit_for_header(con: sqlite3.Connection, lute_config: AnalysisHeader) -> int:
+    """Return the unit for the header's (experiment, run), creating it if needed.
+
+    Raises:
+        DatabaseError: If the run (or experiment) is empty. Every execution in
+            v3 must be for a run.
+    """
+    # Imported here: `_units` imports from this module
+    from ._units import get_or_create_unit
+
+    return get_or_create_unit(con, lute_config.experiment, lute_config.run)
+
+
+def _config_entries(lute_config: AnalysisHeader) -> Dict[str, Any]:
+    """Header fields stored in `config`: all but the unit's (experiment, run)."""
+    entries: Dict[str, Any] = lute_config.dict()
+    entries.pop("experiment", None)
+    entries.pop("run", None)
+    return entries
+
+
+def _link_execution_to_unit(
+    con: sqlite3.Connection, execution_id: int, unit_id: int
+) -> None:
+    """Record in `execution_units` that the execution processed the unit."""
+    con.execute(
+        "INSERT INTO execution_units (execution_id, unit_id) VALUES (?, ?)",
+        (execution_id, unit_id),
+    )
+
+
 def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     """Write an DescribedAnalysis object to the database.
 
     This will unpack all the values from the object and distribute the entries
-    across all the various tables.
+    across all the various tables. The execution is linked to the unit of its
+    (experiment, run) in `execution_units`.
 
     Args:
         con (sqlite3.Connection): A connection to the database.
 
         cfg (DescribedAnalysis): The DescribedAnalysis completed by the Executor
             after Task completion.
+
+    Raises:
+        DatabaseError: If the header has no run.
     """
     if cfg.task_parameters is None:
         return
+    # Unit first: refuse an execution without a run before writing anything
+    lute_config: AnalysisHeader = cfg.task_parameters.lute_config
+    unit_id: int = _get_unit_for_header(con, lute_config)
+
     entries: Dict[str, Any] = {}
     # Task
     entries["name"] = cfg.task_result.task_name
@@ -1005,10 +1280,9 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     entries.clear()
 
     # Config
-    lute_config: AnalysisHeader = cfg.task_parameters.lute_config
     del cfg.task_parameters.lute_config
     config_id: int = _insert_maybe_ignore_return_id(
-        con=con, table="config", entries=lute_config.dict(), ignore=True
+        con=con, table="config", entries=_config_entries(lute_config), ignore=True
     )
 
     # Task Version information
@@ -1092,6 +1366,7 @@ def add_execution(con: sqlite3.Connection, cfg: DescribedAnalysis) -> None:
     execution_id: int = _insert_maybe_ignore_return_id(
         con=con, table="executions", entries=entries, ignore=False
     )
+    _link_execution_to_unit(con=con, execution_id=execution_id, unit_id=unit_id)
 
     # Add individual param/values and their param_meta
     # NOTE: `param_meta` is probably redundant at the moment, since this may all
@@ -1123,9 +1398,15 @@ def update_execution(
 
         row_ids (RowIds): A dictionary containing the entries previously added by the
             Task.
+
+    Raises:
+        DatabaseError: If the header has no run.
     """
     if cfg.task_parameters is None:
         return
+    # The Executor rebuilds the parameters, header included, from the entries
+    # the Task stored, so this is the header the Task ran with.
+    unit_id: int = _get_unit_for_header(con, cfg.task_parameters.lute_config)
     entries: Dict[str, Any] = {}
 
     executor_id: int = _add_executor_and_communicators(con=con, cfg=cfg)
@@ -1196,6 +1477,7 @@ def update_execution(
     execution_id: int = _insert_maybe_ignore_return_id(
         con=con, table="executions", entries=entries, ignore=False
     )
+    _link_execution_to_unit(con=con, execution_id=execution_id, unit_id=unit_id)
 
     _update_parameters(
         con=con, param_ids=row_ids["parameter_ids"], execution_id=execution_id
@@ -1220,6 +1502,10 @@ def add_placeholder_execution(
     This is intended to be a placeholder, written by the Task layer. The execution
     layer should then call `update_execution` to fill in the rest of the information.
 
+    The unit for the header's (experiment, run) is created here, but the
+    execution is linked to it by `update_execution`, which creates the
+    execution.
+
     Args:
         con (sqlite3.Connection): A connection to the database.
 
@@ -1227,9 +1513,14 @@ def add_placeholder_execution(
 
     Returns:
         row_ids (RowIds): The set of row ids for all entries that were inserted.
+
+    Raises:
+        DatabaseError: If the header has no run.
     """
     if params is None:
         return None
+    # Refuse a Task without a run before it starts
+    _get_unit_for_header(con, params.lute_config)
     entries: Dict[str, Any] = {}
     # Task
     entries["name"] = params.__class__.__name__[:-10]
@@ -1241,7 +1532,7 @@ def add_placeholder_execution(
     # Config
     lute_config: AnalysisHeader = params.lute_config
     config_id: int = _insert_maybe_ignore_return_id(
-        con=con, table="config", entries=lute_config.dict(), ignore=True
+        con=con, table="config", entries=_config_entries(lute_config), ignore=True
     )
 
     # Task Version information
@@ -1289,7 +1580,8 @@ def select_param_from_db(
     """Retrieve a specific value for a parameter subject to conditions.
 
     If multiple parameter/value pairs match the provided conditions, this function
-    will return the latest entry.
+    will return the latest entry: the most recent timestamp, then the highest
+    execution id for executions recorded within the same second.
 
     Args:
         con (sqlite3.Connection): A connection to the database.
@@ -1301,7 +1593,11 @@ def select_param_from_db(
 
         condition (Dict[str, str]): A dictionary of conditions. Currently supports:
             - valid_flag: 1/0 # Only include "valid" results.
-            - run: XYZ # Only look at entries from this run. Otherwise, take the latest.
+            - run: XYZ # Only executions which processed a unit with this run
+                (normalized, e.g. "36"). Otherwise, take the latest.
+            - unit: key # Only executions which processed this unit, e.g.
+                "experiment=mfx101624926;run=36".
+            - group: name # Only executions launched under this group.
 
         is_result (bool): If True, select the field from the results table instead
             of the parameters table. E.g. `param_name = payload, is_result=True`
@@ -1323,7 +1619,22 @@ def select_param_from_db(
         if key == "valid_flag":
             formatted_conditions.append("r.valid_flag = :valid_flag")
         elif key == "run":
-            formatted_conditions.append("c.run = :run")
+            formatted_conditions.append("""e.id IN (
+                SELECT eu.execution_id FROM execution_units eu
+                JOIN unit_labels ul ON ul.unit_id = eu.unit_id
+                JOIN labels l ON l.id = ul.label_id
+                JOIN label_kinds k ON k.id = l.kind_id
+                WHERE k.name = 'run' AND l.value = :run)""")
+        elif key == "unit":
+            formatted_conditions.append("""e.id IN (
+                SELECT eu.execution_id FROM execution_units eu
+                JOIN units u ON u.id = eu.unit_id
+                WHERE u.key = :unit)""")
+        elif key == "group":
+            formatted_conditions.append("""e.id IN (
+                SELECT eg.execution_id FROM execution_groups eg
+                JOIN run_groups g ON g.id = eg.group_id
+                WHERE g.name = :group)""")
         elif key == "param":
             if not is_result:
                 formatted_conditions.append("p.name = :param")
@@ -1350,10 +1661,9 @@ def select_param_from_db(
         SELECT r.{param_name}
         FROM results r
         JOIN executions e ON e.result_id = r.id
-        JOIN config c ON e.config_id = c.id
         JOIN tasks t ON e.task_id = t.id
         {where_clause}
-        ORDER BY e.timestamp DESC
+        ORDER BY e.timestamp DESC, e.id DESC
         LIMIT 1
         """
     else:
@@ -1361,11 +1671,10 @@ def select_param_from_db(
         SELECT p.value
         FROM parameters p
         JOIN executions e ON p.execution_id = e.id
-        JOIN config c ON e.config_id = c.id
         JOIN results r ON e.result_id = r.id
         JOIN tasks t ON e.task_id = t.id
         {where_clause}
-        ORDER BY e.timestamp DESC
+        ORDER BY e.timestamp DESC, e.id DESC
         LIMIT 1
         """
 
@@ -1408,10 +1717,9 @@ def executions_summary(
         SELECT e.id, e.timestamp, t.name, r.summary, r.payload, r.status, r.valid_flag
         FROM parameters p
         JOIN executions e ON p.execution_id = e.id
-        JOIN config c ON e.config_id = c.id
         JOIN results r ON e.result_id = r.id
         JOIN tasks t ON e.task_id = t.id
-        ORDER BY e.timestamp ASC
+        ORDER BY e.timestamp ASC, e.id ASC
     """
     with con:
         cur: sqlite3.Cursor = con.execute(join_query)
@@ -1445,11 +1753,10 @@ def task_parameters_summary(
         SELECT e.id, e.timestamp, r.valid_flag, p.name, p.value
         FROM parameters p
         JOIN executions e ON p.execution_id = e.id
-        JOIN config c ON e.config_id = c.id
         JOIN results r ON e.result_id = r.id
         JOIN tasks t ON e.task_id = t.id
         WHERE t.name = ?
-        ORDER BY e.timestamp ASC
+        ORDER BY e.timestamp ASC, e.id ASC
     """
     with con:
         cur: sqlite3.Cursor = con.execute(join_query, (task_name,))
