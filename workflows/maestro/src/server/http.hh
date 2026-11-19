@@ -45,8 +45,8 @@ namespace HTTP {
   class Interface {
   public:
     Interface()
-        : m_version(VERSION::H_1_1)
-        , m_persistent(true)
+      : m_version(VERSION::H_1_1)
+      , m_persistent(true)
     {}
     virtual ~Interface() = default;
 
@@ -89,15 +89,15 @@ namespace HTTP {
   class Request : public Interface {
   public:
     Request()
-        : m_method(METHOD::POST)
+      : m_method(METHOD::POST)
     {}
 
     Request(METHOD method)
-        : m_method(method)
+      : m_method(method)
     {}
 
     Request(const std::string& raw_http_request)
-        : Interface()
+      : Interface()
     {
       parse_from_string(raw_http_request);
     }
@@ -158,14 +158,15 @@ namespace HTTP {
   class Response : public Interface {
   public:
     Response()
-        : m_status_code(CODE::OK)
+      : m_status_code(CODE::OK)
     {}
 
     Response(CODE status_code)
-        : m_status_code(status_code)
+      : m_status_code(status_code)
     {}
 
     CODE status_code() const { return m_status_code; }
+    void set_status_code(CODE status_code) { m_status_code = status_code; }
     ~Response() = default;
 
     /**
