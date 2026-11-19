@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -3388,7 +3388,57 @@
 <span class="normal">189</span>
 <span class="normal">190</span>
 <span class="normal">191</span>
-<span class="normal">192</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIParameters</span><span class="p">(</span><span class="n">TaskParameters</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Parameters for optimizing detector geometry using PyFAI and Bayesian optimization.</span>
 
 <span class="sd">    BayFAI has default hyperparameters that can be overriden by the user.</span>
@@ -3407,7 +3457,7 @@
         <span class="p">)</span>
 
         <span class="n">n_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-            <span class="n">default</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
             <span class="n">description</span><span class="o">=</span><span class="s2">"Number of iterations of Bayesian Optimization"</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -3451,10 +3501,33 @@
             <span class="n">description</span><span class="o">=</span><span class="s2">"Random seed for reproducibility."</span><span class="p">,</span>
         <span class="p">)</span>
 
+        <span class="n">n_cand</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">default</span><span class="o">=</span><span class="mi">8192</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">"Number of random grid points scored by UCB per BO step (0 or None = whole grid)."</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">gp_restarts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">"n_restarts_optimizer of the GP kernel-hyperparameter fit (sklearn GaussianProcessRegressor)."</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">min_points</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">"Geometries with fewer extracted control points score 0 (0 = off; "</span>
+            <span class="s2">"None = 100 when parallelized is 'dist', else 0)."</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="n">parallelized</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Name of the geometry parameter to distribute across MPI ranks as a "</span>
         <span class="s2">"sliding window (e.g. 'dist'). If None, all ranks instead run BO over the same space."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">dist_spacing</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"geometric"</span><span class="p">,</span> <span class="s2">"linear"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="s2">"geometric"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"With parallelized: dist, how bounds.dist is split across ranks: "</span>
+        <span class="s2">"'geometric' (window widths grow with distance, b = low*(high/low)**(r/size)) or "</span>
+        <span class="s2">"'linear' (equal windows). Each rank's grid step is its window width."</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">fixed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -3472,19 +3545,22 @@
             <span class="s2">"rot2"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
             <span class="s2">"rot3"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="p">},</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">"Center of the search space for the detector geometry parameters."</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Prior mean and starting point of the search for each geometry parameter, "</span>
+        <span class="s2">"and the value of fixed parameters."</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">bounds</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">"dist"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">),</span>
+            <span class="s2">"dist"</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.035</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">),</span>
             <span class="s2">"poni1"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.0025</span><span class="p">,</span> <span class="mf">0.0025</span><span class="p">),</span>
             <span class="s2">"poni2"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.0025</span><span class="p">,</span> <span class="mf">0.0025</span><span class="p">),</span>
             <span class="s2">"rot1"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
             <span class="s2">"rot2"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
             <span class="s2">"rot3"</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
         <span class="p">},</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">"Bounds of the search space for the detector geometry parameters."</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Absolute [low, high] limits of the search for each geometry parameter "</span>
+        <span class="s2">"(not offsets around center). With parallelized: dist, bounds.dist is the whole "</span>
+        <span class="s2">"distance range split across ranks."</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="n">resolutions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -3534,6 +3610,30 @@
     <span class="p">)</span>
 
     <span class="n">_find_smd_path</span> <span class="o">=</span> <span class="n">validate_smd_path</span><span class="p">(</span><span class="s2">"h5"</span><span class="p">)</span>
+
+    <span class="nd">@validator</span><span class="p">(</span><span class="s2">"bounds"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_bounds</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">bounds</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="n">values</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+        <span class="n">center</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"center"</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">fixed</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fixed"</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">)</span> <span class="ow">in</span> <span class="n">bounds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">low</span> <span class="o">&gt;=</span> <span class="n">high</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">: low </span><span class="si">{</span><span class="n">low</span><span class="si">}</span><span class="s2"> &gt;= high </span><span class="si">{</span><span class="n">high</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">p</span> <span class="o">==</span> <span class="s2">"dist"</span> <span class="ow">and</span> <span class="n">low</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"dist: low </span><span class="si">{</span><span class="n">low</span><span class="si">}</span><span class="s2"> &lt;= 0"</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fixed</span> <span class="ow">and</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">center</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">low</span> <span class="o">&lt;=</span> <span class="n">center</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">high</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">: center </span><span class="si">{</span><span class="n">center</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="si">}</span><span class="s2"> outside [</span><span class="si">{</span><span class="n">low</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">high</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span> <span class="o">+</span> <span class="s2">". BayFAI bounds are now absolute [low, high] "</span>
+                <span class="s2">"limits, not offsets around center. To convert an old config use "</span>
+                <span class="s2">"[center + old_low, center + old_high]. With parallelized: dist, "</span>
+                <span class="s2">"bounds.dist is the whole distance range split across ranks "</span>
+                <span class="s2">"(default [0.035, 0.4])."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">bounds</span>
 
     <span class="n">_find_out_file_path</span> <span class="o">=</span> <span class="n">validate_geometry_path</span><span class="p">(</span><span class="s2">"out_file"</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -3630,7 +3730,23 @@
 <span class="normal">103</span>
 <span class="normal">104</span>
 <span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIHyperparameters</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BayFAIHyperparameters</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""BayFAI hyperparameters."""</span>
 
     <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
@@ -3639,7 +3755,7 @@
     <span class="p">)</span>
 
     <span class="n">n_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Number of iterations of Bayesian Optimization"</span><span class="p">,</span>
     <span class="p">)</span>
 
@@ -3681,6 +3797,22 @@
     <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="s2">"Random seed for reproducibility."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">n_cand</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">8192</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Number of random grid points scored by UCB per BO step (0 or None = whole grid)."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">gp_restarts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"n_restarts_optimizer of the GP kernel-hyperparameter fit (sklearn GaussianProcessRegressor)."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">min_points</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Geometries with fewer extracted control points score 0 (0 = off; "</span>
+        <span class="s2">"None = 100 when parallelized is 'dist', else 0)."</span><span class="p">,</span>
     <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -3908,7 +4040,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.c21346df.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
