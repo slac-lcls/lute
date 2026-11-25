@@ -11325,10 +11325,10 @@ wavelength : float, optional
 
         <p>Split the parallelized parameter's absolute bounds into one window per MPI rank.</p>
 <p>dist with dist_spacing 'geometric': rank r gets [b_r, b_r+1] of
-b = low*(high/low)<strong>(arange(size+1)/size), searched on a 2-point grid at the
+b = low<em>(high/low)**(arange(size+1)/size), searched on a 2-point grid at the
 window edges. Otherwise ('linear', or any other parallelized parameter):
 size equal windows of width w = (high-low)/size, grid step w.
-Sets res[p] to this rank's window width (refinement range +-step</strong>).</p>
+Sets res[p] to this rank's window width (refinement range +-step</em>w).</p>
 <h5 id="tasks._bayfai.BayFAIOpt.distribute_parallelized--parameters">Parameters</h5>
 <p>bounds : dict
     Absolute bounds per parameter, format: {param: (low, high)}

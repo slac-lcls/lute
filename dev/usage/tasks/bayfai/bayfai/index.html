@@ -3373,20 +3373,13 @@
 </code></pre>
 <p>Optionally, set <code>directory</code> to write the smalldata file somewhere other than the experiment <code>hdf5</code> folder. You don't need to tell BayFAI where the file is: its <code>h5</code> parameter is filled in automatically from the <code>SubmitSMD</code> result.</p>
 <h2 id="bayfai-parameters">BayFAI parameters</h2>
-<p>Scroll down to the <code>BayFAI</code> section of the YAML. At minimum, fill in <code>detname</code>, <code>calibrant</code> and a rough <code>center</code>:</p>
+<p>Scroll down to the <code>BayFAI</code> section of the YAML. At minimum, fill in <code>detname</code> and <code>calibrant</code>, and set <code>bounds</code> around the expected geometry if the defaults don't cover it:</p>
 <pre><code class="language-yaml">BayFAI:
   parallelized: &quot;dist&quot;
   fixed:
   - &quot;rot1&quot;
   - &quot;rot2&quot;
   - &quot;rot3&quot;
-  center:
-    dist: 0.1               # Fill this section with rough estimates
-    poni1: 0.0
-    poni2: 0.0
-    rot1: 0.0
-    rot2: 0.0
-    rot3: 0.0
   calibrant: &quot;AgBh&quot;           # Fill this line with calibrant name (AgBh, LaB6...)
   detname: &quot;jungfrau&quot;         # Fill this line with detector name (epix10k2M, jungfrau...)
 </code></pre>
@@ -3411,13 +3404,13 @@
 </tr>
 <tr>
 <td><code>center</code></td>
-<td><code>dist: 0.1</code>, others <code>0.0</code></td>
-<td>Initial guess geometry: prior mean and starting point of the search, and the value of <code>fixed</code> parameters. Distances in m, rotations in rad.</td>
+<td><code>{}</code></td>
+<td>Initial guess geometry: prior mean and starting point of the search, and the value of <code>fixed</code> parameters. Distances in m, rotations in rad. A parameter left out, or a free parameter outside its <code>bounds</code> (with a warning), defaults to the bounds midpoint.</td>
 </tr>
 <tr>
 <td><code>bounds</code></td>
 <td><code>dist: [0.035, 0.4]</code>, <code>poni1/2: [-0.0025, 0.0025]</code>, <code>rot1/2/3: [-0.1, 0.1]</code></td>
-<td>Absolute <code>[low, high]</code> search limits for each parameter (not offsets around <code>center</code>; a free parameter's <code>center</code> must lie inside). With <code>parallelized: "dist"</code>, <code>bounds.dist</code> is the whole distance range split across ranks. To convert an old relative config use <code>[center + low, center + high]</code>.</td>
+<td>Absolute <code>[low, high]</code> search limits for each parameter (not offsets around <code>center</code>). With <code>parallelized: "dist"</code>, <code>bounds.dist</code> is the whole distance range split across ranks. To convert an old relative config use <code>[center + low, center + high]</code>.</td>
 </tr>
 <tr>
 <td><code>resolutions</code></td>
@@ -3427,7 +3420,7 @@
 <tr>
 <td><code>fixed</code></td>
 <td><code>["rot3"]</code></td>
-<td>Parameters kept at their <code>center</code> value. <code>rot3</code> should always be fixed, because the rings don't change under rotation around the beam axis. Also fix <code>rot1</code>/<code>rot2</code> if the detector is normal to the beam.</td>
+<td>Parameters kept at their <code>center</code> value (the bounds midpoint if not set). <code>rot3</code> should always be fixed, because the rings don't change under rotation around the beam axis. Also fix <code>rot1</code>/<code>rot2</code> if the detector is normal to the beam.</td>
 </tr>
 <tr>
 <td><code>parallelized</code></td>
@@ -3456,7 +3449,7 @@
 </tr>
 </tbody>
 </table>
-<p>Double-check <code>center.dist</code>, <code>calibrant</code> and <code>detname</code> before each calibration run, since they often change between runs.</p>
+<p>Double-check <code>bounds.dist</code>, <code>calibrant</code> and <code>detname</code> before each calibration run, since they often change between runs.</p>
 <h2 id="bayfai-hyperparameters">BayFAI hyperparameters</h2>
 <p>The defaults work for most cases. To override them, add a <code>bayfai_params</code> block under <code>BayFAI</code>:</p>
 <pre><code class="language-yaml">BayFAI:
@@ -3551,7 +3544,7 @@
 <p>With <code>parallelized: "dist"</code>, <code>bounds.dist</code> (default 0.035-0.4 m) is split into one distance window per rank. With <code>dist_spacing: "geometric"</code> (default), rank <code>r</code> gets <code>[b_r, b_r+1]</code> with <code>b = low*(high/low)**(r/N)</code> for <code>N</code> ranks, so windows are narrower at short distance, where the rings move most per mm; <code>"linear"</code> gives <code>N</code> equal windows. Each rank searches its window (its edges) and optimizes the other parameters; the final refinement may move the distance by <code>step</code> window widths. The best geometry across all ranks wins.</p>
 <p><strong>The more ranks (CPUs) you give BayFAI, the more of the search space it explores, and the better the chance that BO converges to the right geometry. The trade-off is that the job takes longer and waits longer in the queue.</strong> The default (64 tasks on one node, at every hutch) is a good compromise. At MEC, 119 ranks give more seeds per quad and solve a few more seed-sensitive quads; at other hutches, 119 ranks did not help and double the memory. To change it, pass e.g. <code>--ntasks-per-node=120</code> (119 ranks) to <code>setup_lute</code>, or edit <code>slurm_params</code> in the DAG.</p>
 <h2 id="mec-4-quads-particularity">MEC 4 Quads particularity</h2>
-<p>At MEC, the detector is made of 4 independent quads (<code>Epix10kaQuad0</code> to <code>Epix10kaQuad3</code>), and each quad needs its own geometry. The <code>bayfai_mec</code> workflow uses a <code>!param_sweep</code> with <code>zip: true</code> to run one BayFAI per quad, each with its own <code>detname</code>, <code>center</code>, <code>bounds</code> and <code>fixed</code>:</p>
+<p>At MEC, the detector is made of 4 independent quads (<code>Epix10kaQuad0</code> to <code>Epix10kaQuad3</code>), and each quad needs its own geometry. The <code>bayfai_mec</code> workflow uses a <code>!param_sweep</code> with <code>zip: true</code> to run one BayFAI per quad, each with its own <code>detname</code>, <code>bounds</code> and <code>fixed</code>:</p>
 <pre><code class="language-yaml">- !param_sweep
   task_name: BayFAIOptimizer
   zip: true
@@ -3562,12 +3555,8 @@
       - [&quot;rot1&quot;, &quot;rot3&quot;]
       - [&quot;rot2&quot;, &quot;rot3&quot;]
       - [&quot;rot2&quot;, &quot;rot3&quot;]
-    center:
-      - {dist: 0.278, poni1: 0.06, poni2: 0.06, rot1: 0.0, rot2: -0.6, rot3: 0.0}
-      - {dist: 0.28, poni1: 0.079, poni2: -0.04, rot1: 0.0, rot2: -0.56, rot3: 0.0}
-      - {dist: 0.192, poni1: -0.0125, poni2: 0.0, rot1: 1.09, rot2: 0.0, rot3: 0.0}
-      - {dist: 0.1, poni1: -0.008, poni2: 0.04, rot1: -0.41, rot2: 0.0, rot3: 0.0}
-    # Absolute [low, high] search limits: center +- 20 mm dist, 5 mm poni, 0.05 rad free rotation.
+    # Absolute [low, high] search limits around the expected geometry (+- 20 mm dist, 5 mm poni,
+    # 0.05 rad free rotation). center is left out: it defaults to the bounds midpoint.
     # The rotation bound matters most: wider tilts reach geometries that fit the arcs to the wrong
     # LaB6 rings and outscore the true one.
     bounds:
